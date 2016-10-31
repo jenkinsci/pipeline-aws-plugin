@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>org.jenkins-ci.plugins</groupId>
+        <artifactId>plugin</artifactId>
+        <version>2.5</version>
+        <relativePath />
+    </parent>
+    <groupId>de.taimos</groupId>
+    <artifactId>pipeline-aws</artifactId>
+    <version>1.0-SNAPSHOT</version>
+    <packaging>hpi</packaging>
+    <name>Pipeline: AWS Steps</name>
+    <scm>
+        <connection>scm:git:ssh://github.com/jenkinsci/pipeline-aws-plugin.git</connection>
+        <developerConnection>scm:git:ssh://git@github.com/jenkinsci/pipeline-aws-plugin.git</developerConnection>
+        <url>https://github.com/jenkinsci/pipeline-aws-plugin</url>
+    </scm>
+    <licenses>
+        <license>
+            <name>The Apache Software License, Version 2.0</name>
+            <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+            <distribution>repo</distribution></license>
+    </licenses>
+    <url>https://wiki.jenkins-ci.org/display/JENKINS/Pipeline+AWS+Plugin</url>
+    <organization>
+        <name>Taimos GmbH</name>
+        <url>https://www.taimos.de</url>
+    </organization>
+    <developers>
+        <developer>
+            <id>hoegertn</id>
+            <name>Thorsten Hoeger</name>
+            <email>thorsten.hoeger@taimos.de</email>
+            <organization>Taimos GmbH</organization>
+            <organizationUrl>https://www.taimos.de</organizationUrl>
+        </developer>
+    </developers>
+    <repositories>
+        <repository>
+            <id>repo.jenkins-ci.org</id>
+            <url>http://repo.jenkins-ci.org/public/</url>
+        </repository>
+    </repositories>
+    <pluginRepositories>
+        <pluginRepository>
+            <id>repo.jenkins-ci.org</id>
+            <url>http://repo.jenkins-ci.org/public/</url>
+        </pluginRepository>
+    </pluginRepositories>
+    <properties>
+        <jenkins.version>2.15</jenkins.version>
+    </properties>
+    <dependencies>
+        <dependency>
+            <groupId>org.jenkins-ci.plugins.workflow</groupId>
+            <artifactId>workflow-step-api</artifactId>
+            <version>2.4</version>
+        </dependency>
+        <dependency>
+            <groupId>org.jenkins-ci.plugins.workflow</groupId>
+            <artifactId>workflow-cps</artifactId>
+            <version>2.21</version>
+        </dependency>
+        <dependency>
+            <groupId>org.jenkins-ci.plugins</groupId>
+            <artifactId>aws-java-sdk</artifactId>
+            <version>1.11.37</version>
+        </dependency>
+        <dependency>
+            <groupId>org.jenkins-ci.plugins.workflow</groupId>
+            <artifactId>workflow-job</artifactId>
+            <version>2.8</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.jenkins-ci.plugins.workflow</groupId>
+            <artifactId>workflow-basic-steps</artifactId>
+            <version>2.2</version>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+</project>
