@@ -50,7 +50,7 @@
         </pluginRepository>
     </pluginRepositories>
     <properties>
-        <jenkins.version>2.15</jenkins.version>
+        <jenkins.version>2.7</jenkins.version>
     </properties>
     <dependencies>
         <dependency>
