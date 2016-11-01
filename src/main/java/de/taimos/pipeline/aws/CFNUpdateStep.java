@@ -23,6 +23,8 @@ package de.taimos.pipeline.aws;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
+import java.util.Map;
 
 import javax.inject.Inject;
 
@@ -34,11 +36,14 @@ import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
 
 import com.amazonaws.services.cloudformation.AmazonCloudFormationClient;
+import com.amazonaws.services.cloudformation.model.AmazonCloudFormationException;
 import com.amazonaws.services.cloudformation.model.Capability;
 import com.amazonaws.services.cloudformation.model.CreateStackRequest;
 import com.amazonaws.services.cloudformation.model.DescribeStacksRequest;
 import com.amazonaws.services.cloudformation.model.DescribeStacksResult;
+import com.amazonaws.services.cloudformation.model.Output;
 import com.amazonaws.services.cloudformation.model.Parameter;
+import com.amazonaws.services.cloudformation.model.Stack;
 import com.amazonaws.services.cloudformation.model.UpdateStackRequest;
 import com.amazonaws.waiters.WaiterParameters;
 
@@ -104,7 +109,7 @@ public class CFNUpdateStep extends AbstractStepImpl {
 		}
 	}
 	
-	public static class Execution extends AbstractSynchronousStepExecution<Void> {
+	public static class Execution extends AbstractSynchronousStepExecution<Map<String, String>> {
 		
 		@Inject
 		private transient CFNUpdateStep step;
@@ -116,7 +121,7 @@ public class CFNUpdateStep extends AbstractStepImpl {
 		private transient TaskListener listener;
 		
 		@Override
-		protected Void run() throws Exception {
+		protected Map<String, String> run() throws Exception {
 			AmazonCloudFormationClient client = AWSClientFactory.create(AmazonCloudFormationClient.class, this.envVars);
 			
 			String stack = this.step.getStack();
@@ -134,7 +139,17 @@ public class CFNUpdateStep extends AbstractStepImpl {
 				this.createStack(client, stack, file, params);
 			}
 			this.listener.getLogger().println("Stack update complete");
-			return null;
+			return this.describeOutputs(client, stack);
+		}
+		
+		private Map<String, String> describeOutputs(AmazonCloudFormationClient client, String stack) {
+			DescribeStacksResult result = client.describeStacks(new DescribeStacksRequest().withStackName(stack));
+			Stack cfnStack = result.getStacks().get(0);
+			Map<String, String> map = new HashMap<>();
+			for (Output output : cfnStack.getOutputs()) {
+				map.put(output.getOutputKey(), output.getOutputValue());
+			}
+			return map;
 		}
 		
 		private void createStack(AmazonCloudFormationClient client, String stack, String file, Collection<Parameter> params) {
@@ -147,12 +162,19 @@ public class CFNUpdateStep extends AbstractStepImpl {
 		}
 		
 		private void updateStack(AmazonCloudFormationClient client, String stack, String file, Collection<Parameter> params) {
-			UpdateStackRequest req = new UpdateStackRequest();
-			req.withStackName(stack).withCapabilities(Capability.CAPABILITY_IAM);
-			req.withTemplateBody(this.readTemplate(file)).withParameters(params);
-			client.updateStack(req);
-			
-			client.waiters().stackUpdateComplete().run(new WaiterParameters<>(new DescribeStacksRequest().withStackName(stack)));
+			try {
+				UpdateStackRequest req = new UpdateStackRequest();
+				req.withStackName(stack).withCapabilities(Capability.CAPABILITY_IAM);
+				req.withTemplateBody(this.readTemplate(file)).withParameters(params);
+				client.updateStack(req);
+				
+				client.waiters().stackUpdateComplete().run(new WaiterParameters<>(new DescribeStacksRequest().withStackName(stack)));
+			} catch (AmazonCloudFormationException e) {
+				if (e.getMessage().contains("No updates are to be performed")) {
+					return;
+				}
+				throw e;
+			}
 		}
 		
 		private String readTemplate(String file) {
@@ -165,8 +187,12 @@ public class CFNUpdateStep extends AbstractStepImpl {
 		}
 		
 		private boolean stackExists(AmazonCloudFormationClient client, String stack) {
-			DescribeStacksResult result = client.describeStacks(new DescribeStacksRequest().withStackName(stack));
-			return !result.getStacks().isEmpty();
+			try {
+				DescribeStacksResult result = client.describeStacks(new DescribeStacksRequest().withStackName(stack));
+				return !result.getStacks().isEmpty();
+			} catch (AmazonCloudFormationException e) {
+				return false;
+			}
 		}
 		
 		private Collection<Parameter> parseParams(String[] params) {

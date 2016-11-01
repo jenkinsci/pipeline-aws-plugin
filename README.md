@@ -84,9 +84,10 @@ s3Download(file:'file.txt', bucket:'my-bucket', path:'/path/to/source/file.txt',
 Create or update the given CloudFormation stack using the given template from the workspace.
 You can specify an optional list of parameters. 
 You can also specify a list of `keepParams` of parameters which will use the previous value on stack updates.
+The step returns the outputs of the stack as map.
 
 ```
-cfnUpdate(stack:'my-stack', file:'template.yaml', params:['InstanceType=t2.nano'], keepParams:['Version'])
+def outputs = cfnUpdate(stack:'my-stack', file:'template.yaml', params:['InstanceType=t2.nano'], keepParams:['Version'])
 ```
 
 ## cfnDelete
