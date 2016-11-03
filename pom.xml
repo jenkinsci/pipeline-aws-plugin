@@ -9,14 +9,15 @@
     </parent>
     <groupId>de.taimos</groupId>
     <artifactId>pipeline-aws</artifactId>
-    <version>1.0-SNAPSHOT</version>
+    <version>1.0</version>
     <packaging>hpi</packaging>
     <name>Pipeline: AWS Steps</name>
     <scm>
         <connection>scm:git:ssh://github.com/jenkinsci/pipeline-aws-plugin.git</connection>
         <developerConnection>scm:git:ssh://git@github.com/jenkinsci/pipeline-aws-plugin.git</developerConnection>
         <url>https://github.com/jenkinsci/pipeline-aws-plugin</url>
-    </scm>
+      <tag>pipeline-aws-1.0</tag>
+  </scm>
     <licenses>
         <license>
             <name>The Apache Software License, Version 2.0</name>
