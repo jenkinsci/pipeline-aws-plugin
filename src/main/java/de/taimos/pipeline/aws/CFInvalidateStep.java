@@ -95,7 +95,8 @@ public class CFInvalidateStep extends AbstractStepImpl {
 			
 			this.listener.getLogger().format("Invalidating paths %s in distribution %s %n", Arrays.toString(paths), distribution);
 			
-			InvalidationBatch batch = new InvalidationBatch().withPaths(new Paths().withItems(paths));
+			Paths invalidationPaths = new Paths().withItems(paths).withQuantity(paths.length);
+			InvalidationBatch batch = new InvalidationBatch(invalidationPaths, Long.toString(System.currentTimeMillis()));
 			client.createInvalidation(new CreateInvalidationRequest(distribution, batch));
 			
 			this.listener.getLogger().println("Invalidation complete");
