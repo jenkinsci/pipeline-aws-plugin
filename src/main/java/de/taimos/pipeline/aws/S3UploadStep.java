@@ -23,11 +23,12 @@ package de.taimos.pipeline.aws;
 
 import java.io.FileNotFoundException;
 
+import javax.annotation.Nonnull;
 import javax.inject.Inject;
 
 import org.jenkinsci.plugins.workflow.steps.AbstractStepDescriptorImpl;
+import org.jenkinsci.plugins.workflow.steps.AbstractStepExecutionImpl;
 import org.jenkinsci.plugins.workflow.steps.AbstractStepImpl;
-import org.jenkinsci.plugins.workflow.steps.AbstractSynchronousStepExecution;
 import org.jenkinsci.plugins.workflow.steps.StepContextParameter;
 import org.kohsuke.stapler.DataBoundConstructor;
 
@@ -82,7 +83,7 @@ public class S3UploadStep extends AbstractStepImpl {
 		}
 	}
 	
-	public static class Execution extends AbstractSynchronousStepExecution<Void> {
+	public static class Execution extends AbstractStepExecutionImpl {
 		
 		@Inject
 		private transient S3UploadStep step;
@@ -94,21 +95,39 @@ public class S3UploadStep extends AbstractStepImpl {
 		private transient TaskListener listener;
 		
 		@Override
-		protected Void run() throws Exception {
-			FilePath child = this.workspace.child(this.step.getFile());
-			String bucket = this.step.getBucket();
-			String path = this.step.getPath();
+		public boolean start() throws Exception {
+			final FilePath child = this.workspace.child(this.step.getFile());
+			final String bucket = this.step.getBucket();
+			final String path = this.step.getPath();
 			
-			AmazonS3Client s3Client = AWSClientFactory.create(AmazonS3Client.class, this.envVars);
-			
-			this.listener.getLogger().format("Uploading file %s to s3://%s/%s %n", child.toURI(), bucket, path);
-			if (!child.exists()) {
-				this.listener.getLogger().println("Upload failed due to missing source file");
-				throw new FileNotFoundException(child.toURI().toString());
-			}
-			s3Client.putObject(bucket, path, child.read(), new ObjectMetadata());
-			this.listener.getLogger().println("Upload complete");
-			return null;
+			new Thread("s3Upload") {
+				@Override
+				public void run() {
+					try {
+						AmazonS3Client s3Client = AWSClientFactory.create(AmazonS3Client.class, Execution.this.envVars);
+						
+						Execution.this.listener.getLogger().format("Uploading file %s to s3://%s/%s %n", child.toURI(), bucket, path);
+						if (!child.exists()) {
+							Execution.this.listener.getLogger().println("Upload failed due to missing source file");
+							Execution.this.getContext().onFailure(new FileNotFoundException(child.toURI().toString()));
+							return;
+						}
+						ObjectMetadata metadata = new ObjectMetadata();
+						metadata.setContentLength(child.length());
+						s3Client.putObject(bucket, path, child.read(), metadata);
+						Execution.this.listener.getLogger().println("Upload complete");
+						Execution.this.getContext().onSuccess(null);
+					} catch (Exception e) {
+						Execution.this.getContext().onFailure(e);
+					}
+				}
+			}.start();
+			return false;
+		}
+		
+		@Override
+		public void stop(@Nonnull Throwable cause) throws Exception {
+			//
 		}
 		
 		private static final long serialVersionUID = 1L;

@@ -104,6 +104,7 @@ cfnDelete(stack:'my-stack')
 * fixing invalidation of CloudFront distributions
 * add output of stack creation, updates and deletes
 * Only fetch AWS environment once 
+* make long-running steps async
 
 ## 1.0
 * first release containing multiple pipeline steps

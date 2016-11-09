@@ -21,18 +21,18 @@
 
 package de.taimos.pipeline.aws;
 
+import javax.annotation.Nonnull;
 import javax.inject.Inject;
 
 import org.jenkinsci.plugins.workflow.steps.AbstractStepDescriptorImpl;
+import org.jenkinsci.plugins.workflow.steps.AbstractStepExecutionImpl;
 import org.jenkinsci.plugins.workflow.steps.AbstractStepImpl;
-import org.jenkinsci.plugins.workflow.steps.AbstractSynchronousStepExecution;
 import org.jenkinsci.plugins.workflow.steps.StepContextParameter;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
 
 import com.amazonaws.services.s3.AmazonS3Client;
 import com.amazonaws.services.s3.model.S3Object;
-import com.amazonaws.util.IOUtils;
 
 import hudson.EnvVars;
 import hudson.Extension;
@@ -92,7 +92,7 @@ public class S3DownloadStep extends AbstractStepImpl {
 		}
 	}
 	
-	public static class Execution extends AbstractSynchronousStepExecution<Void> {
+	public static class Execution extends AbstractStepExecutionImpl {
 		
 		@Inject
 		private transient S3DownloadStep step;
@@ -104,26 +104,43 @@ public class S3DownloadStep extends AbstractStepImpl {
 		private transient TaskListener listener;
 		
 		@Override
-		protected Void run() throws Exception {
-			FilePath target = this.workspace.child(this.step.getFile());
-			String bucket = this.step.getBucket();
-			String path = this.step.getPath();
+		public boolean start() throws Exception {
+			final FilePath target = this.workspace.child(this.step.getFile());
+			final String bucket = this.step.getBucket();
+			final String path = this.step.getPath();
+			final boolean force = this.step.isForce();
 			
-			AmazonS3Client s3Client = AWSClientFactory.create(AmazonS3Client.class, this.envVars);
-			
-			this.listener.getLogger().format("Downloading file s3://%s/%s to %s %n ", bucket, path, target.toURI());
-			if (target.exists()) {
-				if (this.step.isForce()) {
-					target.delete();
-				} else {
-					this.listener.getLogger().println("Download failed due to existing target file; set force=true to overwrite target file");
-					throw new RuntimeException("Target exists: " + target.toURI().toString());
+			new Thread("s3Download") {
+				@Override
+				public void run() {
+					try {
+						AmazonS3Client s3Client = AWSClientFactory.create(AmazonS3Client.class, Execution.this.envVars);
+						
+						Execution.this.listener.getLogger().format("Downloading file s3://%s/%s to %s %n ", bucket, path, target.toURI());
+						if (target.exists()) {
+							if (force) {
+								target.delete();
+							} else {
+								Execution.this.listener.getLogger().println("Download failed due to existing target file; set force=true to overwrite target file");
+								Execution.this.getContext().onFailure(new RuntimeException("Target exists: " + target.toURI().toString()));
+								return;
+							}
+						}
+						S3Object s3Object = s3Client.getObject(bucket, path);
+						target.copyFrom(s3Object.getObjectContent());
+						Execution.this.listener.getLogger().println("Download complete");
+						Execution.this.getContext().onSuccess(null);
+					} catch (Exception e) {
+						Execution.this.getContext().onFailure(e);
+					}
 				}
-			}
-			S3Object s3Object = s3Client.getObject(bucket, path);
-			IOUtils.copy(s3Object.getObjectContent(), target.write());
-			this.listener.getLogger().println("Download complete");
-			return null;
+			}.start();
+			return false;
+		}
+		
+		@Override
+		public void stop(@Nonnull Throwable cause) throws Exception {
+			//
 		}
 		
 		private static final long serialVersionUID = 1L;
