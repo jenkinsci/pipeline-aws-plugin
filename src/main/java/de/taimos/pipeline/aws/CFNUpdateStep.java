@@ -23,30 +23,21 @@ package de.taimos.pipeline.aws;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashMap;
-import java.util.Map;
 
+import javax.annotation.Nonnull;
 import javax.inject.Inject;
 
 import org.jenkinsci.plugins.workflow.steps.AbstractStepDescriptorImpl;
+import org.jenkinsci.plugins.workflow.steps.AbstractStepExecutionImpl;
 import org.jenkinsci.plugins.workflow.steps.AbstractStepImpl;
-import org.jenkinsci.plugins.workflow.steps.AbstractSynchronousStepExecution;
 import org.jenkinsci.plugins.workflow.steps.StepContextParameter;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
 
 import com.amazonaws.services.cloudformation.AmazonCloudFormationClient;
-import com.amazonaws.services.cloudformation.model.AmazonCloudFormationException;
-import com.amazonaws.services.cloudformation.model.Capability;
-import com.amazonaws.services.cloudformation.model.CreateStackRequest;
-import com.amazonaws.services.cloudformation.model.DescribeStacksRequest;
-import com.amazonaws.services.cloudformation.model.DescribeStacksResult;
-import com.amazonaws.services.cloudformation.model.Output;
 import com.amazonaws.services.cloudformation.model.Parameter;
-import com.amazonaws.services.cloudformation.model.Stack;
-import com.amazonaws.services.cloudformation.model.UpdateStackRequest;
-import com.amazonaws.waiters.WaiterParameters;
 
+import de.taimos.pipeline.aws.cloudformation.CloudFormationStack;
 import hudson.EnvVars;
 import hudson.Extension;
 import hudson.FilePath;
@@ -109,7 +100,7 @@ public class CFNUpdateStep extends AbstractStepImpl {
 		}
 	}
 	
-	public static class Execution extends AbstractSynchronousStepExecution<Map<String, String>> {
+	public static class Execution extends AbstractStepExecutionImpl {
 		
 		@Inject
 		private transient CFNUpdateStep step;
@@ -121,60 +112,31 @@ public class CFNUpdateStep extends AbstractStepImpl {
 		private transient TaskListener listener;
 		
 		@Override
-		protected Map<String, String> run() throws Exception {
-			AmazonCloudFormationClient client = AWSClientFactory.create(AmazonCloudFormationClient.class, this.envVars);
-			
-			String stack = this.step.getStack();
-			String file = this.step.getFile();
-			Collection<Parameter> params = this.parseParams(this.step.getParams());
-			Collection<Parameter> keepParams = this.parseKeepParams(this.step.getKeepParams());
+		public boolean start() throws Exception {
+			final String stack = this.step.getStack();
+			final String file = this.step.getFile();
+			final Collection<Parameter> params = this.parseParams(this.step.getParams());
+			final Collection<Parameter> keepParams = this.parseKeepParams(this.step.getKeepParams());
 			
 			this.listener.getLogger().format("Updating/Creating CloudFormation stack %s %n", stack);
 			
-			if (this.stackExists(client, stack)) {
-				ArrayList<Parameter> parameters = new ArrayList<>(params);
-				parameters.addAll(keepParams);
-				this.updateStack(client, stack, file, parameters);
-			} else {
-				this.createStack(client, stack, file, params);
-			}
-			this.listener.getLogger().println("Stack update complete");
-			return this.describeOutputs(client, stack);
-		}
-		
-		private Map<String, String> describeOutputs(AmazonCloudFormationClient client, String stack) {
-			DescribeStacksResult result = client.describeStacks(new DescribeStacksRequest().withStackName(stack));
-			Stack cfnStack = result.getStacks().get(0);
-			Map<String, String> map = new HashMap<>();
-			for (Output output : cfnStack.getOutputs()) {
-				map.put(output.getOutputKey(), output.getOutputValue());
-			}
-			return map;
-		}
-		
-		private void createStack(AmazonCloudFormationClient client, String stack, String file, Collection<Parameter> params) {
-			CreateStackRequest req = new CreateStackRequest();
-			req.withStackName(stack).withCapabilities(Capability.CAPABILITY_IAM);
-			req.withTemplateBody(this.readTemplate(file)).withParameters(params);
-			client.createStack(req);
-			
-			client.waiters().stackCreateComplete().run(new WaiterParameters<>(new DescribeStacksRequest().withStackName(stack)));
-		}
-		
-		private void updateStack(AmazonCloudFormationClient client, String stack, String file, Collection<Parameter> params) {
-			try {
-				UpdateStackRequest req = new UpdateStackRequest();
-				req.withStackName(stack).withCapabilities(Capability.CAPABILITY_IAM);
-				req.withTemplateBody(this.readTemplate(file)).withParameters(params);
-				client.updateStack(req);
-				
-				client.waiters().stackUpdateComplete().run(new WaiterParameters<>(new DescribeStacksRequest().withStackName(stack)));
-			} catch (AmazonCloudFormationException e) {
-				if (e.getMessage().contains("No updates are to be performed")) {
-					return;
+			new Thread("cfnUpdate-" + stack) {
+				@Override
+				public void run() {
+					AmazonCloudFormationClient client = AWSClientFactory.create(AmazonCloudFormationClient.class, Execution.this.envVars);
+					CloudFormationStack cfnStack = new CloudFormationStack(client, stack, Execution.this.listener);
+					if (cfnStack.exists()) {
+						ArrayList<Parameter> parameters = new ArrayList<>(params);
+						parameters.addAll(keepParams);
+						cfnStack.update(Execution.this.readTemplate(file), parameters);
+					} else {
+						cfnStack.create(Execution.this.readTemplate(file), params);
+					}
+					Execution.this.listener.getLogger().println("Stack update complete");
+					Execution.this.getContext().onSuccess(cfnStack.describeOutputs());
 				}
-				throw e;
-			}
+			}.start();
+			return false;
 		}
 		
 		private String readTemplate(String file) {
@@ -183,15 +145,6 @@ public class CFNUpdateStep extends AbstractStepImpl {
 				return child.readToString();
 			} catch (Exception e) {
 				throw new RuntimeException(e);
-			}
-		}
-		
-		private boolean stackExists(AmazonCloudFormationClient client, String stack) {
-			try {
-				DescribeStacksResult result = client.describeStacks(new DescribeStacksRequest().withStackName(stack));
-				return !result.getStacks().isEmpty();
-			} catch (AmazonCloudFormationException e) {
-				return false;
 			}
 		}
 		
@@ -221,6 +174,11 @@ public class CFNUpdateStep extends AbstractStepImpl {
 				parameters.add(new Parameter().withParameterKey(param).withUsePreviousValue(true));
 			}
 			return parameters;
+		}
+		
+		@Override
+		public void stop(@Nonnull Throwable cause) throws Exception {
+			//
 		}
 		
 		private static final long serialVersionUID = 1L;

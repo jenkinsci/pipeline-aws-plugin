@@ -126,12 +126,15 @@ public class WithAWSStep extends AbstractStepImpl {
 		
 		@Override
 		public boolean start() throws Exception {
+			final EnvVars awsEnv = new EnvVars();
+			this.withProfile(awsEnv);
+			this.withRegion(awsEnv);
+			this.withRole(awsEnv);
+			
 			EnvironmentExpander expander = new EnvironmentExpander() {
 				@Override
 				public void expand(@Nonnull EnvVars envVars) throws IOException, InterruptedException {
-					Execution.this.withProfile(envVars);
-					Execution.this.withRegion(envVars);
-					Execution.this.withRole(envVars);
+					envVars.overrideAll(awsEnv);
 				}
 			};
 			this.getContext().newBodyInvoker()
