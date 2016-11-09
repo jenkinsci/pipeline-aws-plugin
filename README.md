@@ -100,6 +100,10 @@ cfnDelete(stack:'my-stack')
 
 # Versions
 
-## 1.0
+## 1.1
+* fixing invalidation of CloudFront distributions
+* add output of stack creation, updates and deletes
+* Only fetch AWS environment once 
 
-Initial version
+## 1.0
+* first release containing multiple pipeline steps

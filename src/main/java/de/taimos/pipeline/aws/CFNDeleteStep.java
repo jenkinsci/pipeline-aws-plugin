@@ -21,19 +21,18 @@
 
 package de.taimos.pipeline.aws;
 
+import javax.annotation.Nonnull;
 import javax.inject.Inject;
 
 import org.jenkinsci.plugins.workflow.steps.AbstractStepDescriptorImpl;
+import org.jenkinsci.plugins.workflow.steps.AbstractStepExecutionImpl;
 import org.jenkinsci.plugins.workflow.steps.AbstractStepImpl;
-import org.jenkinsci.plugins.workflow.steps.AbstractSynchronousStepExecution;
 import org.jenkinsci.plugins.workflow.steps.StepContextParameter;
 import org.kohsuke.stapler.DataBoundConstructor;
 
 import com.amazonaws.services.cloudformation.AmazonCloudFormationClient;
-import com.amazonaws.services.cloudformation.model.DeleteStackRequest;
-import com.amazonaws.services.cloudformation.model.DescribeStacksRequest;
-import com.amazonaws.waiters.WaiterParameters;
 
+import de.taimos.pipeline.aws.cloudformation.CloudFormationStack;
 import hudson.EnvVars;
 import hudson.Extension;
 import hudson.model.TaskListener;
@@ -69,7 +68,7 @@ public class CFNDeleteStep extends AbstractStepImpl {
 		}
 	}
 	
-	public static class Execution extends AbstractSynchronousStepExecution<Void> {
+	public static class Execution extends AbstractStepExecutionImpl {
 		
 		@Inject
 		private transient CFNDeleteStep step;
@@ -79,20 +78,27 @@ public class CFNDeleteStep extends AbstractStepImpl {
 		private transient TaskListener listener;
 		
 		@Override
-		protected Void run() throws Exception {
-			AmazonCloudFormationClient client = AWSClientFactory.create(AmazonCloudFormationClient.class, this.envVars);
-			
-			String stack = this.step.getStack();
+		public boolean start() throws Exception {
+			final String stack = this.step.getStack();
 			
 			this.listener.getLogger().format("Removing CloudFormation stack %s %n", stack);
 			
-			client.deleteStack(new DeleteStackRequest().withStackName(stack));
-			
-			DescribeStacksRequest describeStacksRequest = new DescribeStacksRequest().withStackName(stack);
-			client.waiters().stackDeleteComplete().run(new WaiterParameters<>(describeStacksRequest));
-			
-			this.listener.getLogger().println("Stack deletion complete");
-			return null;
+			new Thread("cfnDelete-" + stack) {
+				@Override
+				public void run() {
+					AmazonCloudFormationClient client = AWSClientFactory.create(AmazonCloudFormationClient.class, Execution.this.envVars);
+					CloudFormationStack cfnStack = new CloudFormationStack(client, stack, Execution.this.listener);
+					cfnStack.delete();
+					Execution.this.listener.getLogger().println("Stack deletion complete");
+					Execution.this.getContext().onSuccess(null);
+				}
+			}.start();
+			return false;
+		}
+		
+		@Override
+		public void stop(@Nonnull Throwable cause) throws Exception {
+			//
 		}
 		
 		private static final long serialVersionUID = 1L;
