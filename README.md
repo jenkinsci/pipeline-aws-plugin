@@ -100,6 +100,9 @@ cfnDelete(stack:'my-stack')
 
 # Versions
 
+## 1.2
+* add proxy support using standard environment variables
+
 ## 1.1
 * fixing invalidation of CloudFront distributions
 * add output of stack creation, updates and deletes
