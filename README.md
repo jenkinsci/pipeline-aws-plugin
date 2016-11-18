@@ -98,10 +98,19 @@ Remove the given stack from CloudFormation.
 cfnDelete(stack:'my-stack')
 ```
 
+## cfnDescribe
+
+The step returns the outputs of the stack as map.
+
+```
+def outputs = cfnDescribe(stack:'my-stack')
+```
+
 # Versions
 
 ## 1.2
 * add proxy support using standard environment variables
+* add cfnDescribe step to fetch stack outputs
 
 ## 1.1
 * fixing invalidation of CloudFront distributions
