@@ -21,6 +21,7 @@
 package de.taimos.pipeline.aws;
 
 import com.amazonaws.AmazonWebServiceClient;
+import com.amazonaws.ClientConfiguration;
 import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.auth.AWSStaticCredentialsProvider;
 import com.amazonaws.auth.BasicAWSCredentials;
@@ -45,7 +46,14 @@ public class AWSClientFactory {
 	static <T extends AmazonWebServiceClient> T create(Class<T> clazz, EnvVars vars) {
 		Region region = AWSClientFactory.getRegion(vars);
 		final AWSCredentialsProvider provider = AWSClientFactory.getCredentials(vars);
-		return region.createClient(clazz, provider, null);
+		ClientConfiguration config = AWSClientFactory.getClientConfiguration(vars);
+		return region.createClient(clazz, provider, config);
+	}
+	
+	private static ClientConfiguration getClientConfiguration(EnvVars vars) {
+		ClientConfiguration clientConfiguration = new ClientConfiguration();
+		ProxyConfiguration.configure(vars, clientConfiguration);
+		return clientConfiguration;
 	}
 	
 	private static AWSCredentialsProvider getCredentials(EnvVars vars) {
