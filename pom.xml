@@ -38,6 +38,12 @@
             <organizationUrl>https://www.taimos.de</organizationUrl>
         </developer>
     </developers>
+    <contributors>
+        <contributor>
+            <id>mdouglass</id>
+            <name>Matthew Douglass</name>
+        </contributor>
+    </contributors>
     <repositories>
         <repository>
             <id>repo.jenkins-ci.org</id>

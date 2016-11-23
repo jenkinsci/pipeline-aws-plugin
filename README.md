@@ -116,6 +116,9 @@ snsPublish(topicArn:'arn:aws:sns:us-east-1:123456789012:MyNewTopic', subject:'my
 
 # Versions
 
+## 1.3
+* add support for publishing messages to SNS 
+
 ## 1.2
 * add proxy support using standard environment variables
 * add cfnDescribe step to fetch stack outputs
