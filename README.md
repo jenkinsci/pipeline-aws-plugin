@@ -106,6 +106,14 @@ The step returns the outputs of the stack as map.
 def outputs = cfnDescribe(stack:'my-stack')
 ```
 
+## snsPublish
+
+Publishes a message to SNS.
+
+```
+snsPublish(topicArn:'arn:aws:sns:us-east-1:123456789012:MyNewTopic', subject:'my subject', message:'this is your message')
+```
+
 # Versions
 
 ## 1.2
