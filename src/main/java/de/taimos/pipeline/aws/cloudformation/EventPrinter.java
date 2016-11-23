@@ -26,9 +26,13 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.lang.StringUtils;
+import org.apache.http.concurrent.BasicFuture;
 
 import com.amazonaws.AmazonWebServiceRequest;
 import com.amazonaws.services.cloudformation.AmazonCloudFormationClient;
@@ -53,20 +57,20 @@ public class EventPrinter {
 		this.listener = listener;
 	}
 	
-	public void waitAndPrintStackEvents(String stack, Waiter<DescribeStacksRequest> waiter) {
+	public void waitAndPrintStackEvents(String stack, Waiter<DescribeStacksRequest> waiter) throws ExecutionException {
 		Date startDate = new Date();
 		
-		final AtomicBoolean done = new AtomicBoolean(false);
+		final BasicFuture<AmazonWebServiceRequest> waitResult = new BasicFuture<>(null);
 		
 		waiter.runAsync(new WaiterParameters<>(new DescribeStacksRequest().withStackName(stack)), new WaiterHandler() {
 			@Override
 			public void onWaitSuccess(AmazonWebServiceRequest request) {
-				done.set(true);
+				waitResult.completed(request);
 			}
 			
 			@Override
 			public void onWaitFailure(Exception e) {
-				done.set(true);
+				waitResult.failed(e);
 			}
 		});
 		
@@ -77,7 +81,7 @@ public class EventPrinter {
 		
 		SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
 		
-		while (!done.get()) {
+		while (!waitResult.isDone()) {
 			try {
 				DescribeStackEventsResult result = this.client.describeStackEvents(new DescribeStackEventsRequest().withStackName(stack));
 				List<StackEvent> stackEvents = new ArrayList<>();
@@ -103,6 +107,12 @@ public class EventPrinter {
 			} catch (InterruptedException e) {
 				e.printStackTrace();
 			}
+		}
+		
+		try {
+			waitResult.get();
+		} catch (InterruptedException e) {
+			e.printStackTrace();
 		}
 	}
 	

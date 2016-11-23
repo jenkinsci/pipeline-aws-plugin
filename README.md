@@ -117,7 +117,8 @@ snsPublish(topicArn:'arn:aws:sns:us-east-1:123456789012:MyNewTopic', subject:'my
 # Versions
 
 ## 1.3
-* add support for publishing messages to SNS 
+* add support for publishing messages to SNS
+* fail step on errors during CloudFormation actions 
 
 ## 1.2
 * add proxy support using standard environment variables

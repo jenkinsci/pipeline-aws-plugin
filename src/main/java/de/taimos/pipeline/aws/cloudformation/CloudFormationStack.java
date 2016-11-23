@@ -24,6 +24,7 @@ package de.taimos.pipeline.aws.cloudformation;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ExecutionException;
 
 import com.amazonaws.services.cloudformation.AmazonCloudFormationClient;
 import com.amazonaws.services.cloudformation.model.AmazonCloudFormationException;
@@ -70,7 +71,7 @@ public class CloudFormationStack {
 		return map;
 	}
 	
-	public void create(String templateBody, Collection<Parameter> params) {
+	public void create(String templateBody, Collection<Parameter> params) throws ExecutionException {
 		CreateStackRequest req = new CreateStackRequest();
 		req.withStackName(this.stack).withCapabilities(Capability.CAPABILITY_IAM, Capability.CAPABILITY_NAMED_IAM);
 		req.withTemplateBody(templateBody).withParameters(params);
@@ -79,7 +80,7 @@ public class CloudFormationStack {
 		new EventPrinter(this.client, this.listener).waitAndPrintStackEvents(this.stack, this.client.waiters().stackCreateComplete());
 	}
 	
-	public void update(String templateBody, Collection<Parameter> params) {
+	public void update(String templateBody, Collection<Parameter> params) throws ExecutionException {
 		try {
 			UpdateStackRequest req = new UpdateStackRequest();
 			req.withStackName(this.stack).withCapabilities(Capability.CAPABILITY_IAM, Capability.CAPABILITY_NAMED_IAM);
@@ -95,7 +96,7 @@ public class CloudFormationStack {
 		}
 	}
 	
-	public void delete() {
+	public void delete() throws ExecutionException {
 		this.client.deleteStack(new DeleteStackRequest().withStackName(this.stack));
 		new EventPrinter(this.client, this.listener).waitAndPrintStackEvents(this.stack, this.client.waiters().stackDeleteComplete());
 	}
