@@ -86,11 +86,15 @@ public class CFNDeleteStep extends AbstractStepImpl {
 			new Thread("cfnDelete-" + stack) {
 				@Override
 				public void run() {
-					AmazonCloudFormationClient client = AWSClientFactory.create(AmazonCloudFormationClient.class, Execution.this.envVars);
-					CloudFormationStack cfnStack = new CloudFormationStack(client, stack, Execution.this.listener);
-					cfnStack.delete();
-					Execution.this.listener.getLogger().println("Stack deletion complete");
-					Execution.this.getContext().onSuccess(null);
+					try {
+						AmazonCloudFormationClient client = AWSClientFactory.create(AmazonCloudFormationClient.class, Execution.this.envVars);
+						CloudFormationStack cfnStack = new CloudFormationStack(client, stack, Execution.this.listener);
+						cfnStack.delete();
+						Execution.this.listener.getLogger().println("Stack deletion complete");
+						Execution.this.getContext().onSuccess(null);
+					} catch (Exception e) {
+						Execution.this.getContext().onFailure(e);
+					}
 				}
 			}.start();
 			return false;

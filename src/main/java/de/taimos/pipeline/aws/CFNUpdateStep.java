@@ -123,17 +123,21 @@ public class CFNUpdateStep extends AbstractStepImpl {
 			new Thread("cfnUpdate-" + stack) {
 				@Override
 				public void run() {
-					AmazonCloudFormationClient client = AWSClientFactory.create(AmazonCloudFormationClient.class, Execution.this.envVars);
-					CloudFormationStack cfnStack = new CloudFormationStack(client, stack, Execution.this.listener);
-					if (cfnStack.exists()) {
-						ArrayList<Parameter> parameters = new ArrayList<>(params);
-						parameters.addAll(keepParams);
-						cfnStack.update(Execution.this.readTemplate(file), parameters);
-					} else {
-						cfnStack.create(Execution.this.readTemplate(file), params);
+					try {
+						AmazonCloudFormationClient client = AWSClientFactory.create(AmazonCloudFormationClient.class, Execution.this.envVars);
+						CloudFormationStack cfnStack = new CloudFormationStack(client, stack, Execution.this.listener);
+						if (cfnStack.exists()) {
+							ArrayList<Parameter> parameters = new ArrayList<>(params);
+							parameters.addAll(keepParams);
+							cfnStack.update(Execution.this.readTemplate(file), parameters);
+						} else {
+							cfnStack.create(Execution.this.readTemplate(file), params);
+						}
+						Execution.this.listener.getLogger().println("Stack update complete");
+						Execution.this.getContext().onSuccess(cfnStack.describeOutputs());
+					} catch (Exception e) {
+						Execution.this.getContext().onFailure(e);
 					}
-					Execution.this.listener.getLogger().println("Stack update complete");
-					Execution.this.getContext().onSuccess(cfnStack.describeOutputs());
 				}
 			}.start();
 			return false;
