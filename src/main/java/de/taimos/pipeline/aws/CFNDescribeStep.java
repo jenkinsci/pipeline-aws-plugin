@@ -32,6 +32,7 @@ import org.kohsuke.stapler.DataBoundConstructor;
 
 import com.amazonaws.services.cloudformation.AmazonCloudFormationClient;
 import com.amazonaws.services.cloudformation.model.AmazonCloudFormationException;
+import com.google.common.base.Preconditions;
 
 import de.taimos.pipeline.aws.cloudformation.CloudFormationStack;
 import hudson.EnvVars;
@@ -81,6 +82,8 @@ public class CFNDescribeStep extends AbstractStepImpl {
 		@Override
 		public boolean start() throws Exception {
 			final String stack = this.step.getStack();
+			
+			Preconditions.checkArgument(stack != null && !stack.isEmpty(), "Stack must not be null or empty");
 			
 			this.listener.getLogger().format("Getting outputs of CloudFormation stack %s %n", stack);
 			

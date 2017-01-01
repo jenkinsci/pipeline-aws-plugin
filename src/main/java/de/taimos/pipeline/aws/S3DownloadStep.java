@@ -33,6 +33,7 @@ import org.kohsuke.stapler.DataBoundSetter;
 
 import com.amazonaws.services.s3.AmazonS3Client;
 import com.amazonaws.services.s3.model.S3Object;
+import com.google.common.base.Preconditions;
 
 import hudson.EnvVars;
 import hudson.Extension;
@@ -109,6 +110,9 @@ public class S3DownloadStep extends AbstractStepImpl {
 			final String bucket = this.step.getBucket();
 			final String path = this.step.getPath();
 			final boolean force = this.step.isForce();
+			
+			Preconditions.checkArgument(bucket != null && !bucket.isEmpty(), "Bucket must not be null or empty");
+			Preconditions.checkArgument(path != null && !path.isEmpty(), "Path must not be null or empty");
 			
 			new Thread("s3Download") {
 				@Override

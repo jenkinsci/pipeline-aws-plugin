@@ -34,6 +34,7 @@ import org.kohsuke.stapler.DataBoundConstructor;
 
 import com.amazonaws.services.s3.AmazonS3Client;
 import com.amazonaws.services.s3.model.ObjectMetadata;
+import com.google.common.base.Preconditions;
 
 import hudson.EnvVars;
 import hudson.Extension;
@@ -99,6 +100,9 @@ public class S3UploadStep extends AbstractStepImpl {
 			final FilePath child = this.workspace.child(this.step.getFile());
 			final String bucket = this.step.getBucket();
 			final String path = this.step.getPath();
+			
+			Preconditions.checkArgument(bucket != null && !bucket.isEmpty(), "Bucket must not be null or empty");
+			Preconditions.checkArgument(path != null && !path.isEmpty(), "Path must not be null or empty");
 			
 			new Thread("s3Upload") {
 				@Override

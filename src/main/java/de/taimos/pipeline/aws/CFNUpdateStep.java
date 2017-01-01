@@ -36,6 +36,7 @@ import org.kohsuke.stapler.DataBoundSetter;
 
 import com.amazonaws.services.cloudformation.AmazonCloudFormationClient;
 import com.amazonaws.services.cloudformation.model.Parameter;
+import com.google.common.base.Preconditions;
 
 import de.taimos.pipeline.aws.cloudformation.CloudFormationStack;
 import hudson.EnvVars;
@@ -117,6 +118,8 @@ public class CFNUpdateStep extends AbstractStepImpl {
 			final String file = this.step.getFile();
 			final Collection<Parameter> params = this.parseParams(this.step.getParams());
 			final Collection<Parameter> keepParams = this.parseKeepParams(this.step.getKeepParams());
+			
+			Preconditions.checkArgument(stack != null && !stack.isEmpty(), "Stack must not be null or empty");
 			
 			this.listener.getLogger().format("Updating/Creating CloudFormation stack %s %n", stack);
 			
