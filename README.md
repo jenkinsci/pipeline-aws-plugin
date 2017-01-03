@@ -67,7 +67,7 @@ cfInvalidate(distribution:'someDistributionId', paths:['/*'])
 Upload a file from the workspace to an S3 bucket.
 
 ```
-s3Upload(file:'file.txt', bucket:'my-bucket', path:'/path/to/target/')
+s3Upload(file:'file.txt', bucket:'my-bucket', path:'/path/to/target/file.txt')
 ```
 
 ## s3Download
@@ -84,10 +84,11 @@ s3Download(file:'file.txt', bucket:'my-bucket', path:'/path/to/source/file.txt',
 Create or update the given CloudFormation stack using the given template from the workspace.
 You can specify an optional list of parameters. 
 You can also specify a list of `keepParams` of parameters which will use the previous value on stack updates.
+Additionally you can specify a list of tags that are set on the stack and all resources created by CloudFormation.
 The step returns the outputs of the stack as map.
 
 ```
-def outputs = cfnUpdate(stack:'my-stack', file:'template.yaml', params:['InstanceType=t2.nano'], keepParams:['Version'])
+def outputs = cfnUpdate(stack:'my-stack', file:'template.yaml', params:['InstanceType=t2.nano'], keepParams:['Version'], tags:['TagName=Value'])
 ```
 
 ## cfnDelete
