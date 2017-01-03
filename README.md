@@ -117,7 +117,9 @@ snsPublish(topicArn:'arn:aws:sns:us-east-1:123456789012:MyNewTopic', subject:'my
 
 # Versions
 
-## 1.4 (master)
+## 1.5 (master)
+
+## 1.4
 * add empty checks for mandatory strings
 * use latest AWS SDK
 * add support for CloudFormation stack tags 
