@@ -36,6 +36,7 @@ import com.amazonaws.services.cloudformation.model.DescribeStacksResult;
 import com.amazonaws.services.cloudformation.model.Output;
 import com.amazonaws.services.cloudformation.model.Parameter;
 import com.amazonaws.services.cloudformation.model.Stack;
+import com.amazonaws.services.cloudformation.model.Tag;
 import com.amazonaws.services.cloudformation.model.UpdateStackRequest;
 
 import hudson.model.TaskListener;
@@ -71,20 +72,20 @@ public class CloudFormationStack {
 		return map;
 	}
 	
-	public void create(String templateBody, Collection<Parameter> params) throws ExecutionException {
+	public void create(String templateBody, Collection<Parameter> params, Collection<Tag> tags) throws ExecutionException {
 		CreateStackRequest req = new CreateStackRequest();
 		req.withStackName(this.stack).withCapabilities(Capability.CAPABILITY_IAM, Capability.CAPABILITY_NAMED_IAM);
-		req.withTemplateBody(templateBody).withParameters(params);
+		req.withTemplateBody(templateBody).withParameters(params).withTags(tags);
 		this.client.createStack(req);
 		
 		new EventPrinter(this.client, this.listener).waitAndPrintStackEvents(this.stack, this.client.waiters().stackCreateComplete());
 	}
 	
-	public void update(String templateBody, Collection<Parameter> params) throws ExecutionException {
+	public void update(String templateBody, Collection<Parameter> params, Collection<Tag> tags) throws ExecutionException {
 		try {
 			UpdateStackRequest req = new UpdateStackRequest();
 			req.withStackName(this.stack).withCapabilities(Capability.CAPABILITY_IAM, Capability.CAPABILITY_NAMED_IAM);
-			req.withTemplateBody(templateBody).withParameters(params);
+			req.withTemplateBody(templateBody).withParameters(params).withTags(tags);
 			this.client.updateStack(req);
 			
 			new EventPrinter(this.client, this.listener).waitAndPrintStackEvents(this.stack, this.client.waiters().stackUpdateComplete());

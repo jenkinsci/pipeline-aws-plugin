@@ -119,6 +119,7 @@ snsPublish(topicArn:'arn:aws:sns:us-east-1:123456789012:MyNewTopic', subject:'my
 ## 1.4 (master)
 * add empty checks for mandatory strings
 * use latest AWS SDK
+* add support for CloudFormation stack tags 
 
 ## 1.3
 * add support for publishing messages to SNS

@@ -36,6 +36,7 @@ import org.kohsuke.stapler.DataBoundSetter;
 
 import com.amazonaws.services.cloudformation.AmazonCloudFormationClient;
 import com.amazonaws.services.cloudformation.model.Parameter;
+import com.amazonaws.services.cloudformation.model.Tag;
 import com.google.common.base.Preconditions;
 
 import de.taimos.pipeline.aws.cloudformation.CloudFormationStack;
@@ -50,6 +51,7 @@ public class CFNUpdateStep extends AbstractStepImpl {
 	private final String file;
 	private String[] params;
 	private String[] keepParams;
+	private String[] tags;
 	
 	@DataBoundConstructor
 	public CFNUpdateStep(String stack, String file) {
@@ -81,6 +83,15 @@ public class CFNUpdateStep extends AbstractStepImpl {
 	@DataBoundSetter
 	public void setKeepParams(String[] keepParams) {
 		this.keepParams = keepParams.clone();
+	}
+	
+	public String[] getTags() {
+		return this.tags != null ? this.tags.clone() : null;
+	}
+	
+	@DataBoundSetter
+	public void setTags(String[] tags) {
+		this.tags = tags.clone();
 	}
 	
 	@Extension
@@ -118,6 +129,7 @@ public class CFNUpdateStep extends AbstractStepImpl {
 			final String file = this.step.getFile();
 			final Collection<Parameter> params = this.parseParams(this.step.getParams());
 			final Collection<Parameter> keepParams = this.parseKeepParams(this.step.getKeepParams());
+			final Collection<Tag> tags = this.parseTags(this.step.getTags());
 			
 			Preconditions.checkArgument(stack != null && !stack.isEmpty(), "Stack must not be null or empty");
 			
@@ -132,9 +144,9 @@ public class CFNUpdateStep extends AbstractStepImpl {
 						if (cfnStack.exists()) {
 							ArrayList<Parameter> parameters = new ArrayList<>(params);
 							parameters.addAll(keepParams);
-							cfnStack.update(Execution.this.readTemplate(file), parameters);
+							cfnStack.update(Execution.this.readTemplate(file), parameters, tags);
 						} else {
-							cfnStack.create(Execution.this.readTemplate(file), params);
+							cfnStack.create(Execution.this.readTemplate(file), params, tags);
 						}
 						Execution.this.listener.getLogger().println("Stack update complete");
 						Execution.this.getContext().onSuccess(cfnStack.describeOutputs());
@@ -153,6 +165,23 @@ public class CFNUpdateStep extends AbstractStepImpl {
 			} catch (Exception e) {
 				throw new RuntimeException(e);
 			}
+		}
+		
+		private Collection<Tag> parseTags(String[] tags) {
+			Collection<Tag> tagList = new ArrayList<>();
+			if (tags == null) {
+				return tagList;
+			}
+			for (String tag : tags) {
+				int i = tag.indexOf("=");
+				if (i < 0) {
+					throw new RuntimeException("Missing = in tag " + tag);
+				}
+				String key = tag.substring(0, i);
+				String value = tag.substring(i + 1);
+				tagList.add(new Tag().withKey(key).withValue(value));
+			}
+			return tagList;
 		}
 		
 		private Collection<Parameter> parseParams(String[] params) {
