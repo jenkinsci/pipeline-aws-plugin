@@ -107,6 +107,14 @@ The step returns the outputs of the stack as map.
 def outputs = cfnDescribe(stack:'my-stack')
 ```
 
+## cfnExports
+
+The step returns the global CloudFormation exports as map.
+
+```
+def globalExports = cfnExports()
+```
+
 ## snsPublish
 
 Publishes a message to SNS.
@@ -118,6 +126,7 @@ snsPublish(topicArn:'arn:aws:sns:us-east-1:123456789012:MyNewTopic', subject:'my
 # Versions
 
 ## 1.5 (master)
+* add cfnExports step
 
 ## 1.4
 * add empty checks for mandatory strings
