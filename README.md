@@ -79,6 +79,14 @@ Set optional parameter `force` to `true` to overwrite existing file in workspace
 s3Download(file:'file.txt', bucket:'my-bucket', path:'/path/to/source/file.txt', force:true)
 ```
 
+## cfnValidate
+
+Validates the given CloudFormation template.
+
+```
+cfnDelete(file:'template.yaml')
+```
+
 ## cfnUpdate
 
 Create or update the given CloudFormation stack using the given template from the workspace.
@@ -127,6 +135,7 @@ snsPublish(topicArn:'arn:aws:sns:us-east-1:123456789012:MyNewTopic', subject:'my
 
 ## 1.5 (master)
 * add cfnExports step
+* add cfnValidate step
 
 ## 1.4
 * add empty checks for mandatory strings
