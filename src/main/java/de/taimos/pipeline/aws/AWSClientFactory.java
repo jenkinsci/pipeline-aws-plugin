@@ -43,7 +43,7 @@ public class AWSClientFactory {
 	static final String AWS_DEFAULT_REGION = "AWS_DEFAULT_REGION";
 	static final String AWS_REGION = "AWS_REGION";
 	
-	static <T extends AmazonWebServiceClient> T create(Class<T> clazz, EnvVars vars) {
+	public static <T extends AmazonWebServiceClient> T create(Class<T> clazz, EnvVars vars) {
 		Region region = AWSClientFactory.getRegion(vars);
 		final AWSCredentialsProvider provider = AWSClientFactory.getCredentials(vars);
 		ClientConfiguration config = AWSClientFactory.getClientConfiguration(vars);

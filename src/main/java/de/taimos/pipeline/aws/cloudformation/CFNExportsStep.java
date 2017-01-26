@@ -19,7 +19,7 @@
  * #L%
  */
 
-package de.taimos.pipeline.aws;
+package de.taimos.pipeline.aws.cloudformation;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -39,6 +39,7 @@ import com.amazonaws.services.cloudformation.model.Export;
 import com.amazonaws.services.cloudformation.model.ListExportsRequest;
 import com.amazonaws.services.cloudformation.model.ListExportsResult;
 
+import de.taimos.pipeline.aws.AWSClientFactory;
 import hudson.EnvVars;
 import hudson.Extension;
 import hudson.model.TaskListener;

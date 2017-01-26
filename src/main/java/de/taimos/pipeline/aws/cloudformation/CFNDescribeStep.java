@@ -3,7 +3,7 @@
  * #%L
  * Pipeline: AWS Steps
  * %%
- * Copyright (C) 2016 Taimos GmbH
+ * Copyright (C) 2017 Taimos GmbH
  * %%
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,7 +19,7 @@
  * #L%
  */
 
-package de.taimos.pipeline.aws;
+package de.taimos.pipeline.aws.cloudformation;
 
 import javax.annotation.Nonnull;
 import javax.inject.Inject;
@@ -31,19 +31,20 @@ import org.jenkinsci.plugins.workflow.steps.StepContextParameter;
 import org.kohsuke.stapler.DataBoundConstructor;
 
 import com.amazonaws.services.cloudformation.AmazonCloudFormationClient;
+import com.amazonaws.services.cloudformation.model.AmazonCloudFormationException;
 import com.google.common.base.Preconditions;
 
-import de.taimos.pipeline.aws.cloudformation.CloudFormationStack;
+import de.taimos.pipeline.aws.AWSClientFactory;
 import hudson.EnvVars;
 import hudson.Extension;
 import hudson.model.TaskListener;
 
-public class CFNDeleteStep extends AbstractStepImpl {
+public class CFNDescribeStep extends AbstractStepImpl {
 	
 	private final String stack;
 	
 	@DataBoundConstructor
-	public CFNDeleteStep(String stack) {
+	public CFNDescribeStep(String stack) {
 		this.stack = stack;
 	}
 	
@@ -60,19 +61,19 @@ public class CFNDeleteStep extends AbstractStepImpl {
 		
 		@Override
 		public String getFunctionName() {
-			return "cfnDelete";
+			return "cfnDescribe";
 		}
 		
 		@Override
 		public String getDisplayName() {
-			return "Delete CloudFormation stack";
+			return "Describe outputs of CloudFormation stack";
 		}
 	}
 	
 	public static class Execution extends AbstractStepExecutionImpl {
 		
 		@Inject
-		private transient CFNDeleteStep step;
+		private transient CFNDescribeStep step;
 		@StepContextParameter
 		private transient EnvVars envVars;
 		@StepContextParameter
@@ -84,18 +85,16 @@ public class CFNDeleteStep extends AbstractStepImpl {
 			
 			Preconditions.checkArgument(stack != null && !stack.isEmpty(), "Stack must not be null or empty");
 			
-			this.listener.getLogger().format("Removing CloudFormation stack %s %n", stack);
+			this.listener.getLogger().format("Getting outputs of CloudFormation stack %s %n", stack);
 			
-			new Thread("cfnDelete-" + stack) {
+			new Thread("cfnDescribe-" + stack) {
 				@Override
 				public void run() {
+					AmazonCloudFormationClient client = AWSClientFactory.create(AmazonCloudFormationClient.class, Execution.this.envVars);
+					CloudFormationStack cfnStack = new CloudFormationStack(client, stack, Execution.this.listener);
 					try {
-						AmazonCloudFormationClient client = AWSClientFactory.create(AmazonCloudFormationClient.class, Execution.this.envVars);
-						CloudFormationStack cfnStack = new CloudFormationStack(client, stack, Execution.this.listener);
-						cfnStack.delete();
-						Execution.this.listener.getLogger().println("Stack deletion complete");
-						Execution.this.getContext().onSuccess(null);
-					} catch (Exception e) {
+						Execution.this.getContext().onSuccess(cfnStack.describeOutputs());
+					} catch (AmazonCloudFormationException e) {
 						Execution.this.getContext().onFailure(e);
 					}
 				}

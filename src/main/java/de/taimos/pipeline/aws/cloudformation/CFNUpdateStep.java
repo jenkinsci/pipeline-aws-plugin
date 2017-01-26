@@ -3,7 +3,7 @@
  * #%L
  * Pipeline: AWS Steps
  * %%
- * Copyright (C) 2016 Taimos GmbH
+ * Copyright (C) 2017 Taimos GmbH
  * %%
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,7 +19,7 @@
  * #L%
  */
 
-package de.taimos.pipeline.aws;
+package de.taimos.pipeline.aws.cloudformation;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -39,7 +39,7 @@ import com.amazonaws.services.cloudformation.model.Parameter;
 import com.amazonaws.services.cloudformation.model.Tag;
 import com.google.common.base.Preconditions;
 
-import de.taimos.pipeline.aws.cloudformation.CloudFormationStack;
+import de.taimos.pipeline.aws.AWSClientFactory;
 import hudson.EnvVars;
 import hudson.Extension;
 import hudson.FilePath;
