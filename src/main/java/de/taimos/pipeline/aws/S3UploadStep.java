@@ -22,6 +22,7 @@
 package de.taimos.pipeline.aws;
 
 import java.io.FileNotFoundException;
+import java.io.File;
 
 import javax.annotation.Nonnull;
 import javax.inject.Inject;
