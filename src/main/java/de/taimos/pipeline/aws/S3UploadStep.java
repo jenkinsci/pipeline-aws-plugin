@@ -22,6 +22,7 @@
 package de.taimos.pipeline.aws;
 
 import java.io.FileNotFoundException;
+import java.io.File;
 
 import javax.annotation.Nonnull;
 import javax.inject.Inject;
@@ -33,7 +34,7 @@ import org.jenkinsci.plugins.workflow.steps.StepContextParameter;
 import org.kohsuke.stapler.DataBoundConstructor;
 
 import com.amazonaws.services.s3.AmazonS3Client;
-import com.amazonaws.services.s3.model.ObjectMetadata;
+import com.amazonaws.services.s3.model.PutObjectRequest;
 import com.google.common.base.Preconditions;
 
 import hudson.EnvVars;
@@ -116,9 +117,9 @@ public class S3UploadStep extends AbstractStepImpl {
 							Execution.this.getContext().onFailure(new FileNotFoundException(child.toURI().toString()));
 							return;
 						}
-						ObjectMetadata metadata = new ObjectMetadata();
-						metadata.setContentLength(child.length());
-						s3Client.putObject(bucket, path, child.read(), metadata);
+						
+						s3Client.putObject(new PutObjectRequest(bucket, path, new File(child.toURI())));
+						
 						Execution.this.listener.getLogger().println("Upload complete");
 						Execution.this.getContext().onSuccess(null);
 					} catch (Exception e) {
