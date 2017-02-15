@@ -118,7 +118,7 @@ public class S3UploadStep extends AbstractStepImpl {
 							return;
 						}
 						
-						s3Client.putObject(new PutObjectRequest(bucket, keyName, new File(child.toURI())));
+						s3Client.putObject(new PutObjectRequest(bucket, path, new File(child.toURI())));
 						
 						Execution.this.listener.getLogger().println("Upload complete");
 						Execution.this.getContext().onSuccess(null);
