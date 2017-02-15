@@ -116,9 +116,9 @@ public class S3UploadStep extends AbstractStepImpl {
 							Execution.this.getContext().onFailure(new FileNotFoundException(child.toURI().toString()));
 							return;
 						}
-						ObjectMetadata metadata = new ObjectMetadata();
-						metadata.setContentLength(child.length());
-						s3Client.putObject(bucket, path, child.read(), metadata);
+						
+						s3Client.putObject(new PutObjectRequest(bucket, keyName, child.toFile()));
+						
 						Execution.this.listener.getLogger().println("Upload complete");
 						Execution.this.getContext().onSuccess(null);
 					} catch (Exception e) {
