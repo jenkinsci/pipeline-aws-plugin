@@ -136,6 +136,7 @@ snsPublish(topicArn:'arn:aws:sns:us-east-1:123456789012:MyNewTopic', subject:'my
 ## 1.5 (master)
 * add cfnExports step
 * add cfnValidate step
+* change how s3Upload works to use the aws client to guess the correct content type for the file.
 
 ## 1.4
 * add empty checks for mandatory strings
