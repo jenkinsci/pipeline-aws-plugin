@@ -21,17 +21,24 @@
 
 package de.taimos.pipeline.aws;
 
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+
 import javax.annotation.Nonnull;
 import javax.inject.Inject;
 
+import org.apache.commons.io.IOUtils;
 import org.jenkinsci.plugins.workflow.steps.AbstractStepDescriptorImpl;
 import org.jenkinsci.plugins.workflow.steps.AbstractStepExecutionImpl;
 import org.jenkinsci.plugins.workflow.steps.AbstractStepImpl;
 import org.jenkinsci.plugins.workflow.steps.StepContextParameter;
+import org.jenkinsci.remoting.RoleChecker;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
 
 import com.amazonaws.services.s3.AmazonS3Client;
+import com.amazonaws.services.s3.model.GetObjectRequest;
 import com.amazonaws.services.s3.model.S3Object;
 import com.google.common.base.Preconditions;
 
@@ -39,6 +46,7 @@ import hudson.EnvVars;
 import hudson.Extension;
 import hudson.FilePath;
 import hudson.model.TaskListener;
+import hudson.remoting.VirtualChannel;
 
 public class S3DownloadStep extends AbstractStepImpl {
 	
@@ -118,8 +126,6 @@ public class S3DownloadStep extends AbstractStepImpl {
 				@Override
 				public void run() {
 					try {
-						AmazonS3Client s3Client = AWSClientFactory.create(AmazonS3Client.class, Execution.this.envVars);
-						
 						Execution.this.listener.getLogger().format("Downloading file s3://%s/%s to %s %n ", bucket, path, target.toURI());
 						if (target.exists()) {
 							if (force) {
@@ -130,8 +136,7 @@ public class S3DownloadStep extends AbstractStepImpl {
 								return;
 							}
 						}
-						S3Object s3Object = s3Client.getObject(bucket, path);
-						target.copyFrom(s3Object.getObjectContent());
+						target.act(new RemoteDownloader(Execution.this.envVars, bucket, path));
 						Execution.this.listener.getLogger().println("Download complete");
 						Execution.this.getContext().onSuccess(null);
 					} catch (Exception e) {
@@ -151,4 +156,29 @@ public class S3DownloadStep extends AbstractStepImpl {
 		
 	}
 	
+	private static class RemoteDownloader implements FilePath.FileCallable<S3Object> {
+		
+		private final EnvVars envVars;
+		private final String bucket;
+		private final String path;
+		
+		RemoteDownloader(EnvVars envVars, String bucket, String path) {
+			this.envVars = envVars;
+			this.bucket = bucket;
+			this.path = path;
+		}
+		
+		@Override
+		public S3Object invoke(File localFile, VirtualChannel channel) throws IOException, InterruptedException {
+			AmazonS3Client s3Client = AWSClientFactory.create(AmazonS3Client.class, envVars);
+			S3Object object = s3Client.getObject(new GetObjectRequest(bucket, path));
+			IOUtils.copy(object.getObjectContent(), new FileOutputStream(localFile));
+			return object;
+		}
+		
+		@Override
+		public void checkRoles(RoleChecker roleChecker) throws SecurityException {
+			
+		}
+	}
 }

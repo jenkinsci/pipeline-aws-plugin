@@ -21,8 +21,9 @@
 
 package de.taimos.pipeline.aws;
 
-import java.io.FileNotFoundException;
 import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.IOException;
 
 import javax.annotation.Nonnull;
 import javax.inject.Inject;
@@ -31,16 +32,19 @@ import org.jenkinsci.plugins.workflow.steps.AbstractStepDescriptorImpl;
 import org.jenkinsci.plugins.workflow.steps.AbstractStepExecutionImpl;
 import org.jenkinsci.plugins.workflow.steps.AbstractStepImpl;
 import org.jenkinsci.plugins.workflow.steps.StepContextParameter;
+import org.jenkinsci.remoting.RoleChecker;
 import org.kohsuke.stapler.DataBoundConstructor;
 
 import com.amazonaws.services.s3.AmazonS3Client;
 import com.amazonaws.services.s3.model.PutObjectRequest;
+import com.amazonaws.services.s3.model.PutObjectResult;
 import com.google.common.base.Preconditions;
 
 import hudson.EnvVars;
 import hudson.Extension;
 import hudson.FilePath;
 import hudson.model.TaskListener;
+import hudson.remoting.VirtualChannel;
 
 public class S3UploadStep extends AbstractStepImpl {
 	
@@ -109,8 +113,6 @@ public class S3UploadStep extends AbstractStepImpl {
 				@Override
 				public void run() {
 					try {
-						AmazonS3Client s3Client = AWSClientFactory.create(AmazonS3Client.class, Execution.this.envVars);
-						
 						Execution.this.listener.getLogger().format("Uploading file %s to s3://%s/%s %n", child.toURI(), bucket, path);
 						if (!child.exists()) {
 							Execution.this.listener.getLogger().println("Upload failed due to missing source file");
@@ -118,7 +120,7 @@ public class S3UploadStep extends AbstractStepImpl {
 							return;
 						}
 						
-						s3Client.putObject(new PutObjectRequest(bucket, path, new File(child.toURI())));
+						child.act(new RemoteUploader(Execution.this.envVars, bucket, path));
 						
 						Execution.this.listener.getLogger().println("Upload complete");
 						Execution.this.getContext().onSuccess(null);
@@ -137,6 +139,30 @@ public class S3UploadStep extends AbstractStepImpl {
 		
 		private static final long serialVersionUID = 1L;
 		
+	}
+	
+	private static class RemoteUploader implements FilePath.FileCallable<PutObjectResult> {
+		
+		private final EnvVars envVars;
+		private final String bucket;
+		private final String path;
+		
+		RemoteUploader(EnvVars envVars, String bucket, String path) {
+			this.envVars = envVars;
+			this.bucket = bucket;
+			this.path = path;
+		}
+		
+		@Override
+		public PutObjectResult invoke(File localFile, VirtualChannel channel) throws IOException, InterruptedException {
+			AmazonS3Client s3Client = AWSClientFactory.create(AmazonS3Client.class, envVars);
+			return s3Client.putObject(new PutObjectRequest(bucket, path, localFile));
+		}
+		
+		@Override
+		public void checkRoles(RoleChecker roleChecker) throws SecurityException {
+			
+		}
 	}
 	
 }

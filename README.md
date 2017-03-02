@@ -134,6 +134,7 @@ snsPublish(topicArn:'arn:aws:sns:us-east-1:123456789012:MyNewTopic', subject:'my
 # Versions
 
 ## 1.6 (master)
+* fix #JENKINS-42415 causing S3 errors on slaves
 
 ## 1.5
 * add cfnExports step
