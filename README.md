@@ -84,7 +84,7 @@ s3Download(file:'file.txt', bucket:'my-bucket', path:'/path/to/source/file.txt',
 Validates the given CloudFormation template.
 
 ```
-cfnDelete(file:'template.yaml')
+cfnValidate(file:'template.yaml')
 ```
 
 ## cfnUpdate
