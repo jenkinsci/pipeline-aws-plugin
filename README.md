@@ -92,8 +92,12 @@ cfnValidate(file:'template.yaml')
 Create or update the given CloudFormation stack using the given template from the workspace.
 You can specify an optional list of parameters. 
 You can also specify a list of `keepParams` of parameters which will use the previous value on stack updates.
+
+If you have many parameters you can specify a `paramsFile` containing the parameters. The format is either a standard 
+JSON file like with the cli or a YAML file for the cfn-params command line utility. 
+
 Additionally you can specify a list of tags that are set on the stack and all resources created by CloudFormation.
-The step returns the outputs of the stack as map.
+The step returns the outputs of the stack as a map.
 
 ```
 def outputs = cfnUpdate(stack:'my-stack', file:'template.yaml', params:['InstanceType=t2.nano'], keepParams:['Version'], tags:['TagName=Value'])
@@ -135,6 +139,7 @@ snsPublish(topicArn:'arn:aws:sns:us-east-1:123456789012:MyNewTopic', subject:'my
 
 ## 1.6 (master)
 * fix #JENKINS-42415 causing S3 errors on slaves
+* add paramsFile support for cfnUpdate
 
 ## 1.5
 * add cfnExports step
