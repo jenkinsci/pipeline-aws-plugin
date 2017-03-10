@@ -40,6 +40,9 @@ import com.amazonaws.services.cloudformation.model.Tag;
 import com.google.common.base.Preconditions;
 
 import de.taimos.pipeline.aws.AWSClientFactory;
+import de.taimos.pipeline.aws.cloudformation.parser.JSONParameterFileParser;
+import de.taimos.pipeline.aws.cloudformation.parser.ParameterFileParser;
+import de.taimos.pipeline.aws.cloudformation.parser.YAMLParameterFileParser;
 import hudson.EnvVars;
 import hudson.Extension;
 import hudson.FilePath;
@@ -52,6 +55,7 @@ public class CFNUpdateStep extends AbstractStepImpl {
 	private String[] params;
 	private String[] keepParams;
 	private String[] tags;
+	private String paramsFile;
 	
 	@DataBoundConstructor
 	public CFNUpdateStep(String stack, String file) {
@@ -94,6 +98,15 @@ public class CFNUpdateStep extends AbstractStepImpl {
 		this.tags = tags.clone();
 	}
 	
+	public String getParamsFile() {
+		return this.paramsFile;
+	}
+	
+	@DataBoundSetter
+	public void setParamsFile(String paramsFile) {
+		this.paramsFile = paramsFile;
+	}
+	
 	@Extension
 	public static class DescriptorImpl extends AbstractStepDescriptorImpl {
 		
@@ -127,7 +140,10 @@ public class CFNUpdateStep extends AbstractStepImpl {
 		public boolean start() throws Exception {
 			final String stack = this.step.getStack();
 			final String file = this.step.getFile();
-			final Collection<Parameter> params = this.parseParams(this.step.getParams());
+			
+			final Collection<Parameter> params= this.parseParamsFile(this.step.getParamsFile());
+			params.addAll(this.parseParams(this.step.getParams()));
+			
 			final Collection<Parameter> keepParams = this.parseKeepParams(this.step.getKeepParams());
 			final Collection<Tag> tags = this.parseTags(this.step.getTags());
 			
@@ -156,6 +172,26 @@ public class CFNUpdateStep extends AbstractStepImpl {
 				}
 			}.start();
 			return false;
+		}
+		
+		private Collection<Parameter> parseParamsFile(String paramsFile) {
+			try {
+				if (paramsFile == null || paramsFile.isEmpty()) {
+					return new ArrayList<>();
+				}
+				final ParameterFileParser parser;
+				if (paramsFile.endsWith(".json")) {
+					parser = new JSONParameterFileParser();
+				} else
+				if (paramsFile.endsWith(".yaml")) {
+					parser = new YAMLParameterFileParser();
+				} else {
+					throw new RuntimeException("Invalid file extension for parameter file (supports json/yaml)");
+				}
+				return parser.parseParams(this.workspace.child(paramsFile).read());
+			} catch (Exception e) {
+				throw new RuntimeException(e);
+			}
 		}
 		
 		private String readTemplate(String file) {
