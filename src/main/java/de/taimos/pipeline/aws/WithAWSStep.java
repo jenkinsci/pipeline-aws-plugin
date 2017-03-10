@@ -22,6 +22,8 @@
 package de.taimos.pipeline.aws;
 
 import java.io.IOException;
+import java.util.Collections;
+import java.util.List;
 
 import javax.annotation.Nonnull;
 import javax.inject.Inject;
@@ -41,10 +43,17 @@ import com.amazonaws.services.securitytoken.model.AssumeRoleResult;
 import com.amazonaws.services.securitytoken.model.Credentials;
 import com.amazonaws.services.securitytoken.model.GetCallerIdentityRequest;
 import com.amazonaws.util.StringUtils;
+import com.cloudbees.plugins.credentials.CredentialsMatcher;
+import com.cloudbees.plugins.credentials.CredentialsMatchers;
+import com.cloudbees.plugins.credentials.CredentialsProvider;
+import com.cloudbees.plugins.credentials.common.UsernamePasswordCredentials;
+import com.cloudbees.plugins.credentials.domains.DomainRequirement;
 
 import hudson.EnvVars;
 import hudson.Extension;
 import hudson.model.TaskListener;
+import hudson.security.ACL;
+import jenkins.model.Jenkins;
 
 public class WithAWSStep extends AbstractStepImpl {
 	
@@ -52,6 +61,7 @@ public class WithAWSStep extends AbstractStepImpl {
 	private String roleAccount;
 	private String region;
 	private String profile;
+	private String credentials;
 	
 	@DataBoundConstructor
 	public WithAWSStep() {
@@ -94,6 +104,15 @@ public class WithAWSStep extends AbstractStepImpl {
 		this.profile = profile;
 	}
 	
+	public String getCredentials() {
+		return this.credentials;
+	}
+	
+	@DataBoundSetter
+	public void setCredentials(String credentials) {
+		this.credentials = credentials;
+	}
+	
 	@Extension
 	public static class DescriptorImpl extends AbstractStepDescriptorImpl {
 		
@@ -127,6 +146,7 @@ public class WithAWSStep extends AbstractStepImpl {
 		@Override
 		public boolean start() throws Exception {
 			final EnvVars awsEnv = new EnvVars();
+			this.withCredentials(awsEnv);
 			this.withProfile(awsEnv);
 			this.withRegion(awsEnv);
 			this.withRole(awsEnv);
@@ -142,6 +162,20 @@ public class WithAWSStep extends AbstractStepImpl {
 					.withCallback(BodyExecutionCallback.wrap(this.getContext()))
 					.start();
 			return false;
+		}
+		
+		private void withCredentials(@Nonnull EnvVars envVars) {
+			if (!StringUtils.isNullOrEmpty(this.step.getCredentials())) {
+				List<UsernamePasswordCredentials> credentials = CredentialsProvider.lookupCredentials(UsernamePasswordCredentials.class, Jenkins.getInstance(), ACL.SYSTEM, Collections.<DomainRequirement>emptyList());
+				CredentialsMatcher matcher = CredentialsMatchers.withId(this.step.getCredentials());
+				UsernamePasswordCredentials usernamePasswordCredentials = CredentialsMatchers.firstOrNull(credentials, matcher);
+				if (usernamePasswordCredentials != null) {
+					envVars.override(AWSClientFactory.AWS_ACCESS_KEY_ID, usernamePasswordCredentials.getUsername());
+					envVars.override(AWSClientFactory.AWS_SECRET_ACCESS_KEY, usernamePasswordCredentials.getPassword().getPlainText());
+				} else {
+					throw new RuntimeException("Cannot find Jenkins credentials with name " + this.step.getCredentials());
+				}
+			}
 		}
 		
 		private void withRole(@Nonnull EnvVars envVars) {

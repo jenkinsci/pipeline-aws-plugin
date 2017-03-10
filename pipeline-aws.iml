@@ -132,6 +132,11 @@
     <orderEntry type="library" name="Maven: com.fasterxml.jackson.core:jackson-databind:2.5.4" level="project" />
     <orderEntry type="library" name="Maven: com.fasterxml.jackson.core:jackson-annotations:2.5.0" level="project" />
     <orderEntry type="library" name="Maven: com.fasterxml.jackson.core:jackson-core:2.5.4" level="project" />
+    <orderEntry type="library" name="Maven: org.jenkins-ci.plugins:credentials:1.25" level="project" />
+    <orderEntry type="library" name="Maven: com.github.stephenc.findbugs:findbugs-annotations:1.3.9-1" level="project" />
+    <orderEntry type="library" name="Maven: com.google.code.findbugs:jsr305:1.3.9" level="project" />
+    <orderEntry type="library" name="Maven: org.jenkins-ci.plugins.icon-shim:icon-shim:2.0.2" level="project" />
+    <orderEntry type="library" name="Maven: org.jenkins-ci.plugins:plain-credentials:1.1" level="project" />
     <orderEntry type="library" name="Maven: org.yaml:snakeyaml:1.18" level="project" />
     <orderEntry type="library" scope="TEST" name="Maven: org.jenkins-ci.plugins.workflow:workflow-job:2.8" level="project" />
     <orderEntry type="library" scope="TEST" name="Maven: org.jenkins-ci.plugins.workflow:workflow-basic-steps:2.2" level="project" />
@@ -142,7 +147,7 @@
     <orderEntry type="library" scope="TEST" name="Maven: javax.servlet:javax.servlet-api:3.1.0" level="project" />
     <orderEntry type="library" scope="PROVIDED" name="Maven: javax.servlet:servlet-api:2.4" level="project" />
     <orderEntry type="library" scope="PROVIDED" name="Maven: org.jenkins-ci.main:jenkins-core:2.7.4" level="project" />
-    <orderEntry type="library" scope="PROVIDED" name="Maven: org.jenkins-ci.plugins.icon-shim:icon-set:1.0.5" level="project" />
+    <orderEntry type="library" name="Maven: org.jenkins-ci.plugins.icon-shim:icon-set:1.0.5" level="project" />
     <orderEntry type="library" scope="PROVIDED" name="Maven: org.jenkins-ci.main:remoting:2.60" level="project" />
     <orderEntry type="library" scope="PROVIDED" name="Maven: org.jenkins-ci:constant-pool-scanner:1.2" level="project" />
     <orderEntry type="library" scope="PROVIDED" name="Maven: org.jenkins-ci.main:cli:2.7.4" level="project" />
@@ -250,7 +255,6 @@
     <orderEntry type="library" scope="PROVIDED" name="Maven: commons-fileupload:commons-fileupload:1.3.1-jenkins-1" level="project" />
     <orderEntry type="library" scope="PROVIDED" name="Maven: org.mindrot:jbcrypt:0.3m" level="project" />
     <orderEntry type="library" name="Maven: com.google.guava:guava:11.0.1" level="project" />
-    <orderEntry type="library" name="Maven: com.google.code.findbugs:jsr305:1.3.9" level="project" />
     <orderEntry type="library" scope="PROVIDED" name="Maven: com.jcraft:jzlib:1.1.3-kohsuke-1" level="project" />
     <orderEntry type="library" scope="TEST" name="Maven: org.jenkins-ci.main:jenkins-war:war-for-test:2.7.4" level="project" />
     <orderEntry type="library" scope="TEST" name="Maven: org.jenkins-ci.modules:instance-identity:1.5.1" level="project" />
@@ -297,7 +301,6 @@
     <orderEntry type="library" scope="TEST" name="Maven: org.eclipse.jetty.websocket:websocket-api:9.2.12.v20150709" level="project" />
     <orderEntry type="library" scope="TEST" name="Maven: org.jvnet.hudson:embedded-rhino-debugger:1.2" level="project" />
     <orderEntry type="library" scope="TEST" name="Maven: org.netbeans.modules:org-netbeans-insane:RELEASE72" level="project" />
-    <orderEntry type="library" scope="TEST" name="Maven: com.github.stephenc.findbugs:findbugs-annotations:1.3.9-1" level="project" />
     <orderEntry type="library" scope="TEST" name="Maven: org.jenkins-ci.lib:lib-jenkins-maven-embedder:3.11" level="project" />
     <orderEntry type="library" scope="TEST" name="Maven: org.apache.maven:maven-core:3.1.0" level="project" />
     <orderEntry type="library" scope="TEST" name="Maven: org.apache.maven:maven-model:3.1.0" level="project" />
