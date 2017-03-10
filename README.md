@@ -145,7 +145,9 @@ snsPublish(topicArn:'arn:aws:sns:us-east-1:123456789012:MyNewTopic', subject:'my
 
 # Versions
 
-## 1.6 (master)
+## 1.7 (master)
+
+## 1.6
 * fix #JENKINS-42415 causing S3 errors on slaves
 * add paramsFile support for cfnUpdate
 * allow the use of Jenkins credentials for AWS access #JENKINS-41261
