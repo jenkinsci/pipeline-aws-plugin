@@ -72,19 +72,23 @@ cfInvalidate(distribution:'someDistributionId', paths:['/*'])
 
 ## s3Upload
 
-Upload a file from the workspace to an S3 bucket.
+Upload a file/folder from the workspace to an S3 bucket.
+If the `file` parameter denotes a directory, the complete directory including all subfolders will be uploaded.
 
 ```
 s3Upload(file:'file.txt', bucket:'my-bucket', path:'/path/to/target/file.txt')
+s3Upload(file:'someFolder', bucket:'my-bucket', path:'/path/to/targetFolder/')
 ```
 
 ## s3Download
 
-Download a file from S3 to the local workspace. 
+Download a file/folder from S3 to the local workspace. 
 Set optional parameter `force` to `true` to overwrite existing file in workspace.
+If the `path` end with a `/` the complete virtual directory will be downloaded.
 
 ```
 s3Download(file:'file.txt', bucket:'my-bucket', path:'/path/to/source/file.txt', force:true)
+s3Download(file:'targetFolder/', bucket:'my-bucket', path:'/path/to/sourceFolder/', force:true)
 ```
 
 ## cfnValidate
@@ -147,6 +151,7 @@ snsPublish(topicArn:'arn:aws:sns:us-east-1:123456789012:MyNewTopic', subject:'my
 
 ## 1.7 (master)
 * fix environment for withAWS step
+* add support for recursive S3 upload/download
 
 ## 1.6
 * fix #JENKINS-42415 causing S3 errors on slaves

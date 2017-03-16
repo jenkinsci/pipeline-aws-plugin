@@ -22,13 +22,11 @@
 package de.taimos.pipeline.aws;
 
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
 
 import javax.annotation.Nonnull;
 import javax.inject.Inject;
 
-import org.apache.commons.io.IOUtils;
 import org.jenkinsci.plugins.workflow.steps.AbstractStepDescriptorImpl;
 import org.jenkinsci.plugins.workflow.steps.AbstractStepExecutionImpl;
 import org.jenkinsci.plugins.workflow.steps.AbstractStepImpl;
@@ -37,9 +35,13 @@ import org.jenkinsci.remoting.RoleChecker;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
 
+import com.amazonaws.event.ProgressEvent;
+import com.amazonaws.event.ProgressEventType;
+import com.amazonaws.event.ProgressListener;
 import com.amazonaws.services.s3.AmazonS3Client;
-import com.amazonaws.services.s3.model.GetObjectRequest;
-import com.amazonaws.services.s3.model.S3Object;
+import com.amazonaws.services.s3.transfer.Download;
+import com.amazonaws.services.s3.transfer.MultipleFileDownload;
+import com.amazonaws.services.s3.transfer.TransferManager;
 import com.google.common.base.Preconditions;
 
 import hudson.EnvVars;
@@ -126,17 +128,21 @@ public class S3DownloadStep extends AbstractStepImpl {
 				@Override
 				public void run() {
 					try {
-						Execution.this.listener.getLogger().format("Downloading file s3://%s/%s to %s %n ", bucket, path, target.toURI());
+						Execution.this.listener.getLogger().format("Downloading s3://%s/%s to %s %n ", bucket, path, target.toURI());
 						if (target.exists()) {
 							if (force) {
-								target.delete();
+								if (target.isDirectory()) {
+									target.deleteRecursive();
+								} else {
+									target.delete();
+								}
 							} else {
 								Execution.this.listener.getLogger().println("Download failed due to existing target file; set force=true to overwrite target file");
 								Execution.this.getContext().onFailure(new RuntimeException("Target exists: " + target.toURI().toString()));
 								return;
 							}
 						}
-						target.act(new RemoteDownloader(Execution.this.envVars, bucket, path));
+						target.act(new RemoteDownloader(Execution.this.envVars, Execution.this.listener, bucket, path));
 						Execution.this.listener.getLogger().println("Download complete");
 						Execution.this.getContext().onSuccess(null);
 					} catch (Exception e) {
@@ -156,24 +162,50 @@ public class S3DownloadStep extends AbstractStepImpl {
 		
 	}
 	
-	private static class RemoteDownloader implements FilePath.FileCallable<S3Object> {
+	private static class RemoteDownloader implements FilePath.FileCallable<Void> {
 		
 		private final EnvVars envVars;
+		private final TaskListener taskListener;
 		private final String bucket;
 		private final String path;
 		
-		RemoteDownloader(EnvVars envVars, String bucket, String path) {
+		RemoteDownloader(EnvVars envVars, TaskListener taskListener, String bucket, String path) {
 			this.envVars = envVars;
+			this.taskListener = taskListener;
 			this.bucket = bucket;
 			this.path = path;
 		}
 		
 		@Override
-		public S3Object invoke(File localFile, VirtualChannel channel) throws IOException, InterruptedException {
-			AmazonS3Client s3Client = AWSClientFactory.create(AmazonS3Client.class, envVars);
-			S3Object object = s3Client.getObject(new GetObjectRequest(bucket, path));
-			IOUtils.copy(object.getObjectContent(), new FileOutputStream(localFile));
-			return object;
+		public Void invoke(File localFile, VirtualChannel channel) throws IOException, InterruptedException {
+			AmazonS3Client s3Client = AWSClientFactory.create(AmazonS3Client.class, this.envVars);
+			TransferManager mgr = new TransferManager(s3Client);
+			
+			if (this.path.endsWith("/")) {
+				final MultipleFileDownload fileDownload = mgr.downloadDirectory(this.bucket, this.path, localFile);
+				fileDownload.addProgressListener(new ProgressListener() {
+					@Override
+					public void progressChanged(ProgressEvent progressEvent) {
+						if (progressEvent.getEventType()== ProgressEventType.TRANSFER_COMPLETED_EVENT) {
+							RemoteDownloader.this.taskListener.getLogger().println("Finished downloading a file!");
+						}
+					}
+				});
+				fileDownload.waitForCompletion();
+				return null;
+			} else {
+				final Download download = mgr.download(this.bucket, this.path, localFile);
+				download.addProgressListener(new ProgressListener() {
+					@Override
+					public void progressChanged(ProgressEvent progressEvent) {
+						if (progressEvent.getEventType()== ProgressEventType.TRANSFER_COMPLETED_EVENT) {
+							RemoteDownloader.this.taskListener.getLogger().println("Finished: " + download.getDescription());
+						}
+					}
+				});
+				download.waitForCompletion();
+				return null;
+			}
 		}
 		
 		@Override

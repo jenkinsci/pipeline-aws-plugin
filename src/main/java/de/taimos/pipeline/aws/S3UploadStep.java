@@ -35,9 +35,13 @@ import org.jenkinsci.plugins.workflow.steps.StepContextParameter;
 import org.jenkinsci.remoting.RoleChecker;
 import org.kohsuke.stapler.DataBoundConstructor;
 
+import com.amazonaws.event.ProgressEvent;
+import com.amazonaws.event.ProgressEventType;
+import com.amazonaws.event.ProgressListener;
 import com.amazonaws.services.s3.AmazonS3Client;
-import com.amazonaws.services.s3.model.PutObjectRequest;
-import com.amazonaws.services.s3.model.PutObjectResult;
+import com.amazonaws.services.s3.transfer.MultipleFileUpload;
+import com.amazonaws.services.s3.transfer.TransferManager;
+import com.amazonaws.services.s3.transfer.Upload;
 import com.google.common.base.Preconditions;
 
 import hudson.EnvVars;
@@ -113,14 +117,14 @@ public class S3UploadStep extends AbstractStepImpl {
 				@Override
 				public void run() {
 					try {
-						Execution.this.listener.getLogger().format("Uploading file %s to s3://%s/%s %n", child.toURI(), bucket, path);
+						Execution.this.listener.getLogger().format("Uploading %s to s3://%s/%s %n", child.toURI(), bucket, path);
 						if (!child.exists()) {
 							Execution.this.listener.getLogger().println("Upload failed due to missing source file");
 							Execution.this.getContext().onFailure(new FileNotFoundException(child.toURI().toString()));
 							return;
 						}
 						
-						child.act(new RemoteUploader(Execution.this.envVars, bucket, path));
+						child.act(new RemoteUploader(Execution.this.envVars, Execution.this.listener, bucket, path));
 						
 						Execution.this.listener.getLogger().println("Upload complete");
 						Execution.this.getContext().onSuccess(null);
@@ -141,22 +145,53 @@ public class S3UploadStep extends AbstractStepImpl {
 		
 	}
 	
-	private static class RemoteUploader implements FilePath.FileCallable<PutObjectResult> {
+	private static class RemoteUploader implements FilePath.FileCallable<Void> {
 		
 		private final EnvVars envVars;
+		private final TaskListener taskListener;
 		private final String bucket;
 		private final String path;
 		
-		RemoteUploader(EnvVars envVars, String bucket, String path) {
+		RemoteUploader(EnvVars envVars, TaskListener taskListener, String bucket, String path) {
 			this.envVars = envVars;
+			this.taskListener = taskListener;
 			this.bucket = bucket;
 			this.path = path;
 		}
 		
 		@Override
-		public PutObjectResult invoke(File localFile, VirtualChannel channel) throws IOException, InterruptedException {
-			AmazonS3Client s3Client = AWSClientFactory.create(AmazonS3Client.class, envVars);
-			return s3Client.putObject(new PutObjectRequest(bucket, path, localFile));
+		public Void invoke(File localFile, VirtualChannel channel) throws IOException, InterruptedException {
+			AmazonS3Client s3Client = AWSClientFactory.create(AmazonS3Client.class, this.envVars);
+			TransferManager mgr = new TransferManager(s3Client);
+			if (localFile.isFile()) {
+				final Upload upload = mgr.upload(this.bucket, this.path, localFile);
+				upload.addProgressListener(new ProgressListener() {
+					@Override
+					public void progressChanged(ProgressEvent progressEvent) {
+						if (progressEvent.getEventType()== ProgressEventType.TRANSFER_COMPLETED_EVENT) {
+							RemoteUploader.this.taskListener.getLogger().println("Finished: " + upload.getDescription());
+						}
+					}
+				});
+				upload.waitForCompletion();
+				return null;
+			}
+			if (localFile.isDirectory()) {
+				final MultipleFileUpload fileUpload = mgr.uploadDirectory(this.bucket, this.path, localFile, true);
+				for (final Upload upload : fileUpload.getSubTransfers()) {
+					upload.addProgressListener(new ProgressListener() {
+						@Override
+						public void progressChanged(ProgressEvent progressEvent) {
+							if (progressEvent.getEventType()== ProgressEventType.TRANSFER_COMPLETED_EVENT) {
+								RemoteUploader.this.taskListener.getLogger().println("Finished: " + upload.getDescription());
+							}
+						}
+					});
+				}
+				fileUpload.waitForCompletion();
+				return null;
+			}
+			return null;
 		}
 		
 		@Override
