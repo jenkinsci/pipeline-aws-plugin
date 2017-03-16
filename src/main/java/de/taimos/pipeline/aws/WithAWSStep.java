@@ -142,6 +142,8 @@ public class WithAWSStep extends AbstractStepImpl {
 		private transient WithAWSStep step;
 		@StepContextParameter
 		private transient TaskListener listener;
+		@StepContextParameter
+		private transient EnvVars envVars;
 		
 		@Override
 		public boolean start() throws Exception {
@@ -164,23 +166,24 @@ public class WithAWSStep extends AbstractStepImpl {
 			return false;
 		}
 		
-		private void withCredentials(@Nonnull EnvVars envVars) {
+		private void withCredentials(@Nonnull EnvVars localEnv) {
 			if (!StringUtils.isNullOrEmpty(this.step.getCredentials())) {
 				List<UsernamePasswordCredentials> credentials = CredentialsProvider.lookupCredentials(UsernamePasswordCredentials.class, Jenkins.getInstance(), ACL.SYSTEM, Collections.<DomainRequirement>emptyList());
 				CredentialsMatcher matcher = CredentialsMatchers.withId(this.step.getCredentials());
 				UsernamePasswordCredentials usernamePasswordCredentials = CredentialsMatchers.firstOrNull(credentials, matcher);
 				if (usernamePasswordCredentials != null) {
-					envVars.override(AWSClientFactory.AWS_ACCESS_KEY_ID, usernamePasswordCredentials.getUsername());
-					envVars.override(AWSClientFactory.AWS_SECRET_ACCESS_KEY, usernamePasswordCredentials.getPassword().getPlainText());
+					localEnv.override(AWSClientFactory.AWS_ACCESS_KEY_ID, usernamePasswordCredentials.getUsername());
+					localEnv.override(AWSClientFactory.AWS_SECRET_ACCESS_KEY, usernamePasswordCredentials.getPassword().getPlainText());
+					this.envVars.overrideAll(localEnv);
 				} else {
 					throw new RuntimeException("Cannot find Jenkins credentials with name " + this.step.getCredentials());
 				}
 			}
 		}
 		
-		private void withRole(@Nonnull EnvVars envVars) {
+		private void withRole(@Nonnull EnvVars localEnv) {
 			if (!StringUtils.isNullOrEmpty(this.step.getRole())) {
-				AWSSecurityTokenServiceClient sts = AWSClientFactory.create(AWSSecurityTokenServiceClient.class, envVars);
+				AWSSecurityTokenServiceClient sts = AWSClientFactory.create(AWSSecurityTokenServiceClient.class, this.envVars);
 				
 				final String accountId;
 				if (!StringUtils.isNullOrEmpty(this.step.getRoleAccount())) {
@@ -197,25 +200,28 @@ public class WithAWSStep extends AbstractStepImpl {
 				this.listener.getLogger().format("Assumed role %s with id %s %n ", roleARN, assumeRole.getAssumedRoleUser().getAssumedRoleId());
 				
 				Credentials credentials = assumeRole.getCredentials();
-				envVars.override(AWSClientFactory.AWS_ACCESS_KEY_ID, credentials.getAccessKeyId());
-				envVars.override(AWSClientFactory.AWS_SECRET_ACCESS_KEY, credentials.getSecretAccessKey());
-				envVars.override(AWSClientFactory.AWS_SESSION_TOKEN, credentials.getSessionToken());
+				localEnv.override(AWSClientFactory.AWS_ACCESS_KEY_ID, credentials.getAccessKeyId());
+				localEnv.override(AWSClientFactory.AWS_SECRET_ACCESS_KEY, credentials.getSecretAccessKey());
+				localEnv.override(AWSClientFactory.AWS_SESSION_TOKEN, credentials.getSessionToken());
+				this.envVars.overrideAll(localEnv);
 			}
 		}
 		
-		private void withRegion(@Nonnull EnvVars envVars) {
+		private void withRegion(@Nonnull EnvVars localEnv) {
 			if (!StringUtils.isNullOrEmpty(this.step.getRegion())) {
 				this.listener.getLogger().format("Setting AWS region %s %n ", this.step.getRegion());
-				envVars.override(AWSClientFactory.AWS_DEFAULT_REGION, this.step.getRegion());
-				envVars.override(AWSClientFactory.AWS_REGION, this.step.getRegion());
+				localEnv.override(AWSClientFactory.AWS_DEFAULT_REGION, this.step.getRegion());
+				localEnv.override(AWSClientFactory.AWS_REGION, this.step.getRegion());
+				this.envVars.overrideAll(localEnv);
 			}
 		}
 		
-		private void withProfile(@Nonnull EnvVars envVars) {
+		private void withProfile(@Nonnull EnvVars localEnv) {
 			if (!StringUtils.isNullOrEmpty(this.step.getProfile())) {
 				this.listener.getLogger().format("Setting AWS profile %s %n ", this.step.getProfile());
-				envVars.override(AWSClientFactory.AWS_DEFAULT_PROFILE, this.step.getProfile());
-				envVars.override(AWSClientFactory.AWS_PROFILE, this.step.getProfile());
+				localEnv.override(AWSClientFactory.AWS_DEFAULT_PROFILE, this.step.getProfile());
+				localEnv.override(AWSClientFactory.AWS_PROFILE, this.step.getProfile());
+				this.envVars.overrideAll(localEnv);
 			}
 		}
 		

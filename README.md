@@ -146,6 +146,7 @@ snsPublish(topicArn:'arn:aws:sns:us-east-1:123456789012:MyNewTopic', subject:'my
 # Versions
 
 ## 1.7 (master)
+* fix environment for withAWS step
 
 ## 1.6
 * fix #JENKINS-42415 causing S3 errors on slaves
