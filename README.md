@@ -149,7 +149,9 @@ snsPublish(topicArn:'arn:aws:sns:us-east-1:123456789012:MyNewTopic', subject:'my
 
 # Versions
 
-## 1.7 (master)
+## 1.8 (master)
+
+## 1.7
 * fix environment for withAWS step
 * add support for recursive S3 upload/download
 
