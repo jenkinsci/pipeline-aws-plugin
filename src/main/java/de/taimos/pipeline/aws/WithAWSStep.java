@@ -62,7 +62,8 @@ public class WithAWSStep extends AbstractStepImpl {
 	private String region;
 	private String profile;
 	private String credentials;
-	
+	private String externalId;
+
 	@DataBoundConstructor
 	public WithAWSStep() {
 		//
@@ -111,6 +112,15 @@ public class WithAWSStep extends AbstractStepImpl {
 	@DataBoundSetter
 	public void setCredentials(String credentials) {
 		this.credentials = credentials;
+	}
+
+	public String getExternalId() {
+		return externalId;
+	}
+
+	@DataBoundSetter
+	public void setExternalId(String externalId) {
+		this.externalId = externalId;
 	}
 	
 	@Extension
@@ -194,7 +204,8 @@ public class WithAWSStep extends AbstractStepImpl {
 				
 				String roleARN = String.format("arn:aws:iam::%s:role/%s", accountId, this.step.getRole());
 				
-				AssumeRoleRequest request = new AssumeRoleRequest().withRoleArn(roleARN).withRoleSessionName("Jenkins-" + System.currentTimeMillis());
+				AssumeRoleRequest request = new AssumeRoleRequest().withRoleArn(roleARN).withRoleSessionName("Jenkins-" + System.currentTimeMillis()).withExternalId(this.step.getExternalId());
+
 				AssumeRoleResult assumeRole = sts.assumeRole(request);
 				
 				this.listener.getLogger().format("Assumed role %s with id %s %n ", roleARN, assumeRole.getAssumedRoleUser().getAssumedRoleId());

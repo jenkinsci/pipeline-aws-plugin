@@ -46,10 +46,10 @@ withAWS(profile:'myProfile') {
 }
 ```
 
-Assume role information (account is optional and uses current account as default):
+Assume role information (account is optional - uses current account as default, externalId is optional):
 
 ```
-withAWS(role:'admin', roleAccount:'123456789012') {
+withAWS(role:'admin', roleAccount:'123456789012', externalId: 'my-external-id') {
     // do something
 }
 ```
