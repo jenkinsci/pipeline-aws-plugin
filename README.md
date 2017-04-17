@@ -84,7 +84,7 @@ s3Upload(file:'someFolder', bucket:'my-bucket', path:'/path/to/targetFolder/')
 
 Download a file/folder from S3 to the local workspace. 
 Set optional parameter `force` to `true` to overwrite existing file in workspace.
-If the `path` end with a `/` the complete virtual directory will be downloaded.
+If the `path` ends with a `/` the complete virtual directory will be downloaded.
 
 ```
 s3Download(file:'file.txt', bucket:'my-bucket', path:'/path/to/source/file.txt', force:true)
@@ -150,6 +150,7 @@ snsPublish(topicArn:'arn:aws:sns:us-east-1:123456789012:MyNewTopic', subject:'my
 # Versions
 
 ## 1.8 (master)
+* allow path to be null or empty in S3 steps
 
 ## 1.7
 * fix environment for withAWS step

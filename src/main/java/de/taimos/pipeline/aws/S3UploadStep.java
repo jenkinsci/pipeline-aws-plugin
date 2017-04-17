@@ -34,6 +34,7 @@ import org.jenkinsci.plugins.workflow.steps.AbstractStepImpl;
 import org.jenkinsci.plugins.workflow.steps.StepContextParameter;
 import org.jenkinsci.remoting.RoleChecker;
 import org.kohsuke.stapler.DataBoundConstructor;
+import org.kohsuke.stapler.DataBoundSetter;
 
 import com.amazonaws.event.ProgressEvent;
 import com.amazonaws.event.ProgressEventType;
@@ -54,13 +55,12 @@ public class S3UploadStep extends AbstractStepImpl {
 	
 	private final String file;
 	private final String bucket;
-	private final String path;
+	private String path = "";
 	
 	@DataBoundConstructor
-	public S3UploadStep(String file, String bucket, String path) {
+	public S3UploadStep(String file, String bucket) {
 		this.file = file;
 		this.bucket = bucket;
-		this.path = path;
 	}
 	
 	public String getFile() {
@@ -73,6 +73,11 @@ public class S3UploadStep extends AbstractStepImpl {
 	
 	public String getPath() {
 		return this.path;
+	}
+	
+	@DataBoundSetter
+	public void setPath(String path) {
+		this.path = path;
 	}
 	
 	@Extension
@@ -111,7 +116,6 @@ public class S3UploadStep extends AbstractStepImpl {
 			final String path = this.step.getPath();
 			
 			Preconditions.checkArgument(bucket != null && !bucket.isEmpty(), "Bucket must not be null or empty");
-			Preconditions.checkArgument(path != null && !path.isEmpty(), "Path must not be null or empty");
 			
 			new Thread("s3Upload") {
 				@Override
@@ -164,6 +168,7 @@ public class S3UploadStep extends AbstractStepImpl {
 			AmazonS3Client s3Client = AWSClientFactory.create(AmazonS3Client.class, this.envVars);
 			TransferManager mgr = new TransferManager(s3Client);
 			if (localFile.isFile()) {
+				Preconditions.checkArgument(path != null && !path.isEmpty(), "Path must not be null or empty when uploading file");
 				final Upload upload = mgr.upload(this.bucket, this.path, localFile);
 				upload.addProgressListener(new ProgressListener() {
 					@Override

@@ -54,14 +54,13 @@ public class S3DownloadStep extends AbstractStepImpl {
 	
 	private final String file;
 	private final String bucket;
-	private final String path;
+	private String path = "";
 	private boolean force = false;
 	
 	@DataBoundConstructor
-	public S3DownloadStep(String file, String bucket, String path) {
+	public S3DownloadStep(String file, String bucket) {
 		this.file = file;
 		this.bucket = bucket;
-		this.path = path;
 	}
 	
 	public String getFile() {
@@ -83,6 +82,11 @@ public class S3DownloadStep extends AbstractStepImpl {
 	@DataBoundSetter
 	public void setForce(boolean force) {
 		this.force = force;
+	}
+	
+	@DataBoundSetter
+	public void setPath(String path) {
+		this.path = path;
 	}
 	
 	@Extension
@@ -122,7 +126,6 @@ public class S3DownloadStep extends AbstractStepImpl {
 			final boolean force = this.step.isForce();
 			
 			Preconditions.checkArgument(bucket != null && !bucket.isEmpty(), "Bucket must not be null or empty");
-			Preconditions.checkArgument(path != null && !path.isEmpty(), "Path must not be null or empty");
 			
 			new Thread("s3Download") {
 				@Override
@@ -181,12 +184,12 @@ public class S3DownloadStep extends AbstractStepImpl {
 			AmazonS3Client s3Client = AWSClientFactory.create(AmazonS3Client.class, this.envVars);
 			TransferManager mgr = new TransferManager(s3Client);
 			
-			if (this.path.endsWith("/")) {
+			if (this.path == null || this.path.isEmpty() || this.path.endsWith("/")) {
 				final MultipleFileDownload fileDownload = mgr.downloadDirectory(this.bucket, this.path, localFile);
 				fileDownload.addProgressListener(new ProgressListener() {
 					@Override
 					public void progressChanged(ProgressEvent progressEvent) {
-						if (progressEvent.getEventType()== ProgressEventType.TRANSFER_COMPLETED_EVENT) {
+						if (progressEvent.getEventType() == ProgressEventType.TRANSFER_COMPLETED_EVENT) {
 							RemoteDownloader.this.taskListener.getLogger().println("Finished downloading a file!");
 						}
 					}
@@ -198,7 +201,7 @@ public class S3DownloadStep extends AbstractStepImpl {
 				download.addProgressListener(new ProgressListener() {
 					@Override
 					public void progressChanged(ProgressEvent progressEvent) {
-						if (progressEvent.getEventType()== ProgressEventType.TRANSFER_COMPLETED_EVENT) {
+						if (progressEvent.getEventType() == ProgressEventType.TRANSFER_COMPLETED_EVENT) {
 							RemoteDownloader.this.taskListener.getLogger().println("Finished: " + download.getDescription());
 						}
 					}
