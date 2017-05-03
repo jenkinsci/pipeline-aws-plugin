@@ -150,6 +150,7 @@ snsPublish(topicArn:'arn:aws:sns:us-east-1:123456789012:MyNewTopic', subject:'my
 # Versions
 
 ## 1.8 (master)
+* add support for externalId for role changes
 * allow path to be null or empty in S3 steps
 
 ## 1.7
