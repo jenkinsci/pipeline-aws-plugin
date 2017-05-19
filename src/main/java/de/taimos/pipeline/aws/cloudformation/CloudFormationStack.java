@@ -42,17 +42,17 @@ import com.amazonaws.services.cloudformation.model.UpdateStackRequest;
 import hudson.model.TaskListener;
 
 public class CloudFormationStack {
-	
+
 	private final AmazonCloudFormationClient client;
 	private final String stack;
 	private final TaskListener listener;
-	
+
 	public CloudFormationStack(AmazonCloudFormationClient client, String stack, TaskListener listener) {
 		this.client = client;
 		this.stack = stack;
 		this.listener = listener;
 	}
-	
+
 	public boolean exists() {
 		try {
 			DescribeStacksResult result = this.client.describeStacks(new DescribeStacksRequest().withStackName(this.stack));
@@ -61,7 +61,7 @@ public class CloudFormationStack {
 			return false;
 		}
 	}
-	
+
 	public Map<String, String> describeOutputs() {
 		DescribeStacksResult result = this.client.describeStacks(new DescribeStacksRequest().withStackName(this.stack));
 		Stack cfnStack = result.getStacks().get(0);
@@ -71,23 +71,23 @@ public class CloudFormationStack {
 		}
 		return map;
 	}
-	
-	public void create(String templateBody, Collection<Parameter> params, Collection<Tag> tags) throws ExecutionException {
+
+	public void create(String templateBody, Collection<Parameter> params, Collection<Tag> tags, Integer timeoutInMinutes) throws ExecutionException {
 		CreateStackRequest req = new CreateStackRequest();
 		req.withStackName(this.stack).withCapabilities(Capability.CAPABILITY_IAM, Capability.CAPABILITY_NAMED_IAM);
-		req.withTemplateBody(templateBody).withParameters(params).withTags(tags);
+		req.withTemplateBody(templateBody).withParameters(params).withTags(tags).withTimeoutInMinutes(timeoutInMinutes);
 		this.client.createStack(req);
-		
+
 		new EventPrinter(this.client, this.listener).waitAndPrintStackEvents(this.stack, this.client.waiters().stackCreateComplete());
 	}
-	
-	public void update(String templateBody, Collection<Parameter> params, Collection<Tag> tags) throws ExecutionException {
+
+	public void update(String templateBody, Collection<Parameter> params, Collection<Tag> tags, Integer timeoutInMinutes) throws ExecutionException {
 		try {
 			UpdateStackRequest req = new UpdateStackRequest();
 			req.withStackName(this.stack).withCapabilities(Capability.CAPABILITY_IAM, Capability.CAPABILITY_NAMED_IAM);
 			req.withTemplateBody(templateBody).withParameters(params).withTags(tags);
 			this.client.updateStack(req);
-			
+
 			new EventPrinter(this.client, this.listener).waitAndPrintStackEvents(this.stack, this.client.waiters().stackUpdateComplete());
 		} catch (AmazonCloudFormationException e) {
 			if (e.getMessage().contains("No updates are to be performed")) {
@@ -96,7 +96,7 @@ public class CloudFormationStack {
 			throw e;
 		}
 	}
-	
+
 	public void delete() throws ExecutionException {
 		this.client.deleteStack(new DeleteStackRequest().withStackName(this.stack));
 		new EventPrinter(this.client, this.listener).waitAndPrintStackEvents(this.stack, this.client.waiters().stackDeleteComplete());

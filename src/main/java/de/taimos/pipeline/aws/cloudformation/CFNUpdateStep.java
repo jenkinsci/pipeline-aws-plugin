@@ -49,84 +49,94 @@ import hudson.FilePath;
 import hudson.model.TaskListener;
 
 public class CFNUpdateStep extends AbstractStepImpl {
-	
+
 	private final String stack;
 	private final String file;
 	private String[] params;
 	private String[] keepParams;
 	private String[] tags;
 	private String paramsFile;
-	
+	private Integer timeoutInMinutes;
+
 	@DataBoundConstructor
 	public CFNUpdateStep(String stack, String file) {
 		this.stack = stack;
 		this.file = file;
 	}
-	
+
 	public String getStack() {
 		return this.stack;
 	}
-	
+
 	public String getFile() {
 		return this.file;
 	}
-	
+
 	public String[] getParams() {
 		return this.params != null ? this.params.clone() : null;
 	}
-	
+
 	@DataBoundSetter
 	public void setParams(String[] params) {
 		this.params = params.clone();
 	}
-	
+
 	public String[] getKeepParams() {
 		return this.keepParams != null ? this.keepParams.clone() : null;
 	}
-	
+
 	@DataBoundSetter
 	public void setKeepParams(String[] keepParams) {
 		this.keepParams = keepParams.clone();
 	}
-	
+
 	public String[] getTags() {
 		return this.tags != null ? this.tags.clone() : null;
 	}
-	
+
 	@DataBoundSetter
 	public void setTags(String[] tags) {
 		this.tags = tags.clone();
 	}
-	
+
 	public String getParamsFile() {
 		return this.paramsFile;
 	}
-	
+
 	@DataBoundSetter
 	public void setParamsFile(String paramsFile) {
 		this.paramsFile = paramsFile;
 	}
-	
+
+	public Integer getTimeoutInMinutes() {
+		return this.timeoutInMinutes;
+	}
+
+	@DataBoundSetter
+	public void setTimeoutInMinutes(Integer timeoutInMinutes) {
+		this.timeoutInMinutes = timeoutInMinutes;
+	}
+
 	@Extension
 	public static class DescriptorImpl extends AbstractStepDescriptorImpl {
-		
+
 		public DescriptorImpl() {
 			super(Execution.class);
 		}
-		
+
 		@Override
 		public String getFunctionName() {
 			return "cfnUpdate";
 		}
-		
+
 		@Override
 		public String getDisplayName() {
 			return "Create or Update CloudFormation stack";
 		}
 	}
-	
+
 	public static class Execution extends AbstractStepExecutionImpl {
-		
+
 		@Inject
 		private transient CFNUpdateStep step;
 		@StepContextParameter
@@ -135,22 +145,24 @@ public class CFNUpdateStep extends AbstractStepImpl {
 		private transient FilePath workspace;
 		@StepContextParameter
 		private transient TaskListener listener;
-		
+
 		@Override
 		public boolean start() throws Exception {
 			final String stack = this.step.getStack();
 			final String file = this.step.getFile();
-			
+
 			final Collection<Parameter> params= this.parseParamsFile(this.step.getParamsFile());
 			params.addAll(this.parseParams(this.step.getParams()));
-			
+
 			final Collection<Parameter> keepParams = this.parseKeepParams(this.step.getKeepParams());
 			final Collection<Tag> tags = this.parseTags(this.step.getTags());
-			
+
+			final Integer timeoutInMinutes = this.step.getTimeoutInMinutes();
+
 			Preconditions.checkArgument(stack != null && !stack.isEmpty(), "Stack must not be null or empty");
-			
+
 			this.listener.getLogger().format("Updating/Creating CloudFormation stack %s %n", stack);
-			
+
 			new Thread("cfnUpdate-" + stack) {
 				@Override
 				public void run() {
@@ -160,9 +172,9 @@ public class CFNUpdateStep extends AbstractStepImpl {
 						if (cfnStack.exists()) {
 							ArrayList<Parameter> parameters = new ArrayList<>(params);
 							parameters.addAll(keepParams);
-							cfnStack.update(Execution.this.readTemplate(file), parameters, tags);
+							cfnStack.update(Execution.this.readTemplate(file), parameters, tags, timeoutInMinutes);
 						} else {
-							cfnStack.create(Execution.this.readTemplate(file), params, tags);
+							cfnStack.create(Execution.this.readTemplate(file), params, tags, timeoutInMinutes);
 						}
 						Execution.this.listener.getLogger().println("Stack update complete");
 						Execution.this.getContext().onSuccess(cfnStack.describeOutputs());
@@ -173,7 +185,7 @@ public class CFNUpdateStep extends AbstractStepImpl {
 			}.start();
 			return false;
 		}
-		
+
 		private Collection<Parameter> parseParamsFile(String paramsFile) {
 			try {
 				if (paramsFile == null || paramsFile.isEmpty()) {
@@ -193,7 +205,7 @@ public class CFNUpdateStep extends AbstractStepImpl {
 				throw new RuntimeException(e);
 			}
 		}
-		
+
 		private String readTemplate(String file) {
 			FilePath child = this.workspace.child(file);
 			try {
@@ -202,7 +214,7 @@ public class CFNUpdateStep extends AbstractStepImpl {
 				throw new RuntimeException(e);
 			}
 		}
-		
+
 		private Collection<Tag> parseTags(String[] tags) {
 			Collection<Tag> tagList = new ArrayList<>();
 			if (tags == null) {
@@ -219,7 +231,7 @@ public class CFNUpdateStep extends AbstractStepImpl {
 			}
 			return tagList;
 		}
-		
+
 		private Collection<Parameter> parseParams(String[] params) {
 			Collection<Parameter> parameters = new ArrayList<>();
 			if (params == null) {
@@ -236,7 +248,7 @@ public class CFNUpdateStep extends AbstractStepImpl {
 			}
 			return parameters;
 		}
-		
+
 		private Collection<Parameter> parseKeepParams(String[] params) {
 			Collection<Parameter> parameters = new ArrayList<>();
 			if (params == null) {
@@ -247,14 +259,14 @@ public class CFNUpdateStep extends AbstractStepImpl {
 			}
 			return parameters;
 		}
-		
+
 		@Override
 		public void stop(@Nonnull Throwable cause) throws Exception {
 			//
 		}
-		
+
 		private static final long serialVersionUID = 1L;
-		
+
 	}
-	
+
 }
