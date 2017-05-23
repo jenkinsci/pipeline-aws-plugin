@@ -105,6 +105,9 @@ Create or update the given CloudFormation stack using the given template from th
 You can specify an optional list of parameters. 
 You can also specify a list of `keepParams` of parameters which will use the previous value on stack updates.
 
+Using `timeoutInMinutes` you can specify the amount of time that can pass before the stack status becomes CREATE_FAILED and the stack gets rolled back.
+Due to limitations in the AWS API, this only applies to stack creation.
+
 If you have many parameters you can specify a `paramsFile` containing the parameters. The format is either a standard 
 JSON file like with the cli or a YAML file for the [cfn-params](https://www.npmjs.com/package/cfn-params) command line utility. 
 
@@ -112,7 +115,7 @@ Additionally you can specify a list of tags that are set on the stack and all re
 The step returns the outputs of the stack as a map.
 
 ```
-def outputs = cfnUpdate(stack:'my-stack', file:'template.yaml', params:['InstanceType=t2.nano'], keepParams:['Version'], tags:['TagName=Value'])
+def outputs = cfnUpdate(stack:'my-stack', file:'template.yaml', params:['InstanceType=t2.nano'], keepParams:['Version'], timeoutInMinutes:10, tags:['TagName=Value'])
 ```
 
 ## cfnDelete
@@ -150,6 +153,7 @@ snsPublish(topicArn:'arn:aws:sns:us-east-1:123456789012:MyNewTopic', subject:'my
 # Versions
 
 ## 1.9 (master)
+* add support for create stack timeout
 
 ## 1.8
 * add support for externalId for role changes
