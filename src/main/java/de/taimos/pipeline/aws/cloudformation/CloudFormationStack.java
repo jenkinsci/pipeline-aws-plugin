@@ -72,10 +72,10 @@ public class CloudFormationStack {
 		return map;
 	}
 	
-	public void create(String templateBody, Collection<Parameter> params, Collection<Tag> tags) throws ExecutionException {
+	public void create(String templateBody, Collection<Parameter> params, Collection<Tag> tags, Integer timeoutInMinutes) throws ExecutionException {
 		CreateStackRequest req = new CreateStackRequest();
 		req.withStackName(this.stack).withCapabilities(Capability.CAPABILITY_IAM, Capability.CAPABILITY_NAMED_IAM);
-		req.withTemplateBody(templateBody).withParameters(params).withTags(tags);
+		req.withTemplateBody(templateBody).withParameters(params).withTags(tags).withTimeoutInMinutes(timeoutInMinutes);
 		this.client.createStack(req);
 		
 		new EventPrinter(this.client, this.listener).waitAndPrintStackEvents(this.stack, this.client.waiters().stackCreateComplete());

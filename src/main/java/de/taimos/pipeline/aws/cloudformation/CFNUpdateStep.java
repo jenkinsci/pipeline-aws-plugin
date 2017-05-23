@@ -56,6 +56,7 @@ public class CFNUpdateStep extends AbstractStepImpl {
 	private String[] keepParams;
 	private String[] tags;
 	private String paramsFile;
+	private Integer timeoutInMinutes;
 	
 	@DataBoundConstructor
 	public CFNUpdateStep(String stack, String file) {
@@ -106,7 +107,16 @@ public class CFNUpdateStep extends AbstractStepImpl {
 	public void setParamsFile(String paramsFile) {
 		this.paramsFile = paramsFile;
 	}
-	
+
+	public Integer getTimeoutInMinutes() {
+		return this.timeoutInMinutes;
+	}
+
+	@DataBoundSetter
+	public void setTimeoutInMinutes(Integer timeoutInMinutes) {
+		this.timeoutInMinutes = timeoutInMinutes;
+	}
+
 	@Extension
 	public static class DescriptorImpl extends AbstractStepDescriptorImpl {
 		
@@ -146,7 +156,8 @@ public class CFNUpdateStep extends AbstractStepImpl {
 			
 			final Collection<Parameter> keepParams = this.parseKeepParams(this.step.getKeepParams());
 			final Collection<Tag> tags = this.parseTags(this.step.getTags());
-			
+			final Integer timeoutInMinutes = this.step.getTimeoutInMinutes();
+
 			Preconditions.checkArgument(stack != null && !stack.isEmpty(), "Stack must not be null or empty");
 			
 			this.listener.getLogger().format("Updating/Creating CloudFormation stack %s %n", stack);
@@ -162,7 +173,7 @@ public class CFNUpdateStep extends AbstractStepImpl {
 							parameters.addAll(keepParams);
 							cfnStack.update(Execution.this.readTemplate(file), parameters, tags);
 						} else {
-							cfnStack.create(Execution.this.readTemplate(file), params, tags);
+							cfnStack.create(Execution.this.readTemplate(file), params, tags, timeoutInMinutes);
 						}
 						Execution.this.listener.getLogger().println("Stack update complete");
 						Execution.this.getContext().onSuccess(cfnStack.describeOutputs());
