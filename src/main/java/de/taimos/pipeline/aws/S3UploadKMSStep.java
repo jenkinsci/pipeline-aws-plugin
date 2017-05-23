@@ -27,7 +27,9 @@ import com.amazonaws.event.ProgressListener;
 import com.amazonaws.regions.Region;
 import com.amazonaws.regions.Regions;
 import com.amazonaws.services.s3.AmazonS3Client;
+import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.transfer.MultipleFileUpload;
+import com.amazonaws.services.s3.transfer.ObjectMetadataProvider;
 import com.amazonaws.services.s3.transfer.TransferManager;
 import com.amazonaws.services.s3.transfer.Upload;
 import com.google.common.base.Preconditions;
@@ -47,18 +49,20 @@ import org.kohsuke.stapler.DataBoundSetter;
 import javax.annotation.Nonnull;
 import javax.inject.Inject;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.InputStream;
 
-public class S3UploadStep extends AbstractStepImpl {
-	
+public class S3UploadKMSStep extends AbstractStepImpl {
+
 	private final String file;
 	private final String bucket;
 	private final String regionName;
 	private String path = "";
-	
+
 	@DataBoundConstructor
-	public S3UploadStep(String file, String bucket, String regionName) {
+	public S3UploadKMSStep(String file, String bucket, String regionName) {
 		this.file = file;
 		this.bucket = bucket;
 		this.regionName = regionName;
@@ -94,7 +98,7 @@ public class S3UploadStep extends AbstractStepImpl {
 		
 		@Override
 		public String getFunctionName() {
-			return "s3Upload";
+			return "s3UploadKMS";
 		}
 		
 		@Override
@@ -106,7 +110,7 @@ public class S3UploadStep extends AbstractStepImpl {
 	public static class Execution extends AbstractStepExecutionImpl {
 		
 		@Inject
-		private transient S3UploadStep step;
+		private transient S3UploadKMSStep step;
 		@StepContextParameter
 		private transient EnvVars envVars;
 		@StepContextParameter
@@ -123,7 +127,7 @@ public class S3UploadStep extends AbstractStepImpl {
 			
 			Preconditions.checkArgument(bucket != null && !bucket.isEmpty(), "Bucket must not be null or empty");
 			
-			new Thread("s3Upload") {
+			new Thread("s3UploadKMS") {
 				@Override
 				public void run() {
 					try {
@@ -178,28 +182,42 @@ public class S3UploadStep extends AbstractStepImpl {
 				s3Client.setRegion(Region.getRegion(Regions.fromName(this.regionName)));
 			}
 			TransferManager mgr = new TransferManager(s3Client);
+
 			if (localFile.isFile()) {
-				Preconditions.checkArgument(path != null && !path.isEmpty(), "Path must not be null or empty when uploading file");
-				final Upload upload = mgr.upload(this.bucket, this.path, localFile);
-				upload.addProgressListener(new ProgressListener() {
-					@Override
-					public void progressChanged(ProgressEvent progressEvent) {
-						if (progressEvent.getEventType()== ProgressEventType.TRANSFER_COMPLETED_EVENT) {
-							RemoteUploader.this.taskListener.getLogger().println("Finished: " + upload.getDescription());
+				InputStream inputStream = new FileInputStream(localFile);
+				try {
+					Preconditions.checkArgument(path != null && !path.isEmpty(), "Path must not be null or empty when uploading file");
+					ObjectMetadata objectMetaData = new ObjectMetadata();
+					objectMetaData.setSSEAlgorithm("aws:kms");
+					final Upload upload = mgr.upload(this.bucket, this.path, inputStream, objectMetaData);
+					upload.addProgressListener(new ProgressListener() {
+						@Override
+						public void progressChanged(ProgressEvent progressEvent) {
+							if (progressEvent.getEventType() == ProgressEventType.TRANSFER_COMPLETED_EVENT) {
+								S3UploadKMSStep.RemoteUploader.this.taskListener.getLogger().println("Finished: " + upload.getDescription());
+							}
 						}
-					}
-				});
-				upload.waitForCompletion();
-				return null;
+					});
+					upload.waitForCompletion();
+					return null;
+				}finally {
+					inputStream.close();
+				}
 			}
 			if (localFile.isDirectory()) {
-				final MultipleFileUpload fileUpload = mgr.uploadDirectory(this.bucket, this.path, localFile, true);
+				ObjectMetadataProvider provider = new ObjectMetadataProvider(){
+
+					@Override
+					public void provideObjectMetadata(File file, ObjectMetadata metadata) {
+						metadata.setSSEAlgorithm("aws:kms");
+					}} ;
+				final MultipleFileUpload fileUpload = mgr.uploadDirectory(this.bucket, this.path, localFile, true, provider);
 				for (final Upload upload : fileUpload.getSubTransfers()) {
 					upload.addProgressListener(new ProgressListener() {
 						@Override
 						public void progressChanged(ProgressEvent progressEvent) {
 							if (progressEvent.getEventType()== ProgressEventType.TRANSFER_COMPLETED_EVENT) {
-								RemoteUploader.this.taskListener.getLogger().println("Finished: " + upload.getDescription());
+								S3UploadKMSStep.RemoteUploader.this.taskListener.getLogger().println("Finished: " + upload.getDescription());
 							}
 						}
 					});

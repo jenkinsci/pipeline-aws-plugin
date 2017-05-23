@@ -23,10 +23,12 @@ package de.taimos.pipeline.aws;
 
 import com.amazonaws.regions.Region;
 import com.amazonaws.regions.Regions;
-import com.amazonaws.services.sns.AmazonSNSClient;
-import com.amazonaws.services.sns.model.PublishResult;
+import com.amazonaws.services.ecr.AmazonECRClient;
+import com.amazonaws.services.ecr.model.CreateRepositoryRequest;
+import com.google.common.base.Preconditions;
 import hudson.EnvVars;
 import hudson.Extension;
+import hudson.FilePath;
 import hudson.model.TaskListener;
 import org.jenkinsci.plugins.workflow.steps.AbstractStepDescriptorImpl;
 import org.jenkinsci.plugins.workflow.steps.AbstractStepExecutionImpl;
@@ -37,31 +39,19 @@ import org.kohsuke.stapler.DataBoundConstructor;
 import javax.annotation.Nonnull;
 import javax.inject.Inject;
 
-public class SNSPublishStep extends AbstractStepImpl {
-	
-	private final String topicArn;
-	private final String subject;
-	private final String message;
+public class ECRCreateRepositoryStep extends AbstractStepImpl {
+
+	private final String repoName;
 	private final String regionName;
-	
+
 	@DataBoundConstructor
-	public SNSPublishStep(String topicArn, String subject, String message, String regionName) {
-		this.topicArn = topicArn;
-		this.subject = subject;
-		this.message = message;
+	public ECRCreateRepositoryStep(String repoName, String regionName) {
+		this.repoName = repoName;
 		this.regionName = regionName;
 	}
 	
-	public String getTopicArn() {
-		return this.topicArn;
-	}
-	
-	public String getSubject() {
-		return this.subject;
-	}
-	
-	public String getMessage() {
-		return this.message;
+	public String getRepoName() {
+		return this.repoName;
 	}
 
 	public String getRegionName() {
@@ -77,43 +67,46 @@ public class SNSPublishStep extends AbstractStepImpl {
 		
 		@Override
 		public String getFunctionName() {
-			return "snsPublish";
+			return "ecrCreateRepository";
 		}
 		
 		@Override
 		public String getDisplayName() {
-			return "Publish notification to SNS";
+			return "Creates an ECR Repository";
 		}
 	}
 	
 	public static class Execution extends AbstractStepExecutionImpl {
 		
 		@Inject
-		private transient SNSPublishStep step;
+		private transient ECRCreateRepositoryStep step;
 		@StepContextParameter
 		private transient EnvVars envVars;
+		@StepContextParameter
+		private transient FilePath workspace;
 		@StepContextParameter
 		private transient TaskListener listener;
 		
 		@Override
 		public boolean start() throws Exception {
-			final String topicArn = this.step.getTopicArn();
-			final String subject = this.step.getSubject();
-			final String message = this.step.getMessage();
+			final String repoName = this.step.getRepoName();
 			final String regionName = this.step.getRegionName();
+
+			Preconditions.checkArgument(repoName != null && !repoName.isEmpty(), "Repo Name must not be null or empty");
 			
-			new Thread("snsPublish") {
+			new Thread("ecrCreateRepository") {
 				@Override
 				public void run() {
 					try {
-						AmazonSNSClient snsClient = AWSClientFactory.create(AmazonSNSClient.class, Execution.this.envVars);
+						Execution.this.listener.getLogger().format("Creating ECR repository %s", repoName);
+						AmazonECRClient ecrClient = AWSClientFactory.create(AmazonECRClient.class, envVars);
 						if(null != regionName && !regionName.isEmpty()) {
-							snsClient.setRegion(Region.getRegion(Regions.fromName(regionName)));
+							ecrClient.setRegion(Region.getRegion(Regions.fromName(regionName)));
 						}
-						
-						Execution.this.listener.getLogger().format("Publishing notification %s to %s %n", subject, topicArn);
-						PublishResult result = snsClient.publish(topicArn, message, subject);
-						Execution.this.listener.getLogger().format("Message published as %s %n", result.getMessageId());
+						CreateRepositoryRequest createRepositoryRequest = new CreateRepositoryRequest();
+						createRepositoryRequest.setRepositoryName(repoName);
+						ecrClient.createRepository(createRepositoryRequest);
+						Execution.this.listener.getLogger().println(" Repository Created");
 						Execution.this.getContext().onSuccess(null);
 					} catch (Exception e) {
 						Execution.this.getContext().onFailure(e);
@@ -131,5 +124,4 @@ public class SNSPublishStep extends AbstractStepImpl {
 		private static final long serialVersionUID = 1L;
 		
 	}
-	
 }
