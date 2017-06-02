@@ -118,6 +118,14 @@ The step returns the outputs of the stack as a map.
 def outputs = cfnUpdate(stack:'my-stack', file:'template.yaml', params:['InstanceType=t2.nano'], keepParams:['Version'], timeoutInMinutes:10, tags:['TagName=Value'])
 ```
 
+Alternatively, you can specify a URL to a template on S3 (you'll need this if you hit the 51200 byte limit on template):
+
+```
+def outputs = cfnUpdate(stack:'my-stack', url:'https://s3.amazonaws.com/my-templates-bucket/template.yaml')
+```
+
+Note: When creating a stack, either `file` or `url` are required. When updating it, omitting both parameters will keep the stack's current template.
+
 ## cfnDelete
 
 Remove the given stack from CloudFormation.

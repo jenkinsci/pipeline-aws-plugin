@@ -172,7 +172,6 @@ public class CFNUpdateStep extends AbstractStepImpl {
 			final Integer timeoutInMinutes = this.step.getTimeoutInMinutes();
 
 			Preconditions.checkArgument(stack != null && !stack.isEmpty(), "Stack must not be null or empty");
-			Preconditions.checkArgument((file != null && !file.isEmpty()) || (url != null && !url.isEmpty()), "Either file or url must be specified");
 			
 			this.listener.getLogger().format("Updating/Creating CloudFormation stack %s %n", stack);
 			
