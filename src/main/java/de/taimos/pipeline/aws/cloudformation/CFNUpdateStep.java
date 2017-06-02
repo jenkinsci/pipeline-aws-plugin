@@ -51,7 +51,8 @@ import hudson.model.TaskListener;
 public class CFNUpdateStep extends AbstractStepImpl {
 	
 	private final String stack;
-	private final String file;
+	private String file;
+	private String url;
 	private String[] params;
 	private String[] keepParams;
 	private String[] tags;
@@ -59,9 +60,8 @@ public class CFNUpdateStep extends AbstractStepImpl {
 	private Integer timeoutInMinutes;
 	
 	@DataBoundConstructor
-	public CFNUpdateStep(String stack, String file) {
+	public CFNUpdateStep(String stack) {
 		this.stack = stack;
-		this.file = file;
 	}
 	
 	public String getStack() {
@@ -70,6 +70,18 @@ public class CFNUpdateStep extends AbstractStepImpl {
 	
 	public String getFile() {
 		return this.file;
+	}
+	
+	public void setFile(String file) {
+		this.file = file;
+	}
+	
+	public String getUrl() {
+		return url;
+	}
+	
+	public void setUrl(String url) {
+		this.url = url;
 	}
 	
 	public String[] getParams() {
@@ -150,6 +162,7 @@ public class CFNUpdateStep extends AbstractStepImpl {
 		public boolean start() throws Exception {
 			final String stack = this.step.getStack();
 			final String file = this.step.getFile();
+			final String url = this.step.getUrl();
 			
 			final Collection<Parameter> params= this.parseParamsFile(this.step.getParamsFile());
 			params.addAll(this.parseParams(this.step.getParams()));
@@ -171,9 +184,9 @@ public class CFNUpdateStep extends AbstractStepImpl {
 						if (cfnStack.exists()) {
 							ArrayList<Parameter> parameters = new ArrayList<>(params);
 							parameters.addAll(keepParams);
-							cfnStack.update(Execution.this.readTemplate(file), parameters, tags);
+							cfnStack.update(Execution.this.readTemplate(file), url, parameters, tags);
 						} else {
-							cfnStack.create(Execution.this.readTemplate(file), params, tags, timeoutInMinutes);
+							cfnStack.create(Execution.this.readTemplate(file), url, params, tags, timeoutInMinutes);
 						}
 						Execution.this.listener.getLogger().println("Stack update complete");
 						Execution.this.getContext().onSuccess(cfnStack.describeOutputs());
@@ -206,6 +219,10 @@ public class CFNUpdateStep extends AbstractStepImpl {
 		}
 		
 		private String readTemplate(String file) {
+			if (file == null) {
+				return null;
+			}
+			
 			FilePath child = this.workspace.child(file);
 			try {
 				return child.readToString();

@@ -72,20 +72,34 @@ public class CloudFormationStack {
 		return map;
 	}
 	
-	public void create(String templateBody, Collection<Parameter> params, Collection<Tag> tags, Integer timeoutInMinutes) throws ExecutionException {
+	public void create(String templateBody, String templateUrl, Collection<Parameter> params, Collection<Tag> tags, Integer timeoutInMinutes) throws ExecutionException {
+		if ((templateBody != null && !templateBody.isEmpty()) || (templateUrl != null && !templateUrl.isEmpty())) {
+			throw new IllegalArgumentException("Either a file or url for the template must be specified");
+		}
+		
 		CreateStackRequest req = new CreateStackRequest();
 		req.withStackName(this.stack).withCapabilities(Capability.CAPABILITY_IAM, Capability.CAPABILITY_NAMED_IAM);
-		req.withTemplateBody(templateBody).withParameters(params).withTags(tags).withTimeoutInMinutes(timeoutInMinutes);
+		req.withTemplateBody(templateBody).withTemplateURL(templateUrl).withParameters(params).withTags(tags).withTimeoutInMinutes(timeoutInMinutes);
 		this.client.createStack(req);
 		
 		new EventPrinter(this.client, this.listener).waitAndPrintStackEvents(this.stack, this.client.waiters().stackCreateComplete());
 	}
 	
-	public void update(String templateBody, Collection<Parameter> params, Collection<Tag> tags) throws ExecutionException {
+	public void update(String templateBody, String templateUrl, Collection<Parameter> params, Collection<Tag> tags) throws ExecutionException {
 		try {
 			UpdateStackRequest req = new UpdateStackRequest();
 			req.withStackName(this.stack).withCapabilities(Capability.CAPABILITY_IAM, Capability.CAPABILITY_NAMED_IAM);
-			req.withTemplateBody(templateBody).withParameters(params).withTags(tags);
+			
+			if (templateBody != null && !templateBody.isEmpty()) {
+				req.setTemplateBody(templateBody);
+			} else if (templateUrl != null && !templateUrl.isEmpty()) {
+				req.setTemplateURL(templateUrl);
+			} else {
+				req.setUsePreviousTemplate(true);
+			}
+			
+			req.withParameters(params).withTags(tags);
+			
 			this.client.updateStack(req);
 			
 			new EventPrinter(this.client, this.listener).waitAndPrintStackEvents(this.stack, this.client.waiters().stackUpdateComplete());
