@@ -158,11 +158,26 @@ Publishes a message to SNS.
 snsPublish(topicArn:'arn:aws:sns:us-east-1:123456789012:MyNewTopic', subject:'my subject', message:'this is your message')
 ```
 
+## deployAPI
+
+Deploys an API Gateway definition to a stage.
+
+```
+deployAPI(api:'myApiId', stage:'Prod')
+```
+
+Additionally you can specify a description and stage variables.
+
+```
+deployAPI(api:'myApiId', stage:'Prod', description:"Build: ${env.BUILD_ID}", variables:['key=value'])
+```
+
 # Versions
 
 ## 1.9 (master)
 * add support for create stack timeout
 * add the ability to use a URL in cfnUpdate
+* add deployAPI step
 
 ## 1.8
 * add support for externalId for role changes
