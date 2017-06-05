@@ -174,7 +174,9 @@ deployAPI(api:'myApiId', stage:'Prod', description:"Build: ${env.BUILD_ID}", var
 
 # Versions
 
-## 1.9 (master)
+## 1.10 (master)
+
+## 1.9
 * add support for create stack timeout
 * add the ability to use a URL in cfnUpdate
 * add deployAPI step
