@@ -71,12 +71,12 @@ public class DeployAPIStep extends AbstractStepImpl {
 	}
 	
 	public String[] getVariables() {
-		return this.variables;
+		return this.variables != null ? this.variables.clone() : null;
 	}
 	
 	@DataBoundSetter
 	public void setVariables(String[] variables) {
-		this.variables = variables;
+		this.variables = variables.clone();
 	}
 	
 	@Extension

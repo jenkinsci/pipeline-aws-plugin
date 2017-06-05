@@ -73,7 +73,7 @@ public class CloudFormationStack {
 	}
 	
 	public void create(String templateBody, String templateUrl, Collection<Parameter> params, Collection<Tag> tags, Integer timeoutInMinutes) throws ExecutionException {
-		if ((templateBody != null && !templateBody.isEmpty()) || (templateUrl != null && !templateUrl.isEmpty())) {
+		if ((templateBody == null || templateBody.isEmpty()) && (templateUrl == null || templateUrl.isEmpty())) {
 			throw new IllegalArgumentException("Either a file or url for the template must be specified");
 		}
 		

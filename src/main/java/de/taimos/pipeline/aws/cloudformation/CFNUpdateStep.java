@@ -72,6 +72,7 @@ public class CFNUpdateStep extends AbstractStepImpl {
 		return this.file;
 	}
 	
+	@DataBoundSetter
 	public void setFile(String file) {
 		this.file = file;
 	}
@@ -80,6 +81,7 @@ public class CFNUpdateStep extends AbstractStepImpl {
 		return url;
 	}
 	
+	@DataBoundSetter
 	public void setUrl(String url) {
 		this.url = url;
 	}
