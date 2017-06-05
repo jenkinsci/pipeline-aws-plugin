@@ -162,6 +162,7 @@ snsPublish(topicArn:'arn:aws:sns:us-east-1:123456789012:MyNewTopic', subject:'my
 
 ## 1.9 (master)
 * add support for create stack timeout
+* add the ability to use a URL in cfnUpdate
 
 ## 1.8
 * add support for externalId for role changes
