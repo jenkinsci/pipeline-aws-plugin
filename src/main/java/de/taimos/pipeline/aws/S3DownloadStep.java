@@ -21,12 +21,21 @@
 
 package de.taimos.pipeline.aws;
 
-import java.io.File;
-import java.io.IOException;
-
-import javax.annotation.Nonnull;
-import javax.inject.Inject;
-
+import com.amazonaws.event.ProgressEvent;
+import com.amazonaws.event.ProgressEventType;
+import com.amazonaws.event.ProgressListener;
+import com.amazonaws.regions.Region;
+import com.amazonaws.regions.Regions;
+import com.amazonaws.services.s3.AmazonS3Client;
+import com.amazonaws.services.s3.transfer.Download;
+import com.amazonaws.services.s3.transfer.MultipleFileDownload;
+import com.amazonaws.services.s3.transfer.TransferManager;
+import com.google.common.base.Preconditions;
+import hudson.EnvVars;
+import hudson.Extension;
+import hudson.FilePath;
+import hudson.model.TaskListener;
+import hudson.remoting.VirtualChannel;
 import org.jenkinsci.plugins.workflow.steps.AbstractStepDescriptorImpl;
 import org.jenkinsci.plugins.workflow.steps.AbstractStepExecutionImpl;
 import org.jenkinsci.plugins.workflow.steps.AbstractStepImpl;
@@ -35,32 +44,24 @@ import org.jenkinsci.remoting.RoleChecker;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
 
-import com.amazonaws.event.ProgressEvent;
-import com.amazonaws.event.ProgressEventType;
-import com.amazonaws.event.ProgressListener;
-import com.amazonaws.services.s3.AmazonS3Client;
-import com.amazonaws.services.s3.transfer.Download;
-import com.amazonaws.services.s3.transfer.MultipleFileDownload;
-import com.amazonaws.services.s3.transfer.TransferManager;
-import com.google.common.base.Preconditions;
-
-import hudson.EnvVars;
-import hudson.Extension;
-import hudson.FilePath;
-import hudson.model.TaskListener;
-import hudson.remoting.VirtualChannel;
+import javax.annotation.Nonnull;
+import javax.inject.Inject;
+import java.io.File;
+import java.io.IOException;
 
 public class S3DownloadStep extends AbstractStepImpl {
 	
 	private final String file;
 	private final String bucket;
+	private final String regionName;
 	private String path = "";
 	private boolean force = false;
-	
+
 	@DataBoundConstructor
-	public S3DownloadStep(String file, String bucket) {
+	public S3DownloadStep(String file, String bucket, String regionName) {
 		this.file = file;
 		this.bucket = bucket;
+		this.regionName = regionName;
 	}
 	
 	public String getFile() {
@@ -78,7 +79,11 @@ public class S3DownloadStep extends AbstractStepImpl {
 	public boolean isForce() {
 		return this.force;
 	}
-	
+
+	public String getRegionName() {
+		return this.regionName;
+	}
+
 	@DataBoundSetter
 	public void setForce(boolean force) {
 		this.force = force;
@@ -123,6 +128,7 @@ public class S3DownloadStep extends AbstractStepImpl {
 			final FilePath target = this.workspace.child(this.step.getFile());
 			final String bucket = this.step.getBucket();
 			final String path = this.step.getPath();
+			final String regionName = this.step.getRegionName();
 			final boolean force = this.step.isForce();
 			
 			Preconditions.checkArgument(bucket != null && !bucket.isEmpty(), "Bucket must not be null or empty");
@@ -145,7 +151,7 @@ public class S3DownloadStep extends AbstractStepImpl {
 								return;
 							}
 						}
-						target.act(new RemoteDownloader(Execution.this.envVars, Execution.this.listener, bucket, path));
+						target.act(new RemoteDownloader(Execution.this.envVars, Execution.this.listener, bucket, path, regionName));
 						Execution.this.listener.getLogger().println("Download complete");
 						Execution.this.getContext().onSuccess(null);
 					} catch (Exception e) {
@@ -171,17 +177,22 @@ public class S3DownloadStep extends AbstractStepImpl {
 		private final TaskListener taskListener;
 		private final String bucket;
 		private final String path;
+		private final String regionName;
 		
-		RemoteDownloader(EnvVars envVars, TaskListener taskListener, String bucket, String path) {
+		RemoteDownloader(EnvVars envVars, TaskListener taskListener, String bucket, String path, String regionName) {
 			this.envVars = envVars;
 			this.taskListener = taskListener;
 			this.bucket = bucket;
 			this.path = path;
+			this.regionName = regionName;
 		}
 		
 		@Override
 		public Void invoke(File localFile, VirtualChannel channel) throws IOException, InterruptedException {
 			AmazonS3Client s3Client = AWSClientFactory.create(AmazonS3Client.class, this.envVars);
+			if(null != this.regionName && !this.regionName.isEmpty()) {
+				s3Client.setRegion(Region.getRegion(Regions.fromName(regionName)));
+			}
 			TransferManager mgr = new TransferManager(s3Client);
 			
 			if (this.path == null || this.path.isEmpty() || this.path.endsWith("/")) {
