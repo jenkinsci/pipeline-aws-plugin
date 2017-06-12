@@ -175,6 +175,7 @@ deployAPI(api:'myApiId', stage:'Prod', description:"Build: ${env.BUILD_ID}", var
 # Versions
 
 ## 1.10 (master)
+* change RoleSessionName to include job name and build number
 
 ## 1.9
 * add support for create stack timeout

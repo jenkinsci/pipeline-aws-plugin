@@ -206,7 +206,7 @@ public class WithAWSStep extends AbstractStepImpl {
 				
 				AssumeRoleRequest request = new AssumeRoleRequest()
 						.withRoleArn(roleARN)
-						.withRoleSessionName("Jenkins-" + System.currentTimeMillis())
+						.withRoleSessionName(this.createRoleSessionName())
 						.withExternalId(this.step.getExternalId());
 
 				AssumeRoleResult assumeRole = sts.assumeRole(request);
@@ -237,6 +237,11 @@ public class WithAWSStep extends AbstractStepImpl {
 				localEnv.override(AWSClientFactory.AWS_PROFILE, this.step.getProfile());
 				this.envVars.overrideAll(localEnv);
 			}
+		}
+		
+		private String createRoleSessionName() {
+			String job_name = this.envVars.get("JOB_NAME").replace(" ", "");
+			return "Jenkins-" + job_name + "-" + this.envVars.get("BUILD_NUMBER");
 		}
 		
 		@Override
