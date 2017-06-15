@@ -168,7 +168,7 @@ public class S3UploadStep extends AbstractStepImpl {
 			AmazonS3Client s3Client = AWSClientFactory.create(AmazonS3Client.class, this.envVars);
 			TransferManager mgr = new TransferManager(s3Client);
 			if (localFile.isFile()) {
-				Preconditions.checkArgument(path != null && !path.isEmpty(), "Path must not be null or empty when uploading file");
+				Preconditions.checkArgument(this.path != null && !this.path.isEmpty(), "Path must not be null or empty when uploading file");
 				final Upload upload = mgr.upload(this.bucket, this.path, localFile);
 				upload.addProgressListener(new ProgressListener() {
 					@Override

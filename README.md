@@ -175,6 +175,7 @@ deployAPI(api:'myApiId', stage:'Prod', description:"Build: ${env.BUILD_ID}", var
 # Versions
 
 ## 1.10 (master)
+* improve S3 download logging #JENKINS-44903
 * change RoleSessionName to include job name and build number
 
 ## 1.9

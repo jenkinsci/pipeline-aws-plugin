@@ -186,15 +186,8 @@ public class S3DownloadStep extends AbstractStepImpl {
 			
 			if (this.path == null || this.path.isEmpty() || this.path.endsWith("/")) {
 				final MultipleFileDownload fileDownload = mgr.downloadDirectory(this.bucket, this.path, localFile);
-				fileDownload.addProgressListener(new ProgressListener() {
-					@Override
-					public void progressChanged(ProgressEvent progressEvent) {
-						if (progressEvent.getEventType() == ProgressEventType.TRANSFER_COMPLETED_EVENT) {
-							RemoteDownloader.this.taskListener.getLogger().println("Finished downloading a file!");
-						}
-					}
-				});
 				fileDownload.waitForCompletion();
+				RemoteDownloader.this.taskListener.getLogger().println("Finished: " + fileDownload.getDescription());
 				return null;
 			} else {
 				final Download download = mgr.download(this.bucket, this.path, localFile);
