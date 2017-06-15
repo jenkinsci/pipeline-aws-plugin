@@ -28,13 +28,11 @@ import org.jenkinsci.plugins.workflow.steps.AbstractStepDescriptorImpl;
 import org.jenkinsci.plugins.workflow.steps.AbstractStepExecutionImpl;
 import org.jenkinsci.plugins.workflow.steps.AbstractStepImpl;
 import org.jenkinsci.plugins.workflow.steps.StepContextParameter;
-import org.kohsuke.stapler.DataBoundConstructor;
+import org.kohsuke.stapler.DataBoundSetter;
 
 import com.amazonaws.services.cloudformation.AmazonCloudFormationClient;
 import com.amazonaws.services.cloudformation.model.AmazonCloudFormationException;
 import com.amazonaws.services.cloudformation.model.ValidateTemplateRequest;
-import com.amazonaws.services.cloudformation.model.ValidateTemplateResult;
-import com.google.common.base.Preconditions;
 
 import de.taimos.pipeline.aws.AWSClientFactory;
 import hudson.EnvVars;
@@ -44,15 +42,25 @@ import hudson.model.TaskListener;
 
 public class CFNValidateStep extends AbstractStepImpl {
 	
-	private final String file;
-	
-	@DataBoundConstructor
-	public CFNValidateStep(String file) {
-		this.file = file;
-	}
+	private String file;
+	private String url;
 	
 	public String getFile() {
 		return this.file;
+	}
+	
+	@DataBoundSetter
+	public void setFile(String file) {
+		this.file = file;
+	}
+	
+	public String getUrl() {
+		return this.url;
+	}
+	
+	@DataBoundSetter
+	public void setUrl(String url) {
+		this.url = url;
 	}
 	
 	@Extension
@@ -87,7 +95,11 @@ public class CFNValidateStep extends AbstractStepImpl {
 		@Override
 		public boolean start() throws Exception {
 			final String file = this.step.getFile();
-			Preconditions.checkArgument(file != null && !file.isEmpty(), "Filename must not be null or empty");
+			final String url = this.step.getUrl();
+			
+			if ((file == null || file.isEmpty()) && (url == null || url.isEmpty())) {
+				throw new IllegalArgumentException("Either a file or url for the template must be specified");
+			}
 			
 			this.listener.getLogger().format("Validating CloudFormation template %s %n", file);
 			
@@ -98,7 +110,13 @@ public class CFNValidateStep extends AbstractStepImpl {
 				public void run() {
 					AmazonCloudFormationClient client = AWSClientFactory.create(AmazonCloudFormationClient.class, Execution.this.envVars);
 					try {
-						ValidateTemplateResult result = client.validateTemplate(new ValidateTemplateRequest().withTemplateBody(template));
+						ValidateTemplateRequest request = new ValidateTemplateRequest();
+						if (template != null) {
+							request.withTemplateBody(template);
+						} else {
+							request.withTemplateURL(url);
+						}
+						client.validateTemplate(request);
 						Execution.this.getContext().onSuccess(null);
 					} catch (AmazonCloudFormationException e) {
 						Execution.this.getContext().onFailure(e);
@@ -109,6 +127,9 @@ public class CFNValidateStep extends AbstractStepImpl {
 		}
 		
 		private String readTemplate(String file) {
+			if (file == null || file.isEmpty()) {
+				return null;
+			}
 			FilePath child = this.workspace.child(file);
 			try {
 				return child.readToString();

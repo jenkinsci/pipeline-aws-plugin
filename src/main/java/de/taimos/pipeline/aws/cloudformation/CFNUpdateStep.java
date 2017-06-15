@@ -78,7 +78,7 @@ public class CFNUpdateStep extends AbstractStepImpl {
 	}
 	
 	public String getUrl() {
-		return url;
+		return this.url;
 	}
 	
 	@DataBoundSetter
