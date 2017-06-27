@@ -57,12 +57,12 @@ import jenkins.model.Jenkins;
 
 public class WithAWSStep extends AbstractStepImpl {
 	
-	private String role;
-	private String roleAccount;
-	private String region;
-	private String profile;
-	private String credentials;
-	private String externalId;
+	private String role = "";
+	private String roleAccount = "";
+	private String region = "";
+	private String profile = "";
+	private String credentials = "";
+	private String externalId = "";
 
 	@DataBoundConstructor
 	public WithAWSStep() {
