@@ -76,8 +76,8 @@ Upload a file/folder from the workspace to an S3 bucket.
 If the `file` parameter denotes a directory, the complete directory including all subfolders will be uploaded.
 
 ```
-s3Upload(file:'file.txt', bucket:'my-bucket', path:'/path/to/target/file.txt')
-s3Upload(file:'someFolder', bucket:'my-bucket', path:'/path/to/targetFolder/')
+s3Upload(file:'file.txt', bucket:'my-bucket', path:'path/to/target/file.txt')
+s3Upload(file:'someFolder', bucket:'my-bucket', path:'path/to/targetFolder/')
 ```
 
 ## s3Download
@@ -87,8 +87,8 @@ Set optional parameter `force` to `true` to overwrite existing file in workspace
 If the `path` ends with a `/` the complete virtual directory will be downloaded.
 
 ```
-s3Download(file:'file.txt', bucket:'my-bucket', path:'/path/to/source/file.txt', force:true)
-s3Download(file:'targetFolder/', bucket:'my-bucket', path:'/path/to/sourceFolder/', force:true)
+s3Download(file:'file.txt', bucket:'my-bucket', path:'path/to/source/file.txt', force:true)
+s3Download(file:'targetFolder/', bucket:'my-bucket', path:'path/to/sourceFolder/', force:true)
 ```
 
 ## cfnValidate

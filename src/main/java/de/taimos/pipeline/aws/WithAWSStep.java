@@ -57,12 +57,12 @@ import jenkins.model.Jenkins;
 
 public class WithAWSStep extends AbstractStepImpl {
 	
-	private String role;
-	private String roleAccount;
-	private String region;
-	private String profile;
-	private String credentials;
-	private String externalId;
+	private String role = "";
+	private String roleAccount = "";
+	private String region = "";
+	private String profile = "";
+	private String credentials = "";
+	private String externalId = "";
 
 	@DataBoundConstructor
 	public WithAWSStep() {
@@ -206,8 +206,10 @@ public class WithAWSStep extends AbstractStepImpl {
 				
 				AssumeRoleRequest request = new AssumeRoleRequest()
 						.withRoleArn(roleARN)
-						.withRoleSessionName(this.createRoleSessionName())
-						.withExternalId(this.step.getExternalId());
+						.withRoleSessionName(this.createRoleSessionName());
+				if(!StringUtils.isNullOrEmpty(this.step.getExternalId())) {
+					request.withExternalId(this.step.getExternalId());
+				}
 
 				AssumeRoleResult assumeRole = sts.assumeRole(request);
 				

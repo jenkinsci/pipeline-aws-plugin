@@ -1,0 +1,12 @@
+<?jelly escape-by-default='true'?>
+<j:jelly xmlns:j="jelly:core" xmlns:f="/lib/form">
+	<f:entry title="${%File}" field="file">
+		<f:textbox />
+	</f:entry>
+	<f:entry title="${%Bucket}" field="bucket">
+		<f:textbox />
+	</f:entry>
+	<f:entry title="${%Path}" field="path">
+		<f:textbox />
+	</f:entry>
+</j:jelly>
