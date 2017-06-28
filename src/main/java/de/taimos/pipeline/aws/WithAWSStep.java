@@ -206,8 +206,10 @@ public class WithAWSStep extends AbstractStepImpl {
 				
 				AssumeRoleRequest request = new AssumeRoleRequest()
 						.withRoleArn(roleARN)
-						.withRoleSessionName(this.createRoleSessionName())
-						.withExternalId(this.step.getExternalId());
+						.withRoleSessionName(this.createRoleSessionName());
+				if(!StringUtils.isNullOrEmpty(this.step.getExternalId())) {
+					request.withExternalId(this.step.getExternalId());
+				}
 
 				AssumeRoleResult assumeRole = sts.assumeRole(request);
 				
