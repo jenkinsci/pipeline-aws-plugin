@@ -28,6 +28,7 @@ import org.jenkinsci.plugins.workflow.steps.AbstractStepDescriptorImpl;
 import org.jenkinsci.plugins.workflow.steps.AbstractStepExecutionImpl;
 import org.jenkinsci.plugins.workflow.steps.AbstractStepImpl;
 import org.jenkinsci.plugins.workflow.steps.StepContextParameter;
+import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
 
 import com.amazonaws.services.cloudformation.AmazonCloudFormationClient;
@@ -44,6 +45,11 @@ public class CFNValidateStep extends AbstractStepImpl {
 	
 	private String file;
 	private String url;
+	
+	@DataBoundConstructor
+	public CFNValidateStep() {
+		//
+	}
 	
 	public String getFile() {
 		return this.file;
