@@ -174,7 +174,9 @@ deployAPI(api:'myApiId', stage:'Prod', description:"Build: ${env.BUILD_ID}", var
 
 # Versions
 
-## 1.10 (master)
+## 1.11 (master)
+
+## 1.10
 * improve S3 download logging #JENKINS-44903
 * change RoleSessionName to include job name and build number
 * add the ability to use a URL in cfnValidate
