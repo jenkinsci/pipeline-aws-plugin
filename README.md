@@ -6,12 +6,7 @@ This plugins adds Jenkins pipeline steps to interact with the AWS API.
 * Creating, updating and deleting CloudFormation stacks
 * Up- and downloading files to/from S3
 
-## Upcoming features
-
-Planned features for upcoming versions include:
-
-* Login to ECR
-* S3 sync
+[**see the changelog for release information**](#Changelog)
 
 # Usage / Steps
 
@@ -172,9 +167,10 @@ Additionally you can specify a description and stage variables.
 deployAPI(api:'myApiId', stage:'Prod', description:"Build: ${env.BUILD_ID}", variables:['key=value'])
 ```
 
-# Versions
+# Changelog
 
 ## 1.11 (master)
+* Replace slash in RoleSessionName coming from Job folders
 
 ## 1.10
 * improve S3 download logging #JENKINS-44903
