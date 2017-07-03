@@ -169,7 +169,9 @@ deployAPI(api:'myApiId', stage:'Prod', description:"Build: ${env.BUILD_ID}", var
 
 # Changelog
 
-## 1.11 (master)
+## 1.12 (master)
+
+## 1.11
 * Replace slash in RoleSessionName coming from Job folders
 
 ## 1.10
