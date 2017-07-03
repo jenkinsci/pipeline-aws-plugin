@@ -6,7 +6,7 @@ This plugins adds Jenkins pipeline steps to interact with the AWS API.
 * Creating, updating and deleting CloudFormation stacks
 * Up- and downloading files to/from S3
 
-[**see the changelog for release information**](#Changelog)
+[**see the changelog for release information**](#changelog)
 
 # Usage / Steps
 
