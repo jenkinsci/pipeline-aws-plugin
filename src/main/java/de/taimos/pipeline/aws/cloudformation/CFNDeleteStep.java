@@ -29,6 +29,7 @@ import org.jenkinsci.plugins.workflow.steps.AbstractStepExecutionImpl;
 import org.jenkinsci.plugins.workflow.steps.AbstractStepImpl;
 import org.jenkinsci.plugins.workflow.steps.StepContextParameter;
 import org.kohsuke.stapler.DataBoundConstructor;
+import org.kohsuke.stapler.DataBoundSetter;
 
 import com.amazonaws.services.cloudformation.AmazonCloudFormationClient;
 import com.google.common.base.Preconditions;
@@ -41,6 +42,7 @@ import hudson.model.TaskListener;
 public class CFNDeleteStep extends AbstractStepImpl {
 	
 	private final String stack;
+	private Long pollInterval = 1000L;
 	
 	@DataBoundConstructor
 	public CFNDeleteStep(String stack) {
@@ -49,6 +51,15 @@ public class CFNDeleteStep extends AbstractStepImpl {
 	
 	public String getStack() {
 		return this.stack;
+	}
+	
+	public Long getPollInterval() {
+		return this.pollInterval;
+	}
+	
+	@DataBoundSetter
+	public void setPollInterval(Long pollInterval) {
+		this.pollInterval = pollInterval;
 	}
 	
 	@Extension
@@ -92,7 +103,7 @@ public class CFNDeleteStep extends AbstractStepImpl {
 					try {
 						AmazonCloudFormationClient client = AWSClientFactory.create(AmazonCloudFormationClient.class, Execution.this.envVars);
 						CloudFormationStack cfnStack = new CloudFormationStack(client, stack, Execution.this.listener);
-						cfnStack.delete();
+						cfnStack.delete(Execution.this.step.getPollInterval());
 						Execution.this.listener.getLogger().println("Stack deletion complete");
 						Execution.this.getContext().onSuccess(null);
 					} catch (Exception e) {

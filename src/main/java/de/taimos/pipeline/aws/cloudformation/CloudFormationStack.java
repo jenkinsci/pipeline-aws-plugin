@@ -72,7 +72,7 @@ public class CloudFormationStack {
 		return map;
 	}
 	
-	public void create(String templateBody, String templateUrl, Collection<Parameter> params, Collection<Tag> tags, Integer timeoutInMinutes) throws ExecutionException {
+	public void create(String templateBody, String templateUrl, Collection<Parameter> params, Collection<Tag> tags, Integer timeoutInMinutes, long pollIntervallMillis) throws ExecutionException {
 		if ((templateBody == null || templateBody.isEmpty()) && (templateUrl == null || templateUrl.isEmpty())) {
 			throw new IllegalArgumentException("Either a file or url for the template must be specified");
 		}
@@ -82,10 +82,10 @@ public class CloudFormationStack {
 		req.withTemplateBody(templateBody).withTemplateURL(templateUrl).withParameters(params).withTags(tags).withTimeoutInMinutes(timeoutInMinutes);
 		this.client.createStack(req);
 		
-		new EventPrinter(this.client, this.listener).waitAndPrintStackEvents(this.stack, this.client.waiters().stackCreateComplete());
+		new EventPrinter(this.client, this.listener).waitAndPrintStackEvents(this.stack, this.client.waiters().stackCreateComplete(), pollIntervallMillis);
 	}
 	
-	public void update(String templateBody, String templateUrl, Collection<Parameter> params, Collection<Tag> tags) throws ExecutionException {
+	public void update(String templateBody, String templateUrl, Collection<Parameter> params, Collection<Tag> tags, long pollIntervallMillis) throws ExecutionException {
 		try {
 			UpdateStackRequest req = new UpdateStackRequest();
 			req.withStackName(this.stack).withCapabilities(Capability.CAPABILITY_IAM, Capability.CAPABILITY_NAMED_IAM);
@@ -102,7 +102,7 @@ public class CloudFormationStack {
 			
 			this.client.updateStack(req);
 			
-			new EventPrinter(this.client, this.listener).waitAndPrintStackEvents(this.stack, this.client.waiters().stackUpdateComplete());
+			new EventPrinter(this.client, this.listener).waitAndPrintStackEvents(this.stack, this.client.waiters().stackUpdateComplete(), pollIntervallMillis);
 		} catch (AmazonCloudFormationException e) {
 			if (e.getMessage().contains("No updates are to be performed")) {
 				return;
@@ -111,8 +111,8 @@ public class CloudFormationStack {
 		}
 	}
 	
-	public void delete() throws ExecutionException {
+	public void delete(long pollIntervallMillis) throws ExecutionException {
 		this.client.deleteStack(new DeleteStackRequest().withStackName(this.stack));
-		new EventPrinter(this.client, this.listener).waitAndPrintStackEvents(this.stack, this.client.waiters().stackDeleteComplete());
+		new EventPrinter(this.client, this.listener).waitAndPrintStackEvents(this.stack, this.client.waiters().stackDeleteComplete(), pollIntervallMillis);
 	}
 }

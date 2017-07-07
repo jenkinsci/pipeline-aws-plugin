@@ -109,8 +109,10 @@ JSON file like with the cli or a YAML file for the [cfn-params](https://www.npmj
 Additionally you can specify a list of tags that are set on the stack and all resources created by CloudFormation.
 The step returns the outputs of the stack as a map.
 
+To prevent running into rate limiting on the AWS API you can change the default polling interval of 1000 ms using the parameter `pollIntervall`. Using the value `0` disables event printing.
+
 ```
-def outputs = cfnUpdate(stack:'my-stack', file:'template.yaml', params:['InstanceType=t2.nano'], keepParams:['Version'], timeoutInMinutes:10, tags:['TagName=Value'])
+def outputs = cfnUpdate(stack:'my-stack', file:'template.yaml', params:['InstanceType=t2.nano'], keepParams:['Version'], timeoutInMinutes:10, tags:['TagName=Value'], pollInterval:1000)
 ```
 
 Alternatively, you can specify a URL to a template on S3 (you'll need this if you hit the 51200 byte limit on template):
@@ -125,8 +127,10 @@ Note: When creating a stack, either `file` or `url` are required. When updating 
 
 Remove the given stack from CloudFormation.
 
+To prevent running into rate limiting on the AWS API you can change the default polling interval of 1000 ms using the parameter `pollIntervall`. Using the value `0` disables event printing.
+
 ```
-cfnDelete(stack:'my-stack')
+cfnDelete(stack:'my-stack', pollInterval:1000)
 ```
 
 ## cfnDescribe
@@ -170,6 +174,7 @@ deployAPI(api:'myApiId', stage:'Prod', description:"Build: ${env.BUILD_ID}", var
 # Changelog
 
 ## 1.12 (master)
+* Make polling interval for CFN events configurable #JENKINS-45348
 
 ## 1.11
 * Replace slash in RoleSessionName coming from Job folders

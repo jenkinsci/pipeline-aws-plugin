@@ -58,6 +58,7 @@ public class CFNUpdateStep extends AbstractStepImpl {
 	private String[] tags;
 	private String paramsFile;
 	private Integer timeoutInMinutes;
+	private Long pollInterval = 1000L;
 	
 	@DataBoundConstructor
 	public CFNUpdateStep(String stack) {
@@ -130,7 +131,16 @@ public class CFNUpdateStep extends AbstractStepImpl {
 	public void setTimeoutInMinutes(Integer timeoutInMinutes) {
 		this.timeoutInMinutes = timeoutInMinutes;
 	}
-
+	
+	public Long getPollInterval() {
+		return this.pollInterval;
+	}
+	
+	@DataBoundSetter
+	public void setPollInterval(Long pollInterval) {
+		this.pollInterval = pollInterval;
+	}
+	
 	@Extension
 	public static class DescriptorImpl extends AbstractStepDescriptorImpl {
 		
@@ -186,9 +196,9 @@ public class CFNUpdateStep extends AbstractStepImpl {
 						if (cfnStack.exists()) {
 							ArrayList<Parameter> parameters = new ArrayList<>(params);
 							parameters.addAll(keepParams);
-							cfnStack.update(Execution.this.readTemplate(file), url, parameters, tags);
+							cfnStack.update(Execution.this.readTemplate(file), url, parameters, tags, Execution.this.step.getPollInterval());
 						} else {
-							cfnStack.create(Execution.this.readTemplate(file), url, params, tags, timeoutInMinutes);
+							cfnStack.create(Execution.this.readTemplate(file), url, params, tags, timeoutInMinutes, Execution.this.step.getPollInterval());
 						}
 						Execution.this.listener.getLogger().println("Stack update complete");
 						Execution.this.getContext().onSuccess(cfnStack.describeOutputs());

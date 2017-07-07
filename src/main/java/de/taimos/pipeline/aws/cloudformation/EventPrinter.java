@@ -54,7 +54,7 @@ public class EventPrinter {
 		this.listener = listener;
 	}
 	
-	public void waitAndPrintStackEvents(String stack, Waiter<DescribeStacksRequest> waiter) throws ExecutionException {
+	public void waitAndPrintStackEvents(String stack, Waiter<DescribeStacksRequest> waiter, long pollIntervalMillis) throws ExecutionException {
 		Date startDate = new Date();
 		
 		final BasicFuture<AmazonWebServiceRequest> waitResult = new BasicFuture<>(null);
@@ -78,38 +78,40 @@ public class EventPrinter {
 		
 		SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
 		
-		while (!waitResult.isDone()) {
-			try {
-				DescribeStackEventsResult result = this.client.describeStackEvents(new DescribeStackEventsRequest().withStackName(stack));
-				List<StackEvent> stackEvents = new ArrayList<>();
-				for (StackEvent event : result.getStackEvents()) {
-					if (event.getEventId().equals(lastEventId) || event.getTimestamp().before(startDate)) {
-						break;
+		if (pollIntervalMillis > 0) {
+			while (!waitResult.isDone()) {
+				try {
+					DescribeStackEventsResult result = this.client.describeStackEvents(new DescribeStackEventsRequest().withStackName(stack));
+					List<StackEvent> stackEvents = new ArrayList<>();
+					for (StackEvent event : result.getStackEvents()) {
+						if (event.getEventId().equals(lastEventId) || event.getTimestamp().before(startDate)) {
+							break;
+						}
+						stackEvents.add(event);
 					}
-					stackEvents.add(event);
-				}
-				if (!stackEvents.isEmpty()) {
-					Collections.reverse(stackEvents);
-					for (StackEvent event : stackEvents) {
-						this.printEvent(sdf, event);
-						this.printLine();
+					if (!stackEvents.isEmpty()) {
+						Collections.reverse(stackEvents);
+						for (StackEvent event : stackEvents) {
+							this.printEvent(sdf, event);
+							this.printLine();
+						}
+						lastEventId = stackEvents.get(stackEvents.size() - 1).getEventId();
 					}
-					lastEventId = stackEvents.get(stackEvents.size() - 1).getEventId();
+				} catch (AmazonCloudFormationException e) {
+					// suppress and continue
 				}
-			} catch (AmazonCloudFormationException e) {
-				// suppress and continue
-			}
-			try {
-				Thread.sleep(1000);
-			} catch (InterruptedException e) {
-				e.printStackTrace();
+				try {
+					Thread.sleep(pollIntervalMillis);
+				} catch (InterruptedException e) {
+					// suppress and continue
+				}
 			}
 		}
 		
 		try {
 			waitResult.get();
 		} catch (InterruptedException e) {
-			e.printStackTrace();
+			this.listener.getLogger().format("Failed to wait for CFN action to complete: $s", e.getMessage());
 		}
 	}
 	
