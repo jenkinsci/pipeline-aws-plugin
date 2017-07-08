@@ -61,6 +61,10 @@ public class WaitDeployStep extends AbstractStepImpl {
         return deploymentId;
     }
 
+    public Long getMaxWait() {
+        return maxWait;
+    }
+
     @Extension
     public static class DescriptorImpl extends AbstractStepDescriptorImpl {
 
@@ -70,7 +74,7 @@ public class WaitDeployStep extends AbstractStepImpl {
 
         @Override
         public String getFunctionName() {
-            return "waitDeploymentCompletion";
+            return "awaitDeploymentCompletion";
         }
 
         @Override
@@ -89,18 +93,18 @@ public class WaitDeployStep extends AbstractStepImpl {
         @StepContextParameter
         private transient TaskListener listener;
 
-        private static final Long PollingInterval = 10000L;
+        private static final Long POLLING_INTERVAL = 10000L;
 
-        private static final String SucceededStatus = "Succeeded";
+        private static final String SUCCEEDED_STATUS = "Succeeded";
 
-        private static final String FailedStatus = "Failed";
+        private static final String FAILED_STATUS = "Failed";
 
         @Override
         protected Void run() throws Exception {
             AmazonCodeDeployClient client = AWSClientFactory.create(AmazonCodeDeployClient.class, this.envVars);
 
             String deploymentId = this.step.getDeploymentId();
-            Long maxWait = this.step.maxWait;
+            Long maxWait = this.step.getMaxWait();
             this.listener.getLogger().format("Checking Deployment(%s) status", deploymentId);
 
             Long startTime = System.currentTimeMillis();
@@ -112,17 +116,17 @@ public class WaitDeployStep extends AbstractStepImpl {
 
                 this.listener.getLogger().format("DeploymentStatus(%s)", deploymentStatus);
 
-                if (SucceededStatus.equals(deploymentStatus)) {
+                if (SUCCEEDED_STATUS.equals(deploymentStatus)) {
                     this.listener.getLogger().println("Deployment completed successfully");
                     return null;
-                } else if (FailedStatus.equals(deploymentStatus)) {
+                } else if (FAILED_STATUS.equals(deploymentStatus)) {
                     this.listener.getLogger().println("Deployment completed in error");
                     String errorMessage = deployment.getDeploymentInfo().getErrorInformation().getMessage();
                     throw new Exception("Deployment Failed: " + errorMessage);
                 } else {
                     this.listener.getLogger().println("Deployment still in progress... sleeping");
                     try {
-                        Thread.sleep(PollingInterval);
+                        Thread.sleep(POLLING_INTERVAL);
                     } catch (Exception e) {
                         throw e;
                     }
