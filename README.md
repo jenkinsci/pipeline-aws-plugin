@@ -195,6 +195,7 @@ timeout(time: 15, unit: 'MINUTES'){
 
 ## 1.12 (master)
 * Make polling interval for CFN events configurable #JENKINS-45348
+* Added `awaitDeploymentCompletion` Step
 
 ## 1.11
 * Replace slash in RoleSessionName coming from Job folders
