@@ -171,6 +171,26 @@ Additionally you can specify a description and stage variables.
 deployAPI(api:'myApiId', stage:'Prod', description:"Build: ${env.BUILD_ID}", variables:['key=value'])
 ```
 
+## awaitDeploymentCompletion
+
+Awaits for a CodeDeploy deployment to complete. 
+
+The step runs within the `withAWS` block and requires only one parameter:
+
+* deploymentId (the AWS CodeDeploy deployment id: e.g. 'd-3GR0HQLDN')
+
+Simple await:
+```
+awaitDeploymentCompletion('d-3GR0HQLDN')
+```
+
+Timed await:
+```
+timeout(time: 15, unit: 'MINUTES'){
+    awaitDeploymentCompletion('d-3GR0HQLDN')
+}
+```
+
 # Changelog
 
 ## 1.12 (master)

@@ -45,24 +45,13 @@ public class WaitDeployStep extends AbstractStepImpl {
      */
     private final String deploymentId;
 
-    /**
-     * The max amount of time, before failing be build.
-     * A negative number will mean indefinite wait
-     */
-    private final Long maxWait;
-
     @DataBoundConstructor
-    public WaitDeployStep(String deploymentId, Long maxWait) {
+    public WaitDeployStep(String deploymentId) {
         this.deploymentId = deploymentId;
-        this.maxWait = maxWait;
     }
 
     public String getDeploymentId() {
         return deploymentId;
-    }
-
-    public Long getMaxWait() {
-        return maxWait;
     }
 
     @Extension
@@ -104,12 +93,9 @@ public class WaitDeployStep extends AbstractStepImpl {
             AmazonCodeDeployClient client = AWSClientFactory.create(AmazonCodeDeployClient.class, this.envVars);
 
             String deploymentId = this.step.getDeploymentId();
-            Long maxWait = this.step.getMaxWait();
             this.listener.getLogger().format("Checking Deployment(%s) status", deploymentId);
 
-            Long startTime = System.currentTimeMillis();
-
-            while (maxWait < 0 || (System.currentTimeMillis() - startTime) < maxWait * 1000) {
+            while (true) {
                 GetDeploymentRequest getDeploymentRequest = new GetDeploymentRequest().withDeploymentId(deploymentId);
                 GetDeploymentResult deployment = client.getDeployment(getDeploymentRequest);
                 String deploymentStatus = deployment.getDeploymentInfo().getStatus();
@@ -133,8 +119,6 @@ public class WaitDeployStep extends AbstractStepImpl {
                 }
 
             }
-
-            throw new Exception("Maximum time elapsed: " + maxWait + " seconds");
 
         }
 
