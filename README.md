@@ -86,6 +86,17 @@ s3Download(file:'file.txt', bucket:'my-bucket', path:'path/to/source/file.txt', 
 s3Download(file:'targetFolder/', bucket:'my-bucket', path:'path/to/sourceFolder/', force:true)
 ```
 
+## s3Delete
+
+Delete a file/folder from S3.
+Set the optional parameter `recursive` to `true` to treat `path` as a directory structure (with directories separated by "/") to remove it and all of its children.
+Using the `recursive` option on a file (as opposed to a folder) is perfectly valid, but it will also attempt to remove any "children" of that path if they exist.
+
+```
+s3Delete(bucket:'my-bucket', path:'path/to/source/file.txt')
+s3Delete(bucket:'my-bucket', path:'path/to/sourceFolder', recursive:true)
+```
+
 ## cfnValidate
 
 Validates the given CloudFormation template.
