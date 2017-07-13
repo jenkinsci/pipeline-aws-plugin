@@ -12,9 +12,9 @@ This plugins adds Jenkins pipeline steps to interact with the AWS API.
 
 ## withAWS
 
-the `withAWS` step provides authorization for the nested steps. 
-You can provide region and profile information or let Jenkins 
-assume a role in another or the same AWS account. 
+the `withAWS` step provides authorization for the nested steps.
+You can provide region and profile information or let Jenkins
+assume a role in another or the same AWS account.
 You can mix all parameters in one `withAWS` block.
 
 Set region information:
@@ -77,7 +77,7 @@ s3Upload(file:'someFolder', bucket:'my-bucket', path:'path/to/targetFolder/')
 
 ## s3Download
 
-Download a file/folder from S3 to the local workspace. 
+Download a file/folder from S3 to the local workspace.
 Set optional parameter `force` to `true` to overwrite existing file in workspace.
 If the `path` ends with a `/` the complete virtual directory will be downloaded.
 
@@ -89,12 +89,11 @@ s3Download(file:'targetFolder/', bucket:'my-bucket', path:'path/to/sourceFolder/
 ## s3Delete
 
 Delete a file/folder from S3.
-Set the optional parameter `recursive` to `true` to treat `path` as a directory structure (with directories separated by "/") to remove it and all of its children.
-Using the `recursive` option on a file (as opposed to a folder) is perfectly valid, but it will also attempt to remove any "children" of that path if they exist.
+If the path ends in a "/", then the path will be interpreted to be a folder, and all of its contents will be removed.
 
 ```
 s3Delete(bucket:'my-bucket', path:'path/to/source/file.txt')
-s3Delete(bucket:'my-bucket', path:'path/to/sourceFolder', recursive:true)
+s3Delete(bucket:'my-bucket', path:'path/to/sourceFolder/')
 ```
 
 ## cfnValidate
@@ -108,14 +107,14 @@ cfnValidate(file:'template.yaml')
 ## cfnUpdate
 
 Create or update the given CloudFormation stack using the given template from the workspace.
-You can specify an optional list of parameters. 
+You can specify an optional list of parameters.
 You can also specify a list of `keepParams` of parameters which will use the previous value on stack updates.
 
 Using `timeoutInMinutes` you can specify the amount of time that can pass before the stack status becomes CREATE_FAILED and the stack gets rolled back.
 Due to limitations in the AWS API, this only applies to stack creation.
 
-If you have many parameters you can specify a `paramsFile` containing the parameters. The format is either a standard 
-JSON file like with the cli or a YAML file for the [cfn-params](https://www.npmjs.com/package/cfn-params) command line utility. 
+If you have many parameters you can specify a `paramsFile` containing the parameters. The format is either a standard
+JSON file like with the cli or a YAML file for the [cfn-params](https://www.npmjs.com/package/cfn-params) command line utility.
 
 Additionally you can specify a list of tags that are set on the stack and all resources created by CloudFormation.
 The step returns the outputs of the stack as a map.
@@ -184,7 +183,7 @@ deployAPI(api:'myApiId', stage:'Prod', description:"Build: ${env.BUILD_ID}", var
 
 ## awaitDeploymentCompletion
 
-Awaits for a CodeDeploy deployment to complete. 
+Awaits for a CodeDeploy deployment to complete.
 
 The step runs within the `withAWS` block and requires only one parameter:
 
@@ -242,11 +241,11 @@ timeout(time: 15, unit: 'MINUTES'){
 ## 1.4
 * add empty checks for mandatory strings
 * use latest AWS SDK
-* add support for CloudFormation stack tags 
+* add support for CloudFormation stack tags
 
 ## 1.3
 * add support for publishing messages to SNS
-* fail step on errors during CloudFormation actions 
+* fail step on errors during CloudFormation actions
 
 ## 1.2
 * add proxy support using standard environment variables
@@ -255,7 +254,7 @@ timeout(time: 15, unit: 'MINUTES'){
 ## 1.1
 * fixing invalidation of CloudFront distributions
 * add output of stack creation, updates and deletes
-* Only fetch AWS environment once 
+* Only fetch AWS environment once
 * make long-running steps async
 
 ## 1.0

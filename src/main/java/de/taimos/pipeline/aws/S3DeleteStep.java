@@ -55,7 +55,7 @@ import hudson.remoting.VirtualChannel;
 
 /**
  * The S3DeleteStep deletes an object from S3.
- * If the "recursive" option is set, then this interprets the object as a folder
+ * If the path ends with a "/", then this interprets the object as a folder
  * and removes all content, as well.
  */
 public class S3DeleteStep extends AbstractStepImpl {
@@ -67,10 +67,6 @@ public class S3DeleteStep extends AbstractStepImpl {
 	 * This is the path to the object.
 	 */
 	private final String path;
-	/**
-	 * This is whether or not we'll be performing a recursive delete action.
-	 */
-	private boolean recursive = false;
 
 	@DataBoundConstructor
 	public S3DeleteStep(String bucket, String path) {
@@ -84,15 +80,6 @@ public class S3DeleteStep extends AbstractStepImpl {
 
 	public String getPath() {
 		return this.path;
-	}
-
-	public boolean isRecursive() {
-		return this.recursive;
-	}
-
-	@DataBoundSetter
-	public void setRecursive(boolean recursive) {
-		this.recursive = recursive;
 	}
 
 	@Extension
@@ -128,7 +115,6 @@ public class S3DeleteStep extends AbstractStepImpl {
 		public boolean start() throws Exception {
 			final String bucket = this.step.getBucket();
 			final String path = this.step.getPath();
-			final boolean recursive = this.step.isRecursive();
 
 			Preconditions.checkArgument(bucket != null && !bucket.isEmpty(), "Bucket must not be null or empty");
 
@@ -136,10 +122,10 @@ public class S3DeleteStep extends AbstractStepImpl {
 				@Override
 				public void run() {
 					try {
-						Execution.this.listener.getLogger().format("Deleting s3://%s/%s %s%n", bucket, path, recursive ? "recursively" : "" );
+						Execution.this.listener.getLogger().format("Deleting s3://%s/%s%n", bucket, path );
 
 						AmazonS3Client s3Client = AWSClientFactory.create(AmazonS3Client.class, Execution.this.envVars);
-						if( ! recursive ) {
+						if( ! path.endsWith("/") ) {
 							// See if the thing that we were given is a file.
 							if( s3Client.doesObjectExist( bucket, path ) ) {
 								Execution.this.listener.getLogger().format("Deleting object at s3://%s/%s%n", bucket, path );

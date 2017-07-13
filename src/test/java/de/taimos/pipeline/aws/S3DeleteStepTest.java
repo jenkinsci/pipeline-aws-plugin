@@ -27,13 +27,6 @@ import org.junit.Assert;
 import org.junit.Test;
 
 public class S3DeleteStepTest {
-
-	@Test
-	public void recursiveDefaultsToFalse() throws Exception {
-		S3DeleteStep step = new S3DeleteStep( "my-bucket", "my-path" );
-		Assert.assertFalse( step.isRecursive() );
-	}
-
 	@Test
 	public void gettersWorkAsExpected() throws Exception {
 		S3DeleteStep step = new S3DeleteStep( "my-bucket", "my-path" );
