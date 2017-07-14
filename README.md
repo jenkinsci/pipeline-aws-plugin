@@ -211,8 +211,6 @@ The step returns an array of Account objects with the following fields:
 * arn
 * name
 * status
-* joinedMethod
-* joinedTimestamp
 
 ```
 def accounts = listAWSAccounts()
