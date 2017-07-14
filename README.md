@@ -220,7 +220,9 @@ def accounts = listAWSAccounts()
 
 # Changelog
 
-## 1.12 (master)
+## 1.13 (master)
+
+## 1.12
 * Make polling interval for CFN events configurable #JENKINS-45348
 * Add `awaitDeploymentCompletion` step
 * Add `s3Delete` step
