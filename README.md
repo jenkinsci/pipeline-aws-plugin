@@ -96,6 +96,40 @@ s3Delete(bucket:'my-bucket', path:'path/to/source/file.txt')
 s3Delete(bucket:'my-bucket', path:'path/to/sourceFolder/')
 ```
 
+## s3FindFiles
+
+This provides a way to query the files/folders in the S3 bucket, analogous to the `findFiles` step provided by "pipeline-utility-steps-plugin".
+If specified, the `path` limits the scope of the operation to that folder only.
+The `glob` parameter tells `s3FindFiles` what to look for.  This can be a file name, a full path to a file, or a standard glob ("\*", "\*.ext", "path/\*\*/file.ext", etc.).
+
+If you do not specify `path`, then it will default to the root of the bucket.
+The path is assumed to be a folder; you do not need to end it with a "/", but it is okay if you do.
+
+If you do not specify `glob`, then it will default to "\*".
+
+By default, this will return both files and folders.
+To only return files, set the `onlyFiles` parameter to `true`.
+
+```
+files = s3FindFiles(bucket:'my-bucket')
+files = s3FindFiles(bucket:'my-bucket', glob:'path/to/targetFolder/file.ext')
+files = s3FindFiles(bucket:'my-bucket', path:'path/to/targetFolder', glob:'file.ext')
+files = s3FindFiles(bucket:'my-bucket', path:'path/to/targetFolder', glob:'file.ext')
+files = s3FindFiles(bucket:'my-bucket', path:'path/to/targetFolder', glob:'*.ext')
+```
+
+`s3FindFiles` returns an array of `FileWrapper` objects exactly identical to those returned by `findFiles`.
+
+Each `FileWrapper` object has the following properties:
+
+* `name`: the filename portion of the path (for "path/to/my/file.ext", this would be "file.ext")
+* `path`: the full path of the file (for "path/to/my/file.ext", this would be "path/to/my/file.ext")
+* `directory`: true if this is a directory; false otherwise
+* `length`: the length of the file (this is always "0" for directories)
+* `lastModified`: the last modification timestamp, in milliseconds since the Unix epoch (this is always "0" for directories)
+
+When used in a string context, a `FileWrapper` object returns the value of its `path`.
+
 ## cfnValidate
 
 Validates the given CloudFormation template.

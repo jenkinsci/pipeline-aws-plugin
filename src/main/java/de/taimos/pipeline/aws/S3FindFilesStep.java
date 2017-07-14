@@ -25,6 +25,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.FileSystems;
 import java.nio.file.PathMatcher;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
@@ -141,7 +142,7 @@ public class S3FindFilesStep extends AbstractStepImpl {
 		}
 	}
 
-	public static class Execution extends AbstractSynchronousNonBlockingStepExecution<String[]> {
+	public static class Execution extends AbstractSynchronousNonBlockingStepExecution<FileWrapper[]> {
 		private static final long serialVersionUID = 1L;
 
 		@Inject
@@ -154,7 +155,7 @@ public class S3FindFilesStep extends AbstractStepImpl {
 		private transient TaskListener listener;
 
 		@Override
-		public String[] run() throws Exception {
+		public FileWrapper[] run() throws Exception {
 			final String bucket = this.step.getBucket();
 			final String path = this.step.getPath();
 			final String glob = this.step.getGlob();
@@ -180,7 +181,7 @@ public class S3FindFilesStep extends AbstractStepImpl {
 				PathMatcher matcher = FileSystems.getDefault().getPathMatcher( matcherString );
 
 				// This is the list of keys that match from the bucket.
-				List<String> matchingObjects = new ArrayList<>();
+				List<FileWrapper> matchingObjects = new ArrayList<>();
 
 				// This is the list of folders that we need to investigate.
 				// We're going to start with the path that we've been given,
@@ -211,8 +212,10 @@ public class S3FindFilesStep extends AbstractStepImpl {
 					while( true ) {
 						// Add any real objects to the list of objects to delete.
 						for( S3ObjectSummary entry : objectListing.getObjectSummaries() ) {
-							if( matcher.matches( Paths.get(entry.getKey()) ) ) {
-								matchingObjects.add( entry.getKey() );
+							Path javaPath = Paths.get(entry.getKey());
+							if( matcher.matches( javaPath ) ) {
+								FileWrapper file = new FileWrapper( javaPath.getFileName().toString(), entry.getKey(), false, entry.getSize(), entry.getLastModified().getTime() );
+								matchingObjects.add( file );
 							}
 						}
 						// Add any folders to the list of folders that we need to investigate.
@@ -221,8 +224,10 @@ public class S3FindFilesStep extends AbstractStepImpl {
 						// go through the folders and add any matching ones.
 						if( ! onlyFiles ) {
 							for( String prefix : objectListing.getCommonPrefixes() ) {
-								if( matcher.matches( Paths.get(prefix) ) ) {
-									matchingObjects.add( prefix );
+								Path javaPath = Paths.get(prefix);
+								if( matcher.matches( javaPath ) ) {
+									FileWrapper file = new FileWrapper( javaPath.getFileName().toString(), prefix, true, 0, 0 );
+									matchingObjects.add( file );
 								}
 							}
 						}
@@ -236,7 +241,7 @@ public class S3FindFilesStep extends AbstractStepImpl {
 					}
 				}
 
-				String[] stepResult = new String[ matchingObjects.size() ];
+				FileWrapper[] stepResult = new FileWrapper[ matchingObjects.size() ];
 				stepResult = matchingObjects.toArray( stepResult );
 
 				Execution.this.listener.getLogger().println("Search complete");
