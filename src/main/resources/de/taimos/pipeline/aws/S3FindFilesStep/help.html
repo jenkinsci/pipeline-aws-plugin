@@ -4,11 +4,11 @@
 		If <tt>path</tt> is given, then it will be used as the root of the search.
 	</p>
 	<p>
-		The following are equivalent:
+		The following all ultimately return one item: "path/to/my/file.ext"; however, limiting the scope using <tt>path</tt> is the most efficient:
 		<ul>
 			<li><tt>s3FindFiles bucket: "my-bucket", glob: "path/to/my/file.ext"</tt></li>
 			<li><tt>s3FindFiles bucket: "my-bucket", path: "path/to", glob: "my/file.ext"</tt></li>
-			<li><tt>s3FindFiles bucket: "my-bucket", path: "path/to/", glob: "my/file.ext"</tt></li>
+			<li><tt>s3FindFiles bucket: "my-bucket", path: "path/to/my", glob: "file.ext"</tt></li>
 		</ul>
 	</p>
 	<p>
