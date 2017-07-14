@@ -21,8 +21,6 @@
 
 package de.taimos.pipeline.aws;
 
-import java.io.File;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -33,17 +31,11 @@ import org.jenkinsci.plugins.workflow.steps.AbstractStepDescriptorImpl;
 import org.jenkinsci.plugins.workflow.steps.AbstractStepExecutionImpl;
 import org.jenkinsci.plugins.workflow.steps.AbstractStepImpl;
 import org.jenkinsci.plugins.workflow.steps.StepContextParameter;
-import org.jenkinsci.remoting.RoleChecker;
 import org.kohsuke.stapler.DataBoundConstructor;
-import org.kohsuke.stapler.DataBoundSetter;
 
-import com.amazonaws.event.ProgressEvent;
-import com.amazonaws.event.ProgressEventType;
-import com.amazonaws.event.ProgressListener;
 import com.amazonaws.services.s3.AmazonS3Client;
 import com.amazonaws.services.s3.model.ListObjectsRequest;
 import com.amazonaws.services.s3.model.ObjectListing;
-import com.amazonaws.services.s3.model.S3Object;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
 import com.google.common.base.Preconditions;
 
@@ -51,7 +43,6 @@ import hudson.EnvVars;
 import hudson.Extension;
 import hudson.FilePath;
 import hudson.model.TaskListener;
-import hudson.remoting.VirtualChannel;
 
 /**
  * The S3DeleteStep deletes an object from S3.
@@ -192,7 +183,7 @@ public class S3DeleteStep extends AbstractStepImpl {
 
 						Execution.this.listener.getLogger().println("Delete complete");
 						Execution.this.getContext().onSuccess(null);
-					} catch (Exception e) {
+					} catch (RuntimeException e) {
 						Execution.this.getContext().onFailure(e);
 					}
 				}

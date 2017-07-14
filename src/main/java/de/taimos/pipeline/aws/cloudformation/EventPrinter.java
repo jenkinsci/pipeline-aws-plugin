@@ -111,7 +111,7 @@ public class EventPrinter {
 		try {
 			waitResult.get();
 		} catch (InterruptedException e) {
-			this.listener.getLogger().format("Failed to wait for CFN action to complete: $s", e.getMessage());
+			this.listener.getLogger().format("Failed to wait for CFN action to complete: %s", e.getMessage());
 		}
 	}
 	
