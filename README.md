@@ -201,12 +201,30 @@ timeout(time: 15, unit: 'MINUTES'){
 }
 ```
 
+## listAWSAccounts
+
+Retrieves the list of all AWS accounts of the organization. This step can only be run in the master account.
+
+The step returns an array of Account objects with the following fields:
+
+* id
+* arn
+* name
+* status
+* joinedMethod
+* joinedTimestamp
+
+```
+def accounts = listAWSAccounts()
+```
+
 # Changelog
 
 ## 1.12 (master)
 * Make polling interval for CFN events configurable #JENKINS-45348
 * Add `awaitDeploymentCompletion` step
 * Add `s3Delete` step
+* Add `listAWSAccounts` step
 
 ## 1.11
 * Replace slash in RoleSessionName coming from Job folders
