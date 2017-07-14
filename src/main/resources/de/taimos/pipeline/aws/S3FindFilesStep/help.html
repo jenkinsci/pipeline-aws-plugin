@@ -1,0 +1,20 @@
+<div>
+	<p>
+		List all of the files/folders in the bucket.
+		If <tt>path</tt> is given, then it will be used as the root of the search.
+	</p>
+	<p>
+		The following are equivalent:
+		<ul>
+			<li><tt>s3FindFiles bucket: "my-bucket", glob: "path/to/my/file.ext"</tt></li>
+			<li><tt>s3FindFiles bucket: "my-bucket", path: "path/to", glob: "my/file.ext"</tt></li>
+			<li><tt>s3FindFiles bucket: "my-bucket", path: "path/to/", glob: "my/file.ext"</tt></li>
+		</ul>
+	</p>
+	<p>
+		List every file:
+		<ul>
+			<li><tt>s3FindFiles bucket: "my-bucket", glob: "**", onlyFiles: true</tt></li>
+		</ul>
+	</p>
+</div>
