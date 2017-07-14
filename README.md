@@ -114,8 +114,8 @@ To only return files, set the `onlyFiles` parameter to `true`.
 files = s3FindFiles(bucket:'my-bucket')
 files = s3FindFiles(bucket:'my-bucket', glob:'path/to/targetFolder/file.ext')
 files = s3FindFiles(bucket:'my-bucket', path:'path/to/targetFolder', glob:'file.ext')
-files = s3FindFiles(bucket:'my-bucket', path:'path/to/targetFolder', glob:'file.ext')
 files = s3FindFiles(bucket:'my-bucket', path:'path/to/targetFolder', glob:'*.ext')
+files = s3FindFiles(bucket:'my-bucket', path:'path', glob:'**/file.ext')
 ```
 
 `s3FindFiles` returns an array of `FileWrapper` objects exactly identical to those returned by `findFiles`.
