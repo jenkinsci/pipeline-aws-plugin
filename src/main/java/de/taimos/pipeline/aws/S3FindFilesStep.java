@@ -177,7 +177,6 @@ public class S3FindFilesStep extends AbstractStepImpl {
 				// Note that a glob of "**" will match everything (both files and folders) under
 				// the path.
 				final String matcherString = "glob:" + ( path.length() == 0 ? "" : path + ( path.endsWith("/") ? "" : "/" ) ) + ( glob.length() == 0 ? "*" : glob );
-				Execution.this.listener.getLogger().format("Matcher string: %s%n", matcherString ); // TODO REMOVE
 				PathMatcher matcher = FileSystems.getDefault().getPathMatcher( matcherString );
 
 				// This is how may components there are in the root path.  We'll use this information
