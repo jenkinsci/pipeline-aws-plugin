@@ -104,6 +104,10 @@ The `glob` parameter tells `s3FindFiles` what to look for.  This can be a file n
 
 If you do not specify `path`, then it will default to the root of the bucket.
 The path is assumed to be a folder; you do not need to end it with a "/", but it is okay if you do.
+The `path` property of the results will be _relative_ to this value.
+
+This works by enumerating _every_ file/folder in the S3 bucket under `path` and then performing glob matching.
+When possible, you should use `path` to limit the search space for efficiency purposes.
 
 If you do not specify `glob`, then it will default to "\*".
 
@@ -113,9 +117,9 @@ To only return files, set the `onlyFiles` parameter to `true`.
 ```
 files = s3FindFiles(bucket:'my-bucket')
 files = s3FindFiles(bucket:'my-bucket', glob:'path/to/targetFolder/file.ext')
-files = s3FindFiles(bucket:'my-bucket', path:'path/to/targetFolder', glob:'file.ext')
-files = s3FindFiles(bucket:'my-bucket', path:'path/to/targetFolder', glob:'*.ext')
-files = s3FindFiles(bucket:'my-bucket', path:'path', glob:'**/file.ext')
+files = s3FindFiles(bucket:'my-bucket', path:'path/to/targetFolder/', glob:'file.ext')
+files = s3FindFiles(bucket:'my-bucket', path:'path/to/targetFolder/', glob:'*.ext')
+files = s3FindFiles(bucket:'my-bucket', path:'path/', glob:'**/file.ext')
 ```
 
 `s3FindFiles` returns an array of `FileWrapper` objects exactly identical to those returned by `findFiles`.
@@ -123,12 +127,12 @@ files = s3FindFiles(bucket:'my-bucket', path:'path', glob:'**/file.ext')
 Each `FileWrapper` object has the following properties:
 
 * `name`: the filename portion of the path (for "path/to/my/file.ext", this would be "file.ext")
-* `path`: the full path of the file (for "path/to/my/file.ext", this would be "path/to/my/file.ext")
+* `path`: the full path of the file, _relative_ to the `path` specified (for `path`="path/to/", this property of the file "path/to/my/file.ext" would be "my/file.ext")
 * `directory`: true if this is a directory; false otherwise
 * `length`: the length of the file (this is always "0" for directories)
 * `lastModified`: the last modification timestamp, in milliseconds since the Unix epoch (this is always "0" for directories)
 
-When used in a string context, a `FileWrapper` object returns the value of its `path`.
+When used in a string context, a `FileWrapper` object returns the value of its `path` property.
 
 ## cfnValidate
 
@@ -253,6 +257,7 @@ def accounts = listAWSAccounts()
 # Changelog
 
 ## 1.13 (master)
+* Add `s3FindFiles` step
 
 ## 1.12
 * Make polling interval for CFN events configurable #JENKINS-45348

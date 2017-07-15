@@ -180,7 +180,13 @@ public class S3FindFilesStep extends AbstractStepImpl {
 				Execution.this.listener.getLogger().format("Matcher string: %s%n", matcherString ); // TODO REMOVE
 				PathMatcher matcher = FileSystems.getDefault().getPathMatcher( matcherString );
 
-				// This is the list of keys that match from the bucket.
+				// This is how may components there are in the root path.  We'll use this information
+				// to strip out these parts from the matches later on.
+				//
+				// For exmple, if `path` is "path/to", then this will be "2".
+				final int pathComponentCount = path.length() == 0 ? 0 : Paths.get( path ).getNameCount();
+
+				// This is the list of S3 file information for all of the matching objects.
 				List<FileWrapper> matchingObjects = new ArrayList<>();
 
 				// This is the list of folders that we need to investigate.
@@ -214,7 +220,18 @@ public class S3FindFilesStep extends AbstractStepImpl {
 						for( S3ObjectSummary entry : objectListing.getObjectSummaries() ) {
 							Path javaPath = Paths.get(entry.getKey());
 							if( matcher.matches( javaPath ) ) {
-								FileWrapper file = new FileWrapper( javaPath.getFileName().toString(), entry.getKey(), false, entry.getSize(), entry.getLastModified().getTime() );
+								FileWrapper file = new FileWrapper(
+									// Name:
+									javaPath.getFileName().toString(),
+									// Path (relative to the `path` parameter):
+									javaPath.subpath( pathComponentCount, javaPath.getNameCount() ).toString(),
+									// Directory?
+									false,
+									// Size:
+									entry.getSize(),
+									// Last modified (milliseconds):
+									entry.getLastModified().getTime()
+								);
 								matchingObjects.add( file );
 							}
 						}
@@ -226,7 +243,18 @@ public class S3FindFilesStep extends AbstractStepImpl {
 							for( String prefix : objectListing.getCommonPrefixes() ) {
 								Path javaPath = Paths.get(prefix);
 								if( matcher.matches( javaPath ) ) {
-									FileWrapper file = new FileWrapper( javaPath.getFileName().toString(), prefix, true, 0, 0 );
+									FileWrapper file = new FileWrapper(
+										// Name:
+										javaPath.getFileName().toString(),
+										// Path (relative to the `path` parameter):
+										javaPath.subpath( pathComponentCount, javaPath.getNameCount() ).toString(),
+										// Directory?
+										true,
+										// Size:
+										0, // S3 folders have no size (they don't even really exist).
+										// Last modified (milliseconds):
+										0 // S3 folders have no last modified date (they don't even really exist).
+									);
 									matchingObjects.add( file );
 								}
 							}

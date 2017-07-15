@@ -2,13 +2,26 @@
 	<p>
 		Return a list of all of the files/folders in the bucket.
 		If <tt>path</tt> is given, then it will be used as the root of the search.
+		Results are returned <i>relative</i> to <tt>path</tt>; if <tt>path</tt> is not given, then the results will contain the full S3 path.
 	</p>
 	<p>
-		The following all ultimately return one item: "path/to/my/file.ext"; however, limiting the scope using <tt>path</tt> is the most efficient:
+		The following all ultimately return one item referring to "path/to/my/file.ext"; however, by limiting the scope via <tt>path</tt>, the results are different.
 		<ul>
-			<li><tt>s3FindFiles bucket: "my-bucket", glob: "path/to/my/file.ext"</tt></li>
-			<li><tt>s3FindFiles bucket: "my-bucket", path: "path/to", glob: "my/file.ext"</tt></li>
-			<li><tt>s3FindFiles bucket: "my-bucket", path: "path/to/my", glob: "file.ext"</tt></li>
+			<li>
+				<tt>files = s3FindFiles bucket: "my-bucket", glob: "path/to/my/file.ext"</tt><br>
+				<tt>// files[0].name = "file.ext"</tt><br>
+				<tt>// files[0].path = "path/to/my/file.ext"</tt>
+			</li>
+			<li>
+				<tt>files = s3FindFiles bucket: "my-bucket", path: "path/to/", glob: "my/file.ext"</tt><br>
+				<tt>// files[0].name = "file.ext"</tt><br>
+				<tt>// files[0].path = "my/file.ext"</tt>
+			</li>
+			<li>
+				<tt>files = s3FindFiles bucket: "my-bucket", path: "path/to/my/", glob: "file.ext"</tt><br>
+				<tt>// files[0].name = "file.ext"</tt><br>
+				<tt>// files[0].path = "file.ext"</tt>
+			</li>
 		</ul>
 	</p>
 	<p>
@@ -22,7 +35,7 @@
 		This will return an array of <tt>FileWrapper</tt> instances with the following properties:
 		<ul>
 			<li><tt>name</tt>: the filename portion of the path (for "path/to/my/file.ext", this would be "file.ext")</li>
-			<li><tt>path</tt>: the full path of the file (for "path/to/my/file.ext", this would be "path/to/my/file.ext")</li>
+			<li><tt>path</tt>: the full path of the file, <i>relative</i> to the <tt>path</tt> specified (for <tt>path</tt>="path/to/", this property of the file "path/to/my/file.ext" would be "my/file.ext")</li>
 			<li><tt>directory</tt>: true if this is a directory; false otherwise</li>
 			<li><tt>length</tt>: the length of the file (this is always "0" for directories)</li>
 			<li><tt>lastModified</tt>: the last modification timestamp, in milliseconds since the Unix epoch (this is always "0" for directories)</li>
