@@ -176,7 +176,7 @@ public class S3FindFilesStep extends AbstractStepImpl {
 				//
 				// Note that a glob of "**" will match everything (both files and folders) under
 				// the path.
-				final String matcherString = "glob:" + ( path.length() == 0 ? "" : path + ( path.endsWith("/") ? "" : "/" ) ) + ( glob.length() == 0 ? "*" : glob );
+				final String matcherString = computeMatcherString( path, glob );
 				PathMatcher matcher = FileSystems.getDefault().getPathMatcher( matcherString );
 
 				// This is how may components there are in the root path.  We'll use this information
@@ -219,18 +219,7 @@ public class S3FindFilesStep extends AbstractStepImpl {
 						for( S3ObjectSummary entry : objectListing.getObjectSummaries() ) {
 							Path javaPath = Paths.get(entry.getKey());
 							if( matcher.matches( javaPath ) ) {
-								FileWrapper file = new FileWrapper(
-									// Name:
-									javaPath.getFileName().toString(),
-									// Path (relative to the `path` parameter):
-									javaPath.subpath( pathComponentCount, javaPath.getNameCount() ).toString(),
-									// Directory?
-									false,
-									// Size:
-									entry.getSize(),
-									// Last modified (milliseconds):
-									entry.getLastModified().getTime()
-								);
+								FileWrapper file = createFileWrapperFromFile( pathComponentCount, javaPath, entry );
 								matchingObjects.add( file );
 							}
 						}
@@ -242,18 +231,7 @@ public class S3FindFilesStep extends AbstractStepImpl {
 							for( String prefix : objectListing.getCommonPrefixes() ) {
 								Path javaPath = Paths.get(prefix);
 								if( matcher.matches( javaPath ) ) {
-									FileWrapper file = new FileWrapper(
-										// Name:
-										javaPath.getFileName().toString(),
-										// Path (relative to the `path` parameter):
-										javaPath.subpath( pathComponentCount, javaPath.getNameCount() ).toString(),
-										// Directory?
-										true,
-										// Size:
-										0, // S3 folders have no size (they don't even really exist).
-										// Last modified (milliseconds):
-										0 // S3 folders have no last modified date (they don't even really exist).
-									);
+									FileWrapper file = createFileWrapperFromFolder( pathComponentCount, javaPath );
 									matchingObjects.add( file );
 								}
 							}
@@ -277,6 +255,68 @@ public class S3FindFilesStep extends AbstractStepImpl {
 				Execution.this.getContext().onFailure(e);
 				return null;
 			}
+		}
+
+		/**
+		 * This computes the string that will be used to construct a PathMatcher that will
+		 * attempt to match the S3 keys.
+		 *
+		 * @param path The step's `path` parameter.
+		 * @param glob The step's `glob` parameter.
+		 *
+		 * @return A string that can be used to construct a PathMatcher.
+		 */
+		public static String computeMatcherString( String path, String glob ) {
+			return "glob:" + ( path.length() == 0 ? "" : path + ( path.endsWith("/") ? "" : "/" ) ) + ( glob.length() == 0 ? "*" : glob );
+		}
+
+		/**
+		 * This creates a new FileWrapper instance based on the S3ObjectSummary information.
+		 *
+		 * @param pathComponentCount The root path component count.
+		 * @param javaPath The Path instance for the file.
+		 * @param entry The S3ObjectSummary for the file.
+		 *
+		 * @return A new FileWrapper instance.
+		 */
+		public static FileWrapper createFileWrapperFromFile( int pathComponentCount, Path javaPath, S3ObjectSummary entry ) {
+			FileWrapper file = new FileWrapper(
+				// Name:
+				javaPath.getFileName().toString(),
+				// Path (relative to the `path` parameter):
+				javaPath.subpath( pathComponentCount, javaPath.getNameCount() ).toString(),
+				// Directory?
+				false,
+				// Size:
+				entry.getSize(),
+				// Last modified (milliseconds):
+				entry.getLastModified().getTime()
+			);
+			return file;
+		}
+
+		/**
+		 * This creates a new FileWrapper instance for the folder.
+		 *
+		 * @param pathComponentCount The root path component count.
+		 * @param javaPath The Path instance for the folder.
+		 *
+		 * @return A new FileWrapper instance.
+		 */
+		public static FileWrapper createFileWrapperFromFolder( int pathComponentCount, Path javaPath ) {
+			FileWrapper file = new FileWrapper(
+				// Name:
+				javaPath.getFileName().toString(),
+				// Path (relative to the `path` parameter):
+				javaPath.subpath( pathComponentCount, javaPath.getNameCount() ).toString(),
+				// Directory?
+				true,
+				// Size:
+				0, // S3 folders have no size (they don't even really exist).
+				// Last modified (milliseconds):
+				0 // S3 folders have no last modified date (they don't even really exist).
+			);
+			return file;
 		}
 	}
 }
