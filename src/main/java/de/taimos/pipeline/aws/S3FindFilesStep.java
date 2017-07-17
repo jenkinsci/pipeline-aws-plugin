@@ -217,6 +217,16 @@ public class S3FindFilesStep extends AbstractStepImpl {
 					while( true ) {
 						// Add any real objects to the list of objects to delete.
 						for( S3ObjectSummary entry : objectListing.getObjectSummaries() ) {
+							// S3 does this sneaky thing with folders created in the management console:
+							// It *actually* creates a zero-length file whose name ends in "/".
+							//
+							// Here, we're going to quietly skip those entries; they'll be handled normally
+							// by the folder pathway below, anyway.  (Yes, they are returned as actual s3
+							// entities as well as prefixes).
+							if( entry.getKey().endsWith("/") ) {
+								continue;
+							}
+
 							Path javaPath = Paths.get(entry.getKey());
 							if( matcher.matches( javaPath ) ) {
 								FileWrapper file = createFileWrapperFromFile( pathComponentCount, javaPath, entry );
