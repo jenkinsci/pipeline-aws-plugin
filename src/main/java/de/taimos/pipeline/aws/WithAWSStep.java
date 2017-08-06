@@ -242,8 +242,10 @@ public class WithAWSStep extends AbstractStepImpl {
 		}
 		
 		private String createRoleSessionName() {
-			String job_name = this.envVars.get("JOB_NAME").replace(" ", "").replace("/", "-");
-			return "Jenkins-" + job_name + "-" + this.envVars.get("BUILD_NUMBER");
+			return RoleSessionNameBuilder
+					.withJobName(this.envVars.get("JOB_NAME"))
+					.withBuildNumber(this.envVars.get("BUILD_NUMBER"))
+					.build();
 		}
 		
 		@Override
