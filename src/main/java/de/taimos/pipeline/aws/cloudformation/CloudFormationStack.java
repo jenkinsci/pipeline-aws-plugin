@@ -58,6 +58,10 @@ public class CloudFormationStack {
 			DescribeStacksResult result = this.client.describeStacks(new DescribeStacksRequest().withStackName(this.stack));
 			return !result.getStacks().isEmpty();
 		} catch (AmazonCloudFormationException e) {
+			if ("AccessDenied".compareTo(e.getErrorCode()) == 0) {
+				this.listener.getLogger().format("Got error from describeStacks: %s\n", e.getErrorMessage());
+				throw e;
+			}
 			return false;
 		}
 	}
