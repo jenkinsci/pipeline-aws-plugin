@@ -254,6 +254,16 @@ The step returns an array of Account objects with the following fields:
 def accounts = listAWSAccounts()
 ```
 
+## updateIdP
+
+Create or update a SAML identity provider with the given metadata document.
+
+The step returns the ARN of the created identity provider.
+
+```
+def idp = updateIdP(name: 'nameToCreateOrUpdate', metadata: 'pathToMetadataFile')
+```
+
 # Changelog
 
 ## 1.13 (master)
