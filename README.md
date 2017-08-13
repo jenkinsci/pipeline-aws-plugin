@@ -1,3 +1,7 @@
+# Status
+
+[![Build Status](https://travis-ci.org/jenkinsci/pipeline-aws-plugin.svg?branch=master)](https://travis-ci.org/jenkinsci/pipeline-aws-plugin)
+
 # Features
 
 This plugins adds Jenkins pipeline steps to interact with the AWS API.
