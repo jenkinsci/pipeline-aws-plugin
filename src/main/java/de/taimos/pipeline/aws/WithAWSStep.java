@@ -58,6 +58,9 @@ import jenkins.model.Jenkins;
 
 public class WithAWSStep extends AbstractStepImpl {
 	
+	static final String AWS_DEFAULT_PARTITION_NAME = "aws";
+	static final String AWS_CN_PARTITION_NAME = "aws-cn";
+
 	private String role = "";
 	private String roleAccount = "";
 	private String region = "";
@@ -251,9 +254,9 @@ public class WithAWSStep extends AbstractStepImpl {
 		
 		private String selectPartitionName() {
 			if (Regions.CN_NORTH_1.getName().equals(this.step.getRegion())) {
-				return "aws-cn";
+				return AWS_CN_PARTITION_NAME;
 			}
-			return "aws";
+			return AWS_DEFAULT_PARTITION_NAME;
 		}	
 		
 		@Override
