@@ -257,7 +257,7 @@ public class WithAWSStep extends AbstractStepImpl {
 				return AWS_CN_PARTITION_NAME;
 			}
 			return AWS_DEFAULT_PARTITION_NAME;
-		}	
+		}
 		
 		@Override
 		public void stop(@Nonnull Throwable throwable) throws Exception {
