@@ -37,6 +37,7 @@ import org.jenkinsci.plugins.workflow.steps.StepContextParameter;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
 
+import com.amazonaws.regions.Regions;
 import com.amazonaws.services.securitytoken.AWSSecurityTokenServiceClient;
 import com.amazonaws.services.securitytoken.model.AssumeRoleRequest;
 import com.amazonaws.services.securitytoken.model.AssumeRoleResult;
@@ -202,7 +203,7 @@ public class WithAWSStep extends AbstractStepImpl {
 					accountId = sts.getCallerIdentity(new GetCallerIdentityRequest()).getAccount();
 				}
 				
-				String roleARN = String.format("arn:aws:iam::%s:role/%s", accountId, this.step.getRole());
+				String roleARN = String.format("arn:%s:iam::%s:role/%s", selectPartitionName(), accountId, this.step.getRole());
 				
 				AssumeRoleRequest request = new AssumeRoleRequest()
 						.withRoleArn(roleARN)
@@ -247,6 +248,13 @@ public class WithAWSStep extends AbstractStepImpl {
 					.withBuildNumber(this.envVars.get("BUILD_NUMBER"))
 					.build();
 		}
+		
+		private String selectPartitionName() {
+			if (Regions.CN_NORTH_1.getName().equals(this.step.getRegion())) {
+				return "aws-cn";
+			}
+			return "aws";
+		}	
 		
 		@Override
 		public void stop(@Nonnull Throwable throwable) throws Exception {
