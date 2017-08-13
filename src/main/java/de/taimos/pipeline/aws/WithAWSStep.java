@@ -54,6 +54,7 @@ import hudson.EnvVars;
 import hudson.Extension;
 import hudson.model.TaskListener;
 import hudson.security.ACL;
+import java.util.regex.Pattern;
 import jenkins.model.Jenkins;
 
 public class WithAWSStep extends AbstractStepImpl {
