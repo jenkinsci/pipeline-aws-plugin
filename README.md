@@ -268,6 +268,7 @@ def idp = updateIdP(name: 'nameToCreateOrUpdate', metadata: 'pathToMetadataFile'
 
 ## 1.13 (master)
 * Add `s3FindFiles` step
+* add `updateIdP` step
 
 ## 1.12
 * Make polling interval for CFN events configurable #JENKINS-45348
