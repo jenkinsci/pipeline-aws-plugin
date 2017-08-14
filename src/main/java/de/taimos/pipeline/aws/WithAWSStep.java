@@ -24,6 +24,7 @@ package de.taimos.pipeline.aws;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
+import java.util.regex.Pattern;
 
 import javax.annotation.Nonnull;
 import javax.inject.Inject;
@@ -54,7 +55,6 @@ import hudson.EnvVars;
 import hudson.Extension;
 import hudson.model.TaskListener;
 import hudson.security.ACL;
-import java.util.regex.Pattern;
 import jenkins.model.Jenkins;
 
 public class WithAWSStep extends AbstractStepImpl {
@@ -208,7 +208,7 @@ public class WithAWSStep extends AbstractStepImpl {
 					accountId = sts.getCallerIdentity(new GetCallerIdentityRequest()).getAccount();
 				}
 				
-				String roleARN = validRoleArn(this.step.getRole()) ? this.step.getRole() : String.format("arn:%s:iam::%s:role/%s", selectPartitionName(), accountId, this.step.getRole());
+				String roleARN = this.validRoleArn(this.step.getRole()) ? this.step.getRole() : String.format("arn:%s:iam::%s:role/%s", this.selectPartitionName(), accountId, this.step.getRole());
 				
 				AssumeRoleRequest request = new AssumeRoleRequest()
 						.withRoleArn(roleARN)

@@ -271,6 +271,7 @@ def idp = updateIdP(name: 'nameToCreateOrUpdate', metadata: 'pathToMetadataFile'
 # Changelog
 
 ## 1.14 (master)
+* fixes JENKINS-45964: Assuming Role does not work in AWS-China
 
 ## 1.13
 * Add `s3FindFiles` step
