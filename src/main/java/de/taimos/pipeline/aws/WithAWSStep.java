@@ -23,11 +23,18 @@ package de.taimos.pipeline.aws;
 
 import java.io.IOException;
 import java.util.Collections;
+import java.util.regex.Pattern;
 import java.util.List;
 
 import javax.annotation.Nonnull;
 import javax.inject.Inject;
 
+import com.cloudbees.plugins.credentials.common.StandardListBoxModel;
+import com.cloudbees.plugins.credentials.common.StandardUsernamePasswordCredentials;
+import hudson.model.Item;
+import hudson.model.Run;
+import hudson.security.ACL;
+import hudson.util.ListBoxModel;
 import de.taimos.pipeline.aws.utils.IamRoleUtils;
 import org.jenkinsci.plugins.workflow.steps.AbstractStepDescriptorImpl;
 import org.jenkinsci.plugins.workflow.steps.AbstractStepExecutionImpl;
@@ -35,6 +42,7 @@ import org.jenkinsci.plugins.workflow.steps.AbstractStepImpl;
 import org.jenkinsci.plugins.workflow.steps.BodyExecutionCallback;
 import org.jenkinsci.plugins.workflow.steps.EnvironmentExpander;
 import org.jenkinsci.plugins.workflow.steps.StepContextParameter;
+import org.kohsuke.stapler.AncestorInPath;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
 
@@ -44,17 +52,12 @@ import com.amazonaws.services.securitytoken.model.AssumeRoleResult;
 import com.amazonaws.services.securitytoken.model.Credentials;
 import com.amazonaws.services.securitytoken.model.GetCallerIdentityRequest;
 import com.amazonaws.util.StringUtils;
-import com.cloudbees.plugins.credentials.CredentialsMatcher;
-import com.cloudbees.plugins.credentials.CredentialsMatchers;
 import com.cloudbees.plugins.credentials.CredentialsProvider;
-import com.cloudbees.plugins.credentials.common.UsernamePasswordCredentials;
 import com.cloudbees.plugins.credentials.domains.DomainRequirement;
 
 import hudson.EnvVars;
 import hudson.Extension;
 import hudson.model.TaskListener;
-import hudson.security.ACL;
-import jenkins.model.Jenkins;
 
 public class WithAWSStep extends AbstractStepImpl {
 
@@ -145,6 +148,20 @@ public class WithAWSStep extends AbstractStepImpl {
 		public boolean takesImplicitBlockArgument() {
 			return true;
 		}
+
+		public ListBoxModel doFillCredentialsItems(@AncestorInPath Item context) {
+
+			if (context == null || !context.hasPermission(Item.CONFIGURE)) {
+				return new ListBoxModel();
+			}
+
+			return new StandardListBoxModel()
+					.withEmptySelection()
+					.withAll(
+						CredentialsProvider.lookupCredentials(StandardUsernamePasswordCredentials.class, context, ACL.SYSTEM,
+								Collections.<DomainRequirement>emptyList())
+			);
+		}
 	}
 	
 	public static class Execution extends AbstractStepExecutionImpl {
@@ -159,7 +176,7 @@ public class WithAWSStep extends AbstractStepImpl {
 		@Override
 		public boolean start() throws Exception {
 			final EnvVars awsEnv = new EnvVars();
-			this.withCredentials(awsEnv);
+			this.withCredentials(getContext().get(Run.class), awsEnv);
 			this.withProfile(awsEnv);
 			this.withRegion(awsEnv);
 			this.withRole(awsEnv);
@@ -177,12 +194,16 @@ public class WithAWSStep extends AbstractStepImpl {
 			return false;
 		}
 		
-		private void withCredentials(@Nonnull EnvVars localEnv) {
+		private void withCredentials(@Nonnull Run<?,?> run, @Nonnull EnvVars localEnv) {
 			if (!StringUtils.isNullOrEmpty(this.step.getCredentials())) {
-				List<UsernamePasswordCredentials> credentials = CredentialsProvider.lookupCredentials(UsernamePasswordCredentials.class, Jenkins.getInstance(), ACL.SYSTEM, Collections.<DomainRequirement>emptyList());
-				CredentialsMatcher matcher = CredentialsMatchers.withId(this.step.getCredentials());
-				UsernamePasswordCredentials usernamePasswordCredentials = CredentialsMatchers.firstOrNull(credentials, matcher);
+				StandardUsernamePasswordCredentials usernamePasswordCredentials = CredentialsProvider.findCredentialById(this.step.getCredentials(),
+						StandardUsernamePasswordCredentials.class, run, Collections.<DomainRequirement>emptyList());
+//				UsernamePasswordCredentials usernamePasswordCredentials = CredentialsMatchers.firstOrNull(
+//						CredentialsProvider.lookupCredentials(UsernamePasswordCredentials.class, run.getParent(), ACL.SYSTEM,
+//								Collections.<DomainRequirement>emptyList()),
+//						CredentialsMatchers.withId(this.step.getCredentials()));
 				if (usernamePasswordCredentials != null) {
+//					CredentialsProvider.track(run, usernamePasswordCredentials);
 					localEnv.override(AWSClientFactory.AWS_ACCESS_KEY_ID, usernamePasswordCredentials.getUsername());
 					localEnv.override(AWSClientFactory.AWS_SECRET_ACCESS_KEY, usernamePasswordCredentials.getPassword().getPlainText());
 					this.envVars.overrideAll(localEnv);
@@ -258,5 +279,5 @@ public class WithAWSStep extends AbstractStepImpl {
 		private static final long serialVersionUID = 1L;
 		
 	}
-	
+
 }
