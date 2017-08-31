@@ -29,10 +29,13 @@ import java.util.List;
 import javax.annotation.Nonnull;
 import javax.inject.Inject;
 
+import com.cloudbees.plugins.credentials.CredentialsMatchers;
 import com.cloudbees.plugins.credentials.common.StandardListBoxModel;
 import com.cloudbees.plugins.credentials.common.StandardUsernamePasswordCredentials;
 import hudson.model.Item;
+import hudson.model.Queue;
 import hudson.model.Run;
+import hudson.model.queue.Tasks;
 import hudson.security.ACL;
 import hudson.util.ListBoxModel;
 import de.taimos.pipeline.aws.utils.IamRoleUtils;
@@ -156,11 +159,15 @@ public class WithAWSStep extends AbstractStepImpl {
 			}
 
 			return new StandardListBoxModel()
-					.withEmptySelection()
-					.withAll(
-						CredentialsProvider.lookupCredentials(StandardUsernamePasswordCredentials.class, context, ACL.SYSTEM,
-								Collections.<DomainRequirement>emptyList())
-			);
+					.includeEmptyValue()
+					.includeMatchingAs(
+					        context instanceof Queue.Task
+                                    ? Tasks.getAuthenticationOf((Queue.Task) context)
+                                    : ACL.SYSTEM,
+						    context,
+                            StandardUsernamePasswordCredentials.class,
+                            Collections.<DomainRequirement>emptyList(),
+                            CredentialsMatchers.instanceOf(StandardUsernamePasswordCredentials.class));
 		}
 	}
 	
@@ -198,12 +205,7 @@ public class WithAWSStep extends AbstractStepImpl {
 			if (!StringUtils.isNullOrEmpty(this.step.getCredentials())) {
 				StandardUsernamePasswordCredentials usernamePasswordCredentials = CredentialsProvider.findCredentialById(this.step.getCredentials(),
 						StandardUsernamePasswordCredentials.class, run, Collections.<DomainRequirement>emptyList());
-//				UsernamePasswordCredentials usernamePasswordCredentials = CredentialsMatchers.firstOrNull(
-//						CredentialsProvider.lookupCredentials(UsernamePasswordCredentials.class, run.getParent(), ACL.SYSTEM,
-//								Collections.<DomainRequirement>emptyList()),
-//						CredentialsMatchers.withId(this.step.getCredentials()));
 				if (usernamePasswordCredentials != null) {
-//					CredentialsProvider.track(run, usernamePasswordCredentials);
 					localEnv.override(AWSClientFactory.AWS_ACCESS_KEY_ID, usernamePasswordCredentials.getUsername());
 					localEnv.override(AWSClientFactory.AWS_SECRET_ACCESS_KEY, usernamePasswordCredentials.getPassword().getPlainText());
 					this.envVars.overrideAll(localEnv);
