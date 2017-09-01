@@ -59,7 +59,7 @@ public class CFNUpdateStep extends AbstractStepImpl {
 	private String paramsFile;
 	private Integer timeoutInMinutes;
 	private Long pollInterval = 1000L;
-	private Boolean create = false;
+	private Boolean create = true;
 	
 	@DataBoundConstructor
 	public CFNUpdateStep(String stack) {
