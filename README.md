@@ -276,6 +276,8 @@ def idp = updateIdP(name: 'nameToCreateOrUpdate', metadata: 'pathToMetadataFile'
 ## 1.13
 * Add `s3FindFiles` step
 * add `updateIdP` step
+* Fix creation of RoleSessionName
+* Fix bug when missing DescribeStacks permission
 
 ## 1.12
 * Make polling interval for CFN events configurable #JENKINS-45348
