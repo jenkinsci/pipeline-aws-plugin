@@ -142,11 +142,12 @@ public class CFNUpdateStep extends AbstractStepImpl {
 		this.pollInterval = pollInterval;
 	}
 
-    @DataBoundSetter
+
     public Boolean getCreate() {
         return create;
     }
 
+	@DataBoundSetter
     public void setCreate(Boolean create) {
         this.create = create;
     }
