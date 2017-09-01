@@ -24,7 +24,6 @@ package de.taimos.pipeline.aws;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
-import java.util.regex.Pattern;
 
 import javax.annotation.Nonnull;
 import javax.inject.Inject;
@@ -38,7 +37,6 @@ import org.jenkinsci.plugins.workflow.steps.StepContextParameter;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
 
-import com.amazonaws.regions.Regions;
 import com.amazonaws.services.securitytoken.AWSSecurityTokenServiceClient;
 import com.amazonaws.services.securitytoken.model.AssumeRoleRequest;
 import com.amazonaws.services.securitytoken.model.AssumeRoleResult;
@@ -57,11 +55,10 @@ import hudson.model.TaskListener;
 import hudson.security.ACL;
 import jenkins.model.Jenkins;
 
+import static de.taimos.pipeline.aws.utils.IamRoleUtils.selectPartitionName;
+import static de.taimos.pipeline.aws.utils.IamRoleUtils.validRoleArn;
+
 public class WithAWSStep extends AbstractStepImpl {
-	
-	static final String AWS_DEFAULT_PARTITION_NAME = "aws";
-	static final String AWS_CN_PARTITION_NAME = "aws-cn";
-	static final Pattern IAM_ROLE_PATTERN = Pattern.compile("arn:(aws|aws-cn)::iam::[0-9]{12}:role/[\\w+=,.@-]{1,64}");
 
 	private String role = "";
 	private String roleAccount = "";
@@ -208,7 +205,7 @@ public class WithAWSStep extends AbstractStepImpl {
 					accountId = sts.getCallerIdentity(new GetCallerIdentityRequest()).getAccount();
 				}
 				
-				String roleARN = this.validRoleArn(this.step.getRole()) ? this.step.getRole() : String.format("arn:%s:iam::%s:role/%s", this.selectPartitionName(), accountId, this.step.getRole());
+				String roleARN = validRoleArn(this.step.getRole()) ? this.step.getRole() : String.format("arn:%s:iam::%s:role/%s", selectPartitionName(this.step.getRegion()), accountId, this.step.getRole());
 				
 				AssumeRoleRequest request = new AssumeRoleRequest()
 						.withRoleArn(roleARN)
@@ -254,17 +251,7 @@ public class WithAWSStep extends AbstractStepImpl {
 					.build();
 		}
 		
-		private String selectPartitionName() {
-			if (Regions.CN_NORTH_1.getName().equals(this.step.getRegion())) {
-				return AWS_CN_PARTITION_NAME;
-			}
-			return AWS_DEFAULT_PARTITION_NAME;
-		}
-		
-		private boolean validRoleArn(String role) {
-			return (IAM_ROLE_PATTERN.matcher(role).matches());
-		}
-		
+
 		@Override
 		public void stop(@Nonnull Throwable throwable) throws Exception {
 			//
