@@ -1,6 +1,6 @@
 # Status
 
-[![Build Status](https://travis-ci.org/jenkinsci/pipeline-aws-plugin.svg?branch=master)](https://travis-ci.org/jenkinsci/pipeline-aws-plugin)
+[![Build Status](https://ci.jenkins.io/buildStatus/icon?job=Plugins/pipeline-aws-plugin/master)](https://ci.jenkins.io/job/Plugins/job/pipeline-aws-plugin/job/master/)
 
 # Features
 
