@@ -27,6 +27,7 @@ import java.util.Collection;
 import javax.annotation.Nonnull;
 import javax.inject.Inject;
 
+import de.taimos.pipeline.aws.utils.IamRoleUtils;
 import org.jenkinsci.plugins.workflow.steps.AbstractStepDescriptorImpl;
 import org.jenkinsci.plugins.workflow.steps.AbstractStepExecutionImpl;
 import org.jenkinsci.plugins.workflow.steps.AbstractStepImpl;
@@ -59,7 +60,8 @@ public class CFNUpdateStep extends AbstractStepImpl {
 	private String paramsFile;
 	private Integer timeoutInMinutes;
 	private Long pollInterval = 1000L;
-	
+	private String roleArn;
+
 	@DataBoundConstructor
 	public CFNUpdateStep(String stack) {
 		this.stack = stack;
@@ -140,7 +142,16 @@ public class CFNUpdateStep extends AbstractStepImpl {
 	public void setPollInterval(Long pollInterval) {
 		this.pollInterval = pollInterval;
 	}
-	
+
+	public String getRoleArn() {
+		return roleArn;
+	}
+
+	@DataBoundSetter
+	public void setRoleArn(String roleArn) {
+		this.roleArn = roleArn;
+	}
+
 	@Extension
 	public static class DescriptorImpl extends AbstractStepDescriptorImpl {
 		
@@ -175,7 +186,8 @@ public class CFNUpdateStep extends AbstractStepImpl {
 			final String stack = this.step.getStack();
 			final String file = this.step.getFile();
 			final String url = this.step.getUrl();
-			
+			final String roleArn = this.step.getRoleArn();
+
 			final Collection<Parameter> params= this.parseParamsFile(this.step.getParamsFile());
 			params.addAll(this.parseParams(this.step.getParams()));
 			
@@ -184,7 +196,7 @@ public class CFNUpdateStep extends AbstractStepImpl {
 			final Integer timeoutInMinutes = this.step.getTimeoutInMinutes();
 
 			Preconditions.checkArgument(stack != null && !stack.isEmpty(), "Stack must not be null or empty");
-			
+			Preconditions.checkArgument(roleArn == null || IamRoleUtils.validRoleArn(roleArn), "RoleArn must be a valid ARN.");
 			this.listener.getLogger().format("Updating/Creating CloudFormation stack %s %n", stack);
 			
 			new Thread("cfnUpdate-" + stack) {
@@ -196,9 +208,9 @@ public class CFNUpdateStep extends AbstractStepImpl {
 						if (cfnStack.exists()) {
 							ArrayList<Parameter> parameters = new ArrayList<>(params);
 							parameters.addAll(keepParams);
-							cfnStack.update(Execution.this.readTemplate(file), url, parameters, tags, Execution.this.step.getPollInterval());
+							cfnStack.update(Execution.this.readTemplate(file), url, parameters, tags, Execution.this.step.getPollInterval(), roleArn);
 						} else {
-							cfnStack.create(Execution.this.readTemplate(file), url, params, tags, timeoutInMinutes, Execution.this.step.getPollInterval());
+							cfnStack.create(Execution.this.readTemplate(file), url, params, tags, timeoutInMinutes, Execution.this.step.getPollInterval(), roleArn);
 						}
 						Execution.this.listener.getLogger().println("Stack update complete");
 						Execution.this.getContext().onSuccess(cfnStack.describeOutputs());
