@@ -102,7 +102,7 @@ public class CloudFormationStack {
 				req.setUsePreviousTemplate(true);
 			}
 			
-			req.withParameters(params).withTags(tags);
+			req.withParameters(params).withTags(tags).withRoleARN(roleArn);
 			
 			this.client.updateStack(req);
 			
