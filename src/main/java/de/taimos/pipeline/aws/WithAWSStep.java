@@ -28,6 +28,7 @@ import java.util.List;
 import javax.annotation.Nonnull;
 import javax.inject.Inject;
 
+import de.taimos.pipeline.aws.utils.IamRoleUtils;
 import org.jenkinsci.plugins.workflow.steps.AbstractStepDescriptorImpl;
 import org.jenkinsci.plugins.workflow.steps.AbstractStepExecutionImpl;
 import org.jenkinsci.plugins.workflow.steps.AbstractStepImpl;
@@ -54,9 +55,6 @@ import hudson.Extension;
 import hudson.model.TaskListener;
 import hudson.security.ACL;
 import jenkins.model.Jenkins;
-
-import static de.taimos.pipeline.aws.utils.IamRoleUtils.selectPartitionName;
-import static de.taimos.pipeline.aws.utils.IamRoleUtils.validRoleArn;
 
 public class WithAWSStep extends AbstractStepImpl {
 
@@ -205,7 +203,7 @@ public class WithAWSStep extends AbstractStepImpl {
 					accountId = sts.getCallerIdentity(new GetCallerIdentityRequest()).getAccount();
 				}
 				
-				String roleARN = validRoleArn(this.step.getRole()) ? this.step.getRole() : String.format("arn:%s:iam::%s:role/%s", selectPartitionName(this.step.getRegion()), accountId, this.step.getRole());
+				String roleARN = IamRoleUtils.validRoleArn(this.step.getRole()) ? this.step.getRole() : String.format("arn:%s:iam::%s:role/%s", IamRoleUtils.selectPartitionName(this.step.getRegion()), accountId, this.step.getRole());
 				
 				AssumeRoleRequest request = new AssumeRoleRequest()
 						.withRoleArn(roleARN)

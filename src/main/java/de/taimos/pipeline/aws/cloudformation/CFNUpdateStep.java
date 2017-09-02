@@ -27,6 +27,7 @@ import java.util.Collection;
 import javax.annotation.Nonnull;
 import javax.inject.Inject;
 
+import de.taimos.pipeline.aws.utils.IamRoleUtils;
 import org.jenkinsci.plugins.workflow.steps.AbstractStepDescriptorImpl;
 import org.jenkinsci.plugins.workflow.steps.AbstractStepExecutionImpl;
 import org.jenkinsci.plugins.workflow.steps.AbstractStepImpl;
@@ -47,8 +48,6 @@ import hudson.EnvVars;
 import hudson.Extension;
 import hudson.FilePath;
 import hudson.model.TaskListener;
-
-import static de.taimos.pipeline.aws.utils.IamRoleUtils.validRoleArn;
 
 public class CFNUpdateStep extends AbstractStepImpl {
 	
@@ -197,7 +196,7 @@ public class CFNUpdateStep extends AbstractStepImpl {
 			final Integer timeoutInMinutes = this.step.getTimeoutInMinutes();
 
 			Preconditions.checkArgument(stack != null && !stack.isEmpty(), "Stack must not be null or empty");
-			Preconditions.checkArgument(roleArn == null || validRoleArn(roleArn), "RoleArn must be a valid ARN.");
+			Preconditions.checkArgument(roleArn == null || IamRoleUtils.validRoleArn(roleArn), "RoleArn must be a valid ARN.");
 			this.listener.getLogger().format("Updating/Creating CloudFormation stack %s %n", stack);
 			
 			new Thread("cfnUpdate-" + stack) {
