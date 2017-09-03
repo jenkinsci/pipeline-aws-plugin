@@ -284,6 +284,9 @@ def idp = updateIdP(name: 'nameToCreateOrUpdate', metadata: 'pathToMetadataFile'
 
 ## 1.14 (master)
 * fixes JENKINS-45964: Assuming Role does not work in AWS-China
+* Allow opt out for by-default stack creation with `cfnUpdate`
+* roleArn parameter support for `cfnUpdate`
+* Fix: Rendering the paths for S3* steps manually (Windows)
 
 ## 1.13
 * Add `s3FindFiles` step
