@@ -180,7 +180,7 @@ def outputs = cfnUpdate(stack:'my-stack', url:'https://s3.amazonaws.com/my-templ
 In above example if `my-stack` already exists it would be updated and if it doesnt exist no actions would be performed.
 
 
-In a case where CloudFormation needs to use a different IAM Role for creating the stack than the one currently in effect, you can pass the comlete Role ARN to be used as `roleArn` parameter. i.e:
+In a case where CloudFormation needs to use a different IAM Role for creating the stack than the one currently in effect, you can pass the complete Role ARN to be used as `roleArn` parameter. i.e:
 ```
 def outputs = cfnUpdate(stack:'my-stack', url:'https://s3.amazonaws.com/my-templates-bucket/template.yaml', roleArn: 'arn:aws:iam::123456789012:role/S3Access')
 ```
