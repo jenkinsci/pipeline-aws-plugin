@@ -173,6 +173,18 @@ Alternatively, you can specify a URL to a template on S3 (you'll need this if yo
 def outputs = cfnUpdate(stack:'my-stack', url:'https://s3.amazonaws.com/my-templates-bucket/template.yaml')
 ```
 
+By default the `cfnUpdate` step creates a new stack if the specified stack does not exist, this behaviour can be overridden by passing `create: 'false'` as parameter :
+```
+def outputs = cfnUpdate(stack:'my-stack', url:'https://s3.amazonaws.com/my-templates-bucket/template.yaml', create: 'false')
+```
+In above example if `my-stack` already exists it would be updated and if it doesnt exist no actions would be performed.
+
+
+In a case where CloudFormation needs to use a different IAM Role for creating the stack than the one currently in effect, you can pass the complete Role ARN to be used as `roleArn` parameter. i.e:
+```
+def outputs = cfnUpdate(stack:'my-stack', url:'https://s3.amazonaws.com/my-templates-bucket/template.yaml', roleArn: 'arn:aws:iam::123456789012:role/S3Access')
+```
+
 Note: When creating a stack, either `file` or `url` are required. When updating it, omitting both parameters will keep the stack's current template.
 
 ## cfnDelete

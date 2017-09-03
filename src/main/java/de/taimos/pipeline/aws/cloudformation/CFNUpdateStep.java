@@ -60,6 +60,8 @@ public class CFNUpdateStep extends AbstractStepImpl {
 	private String paramsFile;
 	private Integer timeoutInMinutes;
 	private Long pollInterval = 1000L;
+	private Boolean create = true;
+
 	private String roleArn;
 
 	@DataBoundConstructor
@@ -143,6 +145,16 @@ public class CFNUpdateStep extends AbstractStepImpl {
 		this.pollInterval = pollInterval;
 	}
 
+
+    public Boolean getCreate() {
+        return create;
+    }
+
+	@DataBoundSetter
+    public void setCreate(Boolean create) {
+        this.create = create;
+    }
+
 	public String getRoleArn() {
 		return roleArn;
 	}
@@ -187,6 +199,7 @@ public class CFNUpdateStep extends AbstractStepImpl {
 			final String file = this.step.getFile();
 			final String url = this.step.getUrl();
 			final String roleArn = this.step.getRoleArn();
+			final Boolean create = this.step.getCreate();
 
 			final Collection<Parameter> params= this.parseParamsFile(this.step.getParamsFile());
 			params.addAll(this.parseParams(this.step.getParams()));
@@ -209,9 +222,11 @@ public class CFNUpdateStep extends AbstractStepImpl {
 							ArrayList<Parameter> parameters = new ArrayList<>(params);
 							parameters.addAll(keepParams);
 							cfnStack.update(Execution.this.readTemplate(file), url, parameters, tags, Execution.this.step.getPollInterval(), roleArn);
-						} else {
+						} else if (create){
 							cfnStack.create(Execution.this.readTemplate(file), url, params, tags, timeoutInMinutes, Execution.this.step.getPollInterval(), roleArn);
-						}
+						} else {
+                            Execution.this.listener.getLogger().println("No stack found with the name and skipped creation due to configuration.");
+                        }
 						Execution.this.listener.getLogger().println("Stack update complete");
 						Execution.this.getContext().onSuccess(cfnStack.describeOutputs());
 					} catch (Exception e) {
