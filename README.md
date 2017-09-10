@@ -283,7 +283,9 @@ def idp = updateIdP(name: 'nameToCreateOrUpdate', metadata: 'pathToMetadataFile'
 
 # Changelog
 
-## 1.14 (master)
+## 1.15 (master)
+
+## 1.14
 * fixes JENKINS-45964: Assuming Role does not work in AWS-China
 * Allow opt out for by-default stack creation with `cfnUpdate`
 * roleArn parameter support for `cfnUpdate`
