@@ -53,13 +53,21 @@ import hudson.remoting.VirtualChannel;
 
 public class S3UploadStep extends AbstractStepImpl {
 	
-	private final String file;
-	private final String bucket;
-	private String path = "";
+	private final String file = null;
+	private final String bucket = null;
+	private String path = null;
+	private String includePathPattern = null;
+	private String excludePathPattern = null;
 	
 	@DataBoundConstructor
 	public S3UploadStep(String file, String bucket) {
 		this.file = file;
+		this.bucket = bucket;
+	}
+	
+	@DataBoundConstructor
+	public S3UploadStep(String includePathPattern, String bucket) {
+		this.includePathPattern = includePathPattern;
 		this.bucket = bucket;
 	}
 	
@@ -75,9 +83,27 @@ public class S3UploadStep extends AbstractStepImpl {
 		return this.path;
 	}
 	
+	public String getIncludePathPattern() {
+		return this.includePathPattern;
+	}
+	
+	public String getExcludePathPattern() {
+		return this.excludePathPattern;
+	}
+	
 	@DataBoundSetter
 	public void setPath(String path) {
 		this.path = path;
+	}
+	
+	@DataBoundSetter
+	public void setIncludePathPattern(String includePathPattern) {
+		this.includePathPattern = includePathPattern;
+	}
+	
+	@DataBoundSetter
+	public void setExcludePathPattern(String excludePathPattern) {
+		this.excludePathPattern = excludePathPattern;
 	}
 	
 	@Extension
@@ -111,11 +137,26 @@ public class S3UploadStep extends AbstractStepImpl {
 		
 		@Override
 		public boolean start() throws Exception {
-			final FilePath child = this.workspace.child(this.step.getFile());
+			final String file = this.step.getFile();
 			final String bucket = this.step.getBucket();
 			final String path = this.step.getPath();
-			
+			final String includePathPattern = this.step.getIncludePathPattern();
+			final String excludePathPattern = this.step.getExcludePathPattern();
+						
 			Preconditions.checkArgument(bucket != null && !bucket.isEmpty(), "Bucket must not be null or empty");
+			Preconditions.checkArgument(this.step.getFile() != null && this.includePathPattern != null, "File or IncludePathPattern must not be null");
+			Preconditions.checkArgument(this.includePathPattern == null || this.step.getFile() == null, "File and IncludePathPattern cannot be use together");
+			
+			List<FilePath> childs = new ArrayList<FilePath>();
+			if(this.step.getFile() != null) {
+				childs.add(this.workspace.child(this.step.getFile()));
+			} else if (this.includePathPattern != null){
+				if(this.excludePathPattern != null && !"".equals(this.excludePathPattern.trim()){
+					childs.addAll(this.workspace.list(includePathPattern, excludePathPattern));
+				} else {
+					childs.addAll(this.workspace.list(includePathPattern));
+				}
+			}
 			
 			new Thread("s3Upload") {
 				@Override
@@ -155,12 +196,16 @@ public class S3UploadStep extends AbstractStepImpl {
 		private final TaskListener taskListener;
 		private final String bucket;
 		private final String path;
+		private final String includePathPattern;
+		private final String excludePathPattern;
 		
-		RemoteUploader(EnvVars envVars, TaskListener taskListener, String bucket, String path) {
+		RemoteUploader(EnvVars envVars, TaskListener taskListener, String bucket, String path, String includePathPattern, String excludePathPattern) {
 			this.envVars = envVars;
 			this.taskListener = taskListener;
 			this.bucket = bucket;
 			this.path = path;
+			this.includePathPattern = includePathPattern;
+			this.excludePathPattern = excludePathPattern;
 		}
 		
 		@Override
