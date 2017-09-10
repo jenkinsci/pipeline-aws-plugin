@@ -287,7 +287,8 @@ def idp = updateIdP(name: 'nameToCreateOrUpdate', metadata: 'pathToMetadataFile'
 * Allow opt out for by-default stack creation with `cfnUpdate`
 * roleArn parameter support for `cfnUpdate`
 * Fix: Rendering the paths for S3* steps manually (Windows)
-
+* fixes JENKINS-46247: Fix credentials scope in withAWS step and add a credentials dropdown
+ 
 ## 1.13
 * Add `s3FindFiles` step
 * add `updateIdP` step
