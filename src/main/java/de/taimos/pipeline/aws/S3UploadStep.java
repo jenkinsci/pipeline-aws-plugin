@@ -24,6 +24,9 @@ package de.taimos.pipeline.aws;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 
 import javax.annotation.Nonnull;
 import javax.inject.Inject;
@@ -42,6 +45,7 @@ import com.amazonaws.event.ProgressListener;
 import com.amazonaws.services.s3.AmazonS3Client;
 import com.amazonaws.services.s3.transfer.MultipleFileUpload;
 import com.amazonaws.services.s3.transfer.TransferManager;
+import com.amazonaws.services.s3.transfer.TransferManagerBuilder;
 import com.amazonaws.services.s3.transfer.Upload;
 import com.google.common.base.Preconditions;
 
@@ -53,21 +57,15 @@ import hudson.remoting.VirtualChannel;
 
 public class S3UploadStep extends AbstractStepImpl {
 	
-	private final String file = null;
-	private final String bucket = null;
-	private String path = null;
-	private String includePathPattern = null;
-	private String excludePathPattern = null;
+	private String file;
+	private final String bucket;
+	private String path = "";
+	private String includePathPattern;
+	private String excludePathPattern;
+	private String workingDir;
 	
 	@DataBoundConstructor
-	public S3UploadStep(String file, String bucket) {
-		this.file = file;
-		this.bucket = bucket;
-	}
-	
-	@DataBoundConstructor
-	public S3UploadStep(String includePathPattern, String bucket) {
-		this.includePathPattern = includePathPattern;
+	public S3UploadStep(String bucket) {
 		this.bucket = bucket;
 	}
 	
@@ -91,6 +89,15 @@ public class S3UploadStep extends AbstractStepImpl {
 		return this.excludePathPattern;
 	}
 	
+	public String getWorkingDir() {
+		return this.workingDir;
+	}
+	
+	@DataBoundSetter
+	public void setFile(String file) {
+		this.file = file;
+	}
+	
 	@DataBoundSetter
 	public void setPath(String path) {
 		this.path = path;
@@ -106,6 +113,11 @@ public class S3UploadStep extends AbstractStepImpl {
 		this.excludePathPattern = excludePathPattern;
 	}
 	
+	@DataBoundSetter
+	public void setWorkingDir(String workingDir) {
+		this.workingDir = workingDir;
+	}
+	
 	@Extension
 	public static class DescriptorImpl extends AbstractStepDescriptorImpl {
 		
@@ -114,7 +126,7 @@ public class S3UploadStep extends AbstractStepImpl {
 		}
 		
 		@Override
-		public String getFunctionName() {
+		public String getFunctionName() { 
 			return "s3Upload";
 		}
 		
@@ -142,19 +154,26 @@ public class S3UploadStep extends AbstractStepImpl {
 			final String path = this.step.getPath();
 			final String includePathPattern = this.step.getIncludePathPattern();
 			final String excludePathPattern = this.step.getExcludePathPattern();
+			final String workingDir = this.step.getWorkingDir();
 						
 			Preconditions.checkArgument(bucket != null && !bucket.isEmpty(), "Bucket must not be null or empty");
-			Preconditions.checkArgument(this.step.getFile() != null && this.includePathPattern != null, "File or IncludePathPattern must not be null");
-			Preconditions.checkArgument(this.includePathPattern == null || this.step.getFile() == null, "File and IncludePathPattern cannot be use together");
+			Preconditions.checkArgument(file != null || includePathPattern != null, "File or IncludePathPattern must not be null");
+			Preconditions.checkArgument(includePathPattern == null || file == null, "File and IncludePathPattern cannot be use together");
 			
-			List<FilePath> childs = new ArrayList<FilePath>();
-			if(this.step.getFile() != null) {
-				childs.add(this.workspace.child(this.step.getFile()));
-			} else if (this.includePathPattern != null){
-				if(this.excludePathPattern != null && !"".equals(this.excludePathPattern.trim()){
-					childs.addAll(this.workspace.list(includePathPattern, excludePathPattern));
+			final List<FilePath> childs = new ArrayList<FilePath>();
+			final FilePath dir;
+			if( workingDir != null && !"".equals(workingDir.trim()) ) {
+				dir = this.workspace.child(workingDir);
+			} else {
+				dir = this.workspace;
+			}
+			if(file != null) {
+				childs.add(dir.child(file));
+			} else if (includePathPattern != null){
+				if(excludePathPattern != null && !"".equals(excludePathPattern.trim())){
+					childs.addAll(Arrays.asList(dir.list(includePathPattern, excludePathPattern, true)));
 				} else {
-					childs.addAll(this.workspace.list(includePathPattern));
+					childs.addAll(Arrays.asList(dir.list(includePathPattern, null, true)));
 				}
 			}
 			
@@ -162,17 +181,29 @@ public class S3UploadStep extends AbstractStepImpl {
 				@Override
 				public void run() {
 					try {
-						Execution.this.listener.getLogger().format("Uploading %s to s3://%s/%s %n", child.toURI(), bucket, path);
-						if (!child.exists()) {
-							Execution.this.listener.getLogger().println("Upload failed due to missing source file");
-							Execution.this.getContext().onFailure(new FileNotFoundException(child.toURI().toString()));
-							return;
+						if( childs != null && childs.size() == 1) {
+							FilePath child = childs.get(0);
+							Execution.this.listener.getLogger().format("Uploading %s to s3://%s/%s %n", child.toURI(), bucket, path);
+							if (!child.exists()) {
+								Execution.this.listener.getLogger().println("Upload failed due to missing source file");
+								Execution.this.getContext().onFailure(new FileNotFoundException(child.toURI().toString()));
+								return;
+							}
+							
+							child.act(new RemoteUploader(Execution.this.envVars, Execution.this.listener, bucket, path));
+							
+							Execution.this.listener.getLogger().println("Upload complete");
+							Execution.this.getContext().onSuccess(null);
+						} else if( childs != null && childs.size() > 1) {
+							List<File> fileList = new ArrayList<File>();
+							Execution.this.listener.getLogger().format("Uploading %s to s3://%s/%s %n", includePathPattern, bucket, path);
+							for( FilePath child : childs ) {
+								child.act(new FeedList(fileList));
+							}
+							dir.act(new RemoteListUploader(Execution.this.envVars, Execution.this.listener, fileList, bucket, path));
+							Execution.this.listener.getLogger().println("Upload complete");
+							Execution.this.getContext().onSuccess(null);
 						}
-						
-						child.act(new RemoteUploader(Execution.this.envVars, Execution.this.listener, bucket, path));
-						
-						Execution.this.listener.getLogger().println("Upload complete");
-						Execution.this.getContext().onSuccess(null);
 					} catch (Exception e) {
 						Execution.this.getContext().onFailure(e);
 					}
@@ -196,22 +227,18 @@ public class S3UploadStep extends AbstractStepImpl {
 		private final TaskListener taskListener;
 		private final String bucket;
 		private final String path;
-		private final String includePathPattern;
-		private final String excludePathPattern;
 		
-		RemoteUploader(EnvVars envVars, TaskListener taskListener, String bucket, String path, String includePathPattern, String excludePathPattern) {
+		RemoteUploader(EnvVars envVars, TaskListener taskListener, String bucket, String path) {
 			this.envVars = envVars;
 			this.taskListener = taskListener;
 			this.bucket = bucket;
 			this.path = path;
-			this.includePathPattern = includePathPattern;
-			this.excludePathPattern = excludePathPattern;
 		}
 		
 		@Override
 		public Void invoke(File localFile, VirtualChannel channel) throws IOException, InterruptedException {
 			AmazonS3Client s3Client = AWSClientFactory.create(AmazonS3Client.class, this.envVars);
-			TransferManager mgr = new TransferManager(s3Client);
+			TransferManager mgr = TransferManagerBuilder.standard().withS3Client(s3Client).build();
 			if (localFile.isFile()) {
 				Preconditions.checkArgument(this.path != null && !this.path.isEmpty(), "Path must not be null or empty when uploading file");
 				final Upload upload = mgr.upload(this.bucket, this.path, localFile);
@@ -246,8 +273,68 @@ public class S3UploadStep extends AbstractStepImpl {
 		
 		@Override
 		public void checkRoles(RoleChecker roleChecker) throws SecurityException {
-			
+		}
+	}
+	
+	private static class RemoteListUploader implements FilePath.FileCallable<Void> {
+		
+		private final EnvVars envVars;
+		private final TaskListener taskListener;
+		private final String bucket;
+		private final String path;
+		private List<File> fileList;
+		
+		RemoteListUploader(EnvVars envVars, TaskListener taskListener, List<File> fileList, String bucket, String path) {
+			this.envVars = envVars;
+			this.taskListener = taskListener;
+			this.fileList = fileList;
+			this.bucket = bucket;
+			this.path = path;
+		}
+		
+		@Override
+		public Void invoke(File localFile, VirtualChannel channel) throws IOException, InterruptedException {
+			AmazonS3Client s3Client = AWSClientFactory.create(AmazonS3Client.class, this.envVars);
+			TransferManager mgr = TransferManagerBuilder.standard().withS3Client(s3Client).build();
+			Preconditions.checkArgument(path != null && !path.isEmpty(), "Path must not be null or empty when uploading file");
+			final MultipleFileUpload fileUpload = mgr.uploadFileList(bucket, path, localFile, fileList);
+			for (final Upload upload : fileUpload.getSubTransfers()) {
+				upload.addProgressListener(new ProgressListener() {
+					@Override
+					public void progressChanged(ProgressEvent progressEvent) {
+						if (progressEvent.getEventType()== ProgressEventType.TRANSFER_COMPLETED_EVENT) {
+							taskListener.getLogger().println("Finished: " + upload.getDescription());
+						}
+					}
+				});
+			}
+			fileUpload.waitForCompletion();
+			return null;
+		}
+		
+		@Override
+		public void checkRoles(RoleChecker roleChecker) throws SecurityException {
+		}
+	}
+	
+	private static class FeedList implements FilePath.FileCallable<Void> {
+		
+		private final List<File> fileList;
+		
+		FeedList(List<File> fileList) {
+			this.fileList = fileList;
+		}
+		
+		@Override
+		public Void invoke(File localFile, VirtualChannel channel) throws IOException, InterruptedException {
+			fileList.add(localFile);
+			return null;
+		}
+
+		@Override
+		public void checkRoles(RoleChecker arg0) throws SecurityException {
 		}
 	}
 	
 }
+	
