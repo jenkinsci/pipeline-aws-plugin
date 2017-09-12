@@ -79,6 +79,18 @@ s3Upload(file:'file.txt', bucket:'my-bucket', path:'path/to/target/file.txt')
 s3Upload(file:'someFolder', bucket:'my-bucket', path:'path/to/targetFolder/')
 ```
 
+Another way to use it with include/exclude pattern in a subdirectory (workingDir).
+
+```
+s3Upload(bucket:"my-bucket", path:'path/to/targetFolder/', includePathPattern:'**/*', workingDir:'dist', excludePathPattern:'**/*.svg')
+```
+
+Specific metadatas can be add to upload files
+
+```
+s3Upload(bucket:"my-bucket", path:'path/to/targetFolder/', includePathPattern:'**/*.svg', workingDir:'dist', metadatas:'Content-type:image/svg+xml;AnotherMeta:AnotherValue')
+```
+
 ## s3Download
 
 Download a file/folder from S3 to the local workspace.
