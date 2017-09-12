@@ -271,7 +271,9 @@ public class S3UploadStep extends AbstractStepImpl {
 				if( metadatas != null && metadatas.size() > 0 ) {
 					ObjectMetadata metas = new ObjectMetadata();
 					metas.setUserMetadata(metadatas);
-					upload = mgr.upload(this.bucket, this.path, new FileInputStream(localFile), metas);
+					FileInputStream stream = new FileInputStream(localFile);
+					upload = mgr.upload(this.bucket, this.path, stream, metas);
+					stream.close();
 				} else {
 					upload = mgr.upload(this.bucket, this.path, localFile);
 				}
