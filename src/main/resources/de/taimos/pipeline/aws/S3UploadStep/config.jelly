@@ -9,4 +9,16 @@
 	<f:entry title="${%Path}" field="path">
 		<f:textbox />
 	</f:entry>
+	<f:entry title="${%IncludePathPattern}" field="includePathPattern">
+		<f:textbox />
+	</f:entry>
+	<f:entry title="${%ExcludePathPattern}" field="excludePathPattern">
+		<f:textbox />
+	</f:entry>
+	<f:entry title="${%WorkingDir}" field="workingDir">
+		<f:textbox />
+	</f:entry>
+	<f:entry title="${%Metadatas}" field="metadatas">
+		<f:tab />
+	</f:entry>
 </j:jelly>

@@ -21,22 +21,34 @@
 
 package de.taimos.pipeline.aws;
 
-import java.util.Collection;
-
 import org.junit.Assert;
 import org.junit.Test;
 
 public class S3UploadStepTest {
 	@Test
-	public void gettersWorkAsExpected() throws Exception {
-		S3UploadStep step = new S3UploadStep( "my-file", "my-bucket" );
+	public void gettersWorkAsExpectedForFileCase() throws Exception {
+		S3UploadStep step = new S3UploadStep( "my-bucket" );
+		step.setFile( "my-file" );
 		Assert.assertEquals( "my-file", step.getFile() );
+		Assert.assertEquals( "my-bucket", step.getBucket() );
+	}
+	
+	@Test
+	public void gettersWorkAsExpectedForPatternCase() throws Exception {
+		S3UploadStep step = new S3UploadStep( "my-bucket" );
+		step.setIncludePathPattern( "**" );
+		step.setExcludePathPattern( "**/*.svg" );
+		step.setWorkingDir( "dist" );
+		Assert.assertEquals( "dist", step.getWorkingDir() );
+		Assert.assertEquals( "**", step.getIncludePathPattern() );
+		Assert.assertEquals( "**/*.svg", step.getExcludePathPattern() );
 		Assert.assertEquals( "my-bucket", step.getBucket() );
 	}
 
 	@Test
 	public void defaultPathIsEmpty() throws Exception {
-		S3UploadStep step = new S3UploadStep( "my-file", "my-bucket" );
+		S3UploadStep step = new S3UploadStep( "my-bucket" );
+		step.setFile( "my-file" );
 		Assert.assertEquals( "", step.getPath() );
 	}
 }
