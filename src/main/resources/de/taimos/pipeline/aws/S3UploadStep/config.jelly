@@ -18,4 +18,7 @@
 	<f:entry title="${%WorkingDir}" field="workingDir">
 		<f:textbox />
 	</f:entry>
+	<f:entry title="${%Metadatas}" field="metadatas">
+		<f:textbox />
+	</f:entry>
 </j:jelly>

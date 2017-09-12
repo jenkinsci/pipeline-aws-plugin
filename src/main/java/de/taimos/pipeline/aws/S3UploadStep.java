@@ -22,11 +22,14 @@
 package de.taimos.pipeline.aws;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import javax.annotation.Nonnull;
 import javax.inject.Inject;
@@ -43,7 +46,9 @@ import com.amazonaws.event.ProgressEvent;
 import com.amazonaws.event.ProgressEventType;
 import com.amazonaws.event.ProgressListener;
 import com.amazonaws.services.s3.AmazonS3Client;
+import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.transfer.MultipleFileUpload;
+import com.amazonaws.services.s3.transfer.ObjectMetadataProvider;
 import com.amazonaws.services.s3.transfer.TransferManager;
 import com.amazonaws.services.s3.transfer.TransferManagerBuilder;
 import com.amazonaws.services.s3.transfer.Upload;
@@ -63,6 +68,7 @@ public class S3UploadStep extends AbstractStepImpl {
 	private String includePathPattern;
 	private String excludePathPattern;
 	private String workingDir;
+	private String metadatas;
 	
 	@DataBoundConstructor
 	public S3UploadStep(String bucket) {
@@ -93,6 +99,10 @@ public class S3UploadStep extends AbstractStepImpl {
 		return this.workingDir;
 	}
 	
+	public String getMetadatas() {
+		return this.metadatas;
+	}
+	
 	@DataBoundSetter
 	public void setFile(String file) {
 		this.file = file;
@@ -116,6 +126,11 @@ public class S3UploadStep extends AbstractStepImpl {
 	@DataBoundSetter
 	public void setWorkingDir(String workingDir) {
 		this.workingDir = workingDir;
+	}
+	
+	@DataBoundSetter
+	public void setMetadatas(String metadatas) {
+		this.metadatas = metadatas;
 	}
 	
 	@Extension
@@ -155,6 +170,15 @@ public class S3UploadStep extends AbstractStepImpl {
 			final String includePathPattern = this.step.getIncludePathPattern();
 			final String excludePathPattern = this.step.getExcludePathPattern();
 			final String workingDir = this.step.getWorkingDir();
+			final Map<String, String> metadatas = new HashMap<String, String>();
+			
+			if( this.step.getMetadatas() != null && !"".equals(this.step.getMetadatas().trim())) {
+				for( String metadata : this.step.getMetadatas().split(";") ) {
+					if( metadata.split(":").length == 2 ) {
+						metadatas.put(metadata.split(":")[0], metadata.split(":")[1]);
+					}
+				}
+			}
 						
 			Preconditions.checkArgument(bucket != null && !bucket.isEmpty(), "Bucket must not be null or empty");
 			Preconditions.checkArgument(file != null || includePathPattern != null, "File or IncludePathPattern must not be null");
@@ -190,7 +214,7 @@ public class S3UploadStep extends AbstractStepImpl {
 								return;
 							}
 							
-							child.act(new RemoteUploader(Execution.this.envVars, Execution.this.listener, bucket, path));
+							child.act(new RemoteUploader(Execution.this.envVars, Execution.this.listener, bucket, path, metadatas));
 							
 							Execution.this.listener.getLogger().println("Upload complete");
 							Execution.this.getContext().onSuccess(null);
@@ -200,7 +224,7 @@ public class S3UploadStep extends AbstractStepImpl {
 							for( FilePath child : childs ) {
 								child.act(new FeedList(fileList));
 							}
-							dir.act(new RemoteListUploader(Execution.this.envVars, Execution.this.listener, fileList, bucket, path));
+							dir.act(new RemoteListUploader(Execution.this.envVars, Execution.this.listener, fileList, bucket, path, metadatas));
 							Execution.this.listener.getLogger().println("Upload complete");
 							Execution.this.getContext().onSuccess(null);
 						}
@@ -227,12 +251,14 @@ public class S3UploadStep extends AbstractStepImpl {
 		private final TaskListener taskListener;
 		private final String bucket;
 		private final String path;
+		private final Map<String, String> metadatas;
 		
-		RemoteUploader(EnvVars envVars, TaskListener taskListener, String bucket, String path) {
+		RemoteUploader(EnvVars envVars, TaskListener taskListener, String bucket, String path, Map<String, String> metadatas) {
 			this.envVars = envVars;
 			this.taskListener = taskListener;
 			this.bucket = bucket;
 			this.path = path;
+			this.metadatas = metadatas;
 		}
 		
 		@Override
@@ -241,7 +267,14 @@ public class S3UploadStep extends AbstractStepImpl {
 			TransferManager mgr = TransferManagerBuilder.standard().withS3Client(s3Client).build();
 			if (localFile.isFile()) {
 				Preconditions.checkArgument(this.path != null && !this.path.isEmpty(), "Path must not be null or empty when uploading file");
-				final Upload upload = mgr.upload(this.bucket, this.path, localFile);
+				final Upload upload;
+				if( metadatas != null && metadatas.size() > 0 ) {
+					ObjectMetadata metas = new ObjectMetadata();
+					metas.setUserMetadata(metadatas);
+					upload = mgr.upload(this.bucket, this.path, new FileInputStream(localFile), metas);
+				} else {
+					upload = mgr.upload(this.bucket, this.path, localFile);
+				}
 				upload.addProgressListener(new ProgressListener() {
 					@Override
 					public void progressChanged(ProgressEvent progressEvent) {
@@ -254,7 +287,20 @@ public class S3UploadStep extends AbstractStepImpl {
 				return null;
 			}
 			if (localFile.isDirectory()) {
-				final MultipleFileUpload fileUpload = mgr.uploadDirectory(this.bucket, this.path, localFile, true);
+				final MultipleFileUpload fileUpload;
+				if( metadatas != null && metadatas.size() > 0 ) {
+					ObjectMetadataProvider metadatasProvider = new ObjectMetadataProvider() {
+						@Override
+						public void provideObjectMetadata(File file, ObjectMetadata meta) {
+							if( meta != null ){
+								meta.setUserMetadata(metadatas);
+							}
+						}
+					};
+					fileUpload = mgr.uploadDirectory(this.bucket, this.path, localFile, true, metadatasProvider);
+				} else {
+					fileUpload = mgr.uploadDirectory(this.bucket, this.path, localFile, true);
+				}
 				for (final Upload upload : fileUpload.getSubTransfers()) {
 					upload.addProgressListener(new ProgressListener() {
 						@Override
@@ -282,14 +328,16 @@ public class S3UploadStep extends AbstractStepImpl {
 		private final TaskListener taskListener;
 		private final String bucket;
 		private final String path;
-		private List<File> fileList;
+		private final List<File> fileList;
+		private final Map<String, String> metadatas;
 		
-		RemoteListUploader(EnvVars envVars, TaskListener taskListener, List<File> fileList, String bucket, String path) {
+		RemoteListUploader(EnvVars envVars, TaskListener taskListener, List<File> fileList, String bucket, String path, Map<String, String> metadatas) {
 			this.envVars = envVars;
 			this.taskListener = taskListener;
 			this.fileList = fileList;
 			this.bucket = bucket;
 			this.path = path;
+			this.metadatas = metadatas;
 		}
 		
 		@Override
@@ -297,7 +345,20 @@ public class S3UploadStep extends AbstractStepImpl {
 			AmazonS3Client s3Client = AWSClientFactory.create(AmazonS3Client.class, this.envVars);
 			TransferManager mgr = TransferManagerBuilder.standard().withS3Client(s3Client).build();
 			Preconditions.checkArgument(path != null && !path.isEmpty(), "Path must not be null or empty when uploading file");
-			final MultipleFileUpload fileUpload = mgr.uploadFileList(bucket, path, localFile, fileList);
+			final MultipleFileUpload fileUpload ;
+			if( metadatas != null && metadatas.size() > 0 ) {
+				ObjectMetadataProvider metadatasProvider = new ObjectMetadataProvider() {
+					@Override
+					public void provideObjectMetadata(File file, ObjectMetadata meta) {
+						if( meta != null ){
+							meta.setUserMetadata(metadatas);
+						}
+					}
+				};
+				fileUpload = mgr.uploadFileList(bucket, path, localFile, fileList, metadatasProvider);
+			} else {
+				fileUpload = mgr.uploadFileList(bucket, path, localFile, fileList);
+			}
 			for (final Upload upload : fileUpload.getSubTransfers()) {
 				upload.addProgressListener(new ProgressListener() {
 					@Override
