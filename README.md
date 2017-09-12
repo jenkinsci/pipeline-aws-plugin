@@ -296,6 +296,7 @@ def idp = updateIdP(name: 'nameToCreateOrUpdate', metadata: 'pathToMetadataFile'
 # Changelog
 
 ## 1.15 (master)
+* Add the following options to `S3Upload` : `workingDir`, `includePathPattern`, `excludePathPattern` and `metadatas`
 
 ## 1.14
 * fixes JENKINS-45964: Assuming Role does not work in AWS-China
