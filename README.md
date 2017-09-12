@@ -88,7 +88,7 @@ s3Upload(bucket:"my-bucket", path:'path/to/targetFolder/', includePathPattern:'*
 Specific metadatas can be add to upload files
 
 ```
-s3Upload(bucket:"my-bucket", path:'path/to/targetFolder/', includePathPattern:'**/*.svg', workingDir:'dist', metadatas:'Content-type:image/svg+xml;AnotherMeta:AnotherValue')
+s3Upload(bucket:"my-bucket", path:'path/to/targetFolder/', includePathPattern:'**/*.svg', workingDir:'dist', metadatas:['Content-type:image/svg+xml','Another:Value'])
 ```
 
 ## s3Download

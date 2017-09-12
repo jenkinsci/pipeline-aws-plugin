@@ -68,7 +68,7 @@ public class S3UploadStep extends AbstractStepImpl {
 	private String includePathPattern;
 	private String excludePathPattern;
 	private String workingDir;
-	private String metadatas;
+	private String[] metadatas;
 	
 	@DataBoundConstructor
 	public S3UploadStep(String bucket) {
@@ -99,8 +99,12 @@ public class S3UploadStep extends AbstractStepImpl {
 		return this.workingDir;
 	}
 	
-	public String getMetadatas() {
-		return this.metadatas;
+	public String[] getMetadatas() {
+		if( this.metadatas != null ) {
+			return this.metadatas.clone();
+		}else {
+			return null;
+		}
 	}
 	
 	@DataBoundSetter
@@ -129,8 +133,12 @@ public class S3UploadStep extends AbstractStepImpl {
 	}
 	
 	@DataBoundSetter
-	public void setMetadatas(String metadatas) {
-		this.metadatas = metadatas;
+	public void setMetadatas(String[] metadatas) {
+		if( metadatas != null ) {
+			this.metadatas = metadatas.clone();
+		} else {
+			this.metadatas = null;
+		}
 	}
 	
 	@Extension
@@ -172,8 +180,8 @@ public class S3UploadStep extends AbstractStepImpl {
 			final String workingDir = this.step.getWorkingDir();
 			final Map<String, String> metadatas = new HashMap<String, String>();
 			
-			if( this.step.getMetadatas() != null && !"".equals(this.step.getMetadatas().trim())) {
-				for( String metadata : this.step.getMetadatas().split(";") ) {
+			if( this.step.getMetadatas() != null && this.step.getMetadatas().length != 0) {
+				for( String metadata : this.step.getMetadatas() ) {
 					if( metadata.split(":").length == 2 ) {
 						metadatas.put(metadata.split(":")[0], metadata.split(":")[1]);
 					}
