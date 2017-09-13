@@ -79,6 +79,18 @@ s3Upload(file:'file.txt', bucket:'my-bucket', path:'path/to/target/file.txt')
 s3Upload(file:'someFolder', bucket:'my-bucket', path:'path/to/targetFolder/')
 ```
 
+Another way to use it with include/exclude pattern in a subdirectory (workingDir).
+
+```
+s3Upload(bucket:"my-bucket", path:'path/to/targetFolder/', includePathPattern:'**/*', workingDir:'dist', excludePathPattern:'**/*.svg')
+```
+
+Specific metadatas can be add to upload files
+
+```
+s3Upload(bucket:"my-bucket", path:'path/to/targetFolder/', includePathPattern:'**/*.svg', workingDir:'dist', metadatas:['Content-type:image/svg+xml','Another:Value'])
+```
+
 ## s3Download
 
 Download a file/folder from S3 to the local workspace.
@@ -261,10 +273,11 @@ Retrieves the list of all AWS accounts of the organization. This step can only b
 
 The step returns an array of Account objects with the following fields:
 
-* id
-* arn
-* name
-* status
+* id - the account id
+* arn - the organizations ARN
+* name - the account name
+* safeName - the name converted to only contain lower-case, numbers and hyphens
+* status - the account status
 
 ```
 def accounts = listAWSAccounts()
@@ -282,12 +295,17 @@ def idp = updateIdP(name: 'nameToCreateOrUpdate', metadata: 'pathToMetadataFile'
 
 # Changelog
 
-## 1.14 (master)
+## 1.15 (master)
+* Add the following options to `S3Upload` : `workingDir`, `includePathPattern`, `excludePathPattern` and `metadatas`
+
+## 1.14
 * fixes JENKINS-45964: Assuming Role does not work in AWS-China
 * Allow opt out for by-default stack creation with `cfnUpdate`
 * roleArn parameter support for `cfnUpdate`
 * Fix: Rendering the paths for S3* steps manually (Windows)
-
+* fixes JENKINS-46247: Fix credentials scope in withAWS step and add a credentials dropdown
+* add `safeName` to `listAWSAccounts` step
+ 
 ## 1.13
 * Add `s3FindFiles` step
 * add `updateIdP` step

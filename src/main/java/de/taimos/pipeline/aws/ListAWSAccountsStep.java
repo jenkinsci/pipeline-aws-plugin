@@ -95,6 +95,7 @@ public class ListAWSAccountsStep extends AbstractStepImpl {
 						awsAccount.put("id", account.getId());
 						awsAccount.put("arn", account.getArn());
 						awsAccount.put("name", account.getName());
+						awsAccount.put("safeName", SafeNameCreator.createSafeName(account.getName()));
 						awsAccount.put("status", account.getStatus());
 						accounts.add(awsAccount);
 					}
@@ -115,6 +116,14 @@ public class ListAWSAccountsStep extends AbstractStepImpl {
 		}
 		
 		private static final long serialVersionUID = 1L;
+		
+	}
+	
+	public static class SafeNameCreator {
+		
+		public static String createSafeName(String name) {
+			return name.replaceAll("[^A-Za-z0-9-]", "-").replaceAll("-+", "-").toLowerCase();
+		}
 		
 	}
 	
