@@ -209,7 +209,7 @@ public class CFNUpdateStep extends AbstractStepImpl {
 			final Integer timeoutInMinutes = this.step.getTimeoutInMinutes();
 
 			Preconditions.checkArgument(stack != null && !stack.isEmpty(), "Stack must not be null or empty");
-			Preconditions.checkArgument(roleArn != null && !IamRoleUtils.validRoleArn(roleArn), "RoleArn must be a valid ARN.");
+			Preconditions.checkArgument(roleArn == null || IamRoleUtils.validRoleArn(roleArn), "RoleArn must be a valid ARN.");
 			this.listener.getLogger().format("Updating/Creating CloudFormation stack %s %n", stack);
 			
 			new Thread("cfnUpdate-" + stack) {
