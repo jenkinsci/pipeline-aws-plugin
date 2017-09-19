@@ -105,6 +105,13 @@ Specific metadatas can be add to upload files
 s3Upload(bucket:"my-bucket", path:'path/to/targetFolder/', includePathPattern:'**/*.svg', workingDir:'dist', metadatas:['Content-type:image/svg+xml','Another:Value'])
 ```
 
+Canned ACLs can be add to upload requests.
+
+```
+s3Upload(file:'file.txt', bucket:'my-bucket', path:'path/to/target/file.txt', acl:'PublicRead')
+s3Upload(file:'someFolder', bucket:'my-bucket', path:'path/to/targetFolder/', acl:'BucketOwnerFullControl')
+```
+
 ## s3Download
 
 Download a file/folder from S3 to the local workspace.
@@ -310,7 +317,7 @@ def idp = updateIdP(name: 'nameToCreateOrUpdate', metadata: 'pathToMetadataFile'
 # Changelog
 
 ## 1.15 (master)
-* Add the following options to `S3Upload` : `workingDir`, `includePathPattern`, `excludePathPattern` and `metadatas`
+* Add the following options to `S3Upload` : `workingDir`, `includePathPattern`, `excludePathPattern`, `metadatas` and `acl`
 
 ## 1.14
 * fixes JENKINS-45964: Assuming Role does not work in AWS-China
