@@ -1,0 +1,15 @@
+<div>
+    <p>
+        Canned ACL to add to the upload request.
+        <ul>
+            <li>Private : Specifies the owner is granted Full Control. No one else has access rights. This is the default access control policy for any new buckets or objects.</li>
+            <li>PublicRead : Specifies the owner is granted Full Control and to the All Users group grantee is granted Read access.</li>
+            <li>PublicReadWrite: Specifies the owner is granted Full Control and to the All Users group grantee is granted Read and Write access.</li>
+            <li>AuthenticatedRead: Specifies the owner is granted Full Control and to the Authenticated Users group grantee is granted Read access.</li>
+            <li>LogDeliveryWrite: Specifies the owner is granted Full Control and to the Log Delivery group grantee is granted Write access.</li>
+            <li>BucketOwnerRead: Specifies the owner of the bucket, but not necessarily the same as the owner of the object, is granted Read access.</li>
+            <li>BucketOwnerFullControl: Specifies the owner of the bucket, but not necessarily the same as the owner of the object, is granted Full Control.</li>
+            <li>AwsExecRead: Specifies the owner is granted Full Control and Amazon EC2 is granted {@link Permission#Read} access to GET an Amazon Machine Image (AMI) bundle from Amazon S3.</li>
+        </ul>
+    </p>
+</div>
