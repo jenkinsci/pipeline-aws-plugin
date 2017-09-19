@@ -21,6 +21,7 @@
 
 package de.taimos.pipeline.aws;
 
+import com.amazonaws.services.s3.model.CannedAccessControlList;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -29,8 +30,10 @@ public class S3UploadStepTest {
 	public void gettersWorkAsExpectedForFileCase() throws Exception {
 		S3UploadStep step = new S3UploadStep( "my-bucket" );
 		step.setFile( "my-file" );
+		step.setAcl(CannedAccessControlList.PublicRead);
 		Assert.assertEquals( "my-file", step.getFile() );
 		Assert.assertEquals( "my-bucket", step.getBucket() );
+		Assert.assertEquals( CannedAccessControlList.PublicRead, step.getAcl() );
 	}
 	
 	@Test
