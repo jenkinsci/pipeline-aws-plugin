@@ -316,7 +316,9 @@ def idp = updateIdP(name: 'nameToCreateOrUpdate', metadata: 'pathToMetadataFile'
 
 # Changelog
 
-## 1.15 (master)
+## 1.16 (master)
+
+## 1.15
 * Add the following options to `S3Upload` : `workingDir`, `includePathPattern`, `excludePathPattern`, `metadatas` and `acl`
 
 ## 1.14
