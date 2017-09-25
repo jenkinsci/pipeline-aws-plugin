@@ -67,6 +67,14 @@ withAWS(role:'admin', roleAccount:'123456789012', externalId: 'my-external-id') 
 }
 ```
 
+Assume federated user id information (federatedUserId is optional - if specified it generates a set of temporary credentials and allows you to push a federated user id into cloud trail for auditing):
+
+```
+withAWS(region:'eu-central-1',credentials:'nameOfSystemCredentials',federatedUserId:"${submitter}@${releaseVersion}") {
+    // do something
+}
+```
+
 ## awsIdentity
 
 Print current AWS identity information to the log.
