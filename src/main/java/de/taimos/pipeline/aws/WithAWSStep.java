@@ -73,7 +73,7 @@ public class WithAWSStep extends AbstractStepImpl {
 	private String federatedUserId = "";
 
 	public String getFederatedUserId() {
-		return federatedUserId;
+		return this.federatedUserId;
 	}
 
 	@DataBoundSetter
