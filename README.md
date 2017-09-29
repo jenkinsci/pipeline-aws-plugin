@@ -325,6 +325,7 @@ def idp = updateIdP(name: 'nameToCreateOrUpdate', metadata: 'pathToMetadataFile'
 # Changelog
 
 ## 1.16 (master)
+* Add federatedUserId for withAWS support - generates temporary aws credentials for federated user which gets logged in CloudTrail 
 
 ## 1.15
 * Add the following options to `S3Upload` : `workingDir`, `includePathPattern`, `excludePathPattern`, `metadatas` and `acl`
