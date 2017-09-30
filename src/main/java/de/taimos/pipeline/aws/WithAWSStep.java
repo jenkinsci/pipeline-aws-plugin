@@ -52,6 +52,8 @@ import com.amazonaws.services.securitytoken.model.AssumeRoleRequest;
 import com.amazonaws.services.securitytoken.model.AssumeRoleResult;
 import com.amazonaws.services.securitytoken.model.Credentials;
 import com.amazonaws.services.securitytoken.model.GetCallerIdentityRequest;
+import com.amazonaws.services.securitytoken.model.GetFederationTokenRequest;
+import com.amazonaws.services.securitytoken.model.GetFederationTokenResult;
 import com.amazonaws.util.StringUtils;
 import com.cloudbees.plugins.credentials.CredentialsProvider;
 import com.cloudbees.plugins.credentials.domains.DomainRequirement;
@@ -68,6 +70,16 @@ public class WithAWSStep extends AbstractStepImpl {
 	private String profile = "";
 	private String credentials = "";
 	private String externalId = "";
+	private String federatedUserId = "";
+
+	public String getFederatedUserId() {
+		return this.federatedUserId;
+	}
+
+	@DataBoundSetter
+	public void setFederatedUserId(String federatedUserId) {
+		this.federatedUserId = federatedUserId;
+	}
 
 	@DataBoundConstructor
 	public WithAWSStep() {
@@ -185,6 +197,7 @@ public class WithAWSStep extends AbstractStepImpl {
 			this.withProfile(awsEnv);
 			this.withRegion(awsEnv);
 			this.withRole(awsEnv);
+			this.withFederatedUserId(awsEnv);
 
 			EnvironmentExpander expander = new EnvironmentExpander() {
 				@Override
@@ -197,6 +210,30 @@ public class WithAWSStep extends AbstractStepImpl {
 					.withCallback(BodyExecutionCallback.wrap(this.getContext()))
 					.start();
 			return false;
+		}
+
+		
+		private final String ALLOW_ALL_POLICY = "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Action\":\"*\","
+				 + "\"Effect\":\"Allow\",\"Resource\":\"*\"}]}";
+		
+		private void withFederatedUserId(@Nonnull EnvVars localEnv) {
+			if (!StringUtils.isNullOrEmpty(this.step.getFederatedUserId())) {
+				AWSSecurityTokenServiceClient sts = AWSClientFactory.create(AWSSecurityTokenServiceClient.class, this.envVars);
+
+				GetFederationTokenRequest getFederationTokenRequest = new GetFederationTokenRequest();
+				getFederationTokenRequest.setDurationSeconds(3600);
+				getFederationTokenRequest.setName(this.step.getFederatedUserId());
+				getFederationTokenRequest.setPolicy(ALLOW_ALL_POLICY);
+				
+				GetFederationTokenResult federationTokenResult = sts.getFederationToken(getFederationTokenRequest);
+
+				Credentials credentials = federationTokenResult.getCredentials();
+				localEnv.override(AWSClientFactory.AWS_ACCESS_KEY_ID, credentials.getAccessKeyId());
+				localEnv.override(AWSClientFactory.AWS_SECRET_ACCESS_KEY, credentials.getSecretAccessKey());
+				localEnv.override(AWSClientFactory.AWS_SESSION_TOKEN, credentials.getSessionToken());
+				this.envVars.overrideAll(localEnv);
+			}
+			
 		}
 
 		private void withCredentials(@Nonnull Run<?,?> run, @Nonnull EnvVars localEnv) {

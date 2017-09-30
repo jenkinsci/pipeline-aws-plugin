@@ -67,6 +67,14 @@ withAWS(role:'admin', roleAccount:'123456789012', externalId: 'my-external-id') 
 }
 ```
 
+Assume federated user id information (federatedUserId is optional - if specified it generates a set of temporary credentials and allows you to push a federated user id into cloud trail for auditing):
+
+```
+withAWS(region:'eu-central-1',credentials:'nameOfSystemCredentials',federatedUserId:"${submitter}@${releaseVersion}") {
+    // do something
+}
+```
+
 ## awsIdentity
 
 Print current AWS identity information to the log.
@@ -317,6 +325,7 @@ def idp = updateIdP(name: 'nameToCreateOrUpdate', metadata: 'pathToMetadataFile'
 # Changelog
 
 ## 1.16 (master)
+* Add federatedUserId for withAWS support - generates temporary aws credentials for federated user which gets logged in CloudTrail 
 
 ## 1.15
 * Add the following options to `S3Upload` : `workingDir`, `includePathPattern`, `excludePathPattern`, `metadatas` and `acl`
