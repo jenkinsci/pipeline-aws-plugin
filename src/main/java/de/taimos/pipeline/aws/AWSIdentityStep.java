@@ -21,6 +21,9 @@
 
 package de.taimos.pipeline.aws;
 
+import java.util.HashMap;
+import java.util.Map;
+
 import javax.inject.Inject;
 
 import org.jenkinsci.plugins.workflow.steps.AbstractStepDescriptorImpl;
@@ -58,11 +61,11 @@ public class AWSIdentityStep extends AbstractStepImpl {
 		
 		@Override
 		public String getDisplayName() {
-			return "Print the AWS identity";
+			return "Print and return the AWS identity";
 		}
 	}
 	
-	public static class Execution extends AbstractSynchronousStepExecution<Void> {
+	public static class Execution extends AbstractSynchronousStepExecution<Map<String, String>> {
 		
 		@Inject
 		private transient AWSIdentityStep step;
@@ -72,12 +75,17 @@ public class AWSIdentityStep extends AbstractStepImpl {
 		private transient TaskListener listener;
 		
 		@Override
-		protected Void run() throws Exception {
+		protected Map<String, String> run() throws Exception {
 			AWSSecurityTokenServiceClient sts = AWSClientFactory.create(AWSSecurityTokenServiceClient.class, this.envVars);
 			GetCallerIdentityResult identity = sts.getCallerIdentity(new GetCallerIdentityRequest());
 			
 			this.listener.getLogger().format("Current AWS identity: %s - %s - %s %n", identity.getAccount(), identity.getUserId(), identity.getArn());
-			return null;
+			
+			Map<String, String> info = new HashMap<>();
+			info.put("account", identity.getAccount());
+			info.put("user", identity.getUserId());
+			info.put("arn", identity.getArn());
+			return info;
 		}
 		
 		private static final long serialVersionUID = 1L;

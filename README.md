@@ -79,8 +79,14 @@ withAWS(region:'eu-central-1',credentials:'nameOfSystemCredentials',federatedUse
 
 Print current AWS identity information to the log.
 
+The step returns an objects with the following fields:
+
+* account - The AWS account ID number of the account that owns or contains the calling entity
+* user - The unique identifier of the calling entity
+* arn - The AWS ARN associated with the calling entity
+
 ```
-awsIdentity()
+def identity = awsIdentity()
 ```
 
 ## cfInvalidate
@@ -326,6 +332,7 @@ def idp = updateIdP(name: 'nameToCreateOrUpdate', metadata: 'pathToMetadataFile'
 
 ## 1.16 (master)
 * Add federatedUserId for withAWS support - generates temporary aws credentials for federated user which gets logged in CloudTrail 
+* Add return value to `awsIdentity` step
 
 ## 1.15
 * Add the following options to `S3Upload` : `workingDir`, `includePathPattern`, `excludePathPattern`, `metadatas` and `acl`
