@@ -55,15 +55,15 @@ public class InvokeLambdaStep extends AbstractStepImpl {
 	}
 
 	public String getFunctionName() {
-		return functionName;
+		return this.functionName;
 	}
 
 	public Object getPayload() {
-		return payload;
+		return this.payload;
 	}
-	
+
 	public String getPayloadAsString() {
-		return toJsonString(this.payload);
+		return this.toJsonString(this.payload);
 	}
 
 	private String toJsonString(Object payloadObject) {
@@ -114,16 +114,16 @@ public class InvokeLambdaStep extends AbstractStepImpl {
 
 			InvokeResult result = client.invoke(request);
 
-			this.listener.getLogger().append(getLogResult(result));
+			this.listener.getLogger().append(this.getLogResult(result));
 			String functionError = result.getFunctionError();
 			if (functionError != null) {
-				throw new RuntimeException("Invoke lambda failed! " + getPayloadAsString(result));
+				throw new RuntimeException("Invoke lambda failed! " + this.getPayloadAsString(result));
 			}
-			return getPayloadAsObject(result);
+			return this.getPayloadAsObject(result);
 		}
 
 		private Object getPayloadAsObject(InvokeResult result) {
-			return new JsonSlurper().parseText(getPayloadAsString(result));
+			return new JsonSlurper().parseText(this.getPayloadAsString(result));
 		}
 
 		private String getPayloadAsString(InvokeResult result) {
