@@ -23,6 +23,7 @@ This plugins adds Jenkins pipeline steps to interact with the AWS API.
 * [awaitDeploymentCompletion](#awaitdeploymentcompletion)
 * [listAWSAccounts](#listawsaccounts)
 * [updateIdP](#updateidp)
+* [ecrLogin](#ecrlogin)
 
 [**see the changelog for release information**](#changelog)
 
@@ -328,11 +329,28 @@ The step returns the ARN of the created identity provider.
 def idp = updateIdP(name: 'nameToCreateOrUpdate', metadata: 'pathToMetadataFile')
 ```
 
+## ecrLogin
+
+Create login string to authenticate docker with the ECR.
+
+The step returns the shell command to perform the login.
+
+```
+def login = ecrLogin()
+```
+
+For older versions of docker that need the email parameter use:
+
+```
+def login = ecrLogin(email:true)
+```
+
 # Changelog
 
 ## 1.16 (master)
 * Add federatedUserId for withAWS support - generates temporary aws credentials for federated user which gets logged in CloudTrail 
 * Add return value to `awsIdentity` step
+* Add `ecrLogin` step
 
 ## 1.15
 * Add the following options to `S3Upload` : `workingDir`, `includePathPattern`, `excludePathPattern`, `metadatas` and `acl`
