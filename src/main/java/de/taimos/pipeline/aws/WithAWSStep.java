@@ -27,16 +27,6 @@ import java.util.Collections;
 import javax.annotation.Nonnull;
 import javax.inject.Inject;
 
-import com.cloudbees.plugins.credentials.CredentialsMatchers;
-import com.cloudbees.plugins.credentials.common.StandardListBoxModel;
-import com.cloudbees.plugins.credentials.common.StandardUsernamePasswordCredentials;
-import hudson.model.Item;
-import hudson.model.Queue;
-import hudson.model.Run;
-import hudson.model.queue.Tasks;
-import hudson.security.ACL;
-import hudson.util.ListBoxModel;
-import de.taimos.pipeline.aws.utils.IamRoleUtils;
 import org.jenkinsci.plugins.workflow.steps.AbstractStepDescriptorImpl;
 import org.jenkinsci.plugins.workflow.steps.AbstractStepExecutionImpl;
 import org.jenkinsci.plugins.workflow.steps.AbstractStepImpl;
@@ -55,12 +45,22 @@ import com.amazonaws.services.securitytoken.model.GetCallerIdentityRequest;
 import com.amazonaws.services.securitytoken.model.GetFederationTokenRequest;
 import com.amazonaws.services.securitytoken.model.GetFederationTokenResult;
 import com.amazonaws.util.StringUtils;
+import com.cloudbees.plugins.credentials.CredentialsMatchers;
 import com.cloudbees.plugins.credentials.CredentialsProvider;
+import com.cloudbees.plugins.credentials.common.StandardListBoxModel;
+import com.cloudbees.plugins.credentials.common.StandardUsernamePasswordCredentials;
 import com.cloudbees.plugins.credentials.domains.DomainRequirement;
 
+import de.taimos.pipeline.aws.utils.IamRoleUtils;
 import hudson.EnvVars;
 import hudson.Extension;
+import hudson.model.Item;
+import hudson.model.Queue;
+import hudson.model.Run;
 import hudson.model.TaskListener;
+import hudson.model.queue.Tasks;
+import hudson.security.ACL;
+import hudson.util.ListBoxModel;
 
 public class WithAWSStep extends AbstractStepImpl {
 
@@ -71,16 +71,7 @@ public class WithAWSStep extends AbstractStepImpl {
 	private String credentials = "";
 	private String externalId = "";
 	private String federatedUserId = "";
-
-	public String getFederatedUserId() {
-		return this.federatedUserId;
-	}
-
-	@DataBoundSetter
-	public void setFederatedUserId(String federatedUserId) {
-		this.federatedUserId = federatedUserId;
-	}
-
+	
 	@DataBoundConstructor
 	public WithAWSStep() {
 		//
@@ -132,14 +123,23 @@ public class WithAWSStep extends AbstractStepImpl {
 	}
 
 	public String getExternalId() {
-		return externalId;
+		return this.externalId;
 	}
 
 	@DataBoundSetter
 	public void setExternalId(String externalId) {
 		this.externalId = externalId;
 	}
-
+	
+	public String getFederatedUserId() {
+		return this.federatedUserId;
+	}
+	
+	@DataBoundSetter
+	public void setFederatedUserId(String federatedUserId) {
+		this.federatedUserId = federatedUserId;
+	}
+	
 	@Extension
 	public static class DescriptorImpl extends AbstractStepDescriptorImpl {
 
@@ -223,7 +223,7 @@ public class WithAWSStep extends AbstractStepImpl {
 				GetFederationTokenRequest getFederationTokenRequest = new GetFederationTokenRequest();
 				getFederationTokenRequest.setDurationSeconds(3600);
 				getFederationTokenRequest.setName(this.step.getFederatedUserId());
-				getFederationTokenRequest.setPolicy(ALLOW_ALL_POLICY);
+				getFederationTokenRequest.setPolicy(this.ALLOW_ALL_POLICY);
 				
 				GetFederationTokenResult federationTokenResult = sts.getFederationToken(getFederationTokenRequest);
 
