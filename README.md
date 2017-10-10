@@ -24,6 +24,7 @@ This plugins adds Jenkins pipeline steps to interact with the AWS API.
 * [listAWSAccounts](#listawsaccounts)
 * [updateIdP](#updateidp)
 * [ecrLogin](#ecrlogin)
+* [invokeLambda](#invokelambda)
 
 [**see the changelog for release information**](#changelog)
 
@@ -345,12 +346,26 @@ For older versions of docker that need the email parameter use:
 def login = ecrLogin(email:true)
 ```
 
+## invokeLambda
+
+Invoke a Lambda function.
+
+The step returns the object returned by the Lambda.
+
+```
+def result = invokeLambda(
+	functionName: 'myLambdaFunction',
+	payload: [ "key": "value", "anotherkey" : [ "another", "value"] ]
+)
+```
+
 # Changelog
 
 ## 1.16 (master)
 * Add federatedUserId for withAWS support - generates temporary aws credentials for federated user which gets logged in CloudTrail 
 * Add return value to `awsIdentity` step
 * Add `ecrLogin` step
+* Add `invokeLambda` step
 
 ## 1.15
 * Add the following options to `S3Upload` : `workingDir`, `includePathPattern`, `excludePathPattern`, `metadatas` and `acl`
