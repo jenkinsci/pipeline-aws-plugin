@@ -23,6 +23,7 @@ This plugins adds Jenkins pipeline steps to interact with the AWS API.
 * [awaitDeploymentCompletion](#awaitdeploymentcompletion)
 * [listAWSAccounts](#listawsaccounts)
 * [updateIdP](#updateidp)
+* [ecrLogin](#ecrlogin)
 * [invokeLambda](#invokelambda)
 
 [**see the changelog for release information**](#changelog)
@@ -80,8 +81,14 @@ withAWS(region:'eu-central-1',credentials:'nameOfSystemCredentials',federatedUse
 
 Print current AWS identity information to the log.
 
+The step returns an objects with the following fields:
+
+* account - The AWS account ID number of the account that owns or contains the calling entity
+* user - The unique identifier of the calling entity
+* arn - The AWS ARN associated with the calling entity
+
 ```
-awsIdentity()
+def identity = awsIdentity()
 ```
 
 ## cfInvalidate
@@ -323,6 +330,22 @@ The step returns the ARN of the created identity provider.
 def idp = updateIdP(name: 'nameToCreateOrUpdate', metadata: 'pathToMetadataFile')
 ```
 
+## ecrLogin
+
+Create login string to authenticate docker with the ECR.
+
+The step returns the shell command to perform the login.
+
+```
+def login = ecrLogin()
+```
+
+For older versions of docker that need the email parameter use:
+
+```
+def login = ecrLogin(email:true)
+```
+
 ## invokeLambda
 
 Invoke a Lambda function.
@@ -336,11 +359,12 @@ def result = invokeLambda(
 )
 ```
 
-
 # Changelog
 
 ## 1.16 (master)
 * Add federatedUserId for withAWS support - generates temporary aws credentials for federated user which gets logged in CloudTrail 
+* Add return value to `awsIdentity` step
+* Add `ecrLogin` step
 * Add `invokeLambda` step
 
 ## 1.15
