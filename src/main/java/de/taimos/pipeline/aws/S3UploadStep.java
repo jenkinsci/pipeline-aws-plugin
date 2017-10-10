@@ -34,9 +34,6 @@ import java.util.Map;
 import javax.annotation.Nonnull;
 import javax.inject.Inject;
 
-import com.amazonaws.services.s3.Headers;
-import com.amazonaws.services.s3.model.CannedAccessControlList;
-import com.amazonaws.services.s3.model.PutObjectRequest;
 import org.jenkinsci.plugins.workflow.steps.AbstractStepDescriptorImpl;
 import org.jenkinsci.plugins.workflow.steps.AbstractStepExecutionImpl;
 import org.jenkinsci.plugins.workflow.steps.AbstractStepImpl;
@@ -49,7 +46,10 @@ import com.amazonaws.event.ProgressEvent;
 import com.amazonaws.event.ProgressEventType;
 import com.amazonaws.event.ProgressListener;
 import com.amazonaws.services.s3.AmazonS3Client;
+import com.amazonaws.services.s3.Headers;
+import com.amazonaws.services.s3.model.CannedAccessControlList;
 import com.amazonaws.services.s3.model.ObjectMetadata;
+import com.amazonaws.services.s3.model.PutObjectRequest;
 import com.amazonaws.services.s3.transfer.MultipleFileUpload;
 import com.amazonaws.services.s3.transfer.ObjectMetadataProvider;
 import com.amazonaws.services.s3.transfer.TransferManager;
@@ -104,16 +104,17 @@ public class S3UploadStep extends AbstractStepImpl {
 	}
 	
 	public String[] getMetadatas() {
-		if( this.metadatas != null ) {
+		if (this.metadatas != null) {
 			return this.metadatas.clone();
-		}else {
+		} else {
 			return null;
 		}
 	}
-
-	public CannedAccessControlList getAcl() { return acl; }
-
-
+	
+	public CannedAccessControlList getAcl() {
+		return this.acl;
+	}
+	
 	@DataBoundSetter
 	public void setFile(String file) {
 		this.file = file;
@@ -141,15 +142,17 @@ public class S3UploadStep extends AbstractStepImpl {
 	
 	@DataBoundSetter
 	public void setMetadatas(String[] metadatas) {
-		if( metadatas != null ) {
+		if (metadatas != null) {
 			this.metadatas = metadatas.clone();
 		} else {
 			this.metadatas = null;
 		}
 	}
-
+	
 	@DataBoundSetter
-	public void setAcl(CannedAccessControlList acl) {  this.acl = acl; }
+	public void setAcl(CannedAccessControlList acl) {
+		this.acl = acl;
+	}
 	
 	@Extension
 	public static class DescriptorImpl extends AbstractStepDescriptorImpl {
@@ -159,7 +162,7 @@ public class S3UploadStep extends AbstractStepImpl {
 		}
 		
 		@Override
-		public String getFunctionName() { 
+		public String getFunctionName() {
 			return "s3Upload";
 		}
 		
@@ -188,44 +191,43 @@ public class S3UploadStep extends AbstractStepImpl {
 			final String includePathPattern = this.step.getIncludePathPattern();
 			final String excludePathPattern = this.step.getExcludePathPattern();
 			final String workingDir = this.step.getWorkingDir();
-			final Map<String, String> metadatas = new HashMap<String, String>();
+			final Map<String, String> metadatas = new HashMap<>();
 			final CannedAccessControlList acl = this.step.getAcl();
 			
-			if( this.step.getMetadatas() != null && this.step.getMetadatas().length != 0) {
-				for( String metadata : this.step.getMetadatas() ) {
-					if( metadata.split(":").length == 2 ) {
+			if (this.step.getMetadatas() != null && this.step.getMetadatas().length != 0) {
+				for (String metadata : this.step.getMetadatas()) {
+					if (metadata.split(":").length == 2) {
 						metadatas.put(metadata.split(":")[0], metadata.split(":")[1]);
 					}
 				}
 			}
-						
+			
 			Preconditions.checkArgument(bucket != null && !bucket.isEmpty(), "Bucket must not be null or empty");
 			Preconditions.checkArgument(file != null || includePathPattern != null, "File or IncludePathPattern must not be null");
 			Preconditions.checkArgument(includePathPattern == null || file == null, "File and IncludePathPattern cannot be use together");
 			
-			final List<FilePath> childs = new ArrayList<FilePath>();
+			final List<FilePath> children = new ArrayList<>();
 			final FilePath dir;
-			if( workingDir != null && !"".equals(workingDir.trim()) ) {
+			if (workingDir != null && !"".equals(workingDir.trim())) {
 				dir = this.workspace.child(workingDir);
 			} else {
 				dir = this.workspace;
 			}
-			if(file != null) {
-				childs.add(dir.child(file));
-			} else if (includePathPattern != null){
-				if(excludePathPattern != null && !"".equals(excludePathPattern.trim())){
-					childs.addAll(Arrays.asList(dir.list(includePathPattern, excludePathPattern, true)));
-				} else {
-					childs.addAll(Arrays.asList(dir.list(includePathPattern, null, true)));
-				}
+			
+			if (file != null) {
+				children.add(dir.child(file));
+			} else if (excludePathPattern != null && !excludePathPattern.trim().isEmpty()) {
+				children.addAll(Arrays.asList(dir.list(includePathPattern, excludePathPattern, true)));
+			} else {
+				children.addAll(Arrays.asList(dir.list(includePathPattern, null, true)));
 			}
 			
 			new Thread("s3Upload") {
 				@Override
 				public void run() {
 					try {
-						if( childs != null && childs.size() == 1) {
-							FilePath child = childs.get(0);
+						if (children.size() == 1) {
+							FilePath child = children.get(0);
 							Execution.this.listener.getLogger().format("Uploading %s to s3://%s/%s %n", child.toURI(), bucket, path);
 							if (!child.exists()) {
 								Execution.this.listener.getLogger().println("Upload failed due to missing source file");
@@ -237,10 +239,10 @@ public class S3UploadStep extends AbstractStepImpl {
 							
 							Execution.this.listener.getLogger().println("Upload complete");
 							Execution.this.getContext().onSuccess(null);
-						} else if( childs != null && childs.size() > 1) {
+						} else if (children.size() > 1) {
 							List<File> fileList = new ArrayList<File>();
 							Execution.this.listener.getLogger().format("Uploading %s to s3://%s/%s %n", includePathPattern, bucket, path);
-							for( FilePath child : childs ) {
+							for (FilePath child : children) {
 								child.act(new FeedList(fileList));
 							}
 							dir.act(new RemoteListUploader(Execution.this.envVars, Execution.this.listener, fileList, bucket, path, metadatas, acl));
@@ -289,19 +291,19 @@ public class S3UploadStep extends AbstractStepImpl {
 			if (localFile.isFile()) {
 				Preconditions.checkArgument(this.path != null && !this.path.isEmpty(), "Path must not be null or empty when uploading file");
 				final Upload upload;
-				if( metadatas != null && metadatas.size() > 0 ) {
+				if (this.metadatas != null && this.metadatas.size() > 0) {
 					ObjectMetadata metas = new ObjectMetadata();
-					metas.setUserMetadata(metadatas);
+					metas.setUserMetadata(this.metadatas);
 					FileInputStream stream = new FileInputStream(localFile);
 					PutObjectRequest request = new PutObjectRequest(this.bucket, this.path, stream, metas);
-					if(this.acl != null){
+					if (this.acl != null) {
 						request = request.withCannedAcl(this.acl);
 					}
 					upload = mgr.upload(request);
 					stream.close();
 				} else {
 					PutObjectRequest request = new PutObjectRequest(this.bucket, this.path, localFile);
-					if(this.acl != null){
+					if (this.acl != null) {
 						request = request.withCannedAcl(this.acl);
 					}
 					upload = mgr.upload(request);
@@ -309,7 +311,7 @@ public class S3UploadStep extends AbstractStepImpl {
 				upload.addProgressListener(new ProgressListener() {
 					@Override
 					public void progressChanged(ProgressEvent progressEvent) {
-						if (progressEvent.getEventType()== ProgressEventType.TRANSFER_COMPLETED_EVENT) {
+						if (progressEvent.getEventType() == ProgressEventType.TRANSFER_COMPLETED_EVENT) {
 							RemoteUploader.this.taskListener.getLogger().println("Finished: " + upload.getDescription());
 						}
 					}
@@ -322,11 +324,11 @@ public class S3UploadStep extends AbstractStepImpl {
 				ObjectMetadataProvider metadatasProvider = new ObjectMetadataProvider() {
 					@Override
 					public void provideObjectMetadata(File file, ObjectMetadata meta) {
-						if( meta != null ){
-							if( metadatas != null && metadatas.size() > 0 ) {
-								meta.setUserMetadata(metadatas);
+						if (meta != null) {
+							if (RemoteUploader.this.metadatas != null && RemoteUploader.this.metadatas.size() > 0) {
+								meta.setUserMetadata(RemoteUploader.this.metadatas);
 							}
-							if(RemoteUploader.this.acl != null) {
+							if (RemoteUploader.this.acl != null) {
 								meta.setHeader(Headers.S3_CANNED_ACL, RemoteUploader.this.acl);
 							}
 						}
@@ -337,7 +339,7 @@ public class S3UploadStep extends AbstractStepImpl {
 					upload.addProgressListener(new ProgressListener() {
 						@Override
 						public void progressChanged(ProgressEvent progressEvent) {
-							if (progressEvent.getEventType()== ProgressEventType.TRANSFER_COMPLETED_EVENT) {
+							if (progressEvent.getEventType() == ProgressEventType.TRANSFER_COMPLETED_EVENT) {
 								RemoteUploader.this.taskListener.getLogger().println("Finished: " + upload.getDescription());
 							}
 						}
@@ -378,28 +380,28 @@ public class S3UploadStep extends AbstractStepImpl {
 		public Void invoke(File localFile, VirtualChannel channel) throws IOException, InterruptedException {
 			AmazonS3Client s3Client = AWSClientFactory.create(AmazonS3Client.class, this.envVars);
 			TransferManager mgr = TransferManagerBuilder.standard().withS3Client(s3Client).build();
-			Preconditions.checkArgument(path != null && !path.isEmpty(), "Path must not be null or empty when uploading file");
-			final MultipleFileUpload fileUpload ;
+			Preconditions.checkArgument(this.path != null && !this.path.isEmpty(), "Path must not be null or empty when uploading file");
+			final MultipleFileUpload fileUpload;
 			ObjectMetadataProvider metadatasProvider = new ObjectMetadataProvider() {
 				@Override
 				public void provideObjectMetadata(File file, ObjectMetadata meta) {
-					if( meta != null ){
-						if( metadatas != null && metadatas.size() > 0 ) {
-							meta.setUserMetadata(metadatas);
+					if (meta != null) {
+						if (RemoteListUploader.this.metadatas != null && RemoteListUploader.this.metadatas.size() > 0) {
+							meta.setUserMetadata(RemoteListUploader.this.metadatas);
 						}
-						if(RemoteListUploader.this.acl != null) {
+						if (RemoteListUploader.this.acl != null) {
 							meta.setHeader(Headers.S3_CANNED_ACL, RemoteListUploader.this.acl);
 						}
 					}
 				}
 			};
-			fileUpload = mgr.uploadFileList(bucket, path, localFile, fileList, metadatasProvider);
+			fileUpload = mgr.uploadFileList(this.bucket, this.path, localFile, this.fileList, metadatasProvider);
 			for (final Upload upload : fileUpload.getSubTransfers()) {
 				upload.addProgressListener(new ProgressListener() {
 					@Override
 					public void progressChanged(ProgressEvent progressEvent) {
-						if (progressEvent.getEventType()== ProgressEventType.TRANSFER_COMPLETED_EVENT) {
-							taskListener.getLogger().println("Finished: " + upload.getDescription());
+						if (progressEvent.getEventType() == ProgressEventType.TRANSFER_COMPLETED_EVENT) {
+							RemoteListUploader.this.taskListener.getLogger().println("Finished: " + upload.getDescription());
 						}
 					}
 				});
@@ -423,10 +425,10 @@ public class S3UploadStep extends AbstractStepImpl {
 		
 		@Override
 		public Void invoke(File localFile, VirtualChannel channel) throws IOException, InterruptedException {
-			fileList.add(localFile);
+			this.fileList.add(localFile);
 			return null;
 		}
-
+		
 		@Override
 		public void checkRoles(RoleChecker arg0) throws SecurityException {
 		}
