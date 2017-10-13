@@ -31,9 +31,12 @@ public class S3UploadStepTest {
 		S3UploadStep step = new S3UploadStep( "my-bucket" );
 		step.setFile( "my-file" );
 		step.setAcl(CannedAccessControlList.PublicRead);
+		step.setCacheControl("my-cachecontrol");
 		Assert.assertEquals( "my-file", step.getFile() );
 		Assert.assertEquals( "my-bucket", step.getBucket() );
 		Assert.assertEquals( CannedAccessControlList.PublicRead, step.getAcl() );
+		Assert.assertEquals( "my-cachecontrol", step.getCacheControl() );
+
 	}
 	
 	@Test

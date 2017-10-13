@@ -121,6 +121,12 @@ Specific metadatas can be add to upload files
 s3Upload(bucket:"my-bucket", path:'path/to/targetFolder/', includePathPattern:'**/*.svg', workingDir:'dist', metadatas:['Content-type:image/svg+xml','Another:Value'])
 ```
 
+Specific cachecontrol can be add to upload files
+
+```
+s3Upload(bucket:"my-bucket", path:'path/to/targetFolder/', includePathPattern:'**/*.svg', workingDir:'dist', cacheControl:'public,max-age=31536000')
+```
+
 Canned ACLs can be add to upload requests.
 
 ```
@@ -366,6 +372,7 @@ def result = invokeLambda(
 * Add return value to `awsIdentity` step
 * Add `ecrLogin` step
 * Add `invokeLambda` step
+* Add `cacheControl` to `s3Upload`step
 
 ## 1.15
 * Add the following options to `S3Upload` : `workingDir`, `includePathPattern`, `excludePathPattern`, `metadatas` and `acl`
