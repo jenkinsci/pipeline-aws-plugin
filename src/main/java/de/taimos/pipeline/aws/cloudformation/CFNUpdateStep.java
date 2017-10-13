@@ -27,7 +27,6 @@ import java.util.Collection;
 import javax.annotation.Nonnull;
 import javax.inject.Inject;
 
-import de.taimos.pipeline.aws.utils.IamRoleUtils;
 import org.jenkinsci.plugins.workflow.steps.AbstractStepDescriptorImpl;
 import org.jenkinsci.plugins.workflow.steps.AbstractStepExecutionImpl;
 import org.jenkinsci.plugins.workflow.steps.AbstractStepImpl;
@@ -44,6 +43,7 @@ import de.taimos.pipeline.aws.AWSClientFactory;
 import de.taimos.pipeline.aws.cloudformation.parser.JSONParameterFileParser;
 import de.taimos.pipeline.aws.cloudformation.parser.ParameterFileParser;
 import de.taimos.pipeline.aws.cloudformation.parser.YAMLParameterFileParser;
+import de.taimos.pipeline.aws.utils.IamRoleUtils;
 import hudson.EnvVars;
 import hudson.Extension;
 import hudson.FilePath;
@@ -61,9 +61,9 @@ public class CFNUpdateStep extends AbstractStepImpl {
 	private Integer timeoutInMinutes;
 	private Long pollInterval = 1000L;
 	private Boolean create = true;
-
+	
 	private String roleArn;
-
+	
 	@DataBoundConstructor
 	public CFNUpdateStep(String stack) {
 		this.stack = stack;
@@ -126,11 +126,11 @@ public class CFNUpdateStep extends AbstractStepImpl {
 	public void setParamsFile(String paramsFile) {
 		this.paramsFile = paramsFile;
 	}
-
+	
 	public Integer getTimeoutInMinutes() {
 		return this.timeoutInMinutes;
 	}
-
+	
 	@DataBoundSetter
 	public void setTimeoutInMinutes(Integer timeoutInMinutes) {
 		this.timeoutInMinutes = timeoutInMinutes;
@@ -144,26 +144,25 @@ public class CFNUpdateStep extends AbstractStepImpl {
 	public void setPollInterval(Long pollInterval) {
 		this.pollInterval = pollInterval;
 	}
-
-
-    public Boolean getCreate() {
-        return create;
-    }
-
+	
+	public Boolean getCreate() {
+		return create;
+	}
+	
 	@DataBoundSetter
-    public void setCreate(Boolean create) {
-        this.create = create;
-    }
-
+	public void setCreate(Boolean create) {
+		this.create = create;
+	}
+	
 	public String getRoleArn() {
 		return roleArn;
 	}
-
+	
 	@DataBoundSetter
 	public void setRoleArn(String roleArn) {
 		this.roleArn = roleArn;
 	}
-
+	
 	@Extension
 	public static class DescriptorImpl extends AbstractStepDescriptorImpl {
 		
@@ -200,14 +199,14 @@ public class CFNUpdateStep extends AbstractStepImpl {
 			final String url = this.step.getUrl();
 			final String roleArn = this.step.getRoleArn();
 			final Boolean create = this.step.getCreate();
-
-			final Collection<Parameter> params= this.parseParamsFile(this.step.getParamsFile());
+			
+			final Collection<Parameter> params = this.parseParamsFile(this.step.getParamsFile());
 			params.addAll(this.parseParams(this.step.getParams()));
 			
 			final Collection<Parameter> keepParams = this.parseKeepParams(this.step.getKeepParams());
 			final Collection<Tag> tags = this.parseTags(this.step.getTags());
 			final Integer timeoutInMinutes = this.step.getTimeoutInMinutes();
-
+			
 			Preconditions.checkArgument(stack != null && !stack.isEmpty(), "Stack must not be null or empty");
 			Preconditions.checkArgument(roleArn == null || IamRoleUtils.validRoleArn(roleArn), "RoleArn must be a valid ARN.");
 			this.listener.getLogger().format("Updating/Creating CloudFormation stack %s %n", stack);
@@ -222,11 +221,11 @@ public class CFNUpdateStep extends AbstractStepImpl {
 							ArrayList<Parameter> parameters = new ArrayList<>(params);
 							parameters.addAll(keepParams);
 							cfnStack.update(Execution.this.readTemplate(file), url, parameters, tags, Execution.this.step.getPollInterval(), roleArn);
-						} else if (create){
+						} else if (create) {
 							cfnStack.create(Execution.this.readTemplate(file), url, params, tags, timeoutInMinutes, Execution.this.step.getPollInterval(), roleArn);
 						} else {
-                            Execution.this.listener.getLogger().println("No stack found with the name and skipped creation due to configuration.");
-                        }
+							Execution.this.listener.getLogger().println("No stack found with the name and skipped creation due to configuration.");
+						}
 						Execution.this.listener.getLogger().println("Stack update complete");
 						Execution.this.getContext().onSuccess(cfnStack.describeOutputs());
 					} catch (Exception e) {
@@ -245,8 +244,7 @@ public class CFNUpdateStep extends AbstractStepImpl {
 				final ParameterFileParser parser;
 				if (paramsFile.endsWith(".json")) {
 					parser = new JSONParameterFileParser();
-				} else
-				if (paramsFile.endsWith(".yaml")) {
+				} else if (paramsFile.endsWith(".yaml")) {
 					parser = new YAMLParameterFileParser();
 				} else {
 					throw new RuntimeException("Invalid file extension for parameter file (supports json/yaml)");

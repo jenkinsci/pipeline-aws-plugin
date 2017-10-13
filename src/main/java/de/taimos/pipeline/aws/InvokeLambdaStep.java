@@ -44,76 +44,76 @@ import hudson.Extension;
 import hudson.model.TaskListener;
 
 public class InvokeLambdaStep extends AbstractStepImpl {
-
+	
 	private final Object payload;
 	private final String functionName;
-
+	
 	@DataBoundConstructor
 	public InvokeLambdaStep(String functionName, Object payload) {
 		this.functionName = functionName;
 		this.payload = payload;
 	}
-
+	
 	public String getFunctionName() {
 		return this.functionName;
 	}
-
+	
 	public Object getPayload() {
 		return this.payload;
 	}
-
+	
 	public String getPayloadAsString() {
 		return this.toJsonString(this.payload);
 	}
-
+	
 	private String toJsonString(Object payloadObject) {
 		return (new JsonBuilder(payloadObject)).toString();
 	}
-
+	
 	@Extension
 	public static class DescriptorImpl extends AbstractStepDescriptorImpl {
-
+		
 		public DescriptorImpl() {
 			super(Execution.class);
 		}
-
+		
 		@Override
 		public String getFunctionName() {
 			return "invokeLambda";
 		}
-
+		
 		@Override
 		public String getDisplayName() {
 			return "Invoke a given Lambda function";
 		}
 	}
-
+	
 	public static class Execution extends AbstractSynchronousStepExecution<Object> {
-
+		
 		private static final long serialVersionUID = 1L;
-
+		
 		@Inject
 		private transient InvokeLambdaStep step;
 		@StepContextParameter
 		private transient EnvVars envVars;
 		@StepContextParameter
 		private transient TaskListener listener;
-
+		
 		@Override
 		protected Object run() throws Exception {
 			AWSLambdaClient client = AWSClientFactory.create(AWSLambdaClient.class, this.envVars);
-
+			
 			String functionName = this.step.getFunctionName();
-
+			
 			this.listener.getLogger().format("Invoke Lambda function %s%n", functionName);
-
+			
 			InvokeRequest request = new InvokeRequest();
 			request.withFunctionName(functionName);
 			request.withPayload(this.step.getPayloadAsString());
 			request.withLogType(LogType.Tail);
-
+			
 			InvokeResult result = client.invoke(request);
-
+			
 			this.listener.getLogger().append(this.getLogResult(result));
 			String functionError = result.getFunctionError();
 			if (functionError != null) {
@@ -121,19 +121,19 @@ public class InvokeLambdaStep extends AbstractStepImpl {
 			}
 			return this.getPayloadAsObject(result);
 		}
-
+		
 		private Object getPayloadAsObject(InvokeResult result) {
 			return new JsonSlurper().parseText(this.getPayloadAsString(result));
 		}
-
+		
 		private String getPayloadAsString(InvokeResult result) {
 			return new String(result.getPayload().array(), StandardCharsets.UTF_8);
 		}
-
+		
 		private String getLogResult(InvokeResult result) {
 			return new String(DatatypeConverter.parseBase64Binary(result.getLogResult()), StandardCharsets.UTF_8);
 		}
-
+		
 	}
-
+	
 }

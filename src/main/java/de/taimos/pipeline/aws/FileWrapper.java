@@ -64,83 +64,89 @@ import hudson.FilePath;
  * @author Robert Sandell &lt;rsandell@cloudbees.com&gt;.
  */
 public class FileWrapper implements Serializable {
-    private static final long serialVersionUID = 1L;
-
-    @Nonnull
-    private final String name;
-    @Nonnull
-    private final String path;
-    private final boolean directory;
-    private final long length;
-    private final long lastModified;
-
-    public FileWrapper(@Nonnull String name, @Nonnull String path, boolean directory, long length, long lastModified) {
-        this.name = name;
-        this.directory = directory;
-        this.length = length;
-        this.lastModified = lastModified;
-        if (directory && !path.endsWith("/")) {
-            this.path = path + "/";
-        } else {
-            this.path = path;
-        }
-    }
-
-    protected FileWrapper(@Nonnull FilePath base, @Nonnull FilePath file) throws IOException, InterruptedException {
-        this(file.getName(),
-                file.getRemote().substring(base.getRemote().length() + 1),
-                file.isDirectory(),
-                file.length(),
-                file.lastModified());
-    }
-
-    protected FileWrapper(@Nonnull FilePath file) throws IOException, InterruptedException {
-        this(file.getName(), file.getRemote(), file.isDirectory(), file.length(), file.lastModified());
-    }
-
-    @Whitelisted @Nonnull
-    public String getName() {
-        return name;
-    }
-
-    @Whitelisted @Nonnull
-    public String getPath() {
-        return path;
-    }
-
-    @Whitelisted
-    public boolean isDirectory() {
-        return directory;
-    }
-
-    @Whitelisted
-    public long getLength() {
-        return length;
-    }
-
-    @Whitelisted
-    public long getLastModified() {
-        return lastModified;
-    }
-
-    @Override @Whitelisted @Nonnull
-    public String toString() {
-        return getPath();
-    }
-
-    @Override @Whitelisted
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (!(o instanceof FileWrapper)) return false;
-
-        FileWrapper that = (FileWrapper)o;
-
-        return getPath().equals(that.getPath());
-
-    }
-
-    @Override @Whitelisted
-    public int hashCode() {
-        return getPath().hashCode();
-    }
+	private static final long serialVersionUID = 1L;
+	
+	@Nonnull
+	private final String name;
+	@Nonnull
+	private final String path;
+	private final boolean directory;
+	private final long length;
+	private final long lastModified;
+	
+	public FileWrapper(@Nonnull String name, @Nonnull String path, boolean directory, long length, long lastModified) {
+		this.name = name;
+		this.directory = directory;
+		this.length = length;
+		this.lastModified = lastModified;
+		if (directory && !path.endsWith("/")) {
+			this.path = path + "/";
+		} else {
+			this.path = path;
+		}
+	}
+	
+	protected FileWrapper(@Nonnull FilePath base, @Nonnull FilePath file) throws IOException, InterruptedException {
+		this(file.getName(),
+			 file.getRemote().substring(base.getRemote().length() + 1),
+			 file.isDirectory(),
+			 file.length(),
+			 file.lastModified());
+	}
+	
+	protected FileWrapper(@Nonnull FilePath file) throws IOException, InterruptedException {
+		this(file.getName(), file.getRemote(), file.isDirectory(), file.length(), file.lastModified());
+	}
+	
+	@Whitelisted
+	@Nonnull
+	public String getName() {
+		return name;
+	}
+	
+	@Whitelisted
+	@Nonnull
+	public String getPath() {
+		return path;
+	}
+	
+	@Whitelisted
+	public boolean isDirectory() {
+		return directory;
+	}
+	
+	@Whitelisted
+	public long getLength() {
+		return length;
+	}
+	
+	@Whitelisted
+	public long getLastModified() {
+		return lastModified;
+	}
+	
+	@Override
+	@Whitelisted
+	@Nonnull
+	public String toString() {
+		return getPath();
+	}
+	
+	@Override
+	@Whitelisted
+	public boolean equals(Object o) {
+		if (this == o) return true;
+		if (!(o instanceof FileWrapper)) return false;
+		
+		FileWrapper that = (FileWrapper) o;
+		
+		return getPath().equals(that.getPath());
+		
+	}
+	
+	@Override
+	@Whitelisted
+	public int hashCode() {
+		return getPath().hashCode();
+	}
 }

@@ -21,8 +21,6 @@
 
 package de.taimos.pipeline.aws;
 
-import java.io.FileNotFoundException;
-
 import javax.annotation.Nonnull;
 import javax.inject.Inject;
 
@@ -37,7 +35,6 @@ import com.amazonaws.services.sns.model.PublishResult;
 
 import hudson.EnvVars;
 import hudson.Extension;
-import hudson.FilePath;
 import hudson.model.TaskListener;
 
 public class SNSPublishStep extends AbstractStepImpl {

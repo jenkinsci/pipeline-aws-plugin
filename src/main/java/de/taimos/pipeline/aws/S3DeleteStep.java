@@ -58,41 +58,41 @@ public class S3DeleteStep extends AbstractStepImpl {
 	 * This is the path to the object.
 	 */
 	private final String path;
-
+	
 	@DataBoundConstructor
 	public S3DeleteStep(String bucket, String path) {
 		this.bucket = bucket;
 		this.path = path;
 	}
-
+	
 	public String getBucket() {
 		return this.bucket;
 	}
-
+	
 	public String getPath() {
 		return this.path;
 	}
-
+	
 	@Extension
 	public static class DescriptorImpl extends AbstractStepDescriptorImpl {
-
+		
 		public DescriptorImpl() {
 			super(Execution.class);
 		}
-
+		
 		@Override
 		public String getFunctionName() {
 			return "s3Delete";
 		}
-
+		
 		@Override
 		public String getDisplayName() {
 			return "Delete file from S3";
 		}
 	}
-
+	
 	public static class Execution extends AbstractStepExecutionImpl {
-
+		
 		@Inject
 		private transient S3DeleteStep step;
 		@StepContextParameter
@@ -101,86 +101,86 @@ public class S3DeleteStep extends AbstractStepImpl {
 		private transient FilePath workspace;
 		@StepContextParameter
 		private transient TaskListener listener;
-
+		
 		@Override
 		public boolean start() throws Exception {
 			final String bucket = this.step.getBucket();
 			final String path = this.step.getPath();
-
+			
 			Preconditions.checkArgument(bucket != null && !bucket.isEmpty(), "Bucket must not be null or empty");
-
+			
 			new Thread("s3Delete") {
 				@Override
 				public void run() {
 					try {
-						Execution.this.listener.getLogger().format("Deleting s3://%s/%s%n", bucket, path );
-
+						Execution.this.listener.getLogger().format("Deleting s3://%s/%s%n", bucket, path);
+						
 						AmazonS3Client s3Client = AWSClientFactory.create(AmazonS3Client.class, Execution.this.envVars);
-						if( ! path.endsWith("/") ) {
+						if (!path.endsWith("/")) {
 							// See if the thing that we were given is a file.
-							if( s3Client.doesObjectExist( bucket, path ) ) {
-								Execution.this.listener.getLogger().format("Deleting object at s3://%s/%s%n", bucket, path );
-								s3Client.deleteObject( bucket, path );
+							if (s3Client.doesObjectExist(bucket, path)) {
+								Execution.this.listener.getLogger().format("Deleting object at s3://%s/%s%n", bucket, path);
+								s3Client.deleteObject(bucket, path);
 							}
 						} else {
 							// This is the list of keys to delete from the bucket.
 							List<String> objectsToDelete = new ArrayList<>();
-
+							
 							// See if the thing that we were given is a file.
-							if( s3Client.doesObjectExist( bucket, path ) ) {
-								objectsToDelete.add( path );
+							if (s3Client.doesObjectExist(bucket, path)) {
+								objectsToDelete.add(path);
 							}
-
+							
 							// This is the list of folders that we need to investigate.
 							// We're going to start with the path that we've been given,
 							// and then we'll grow it from there.
 							List<String> folders = new ArrayList<>();
-							folders.add( path );
-
+							folders.add(path);
+							
 							// Go through all of the folders that we need to investigate,
 							// popping the first item off and working on it.  When they're
 							// all gone, we'll be done.
-							while( folders.size() > 0 ) {
+							while (folders.size() > 0) {
 								// This is the folder to investigate.
-								String folder = folders.remove( 0 );
-
+								String folder = folders.remove(0);
+								
 								// Create the request to list the objects within it.
 								ListObjectsRequest request = new ListObjectsRequest();
-								request.setBucketName( bucket );
-								request.setPrefix( folder );
-								request.setDelimiter( "/" );
-								if( ! folder.endsWith("/") ) {
-									request.setPrefix( folder + "/" );
+								request.setBucketName(bucket);
+								request.setPrefix(folder);
+								request.setDelimiter("/");
+								if (!folder.endsWith("/")) {
+									request.setPrefix(folder + "/");
 								}
-
+								
 								// Get the list of objects within the folder.  Because AWS
 								// might paginate this, we're going to continue dealing with
 								// the "objectListing" object until it claims that it's done.
 								ObjectListing objectListing = s3Client.listObjects(request);
-								while( true ) {
+								while (true) {
 									// Add any real objects to the list of objects to delete.
-									for( S3ObjectSummary entry : objectListing.getObjectSummaries() ) {
-										objectsToDelete.add( entry.getKey() );
+									for (S3ObjectSummary entry : objectListing.getObjectSummaries()) {
+										objectsToDelete.add(entry.getKey());
 									}
 									// Add any folders to the list of folders that we need to investigate.
-									folders.addAll( objectListing.getCommonPrefixes() );
-
+									folders.addAll(objectListing.getCommonPrefixes());
+									
 									// If this listing is complete, then we can stop.
-									if( ! objectListing.isTruncated() ) {
+									if (!objectListing.isTruncated()) {
 										break;
 									}
 									// Otherwise, we need to get the next batch and repeat.
 									objectListing = s3Client.listNextBatchOfObjects(objectListing);
 								}
 							}
-
+							
 							// Go through all of the objects that we want to delete and actually delete them.
-							for( String objectToDelete : objectsToDelete ) {
-								Execution.this.listener.getLogger().format("Deleting object at s3://%s/%s%n", bucket, objectToDelete );
-								s3Client.deleteObject( bucket, objectToDelete );
+							for (String objectToDelete : objectsToDelete) {
+								Execution.this.listener.getLogger().format("Deleting object at s3://%s/%s%n", bucket, objectToDelete);
+								s3Client.deleteObject(bucket, objectToDelete);
 							}
 						}
-
+						
 						Execution.this.listener.getLogger().println("Delete complete");
 						Execution.this.getContext().onSuccess(null);
 					} catch (RuntimeException e) {
@@ -190,13 +190,13 @@ public class S3DeleteStep extends AbstractStepImpl {
 			}.start();
 			return false;
 		}
-
+		
 		@Override
 		public void stop(@Nonnull Throwable cause) throws Exception {
 			//
 		}
-
+		
 		private static final long serialVersionUID = 1L;
-
+		
 	}
 }

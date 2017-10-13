@@ -63,7 +63,7 @@ import hudson.security.ACL;
 import hudson.util.ListBoxModel;
 
 public class WithAWSStep extends AbstractStepImpl {
-
+	
 	private String role = "";
 	private String roleAccount = "";
 	private String region = "";
@@ -76,56 +76,56 @@ public class WithAWSStep extends AbstractStepImpl {
 	public WithAWSStep() {
 		//
 	}
-
+	
 	public String getRole() {
 		return this.role;
 	}
-
+	
 	@DataBoundSetter
 	public void setRole(String role) {
 		this.role = role;
 	}
-
+	
 	public String getRoleAccount() {
 		return this.roleAccount;
 	}
-
+	
 	@DataBoundSetter
 	public void setRoleAccount(String roleAccount) {
 		this.roleAccount = roleAccount;
 	}
-
+	
 	public String getRegion() {
 		return this.region;
 	}
-
+	
 	@DataBoundSetter
 	public void setRegion(String region) {
 		this.region = region;
 	}
-
+	
 	public String getProfile() {
 		return this.profile;
 	}
-
+	
 	@DataBoundSetter
 	public void setProfile(String profile) {
 		this.profile = profile;
 	}
-
+	
 	public String getCredentials() {
 		return this.credentials;
 	}
-
+	
 	@DataBoundSetter
 	public void setCredentials(String credentials) {
 		this.credentials = credentials;
 	}
-
+	
 	public String getExternalId() {
 		return this.externalId;
 	}
-
+	
 	@DataBoundSetter
 	public void setExternalId(String externalId) {
 		this.externalId = externalId;
@@ -142,54 +142,54 @@ public class WithAWSStep extends AbstractStepImpl {
 	
 	@Extension
 	public static class DescriptorImpl extends AbstractStepDescriptorImpl {
-
+		
 		public DescriptorImpl() {
 			super(Execution.class);
 		}
-
+		
 		@Override
 		public String getFunctionName() {
 			return "withAWS";
 		}
-
+		
 		@Override
 		public String getDisplayName() {
 			return "set AWS settings for nested block";
 		}
-
+		
 		@Override
 		public boolean takesImplicitBlockArgument() {
 			return true;
 		}
-
+		
 		public ListBoxModel doFillCredentialsItems(@AncestorInPath Item context) {
-
+			
 			if (context == null || !context.hasPermission(Item.CONFIGURE)) {
 				return new ListBoxModel();
 			}
-
+			
 			return new StandardListBoxModel()
 					.includeEmptyValue()
 					.includeMatchingAs(
-					        context instanceof Queue.Task
-                                    ? Tasks.getAuthenticationOf((Queue.Task) context)
-                                    : ACL.SYSTEM,
-						    context,
-                            StandardUsernamePasswordCredentials.class,
-                            Collections.<DomainRequirement>emptyList(),
-                            CredentialsMatchers.instanceOf(StandardUsernamePasswordCredentials.class));
+							context instanceof Queue.Task
+									? Tasks.getAuthenticationOf((Queue.Task) context)
+									: ACL.SYSTEM,
+							context,
+							StandardUsernamePasswordCredentials.class,
+							Collections.<DomainRequirement>emptyList(),
+							CredentialsMatchers.instanceOf(StandardUsernamePasswordCredentials.class));
 		}
 	}
-
+	
 	public static class Execution extends AbstractStepExecutionImpl {
-
+		
 		@Inject
 		private transient WithAWSStep step;
 		@StepContextParameter
 		private transient TaskListener listener;
 		@StepContextParameter
 		private transient EnvVars envVars;
-
+		
 		@Override
 		public boolean start() throws Exception {
 			final EnvVars awsEnv = new EnvVars();
@@ -198,7 +198,7 @@ public class WithAWSStep extends AbstractStepImpl {
 			this.withRegion(awsEnv);
 			this.withRole(awsEnv);
 			this.withFederatedUserId(awsEnv);
-
+			
 			EnvironmentExpander expander = new EnvironmentExpander() {
 				@Override
 				public void expand(@Nonnull EnvVars envVars) throws IOException, InterruptedException {
@@ -211,22 +211,21 @@ public class WithAWSStep extends AbstractStepImpl {
 					.start();
 			return false;
 		}
-
 		
 		private final String ALLOW_ALL_POLICY = "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Action\":\"*\","
-				 + "\"Effect\":\"Allow\",\"Resource\":\"*\"}]}";
+				+ "\"Effect\":\"Allow\",\"Resource\":\"*\"}]}";
 		
 		private void withFederatedUserId(@Nonnull EnvVars localEnv) {
 			if (!StringUtils.isNullOrEmpty(this.step.getFederatedUserId())) {
 				AWSSecurityTokenServiceClient sts = AWSClientFactory.create(AWSSecurityTokenServiceClient.class, this.envVars);
-
+				
 				GetFederationTokenRequest getFederationTokenRequest = new GetFederationTokenRequest();
 				getFederationTokenRequest.setDurationSeconds(3600);
 				getFederationTokenRequest.setName(this.step.getFederatedUserId());
 				getFederationTokenRequest.setPolicy(this.ALLOW_ALL_POLICY);
 				
 				GetFederationTokenResult federationTokenResult = sts.getFederationToken(getFederationTokenRequest);
-
+				
 				Credentials credentials = federationTokenResult.getCredentials();
 				localEnv.override(AWSClientFactory.AWS_ACCESS_KEY_ID, credentials.getAccessKeyId());
 				localEnv.override(AWSClientFactory.AWS_SECRET_ACCESS_KEY, credentials.getSecretAccessKey());
@@ -235,11 +234,11 @@ public class WithAWSStep extends AbstractStepImpl {
 			}
 			
 		}
-
-		private void withCredentials(@Nonnull Run<?,?> run, @Nonnull EnvVars localEnv) {
+		
+		private void withCredentials(@Nonnull Run<?, ?> run, @Nonnull EnvVars localEnv) {
 			if (!StringUtils.isNullOrEmpty(this.step.getCredentials())) {
 				StandardUsernamePasswordCredentials usernamePasswordCredentials = CredentialsProvider.findCredentialById(this.step.getCredentials(),
-						StandardUsernamePasswordCredentials.class, run, Collections.<DomainRequirement>emptyList());
+																														 StandardUsernamePasswordCredentials.class, run, Collections.<DomainRequirement>emptyList());
 				if (usernamePasswordCredentials != null) {
 					localEnv.override(AWSClientFactory.AWS_ACCESS_KEY_ID, usernamePasswordCredentials.getUsername());
 					localEnv.override(AWSClientFactory.AWS_SECRET_ACCESS_KEY, usernamePasswordCredentials.getPassword().getPlainText());
@@ -249,31 +248,31 @@ public class WithAWSStep extends AbstractStepImpl {
 				}
 			}
 		}
-
+		
 		private void withRole(@Nonnull EnvVars localEnv) {
 			if (!StringUtils.isNullOrEmpty(this.step.getRole())) {
 				AWSSecurityTokenServiceClient sts = AWSClientFactory.create(AWSSecurityTokenServiceClient.class, this.envVars);
-
+				
 				final String accountId;
 				if (!StringUtils.isNullOrEmpty(this.step.getRoleAccount())) {
 					accountId = this.step.getRoleAccount();
 				} else {
 					accountId = sts.getCallerIdentity(new GetCallerIdentityRequest()).getAccount();
 				}
-
+				
 				String roleARN = IamRoleUtils.validRoleArn(this.step.getRole()) ? this.step.getRole() : String.format("arn:%s:iam::%s:role/%s", IamRoleUtils.selectPartitionName(this.step.getRegion()), accountId, this.step.getRole());
-
+				
 				AssumeRoleRequest request = new AssumeRoleRequest()
 						.withRoleArn(roleARN)
 						.withRoleSessionName(this.createRoleSessionName());
-				if(!StringUtils.isNullOrEmpty(this.step.getExternalId())) {
+				if (!StringUtils.isNullOrEmpty(this.step.getExternalId())) {
 					request.withExternalId(this.step.getExternalId());
 				}
-
+				
 				AssumeRoleResult assumeRole = sts.assumeRole(request);
-
+				
 				this.listener.getLogger().format("Assumed role %s with id %s %n ", roleARN, assumeRole.getAssumedRoleUser().getAssumedRoleId());
-
+				
 				Credentials credentials = assumeRole.getCredentials();
 				localEnv.override(AWSClientFactory.AWS_ACCESS_KEY_ID, credentials.getAccessKeyId());
 				localEnv.override(AWSClientFactory.AWS_SECRET_ACCESS_KEY, credentials.getSecretAccessKey());
@@ -281,7 +280,7 @@ public class WithAWSStep extends AbstractStepImpl {
 				this.envVars.overrideAll(localEnv);
 			}
 		}
-
+		
 		private void withRegion(@Nonnull EnvVars localEnv) {
 			if (!StringUtils.isNullOrEmpty(this.step.getRegion())) {
 				this.listener.getLogger().format("Setting AWS region %s %n ", this.step.getRegion());
@@ -290,7 +289,7 @@ public class WithAWSStep extends AbstractStepImpl {
 				this.envVars.overrideAll(localEnv);
 			}
 		}
-
+		
 		private void withProfile(@Nonnull EnvVars localEnv) {
 			if (!StringUtils.isNullOrEmpty(this.step.getProfile())) {
 				this.listener.getLogger().format("Setting AWS profile %s %n ", this.step.getProfile());
@@ -299,22 +298,21 @@ public class WithAWSStep extends AbstractStepImpl {
 				this.envVars.overrideAll(localEnv);
 			}
 		}
-
+		
 		private String createRoleSessionName() {
 			return RoleSessionNameBuilder
 					.withJobName(this.envVars.get("JOB_NAME"))
 					.withBuildNumber(this.envVars.get("BUILD_NUMBER"))
 					.build();
 		}
-
-
+		
 		@Override
 		public void stop(@Nonnull Throwable throwable) throws Exception {
 			//
 		}
-
+		
 		private static final long serialVersionUID = 1L;
-
+		
 	}
-
+	
 }

@@ -21,109 +21,111 @@
 
 package de.taimos.pipeline.aws;
 
-import com.amazonaws.services.codedeploy.AmazonCodeDeployClient;
-import com.amazonaws.services.codedeploy.model.GetDeploymentRequest;
-import com.amazonaws.services.codedeploy.model.GetDeploymentResult;
-import hudson.EnvVars;
-import hudson.Extension;
-import hudson.model.TaskListener;
+import javax.inject.Inject;
+
 import org.jenkinsci.plugins.workflow.steps.AbstractStepDescriptorImpl;
 import org.jenkinsci.plugins.workflow.steps.AbstractStepImpl;
 import org.jenkinsci.plugins.workflow.steps.AbstractSynchronousNonBlockingStepExecution;
 import org.jenkinsci.plugins.workflow.steps.StepContextParameter;
 import org.kohsuke.stapler.DataBoundConstructor;
 
-import javax.inject.Inject;
+import com.amazonaws.services.codedeploy.AmazonCodeDeployClient;
+import com.amazonaws.services.codedeploy.model.GetDeploymentRequest;
+import com.amazonaws.services.codedeploy.model.GetDeploymentResult;
+
+import hudson.EnvVars;
+import hudson.Extension;
+import hudson.model.TaskListener;
 
 /**
  * @author Giovanni Gargiulo
  */
 public class WaitDeployStep extends AbstractStepImpl {
-
-    /**
-     * The DeploymentId to monitor. Example: d-3GR0HQLDN
-     */
-    private final String deploymentId;
-
-    @DataBoundConstructor
-    public WaitDeployStep(String deploymentId) {
-        this.deploymentId = deploymentId;
-    }
-
-    public String getDeploymentId() {
-        return deploymentId;
-    }
-
-    @Extension
-    public static class DescriptorImpl extends AbstractStepDescriptorImpl {
-
-        public DescriptorImpl() {
-            super(Execution.class);
-        }
-
-        @Override
-        public String getFunctionName() {
-            return "awaitDeploymentCompletion";
-        }
-
-        @Override
-        public String getDisplayName() {
-            return "Wait for AWS CodeDeploy deployment completion";
-        }
-
-    }
-
-    public static class Execution extends AbstractSynchronousNonBlockingStepExecution<Void> {
-
-        @Inject
-        private transient WaitDeployStep step;
-        @StepContextParameter
-        private transient EnvVars envVars;
-        @StepContextParameter
-        private transient TaskListener listener;
-
-        private static final Long POLLING_INTERVAL = 10000L;
-
-        private static final String SUCCEEDED_STATUS = "Succeeded";
-
-        private static final String FAILED_STATUS = "Failed";
-
-        @Override
-        protected Void run() throws Exception {
-            AmazonCodeDeployClient client = AWSClientFactory.create(AmazonCodeDeployClient.class, this.envVars);
-
-            String deploymentId = this.step.getDeploymentId();
-            this.listener.getLogger().format("Checking Deployment(%s) status", deploymentId);
-
-            while (true) {
-                GetDeploymentRequest getDeploymentRequest = new GetDeploymentRequest().withDeploymentId(deploymentId);
-                GetDeploymentResult deployment = client.getDeployment(getDeploymentRequest);
-                String deploymentStatus = deployment.getDeploymentInfo().getStatus();
-
-                this.listener.getLogger().format("DeploymentStatus(%s)", deploymentStatus);
-
-                if (SUCCEEDED_STATUS.equals(deploymentStatus)) {
-                    this.listener.getLogger().println("Deployment completed successfully");
-                    return null;
-                } else if (FAILED_STATUS.equals(deploymentStatus)) {
-                    this.listener.getLogger().println("Deployment completed in error");
-                    String errorMessage = deployment.getDeploymentInfo().getErrorInformation().getMessage();
-                    throw new Exception("Deployment Failed: " + errorMessage);
-                } else {
-                    this.listener.getLogger().println("Deployment still in progress... sleeping");
-                    try {
-                        Thread.sleep(POLLING_INTERVAL);
-                    } catch (Exception e) {
-                        throw e;
-                    }
-                }
-
-            }
-
-        }
-
-        private static final long serialVersionUID = 1L;
-
-    }
-
+	
+	/**
+	 * The DeploymentId to monitor. Example: d-3GR0HQLDN
+	 */
+	private final String deploymentId;
+	
+	@DataBoundConstructor
+	public WaitDeployStep(String deploymentId) {
+		this.deploymentId = deploymentId;
+	}
+	
+	public String getDeploymentId() {
+		return deploymentId;
+	}
+	
+	@Extension
+	public static class DescriptorImpl extends AbstractStepDescriptorImpl {
+		
+		public DescriptorImpl() {
+			super(Execution.class);
+		}
+		
+		@Override
+		public String getFunctionName() {
+			return "awaitDeploymentCompletion";
+		}
+		
+		@Override
+		public String getDisplayName() {
+			return "Wait for AWS CodeDeploy deployment completion";
+		}
+		
+	}
+	
+	public static class Execution extends AbstractSynchronousNonBlockingStepExecution<Void> {
+		
+		@Inject
+		private transient WaitDeployStep step;
+		@StepContextParameter
+		private transient EnvVars envVars;
+		@StepContextParameter
+		private transient TaskListener listener;
+		
+		private static final Long POLLING_INTERVAL = 10000L;
+		
+		private static final String SUCCEEDED_STATUS = "Succeeded";
+		
+		private static final String FAILED_STATUS = "Failed";
+		
+		@Override
+		protected Void run() throws Exception {
+			AmazonCodeDeployClient client = AWSClientFactory.create(AmazonCodeDeployClient.class, this.envVars);
+			
+			String deploymentId = this.step.getDeploymentId();
+			this.listener.getLogger().format("Checking Deployment(%s) status", deploymentId);
+			
+			while (true) {
+				GetDeploymentRequest getDeploymentRequest = new GetDeploymentRequest().withDeploymentId(deploymentId);
+				GetDeploymentResult deployment = client.getDeployment(getDeploymentRequest);
+				String deploymentStatus = deployment.getDeploymentInfo().getStatus();
+				
+				this.listener.getLogger().format("DeploymentStatus(%s)", deploymentStatus);
+				
+				if (SUCCEEDED_STATUS.equals(deploymentStatus)) {
+					this.listener.getLogger().println("Deployment completed successfully");
+					return null;
+				} else if (FAILED_STATUS.equals(deploymentStatus)) {
+					this.listener.getLogger().println("Deployment completed in error");
+					String errorMessage = deployment.getDeploymentInfo().getErrorInformation().getMessage();
+					throw new Exception("Deployment Failed: " + errorMessage);
+				} else {
+					this.listener.getLogger().println("Deployment still in progress... sleeping");
+					try {
+						Thread.sleep(POLLING_INTERVAL);
+					} catch (Exception e) {
+						throw e;
+					}
+				}
+				
+			}
+			
+		}
+		
+		private static final long serialVersionUID = 1L;
+		
+	}
+	
 }

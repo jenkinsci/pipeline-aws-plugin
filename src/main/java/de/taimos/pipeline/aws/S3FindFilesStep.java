@@ -83,64 +83,64 @@ public class S3FindFilesStep extends AbstractStepImpl {
 	 * By default, both files and folders are returned.
 	 */
 	private boolean onlyFiles = false;
-
+	
 	@DataBoundConstructor
 	public S3FindFilesStep(String bucket) {
 		this.bucket = bucket;
 	}
-
+	
 	public String getBucket() {
 		return this.bucket;
 	}
-
+	
 	@DataBoundSetter
 	public void setPath(String path) {
 		this.path = path;
 	}
-
+	
 	public String getPath() {
 		return this.path;
 	}
-
+	
 	@DataBoundSetter
 	public void setGlob(String glob) {
 		this.glob = glob;
 	}
-
+	
 	public String getGlob() {
 		return this.glob;
 	}
-
+	
 	@DataBoundSetter
 	public void setOnlyFiles(boolean onlyFiles) {
 		this.onlyFiles = onlyFiles;
 	}
-
+	
 	public boolean isOnlyFiles() {
 		return this.onlyFiles;
 	}
-
+	
 	@Extension
 	public static class DescriptorImpl extends AbstractStepDescriptorImpl {
-
+		
 		public DescriptorImpl() {
 			super(Execution.class);
 		}
-
+		
 		@Override
 		public String getFunctionName() {
 			return "s3FindFiles";
 		}
-
+		
 		@Override
 		public String getDisplayName() {
 			return "Find files in S3";
 		}
 	}
-
+	
 	public static class Execution extends AbstractSynchronousNonBlockingStepExecution<FileWrapper[]> {
 		private static final long serialVersionUID = 1L;
-
+		
 		@Inject
 		private transient S3FindFilesStep step;
 		@StepContextParameter
@@ -149,20 +149,20 @@ public class S3FindFilesStep extends AbstractStepImpl {
 		private transient FilePath workspace;
 		@StepContextParameter
 		private transient TaskListener listener;
-
+		
 		@Override
 		public FileWrapper[] run() throws Exception {
 			final String bucket = this.step.getBucket();
 			final String path = this.step.getPath();
 			final String glob = this.step.getGlob();
 			final boolean onlyFiles = this.step.isOnlyFiles();
-
+			
 			Preconditions.checkArgument(bucket != null && !bucket.isEmpty(), "Bucket must not be null or empty");
-
+			
 			Execution.this.listener.getLogger().format("Searching s3://%s/%s for glob:'%s' %s%n", bucket, path, glob, onlyFiles ? "(only files)" : "");
-
+			
 			AmazonS3Client s3Client = AWSClientFactory.create(AmazonS3Client.class, Execution.this.envVars);
-
+			
 			// Construct a PatternMatcher to match the files.
 			// Essentially, we're going to match against "${path}/${glob}".  Obviously,
 			// if there's no path, then we're going to leave that part out.  If no glob
@@ -173,29 +173,29 @@ public class S3FindFilesStep extends AbstractStepImpl {
 			// the path.
 			final String matcherString = computeMatcherString(path, glob);
 			PathMatcher matcher = FileSystems.getDefault().getPathMatcher(matcherString);
-
+			
 			// This is how may components there are in the root path.  We'll use this information
 			// to strip out these parts from the matches later on.
 			//
 			// For exmple, if `path` is "path/to", then this will be "2".
 			final int pathComponentCount = path.length() == 0 ? 0 : Paths.get(path).getNameCount();
-
+			
 			// This is the list of S3 file information for all of the matching objects.
 			List<FileWrapper> matchingObjects = new ArrayList<>();
-
+			
 			// This is the list of folders that we need to investigate.
 			// We're going to start with the path that we've been given,
 			// and then we'll grow it from there.
 			List<String> folders = new ArrayList<>();
 			folders.add(path);
-
+			
 			// Go through all of the folders that we need to investigate,
 			// popping the first item off and working on it.  When they're
 			// all gone, we'll be done.
 			while (folders.size() > 0) {
 				// This is the folder to investigate.
 				String folder = folders.remove(0);
-
+				
 				// Create the request to list the objects within it.
 				ListObjectsRequest request = new ListObjectsRequest();
 				request.setBucketName(bucket);
@@ -204,7 +204,7 @@ public class S3FindFilesStep extends AbstractStepImpl {
 				if (folder.length() > 0 && !folder.endsWith("/")) {
 					request.setPrefix(folder + "/");
 				}
-
+				
 				// Get the list of objects within the folder.  Because AWS
 				// might paginate this, we're going to continue dealing with
 				// the "objectListing" object until it claims that it's done.
@@ -221,7 +221,7 @@ public class S3FindFilesStep extends AbstractStepImpl {
 						if (entry.getKey().endsWith("/")) {
 							continue;
 						}
-
+						
 						Path javaPath = Paths.get(entry.getKey());
 						if (matcher.matches(javaPath)) {
 							FileWrapper file = createFileWrapperFromFile(pathComponentCount, javaPath, entry);
@@ -241,7 +241,7 @@ public class S3FindFilesStep extends AbstractStepImpl {
 							}
 						}
 					}
-
+					
 					// If this listing is complete, then we can stop.
 					if (!objectListing.isTruncated()) {
 						break;
@@ -250,14 +250,14 @@ public class S3FindFilesStep extends AbstractStepImpl {
 					objectListing = s3Client.listNextBatchOfObjects(objectListing);
 				}
 			}
-
+			
 			FileWrapper[] stepResult = new FileWrapper[matchingObjects.size()];
 			stepResult = matchingObjects.toArray(stepResult);
-
+			
 			Execution.this.listener.getLogger().println("Search complete");
 			return stepResult;
 		}
-
+		
 		/**
 		 * This computes the string that will be used to construct a PathMatcher that will
 		 * attempt to match the S3 keys.
@@ -269,7 +269,7 @@ public class S3FindFilesStep extends AbstractStepImpl {
 		public static String computeMatcherString(String path, String glob) {
 			return "glob:" + (path.length() == 0 ? "" : path + (path.endsWith("/") ? "" : "/")) + (glob.length() == 0 ? "*" : glob);
 		}
-
+		
 		/**
 		 * This creates a new FileWrapper instance based on the S3ObjectSummary information.
 		 *
@@ -297,7 +297,7 @@ public class S3FindFilesStep extends AbstractStepImpl {
 			);
 			return file;
 		}
-
+		
 		/**
 		 * This creates a new FileWrapper instance for the folder.
 		 *
@@ -324,7 +324,7 @@ public class S3FindFilesStep extends AbstractStepImpl {
 			);
 			return file;
 		}
-
+		
 		/**
 		 * This converts a Path to a string that represents the AWS path.  Since the Path instance
 		 * will be coming from a FileSystem (in fact, the OS's "default FileSystem"), we can't trust
@@ -337,7 +337,7 @@ public class S3FindFilesStep extends AbstractStepImpl {
 		public static String convertPathToAwsFormat(Path javaPath) {
 			// Since we're using the default FileSystem to create the Path, we'll need to replace all
 			// of the default `File.separator` instances with "/".
-			return javaPath.toString().replace( (CharSequence)File.separator, (CharSequence)"/" );
+			return javaPath.toString().replace((CharSequence) File.separator, (CharSequence) "/");
 		}
 	}
 }
