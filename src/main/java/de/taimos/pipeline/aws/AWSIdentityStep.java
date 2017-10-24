@@ -26,6 +26,7 @@ import java.util.Map;
 
 import javax.inject.Inject;
 
+import com.amazonaws.services.securitytoken.AWSSecurityTokenService;
 import org.jenkinsci.plugins.workflow.steps.AbstractStepDescriptorImpl;
 import org.jenkinsci.plugins.workflow.steps.AbstractStepImpl;
 import org.jenkinsci.plugins.workflow.steps.AbstractSynchronousStepExecution;
@@ -41,55 +42,55 @@ import hudson.Extension;
 import hudson.model.TaskListener;
 
 public class AWSIdentityStep extends AbstractStepImpl {
-	
+
 	@DataBoundConstructor
 	public AWSIdentityStep() {
 		//
 	}
-	
+
 	@Extension
 	public static class DescriptorImpl extends AbstractStepDescriptorImpl {
-		
+
 		public DescriptorImpl() {
 			super(Execution.class);
 		}
-		
+
 		@Override
 		public String getFunctionName() {
 			return "awsIdentity";
 		}
-		
+
 		@Override
 		public String getDisplayName() {
 			return "Print and return the AWS identity";
 		}
 	}
-	
+
 	public static class Execution extends AbstractSynchronousStepExecution<Map<String, String>> {
-		
+
 		@Inject
 		private transient AWSIdentityStep step;
 		@StepContextParameter
 		private transient EnvVars envVars;
 		@StepContextParameter
 		private transient TaskListener listener;
-		
+
 		@Override
 		protected Map<String, String> run() throws Exception {
-			AWSSecurityTokenServiceClient sts = AWSClientFactory.create(AWSSecurityTokenServiceClient.class, this.envVars);
+			AWSSecurityTokenService sts = AWSClientFactory.createAWSSecurityTokenServiceClient(this.envVars);
 			GetCallerIdentityResult identity = sts.getCallerIdentity(new GetCallerIdentityRequest());
-			
+
 			this.listener.getLogger().format("Current AWS identity: %s - %s - %s %n", identity.getAccount(), identity.getUserId(), identity.getArn());
-			
+
 			Map<String, String> info = new HashMap<>();
 			info.put("account", identity.getAccount());
 			info.put("user", identity.getUserId());
 			info.put("arn", identity.getArn());
 			return info;
 		}
-		
+
 		private static final long serialVersionUID = 1L;
-		
+
 	}
-	
+
 }

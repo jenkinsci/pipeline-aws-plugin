@@ -24,6 +24,7 @@ package de.taimos.pipeline.aws;
 import javax.annotation.Nonnull;
 import javax.inject.Inject;
 
+import com.amazonaws.services.identitymanagement.AmazonIdentityManagement;
 import org.jenkinsci.plugins.workflow.steps.AbstractStepDescriptorImpl;
 import org.jenkinsci.plugins.workflow.steps.AbstractStepExecutionImpl;
 import org.jenkinsci.plugins.workflow.steps.AbstractStepImpl;
@@ -44,44 +45,44 @@ import hudson.FilePath;
 import hudson.model.TaskListener;
 
 public class UpdateIdP extends AbstractStepImpl {
-	
+
 	private final String name;
 	private final String metadata;
-	
+
 	@DataBoundConstructor
 	public UpdateIdP(String name, String metadata) {
 		this.name = name;
 		this.metadata = metadata;
 	}
-	
+
 	public String getName() {
 		return this.name;
 	}
-	
+
 	public String getMetadata() {
 		return this.metadata;
 	}
-	
+
 	@Extension
 	public static class DescriptorImpl extends AbstractStepDescriptorImpl {
-		
+
 		public DescriptorImpl() {
 			super(Execution.class);
 		}
-		
+
 		@Override
 		public String getFunctionName() {
 			return "updateIdP";
 		}
-		
+
 		@Override
 		public String getDisplayName() {
 			return "Update thirdparty Identity Provider";
 		}
 	}
-	
+
 	public static class Execution extends AbstractStepExecutionImpl {
-		
+
 		@Inject
 		private transient UpdateIdP step;
 		@StepContextParameter
@@ -90,21 +91,21 @@ public class UpdateIdP extends AbstractStepImpl {
 		private transient FilePath workspace;
 		@StepContextParameter
 		private transient TaskListener listener;
-		
+
 		@Override
 		public boolean start() throws Exception {
 			final String name = this.step.getName();
 			final String metadata = this.step.getMetadata();
-			
+
 			new Thread("updateIDP") {
 				@Override
 				public void run() {
 					try {
-						AmazonIdentityManagementClient iamClient = AWSClientFactory.create(AmazonIdentityManagementClient.class, Execution.this.envVars);
-						
+						AmazonIdentityManagement iamClient = AWSClientFactory.createAmazonIdentityManagementClient(Execution.this.envVars);
+
 						Execution.this.listener.getLogger().format("Checking for identity provider %s %n", name);
 						ListSAMLProvidersResult listResult = iamClient.listSAMLProviders();
-						
+
 						String providerARN = null;
 						for (SAMLProviderListEntry entry : listResult.getSAMLProviderList()) {
 							String entryArn = entry.getArn();
@@ -114,7 +115,7 @@ public class UpdateIdP extends AbstractStepImpl {
 								break;
 							}
 						}
-						
+
 						if (providerARN != null) {
 							// Update IdP
 							UpdateSAMLProviderRequest request = new UpdateSAMLProviderRequest();
@@ -139,26 +140,26 @@ public class UpdateIdP extends AbstractStepImpl {
 			}.start();
 			return false;
 		}
-		
+
 		private String readMetadata(String file) {
 			if (file == null) {
 				return null;
 			}
-			
+
 			try {
 				return this.workspace.child(file).readToString();
 			} catch (Exception e) {
 				throw new RuntimeException(e);
 			}
 		}
-		
+
 		@Override
 		public void stop(@Nonnull Throwable cause) throws Exception {
 			//
 		}
-		
+
 		private static final long serialVersionUID = 1L;
-		
+
 	}
-	
+
 }

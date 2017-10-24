@@ -27,6 +27,10 @@ import java.io.IOException;
 import javax.annotation.Nonnull;
 import javax.inject.Inject;
 
+import com.amazonaws.client.builder.AwsClientBuilder;
+import com.amazonaws.services.s3.AmazonS3;
+import com.amazonaws.services.s3.AmazonS3ClientBuilder;
+import com.amazonaws.services.s3.transfer.TransferManagerBuilder;
 import org.jenkinsci.plugins.workflow.steps.AbstractStepDescriptorImpl;
 import org.jenkinsci.plugins.workflow.steps.AbstractStepExecutionImpl;
 import org.jenkinsci.plugins.workflow.steps.AbstractStepImpl;
@@ -51,64 +55,64 @@ import hudson.model.TaskListener;
 import hudson.remoting.VirtualChannel;
 
 public class S3DownloadStep extends AbstractStepImpl {
-	
+
 	private final String file;
 	private final String bucket;
 	private String path = "";
 	private boolean force = false;
-	
+
 	@DataBoundConstructor
 	public S3DownloadStep(String file, String bucket) {
 		this.file = file;
 		this.bucket = bucket;
 	}
-	
+
 	public String getFile() {
 		return this.file;
 	}
-	
+
 	public String getBucket() {
 		return this.bucket;
 	}
-	
+
 	public String getPath() {
 		return this.path;
 	}
-	
+
 	public boolean isForce() {
 		return this.force;
 	}
-	
+
 	@DataBoundSetter
 	public void setForce(boolean force) {
 		this.force = force;
 	}
-	
+
 	@DataBoundSetter
 	public void setPath(String path) {
 		this.path = path;
 	}
-	
+
 	@Extension
 	public static class DescriptorImpl extends AbstractStepDescriptorImpl {
-		
+
 		public DescriptorImpl() {
 			super(Execution.class);
 		}
-		
+
 		@Override
 		public String getFunctionName() {
 			return "s3Download";
 		}
-		
+
 		@Override
 		public String getDisplayName() {
 			return "Copy file from S3";
 		}
 	}
-	
+
 	public static class Execution extends AbstractStepExecutionImpl {
-		
+
 		@Inject
 		private transient S3DownloadStep step;
 		@StepContextParameter
@@ -117,16 +121,16 @@ public class S3DownloadStep extends AbstractStepImpl {
 		private transient FilePath workspace;
 		@StepContextParameter
 		private transient TaskListener listener;
-		
+
 		@Override
 		public boolean start() throws Exception {
 			final FilePath target = this.workspace.child(this.step.getFile());
 			final String bucket = this.step.getBucket();
 			final String path = this.step.getPath();
 			final boolean force = this.step.isForce();
-			
+
 			Preconditions.checkArgument(bucket != null && !bucket.isEmpty(), "Bucket must not be null or empty");
-			
+
 			new Thread("s3Download") {
 				@Override
 				public void run() {
@@ -155,35 +159,34 @@ public class S3DownloadStep extends AbstractStepImpl {
 			}.start();
 			return false;
 		}
-		
+
 		@Override
 		public void stop(@Nonnull Throwable cause) throws Exception {
 			//
 		}
-		
+
 		private static final long serialVersionUID = 1L;
-		
+
 	}
-	
+
 	private static class RemoteDownloader implements FilePath.FileCallable<Void> {
-		
+
 		private final EnvVars envVars;
 		private final TaskListener taskListener;
 		private final String bucket;
 		private final String path;
-		
+
 		RemoteDownloader(EnvVars envVars, TaskListener taskListener, String bucket, String path) {
 			this.envVars = envVars;
 			this.taskListener = taskListener;
 			this.bucket = bucket;
 			this.path = path;
 		}
-		
+
 		@Override
 		public Void invoke(File localFile, VirtualChannel channel) throws IOException, InterruptedException {
-			AmazonS3Client s3Client = AWSClientFactory.create(AmazonS3Client.class, this.envVars);
-			TransferManager mgr = new TransferManager(s3Client);
-			
+			TransferManager mgr = AWSClientFactory.createTransferManager(this.envVars);
+
 			if (this.path == null || this.path.isEmpty() || this.path.endsWith("/")) {
 				final MultipleFileDownload fileDownload = mgr.downloadDirectory(this.bucket, this.path, localFile);
 				fileDownload.waitForCompletion();
@@ -203,10 +206,10 @@ public class S3DownloadStep extends AbstractStepImpl {
 				return null;
 			}
 		}
-		
+
 		@Override
 		public void checkRoles(RoleChecker roleChecker) throws SecurityException {
-			
+
 		}
 	}
 }

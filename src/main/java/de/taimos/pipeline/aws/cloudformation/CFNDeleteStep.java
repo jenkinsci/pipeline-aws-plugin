@@ -24,6 +24,7 @@ package de.taimos.pipeline.aws.cloudformation;
 import javax.annotation.Nonnull;
 import javax.inject.Inject;
 
+import com.amazonaws.services.cloudformation.AmazonCloudFormation;
 import org.jenkinsci.plugins.workflow.steps.AbstractStepDescriptorImpl;
 import org.jenkinsci.plugins.workflow.steps.AbstractStepExecutionImpl;
 import org.jenkinsci.plugins.workflow.steps.AbstractStepImpl;
@@ -40,68 +41,68 @@ import hudson.Extension;
 import hudson.model.TaskListener;
 
 public class CFNDeleteStep extends AbstractStepImpl {
-	
+
 	private final String stack;
 	private Long pollInterval = 1000L;
-	
+
 	@DataBoundConstructor
 	public CFNDeleteStep(String stack) {
 		this.stack = stack;
 	}
-	
+
 	public String getStack() {
 		return this.stack;
 	}
-	
+
 	public Long getPollInterval() {
 		return this.pollInterval;
 	}
-	
+
 	@DataBoundSetter
 	public void setPollInterval(Long pollInterval) {
 		this.pollInterval = pollInterval;
 	}
-	
+
 	@Extension
 	public static class DescriptorImpl extends AbstractStepDescriptorImpl {
-		
+
 		public DescriptorImpl() {
 			super(Execution.class);
 		}
-		
+
 		@Override
 		public String getFunctionName() {
 			return "cfnDelete";
 		}
-		
+
 		@Override
 		public String getDisplayName() {
 			return "Delete CloudFormation stack";
 		}
 	}
-	
+
 	public static class Execution extends AbstractStepExecutionImpl {
-		
+
 		@Inject
 		private transient CFNDeleteStep step;
 		@StepContextParameter
 		private transient EnvVars envVars;
 		@StepContextParameter
 		private transient TaskListener listener;
-		
+
 		@Override
 		public boolean start() throws Exception {
 			final String stack = this.step.getStack();
-			
+
 			Preconditions.checkArgument(stack != null && !stack.isEmpty(), "Stack must not be null or empty");
-			
+
 			this.listener.getLogger().format("Removing CloudFormation stack %s %n", stack);
-			
+
 			new Thread("cfnDelete-" + stack) {
 				@Override
 				public void run() {
 					try {
-						AmazonCloudFormationClient client = AWSClientFactory.create(AmazonCloudFormationClient.class, Execution.this.envVars);
+						AmazonCloudFormation client = AWSClientFactory.createAmazonCloudFormationClient(Execution.this.envVars);
 						CloudFormationStack cfnStack = new CloudFormationStack(client, stack, Execution.this.listener);
 						cfnStack.delete(Execution.this.step.getPollInterval());
 						Execution.this.listener.getLogger().println("Stack deletion complete");
@@ -113,14 +114,14 @@ public class CFNDeleteStep extends AbstractStepImpl {
 			}.start();
 			return false;
 		}
-		
+
 		@Override
 		public void stop(@Nonnull Throwable cause) throws Exception {
 			//
 		}
-		
+
 		private static final long serialVersionUID = 1L;
-		
+
 	}
-	
+
 }

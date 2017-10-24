@@ -24,6 +24,7 @@ package de.taimos.pipeline.aws;
 import javax.annotation.Nonnull;
 import javax.inject.Inject;
 
+import com.amazonaws.services.sns.AmazonSNS;
 import org.jenkinsci.plugins.workflow.steps.AbstractStepDescriptorImpl;
 import org.jenkinsci.plugins.workflow.steps.AbstractStepExecutionImpl;
 import org.jenkinsci.plugins.workflow.steps.AbstractStepImpl;
@@ -38,69 +39,69 @@ import hudson.Extension;
 import hudson.model.TaskListener;
 
 public class SNSPublishStep extends AbstractStepImpl {
-	
+
 	private final String topicArn;
 	private final String subject;
 	private final String message;
-	
+
 	@DataBoundConstructor
 	public SNSPublishStep(String topicArn, String subject, String message) {
 		this.topicArn = topicArn;
 		this.subject = subject;
 		this.message = message;
 	}
-	
+
 	public String getTopicArn() {
 		return this.topicArn;
 	}
-	
+
 	public String getSubject() {
 		return this.subject;
 	}
-	
+
 	public String getMessage() {
 		return this.message;
 	}
-	
+
 	@Extension
 	public static class DescriptorImpl extends AbstractStepDescriptorImpl {
-		
+
 		public DescriptorImpl() {
 			super(Execution.class);
 		}
-		
+
 		@Override
 		public String getFunctionName() {
 			return "snsPublish";
 		}
-		
+
 		@Override
 		public String getDisplayName() {
 			return "Publish notification to SNS";
 		}
 	}
-	
+
 	public static class Execution extends AbstractStepExecutionImpl {
-		
+
 		@Inject
 		private transient SNSPublishStep step;
 		@StepContextParameter
 		private transient EnvVars envVars;
 		@StepContextParameter
 		private transient TaskListener listener;
-		
+
 		@Override
 		public boolean start() throws Exception {
 			final String topicArn = this.step.getTopicArn();
 			final String subject = this.step.getSubject();
 			final String message = this.step.getMessage();
-			
+
 			new Thread("snsPublish") {
 				@Override
 				public void run() {
 					try {
-						AmazonSNSClient snsClient = AWSClientFactory.create(AmazonSNSClient.class, Execution.this.envVars);
-						
+						AmazonSNS snsClient = AWSClientFactory.createAmazonSNSClient(Execution.this.envVars);
+
 						Execution.this.listener.getLogger().format("Publishing notification %s to %s %n", subject, topicArn);
 						PublishResult result = snsClient.publish(topicArn, message, subject);
 						Execution.this.listener.getLogger().format("Message published as %s %n", result.getMessageId());
@@ -112,14 +113,14 @@ public class SNSPublishStep extends AbstractStepImpl {
 			}.start();
 			return false;
 		}
-		
+
 		@Override
 		public void stop(@Nonnull Throwable cause) throws Exception {
 			//
 		}
-		
+
 		private static final long serialVersionUID = 1L;
-		
+
 	}
-	
+
 }

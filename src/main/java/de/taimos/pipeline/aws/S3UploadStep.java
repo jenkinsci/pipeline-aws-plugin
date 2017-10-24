@@ -34,6 +34,7 @@ import java.util.Map;
 import javax.annotation.Nonnull;
 import javax.inject.Inject;
 
+import com.amazonaws.services.s3.AmazonS3;
 import org.jenkinsci.plugins.workflow.steps.AbstractStepDescriptorImpl;
 import org.jenkinsci.plugins.workflow.steps.AbstractStepExecutionImpl;
 import org.jenkinsci.plugins.workflow.steps.AbstractStepImpl;
@@ -64,7 +65,7 @@ import hudson.model.TaskListener;
 import hudson.remoting.VirtualChannel;
 
 public class S3UploadStep extends AbstractStepImpl {
-	
+
 	private final String bucket;
 	private String file;
 	private String path = "";
@@ -74,61 +75,61 @@ public class S3UploadStep extends AbstractStepImpl {
 	private String[] metadatas;
 	private CannedAccessControlList acl;
 	private String cacheControl;
-	
+
 	@DataBoundConstructor
 	public S3UploadStep(String bucket) {
 		this.bucket = bucket;
 	}
-	
+
 	public String getFile() {
 		return this.file;
 	}
-	
+
 	@DataBoundSetter
 	public void setFile(String file) {
 		this.file = file;
 	}
-	
+
 	public String getBucket() {
 		return this.bucket;
 	}
-	
+
 	public String getPath() {
 		return this.path;
 	}
-	
+
 	@DataBoundSetter
 	public void setPath(String path) {
 		this.path = path;
 	}
-	
+
 	public String getIncludePathPattern() {
 		return this.includePathPattern;
 	}
-	
+
 	@DataBoundSetter
 	public void setIncludePathPattern(String includePathPattern) {
 		this.includePathPattern = includePathPattern;
 	}
-	
+
 	public String getExcludePathPattern() {
 		return this.excludePathPattern;
 	}
-	
+
 	@DataBoundSetter
 	public void setExcludePathPattern(String excludePathPattern) {
 		this.excludePathPattern = excludePathPattern;
 	}
-	
+
 	public String getWorkingDir() {
 		return this.workingDir;
 	}
-	
+
 	@DataBoundSetter
 	public void setWorkingDir(String workingDir) {
 		this.workingDir = workingDir;
 	}
-	
+
 	public String[] getMetadatas() {
 		if (this.metadatas != null) {
 			return this.metadatas.clone();
@@ -136,7 +137,7 @@ public class S3UploadStep extends AbstractStepImpl {
 			return null;
 		}
 	}
-	
+
 	@DataBoundSetter
 	public void setMetadatas(String[] metadatas) {
 		if (metadatas != null) {
@@ -145,45 +146,45 @@ public class S3UploadStep extends AbstractStepImpl {
 			this.metadatas = null;
 		}
 	}
-	
+
 	public CannedAccessControlList getAcl() {
 		return acl;
 	}
-	
+
 	@DataBoundSetter
 	public void setAcl(CannedAccessControlList acl) {
 		this.acl = acl;
 	}
-	
+
 	public String getCacheControl() {
 		return cacheControl;
 	}
-	
+
 	@DataBoundSetter
 	public void setCacheControl(final String cacheControl) {
 		this.cacheControl = cacheControl;
 	}
-	
+
 	@Extension
 	public static class DescriptorImpl extends AbstractStepDescriptorImpl {
-		
+
 		public DescriptorImpl() {
 			super(Execution.class);
 		}
-		
+
 		@Override
 		public String getFunctionName() {
 			return "s3Upload";
 		}
-		
+
 		@Override
 		public String getDisplayName() {
 			return "Copy file to S3";
 		}
 	}
-	
+
 	public static class Execution extends AbstractStepExecutionImpl {
-		
+
 		private static final long serialVersionUID = 1L;
 		@Inject
 		private transient S3UploadStep step;
@@ -193,7 +194,7 @@ public class S3UploadStep extends AbstractStepImpl {
 		private transient FilePath workspace;
 		@StepContextParameter
 		private transient TaskListener listener;
-		
+
 		@Override
 		public boolean start() throws Exception {
 			final String file = this.step.getFile();
@@ -205,7 +206,7 @@ public class S3UploadStep extends AbstractStepImpl {
 			final Map<String, String> metadatas = new HashMap<>();
 			final CannedAccessControlList acl = this.step.getAcl();
 			final String cacheControl = this.step.getCacheControl();
-			
+
 			if (this.step.getMetadatas() != null && this.step.getMetadatas().length != 0) {
 				for (String metadata : this.step.getMetadatas()) {
 					if (metadata.split(":").length == 2) {
@@ -213,11 +214,11 @@ public class S3UploadStep extends AbstractStepImpl {
 					}
 				}
 			}
-			
+
 			Preconditions.checkArgument(bucket != null && !bucket.isEmpty(), "Bucket must not be null or empty");
 			Preconditions.checkArgument(file != null || includePathPattern != null, "File or IncludePathPattern must not be null");
 			Preconditions.checkArgument(includePathPattern == null || file == null, "File and IncludePathPattern cannot be use together");
-			
+
 			final List<FilePath> children = new ArrayList<>();
 			final FilePath dir;
 			if (workingDir != null && !"".equals(workingDir.trim())) {
@@ -231,9 +232,9 @@ public class S3UploadStep extends AbstractStepImpl {
 				children.addAll(Arrays.asList(dir.list(includePathPattern, excludePathPattern, true)));
 			} else {
 				children.addAll(Arrays.asList(dir.list(includePathPattern, null, true)));
-				
+
 			}
-			
+
 			new Thread("s3Upload") {
 				@Override
 				public void run() {
@@ -246,9 +247,9 @@ public class S3UploadStep extends AbstractStepImpl {
 								Execution.this.getContext().onFailure(new FileNotFoundException(child.toURI().toString()));
 								return;
 							}
-							
+
 							child.act(new RemoteUploader(Execution.this.envVars, Execution.this.listener, bucket, path, metadatas, acl, cacheControl));
-							
+
 							Execution.this.listener.getLogger().println("Upload complete");
 							Execution.this.getContext().onSuccess(null);
 						} else if (children.size() > 1) {
@@ -268,16 +269,16 @@ public class S3UploadStep extends AbstractStepImpl {
 			}.start();
 			return false;
 		}
-		
+
 		@Override
 		public void stop(@Nonnull Throwable cause) throws Exception {
 			//
 		}
-		
+
 	}
-	
+
 	private static class RemoteUploader implements FilePath.FileCallable<Void> {
-		
+
 		private final EnvVars envVars;
 		private final TaskListener taskListener;
 		private final String bucket;
@@ -285,7 +286,7 @@ public class S3UploadStep extends AbstractStepImpl {
 		private final Map<String, String> metadatas;
 		private final CannedAccessControlList acl;
 		private final String cacheControl;
-		
+
 		RemoteUploader(EnvVars envVars, TaskListener taskListener, String bucket, String path, Map<String, String> metadatas, CannedAccessControlList acl, String cacheControl) {
 			this.envVars = envVars;
 			this.taskListener = taskListener;
@@ -295,11 +296,10 @@ public class S3UploadStep extends AbstractStepImpl {
 			this.acl = acl;
 			this.cacheControl = cacheControl;
 		}
-		
+
 		@Override
 		public Void invoke(File localFile, VirtualChannel channel) throws IOException, InterruptedException {
-			AmazonS3Client s3Client = AWSClientFactory.create(AmazonS3Client.class, this.envVars);
-			TransferManager mgr = TransferManagerBuilder.standard().withS3Client(s3Client).build();
+			TransferManager mgr = AWSClientFactory.createTransferManager(this.envVars);
 			if (localFile.isFile()) {
 				Preconditions.checkArgument(this.path != null && !this.path.isEmpty(), "Path must not be null or empty when uploading file");
 				final Upload upload;
@@ -352,7 +352,7 @@ public class S3UploadStep extends AbstractStepImpl {
 								meta.setCacheControl(RemoteUploader.this.cacheControl);
 							}
 						}
-						
+
 					}
 				};
 				fileUpload = mgr.uploadDirectory(this.bucket, this.path, localFile, true, metadatasProvider);
@@ -371,14 +371,14 @@ public class S3UploadStep extends AbstractStepImpl {
 			}
 			return null;
 		}
-		
+
 		@Override
 		public void checkRoles(RoleChecker roleChecker) throws SecurityException {
 		}
 	}
-	
+
 	private static class RemoteListUploader implements FilePath.FileCallable<Void> {
-		
+
 		private final EnvVars envVars;
 		private final TaskListener taskListener;
 		private final String bucket;
@@ -387,7 +387,7 @@ public class S3UploadStep extends AbstractStepImpl {
 		private final Map<String, String> metadatas;
 		private final CannedAccessControlList acl;
 		private final String cacheControl;
-		
+
 		RemoteListUploader(EnvVars envVars, TaskListener taskListener, List<File> fileList, String bucket, String path, Map<String, String> metadatas, CannedAccessControlList acl, final String cacheControl) {
 			this.envVars = envVars;
 			this.taskListener = taskListener;
@@ -398,11 +398,10 @@ public class S3UploadStep extends AbstractStepImpl {
 			this.acl = acl;
 			this.cacheControl = cacheControl;
 		}
-		
+
 		@Override
 		public Void invoke(File localFile, VirtualChannel channel) throws IOException, InterruptedException {
-			AmazonS3Client s3Client = AWSClientFactory.create(AmazonS3Client.class, this.envVars);
-			TransferManager mgr = TransferManagerBuilder.standard().withS3Client(s3Client).build();
+			TransferManager mgr = AWSClientFactory.createTransferManager(this.envVars);
 			Preconditions.checkArgument(this.path != null && !this.path.isEmpty(), "Path must not be null or empty when uploading file");
 			final MultipleFileUpload fileUpload;
 			ObjectMetadataProvider metadatasProvider = new ObjectMetadataProvider() {
@@ -435,29 +434,29 @@ public class S3UploadStep extends AbstractStepImpl {
 			fileUpload.waitForCompletion();
 			return null;
 		}
-		
+
 		@Override
 		public void checkRoles(RoleChecker roleChecker) throws SecurityException {
 		}
 	}
-	
+
 	private static class FeedList implements FilePath.FileCallable<Void> {
-		
+
 		private final List<File> fileList;
-		
+
 		FeedList(List<File> fileList) {
 			this.fileList = fileList;
 		}
-		
+
 		@Override
 		public Void invoke(File localFile, VirtualChannel channel) throws IOException, InterruptedException {
 			this.fileList.add(localFile);
 			return null;
 		}
-		
+
 		@Override
 		public void checkRoles(RoleChecker arg0) throws SecurityException {
 		}
 	}
-	
+
 }
