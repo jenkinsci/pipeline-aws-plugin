@@ -27,18 +27,9 @@ import java.util.Map;
 import java.util.concurrent.ExecutionException;
 
 import com.amazonaws.services.cloudformation.AmazonCloudFormationClient;
-import com.amazonaws.services.cloudformation.model.AmazonCloudFormationException;
-import com.amazonaws.services.cloudformation.model.Capability;
-import com.amazonaws.services.cloudformation.model.CreateStackRequest;
-import com.amazonaws.services.cloudformation.model.DeleteStackRequest;
-import com.amazonaws.services.cloudformation.model.DescribeStacksRequest;
-import com.amazonaws.services.cloudformation.model.DescribeStacksResult;
-import com.amazonaws.services.cloudformation.model.Output;
-import com.amazonaws.services.cloudformation.model.Parameter;
-import com.amazonaws.services.cloudformation.model.Stack;
-import com.amazonaws.services.cloudformation.model.Tag;
-import com.amazonaws.services.cloudformation.model.UpdateStackRequest;
+import com.amazonaws.services.cloudformation.model.*;
 
+import com.amazonaws.waiters.WaiterUnrecoverableException;
 import hudson.model.TaskListener;
 
 public class CloudFormationStack {
@@ -65,7 +56,25 @@ public class CloudFormationStack {
 			return false;
 		}
 	}
-	
+
+	public boolean changeSetExists(String changeSetName) {
+		try {
+			this.client.describeChangeSet(new DescribeChangeSetRequest().withStackName(this.stack).withChangeSetName(changeSetName));
+			return true;
+		} catch (AmazonCloudFormationException e) {
+			if ("AccessDenied".equals(e.getErrorCode())) {
+				this.listener.getLogger().format("Got error from describeStacks: %s %n", e.getErrorMessage());
+				throw e;
+			}
+			return false;
+		}
+	}
+
+	public boolean changeSetHasChanges(String changeSetName) {
+		DescribeChangeSetResult result = this.client.describeChangeSet(new DescribeChangeSetRequest().withStackName(this.stack).withChangeSetName(changeSetName));
+		return !result.getChanges().isEmpty();
+	}
+
 	public Map<String, String> describeOutputs() {
 		DescribeStacksResult result = this.client.describeStacks(new DescribeStacksRequest().withStackName(this.stack));
 		Stack cfnStack = result.getStacks().get(0);
@@ -114,7 +123,62 @@ public class CloudFormationStack {
 			throw e;
 		}
 	}
-	
+
+	public void createChangeSet(String changeSetName, String templateBody, String templateUrl, Collection<Parameter> params, Collection<Tag> tags, long pollIntervallMillis, ChangeSetType changeSetType, String roleArn) throws ExecutionException {
+		try {
+			CreateChangeSetRequest req = new CreateChangeSetRequest();
+			req.withChangeSetName(changeSetName).withStackName(this.stack).withCapabilities(Capability.CAPABILITY_IAM, Capability.CAPABILITY_NAMED_IAM).withChangeSetType(changeSetType);
+
+			if (ChangeSetType.CREATE.equals(changeSetType)) {
+				if ((templateBody == null || templateBody.isEmpty()) && (templateUrl == null || templateUrl.isEmpty())) {
+					throw new IllegalArgumentException("Either a file or url for the template must be specified");
+				}
+				req.withTemplateBody(templateBody).withTemplateURL(templateUrl);
+			} else if (ChangeSetType.UPDATE.equals(changeSetType)) {
+				if (templateBody != null && !templateBody.isEmpty()) {
+					req.setTemplateBody(templateBody);
+				} else if (templateUrl != null && !templateUrl.isEmpty()) {
+					req.setTemplateURL(templateUrl);
+				} else {
+					req.setUsePreviousTemplate(true);
+				}
+			} else {
+				throw new IllegalArgumentException("A valid change set type must be provided.");
+			}
+
+			req.withParameters(params).withTags(tags).withRoleARN(roleArn);
+
+			this.client.createChangeSet(req);
+
+			new EventPrinter(this.client, this.listener).waitAndPrintChangeSetEvents(this.stack, changeSetName, this.client.waiters().changeSetCreateComplete(), pollIntervallMillis);
+
+		} catch (ExecutionException e) {
+			try {
+				if (changeSetExists(changeSetName) && !changeSetHasChanges(changeSetName)) {
+					// Ignore the failed creation of a change set with no changes.
+					this.listener.getLogger().format("Created empty change set %s for stack %s %n", changeSetName, this.stack);
+					return;
+				}
+			} catch (Throwable throwable) {
+				e.addSuppressed(throwable);
+			}
+			throw e;
+		}
+	}
+
+	public void executeChangeSet(String changeSetName, long pollIntervallMillis) throws ExecutionException {
+		if (!changeSetHasChanges(changeSetName)) {
+			// If the change set has no changes we should simply delete it.
+			this.listener.getLogger().format("Deleting empty change set %s for stack %s %n", changeSetName, this.stack);
+			DeleteChangeSetRequest req = new DeleteChangeSetRequest().withChangeSetName(changeSetName).withStackName(this.stack);
+			this.client.deleteChangeSet(req);
+		} else {
+			ExecuteChangeSetRequest req = new ExecuteChangeSetRequest().withChangeSetName(changeSetName).withStackName(this.stack);
+			this.client.executeChangeSet(req);
+			new EventPrinter(this.client, this.listener).waitAndPrintStackEvents(this.stack, this.client.waiters().stackUpdateComplete(), pollIntervallMillis);
+		}
+	}
+
 	public void delete(long pollIntervallMillis) throws ExecutionException {
 		this.client.deleteStack(new DeleteStackRequest().withStackName(this.stack));
 		new EventPrinter(this.client, this.listener).waitAndPrintStackEvents(this.stack, this.client.waiters().stackDeleteComplete(), pollIntervallMillis);
