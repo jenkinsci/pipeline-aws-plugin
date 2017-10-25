@@ -351,8 +351,7 @@ public class WithAWSStep extends AbstractStepImpl {
 				this.envVars.overrideAll(localEnv);
 			}
 		}
-//		withPathStyleAccessEnabled
-//				withPayloadSigningEnabled
+
 		private void withPathStyleAccessEnabled(@Nonnull EnvVars localEnv) {
             this.listener.getLogger().format("Setting AWS isPathStyleAccessEnabled %s %n ", this.step.isPathStyleAccessEnabled());
             localEnv.override(AWSClientFactory.AWS_S3_PATH_STYLE_ACCESS_ENABLED, String.valueOf(this.step.isPathStyleAccessEnabled()));
