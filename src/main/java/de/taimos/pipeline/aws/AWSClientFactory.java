@@ -68,24 +68,31 @@ public class AWSClientFactory {
     static final String AWS_DEFAULT_REGION = "AWS_DEFAULT_REGION";
     static final String AWS_REGION = "AWS_REGION";
     static final String AWS_ENDPOINT_URL = "AWS_ENDPOINT_URL";
+    static final String AWS_S3_PATH_STYLE_ACCESS_ENABLED = "AWS_S3_PATH_STYLE_ACCESS_ENABLED";
+    static final String AWS_S3_PAYLOAD_SIGNING_ENABLED = "AWS_S3_PAYLOAD_SIGNING_ENABLED";
 
     private static <B extends AwsSyncClientBuilder<?, ?>> B configureAwsSyncClientBuilder(B clientBuilder, EnvVars vars) {
         if (StringUtils.isNotBlank(vars.get(AWS_ENDPOINT_URL))) {
             clientBuilder.setEndpointConfiguration(new AwsClientBuilder.EndpointConfiguration(vars.get(AWS_ENDPOINT_URL), vars.get(AWS_REGION)));
+        } else {
+            clientBuilder.setRegion(AWSClientFactory.getRegion(vars).getName());
         }
-        clientBuilder.setRegion(AWSClientFactory.getRegion(vars).getName());
         clientBuilder.setCredentials(AWSClientFactory.getCredentials(vars));
         clientBuilder.setClientConfiguration(AWSClientFactory.getClientConfiguration(vars));
         return clientBuilder;
     }
 
     public static AmazonS3 createAmazonS3Client(EnvVars vars) {
-        return configureAwsSyncClientBuilder(AmazonS3ClientBuilder.standard(), vars).build();
+        return configureAwsSyncClientBuilder(AmazonS3ClientBuilder.standard(), vars)
+                .withPathStyleAccessEnabled(Boolean.valueOf(vars.get(AWS_S3_PATH_STYLE_ACCESS_ENABLED, Boolean.FALSE.toString())))
+                .withPayloadSigningEnabled(Boolean.valueOf(vars.get(AWS_S3_PAYLOAD_SIGNING_ENABLED, Boolean.FALSE.toString())))
+                .build();
     }
 
     public static TransferManager createTransferManager(EnvVars vars) {
-        AmazonS3 s3Client = configureAwsSyncClientBuilder(AmazonS3ClientBuilder.standard(), vars).build();
-        return TransferManagerBuilder.standard().withS3Client(s3Client).build();
+        return TransferManagerBuilder.standard()
+                .withS3Client(createAmazonS3Client(vars))
+                .build();
     }
 
     public static AmazonCloudFormation createAmazonCloudFormationClient(EnvVars vars) {

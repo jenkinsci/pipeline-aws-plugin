@@ -74,6 +74,9 @@ public class WithAWSStep extends AbstractStepImpl {
 	private String externalId = "";
 	private String federatedUserId = "";
 	private String policy = "";
+	private boolean pathStyleAccessEnabled = false;
+	private boolean payloadSigningEnabled = false;
+
 	@DataBoundConstructor
 	public WithAWSStep() {
 		//
@@ -158,6 +161,25 @@ public class WithAWSStep extends AbstractStepImpl {
 	public void setPolicy(String policy) {
 		this.policy = policy;
 	}
+
+	public boolean isPathStyleAccessEnabled() {
+		return pathStyleAccessEnabled;
+	}
+
+	@DataBoundSetter
+	public void setPathStyleAccessEnabled(final boolean pathStyleAccessEnabled) {
+		this.pathStyleAccessEnabled = pathStyleAccessEnabled;
+	}
+
+	public boolean isPayloadSigningEnabled() {
+		return payloadSigningEnabled;
+	}
+
+	@DataBoundSetter
+	public void setPayloadSigningEnabled(final boolean payloadSigningEnabled) {
+		this.payloadSigningEnabled = payloadSigningEnabled;
+	}
+
 	@Extension
 	public static class DescriptorImpl extends AbstractStepDescriptorImpl {
 
@@ -217,6 +239,8 @@ public class WithAWSStep extends AbstractStepImpl {
 			this.withEndpointUrl(awsEnv);
 			this.withRole(awsEnv);
 			this.withFederatedUserId(awsEnv);
+			this.withPathStyleAccessEnabled(awsEnv);
+			this.withPayloadSigningEnabled(awsEnv);
 
 			EnvironmentExpander expander = new EnvironmentExpander() {
 				@Override
@@ -327,6 +351,20 @@ public class WithAWSStep extends AbstractStepImpl {
 				this.envVars.overrideAll(localEnv);
 			}
 		}
+//		withPathStyleAccessEnabled
+//				withPayloadSigningEnabled
+		private void withPathStyleAccessEnabled(@Nonnull EnvVars localEnv) {
+            this.listener.getLogger().format("Setting AWS isPathStyleAccessEnabled %s %n ", this.step.isPathStyleAccessEnabled());
+            localEnv.override(AWSClientFactory.AWS_S3_PATH_STYLE_ACCESS_ENABLED, String.valueOf(this.step.isPathStyleAccessEnabled()));
+            this.envVars.overrideAll(localEnv);
+        }
+
+		private void withPayloadSigningEnabled(@Nonnull EnvVars localEnv) {
+            this.listener.getLogger().format("Setting AWS isPayloadSigningEnabled %s %n ", this.step.isPayloadSigningEnabled());
+            localEnv.override(AWSClientFactory.AWS_S3_PAYLOAD_SIGNING_ENABLED, String.valueOf(this.step.isPayloadSigningEnabled()));
+            this.envVars.overrideAll(localEnv);
+        }
+
 
 		private String createRoleSessionName() {
 			return RoleSessionNameBuilder

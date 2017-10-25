@@ -6,6 +6,12 @@
 	<f:entry title="${%Endpoint URL}" field="endpointUrl">
 		<f:textbox />
 	</f:entry>
+	<f:entry title="${%Enable Path-style Access}" field="pathStyleAccessEnabled">
+		<f:checkbox />
+	</f:entry>
+	<f:entry title="${%Enable Payload Signing}" field="payloadSigningEnabled">
+		<f:checkbox />
+	</f:entry>
 	<f:entry title="${%Credentials}" field="credentials">
 		<c:select />
 	</f:entry>
