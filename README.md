@@ -63,10 +63,10 @@ withAWS(profile:'myProfile') {
 }
 ```
 
-Assume role information (account is optional - uses current account as default, externalId is optional):
+Assume role information (account is optional - uses current account as default, externalId and policy are optional):
 
 ```
-withAWS(role:'admin', roleAccount:'123456789012', externalId: 'my-external-id') {
+withAWS(role:'admin', roleAccount:'123456789012', externalId: 'my-external-id', policy: '{"Version":"2012-10-17","Statement":[{"Sid":"Stmt1","Effect":"Deny","Action":"s3:DeleteObject","Resource":"*"}]}') {
     // do something
 }
 ```
@@ -418,6 +418,7 @@ def result = invokeLambda(
 # Changelog
 
 ## 1.17 (master)
+* Add policy for withAWS support - allows an additional policy to be combined with the policy associated with the assumed role. 
 * add `cfnCreateChangeSet` step
 * add `cfnExecuteChangeSet` step
 

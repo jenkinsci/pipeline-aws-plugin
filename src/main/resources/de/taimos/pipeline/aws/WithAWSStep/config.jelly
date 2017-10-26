@@ -18,6 +18,9 @@
 	<f:entry title="${%External ID}" field="externalId">
 		<f:textbox />
 	</f:entry>
+	<f:entry title="${%Policy}" field="policy">
+		<f:textbox />
+	</f:entry>
 	<f:entry title="${%Federated User ID}" field="federatedUserId">
 		<f:textbox />
 	</f:entry>
