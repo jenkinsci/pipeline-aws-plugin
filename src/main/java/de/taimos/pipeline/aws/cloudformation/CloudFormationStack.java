@@ -132,10 +132,15 @@ public class CloudFormationStack {
 			this.client.updateStack(req);
 			
 			new EventPrinter(this.client, this.listener).waitAndPrintStackEvents(this.stack, this.client.waiters().stackUpdateComplete(), pollIntervallMillis);
+
+			this.listener.getLogger().format("Updated CloudFormation stack %s %n", stack);
+
 		} catch (AmazonCloudFormationException e) {
 			if (e.getMessage().contains("No updates are to be performed")) {
+				this.listener.getLogger().format("No updates were needed for CloudFormation stack %s %n", stack);
 				return;
 			}
+			this.listener.getLogger().format("Failed to update CloudFormation stack %s %n", stack);
 			throw e;
 		}
 	}
@@ -146,11 +151,13 @@ public class CloudFormationStack {
 			req.withChangeSetName(changeSetName).withStackName(this.stack).withCapabilities(Capability.CAPABILITY_IAM, Capability.CAPABILITY_NAMED_IAM).withChangeSetType(changeSetType);
 
 			if (ChangeSetType.CREATE.equals(changeSetType)) {
+				this.listener.getLogger().format("Creating CloudFormation change set %s for new stack %s %n", changeSetName, stack);
 				if ((templateBody == null || templateBody.isEmpty()) && (templateUrl == null || templateUrl.isEmpty())) {
 					throw new IllegalArgumentException("Either a file or url for the template must be specified");
 				}
 				req.withTemplateBody(templateBody).withTemplateURL(templateUrl);
 			} else if (ChangeSetType.UPDATE.equals(changeSetType)) {
+				this.listener.getLogger().format("Creating CloudFormation change set %s for existing stack %s %n", changeSetName, stack);
 				if (templateBody != null && !templateBody.isEmpty()) {
 					req.setTemplateBody(templateBody);
 				} else if (templateUrl != null && !templateUrl.isEmpty()) {
@@ -159,7 +166,7 @@ public class CloudFormationStack {
 					req.setUsePreviousTemplate(true);
 				}
 			} else {
-				throw new IllegalArgumentException("A valid change set type must be provided.");
+				throw new IllegalArgumentException("Cannot create a CloudFormation change set without a valid change set type.");
 			}
 
 			req.withParameters(params).withTags(tags).withRoleARN(roleArn);
@@ -167,6 +174,8 @@ public class CloudFormationStack {
 			this.client.createChangeSet(req);
 
 			new EventPrinter(this.client, this.listener).waitAndPrintChangeSetEvents(this.stack, changeSetName, this.client.waiters().changeSetCreateComplete(), pollIntervallMillis);
+
+			this.listener.getLogger().format("Created CloudFormation change set %s for stack %s %n", changeSetName, stack);
 
 		} catch (ExecutionException e) {
 			try {
@@ -178,6 +187,7 @@ public class CloudFormationStack {
 			} catch (Throwable throwable) {
 				e.addSuppressed(throwable);
 			}
+			this.listener.getLogger().format("Failed to create CloudFormation change set %s for stack %s %n", changeSetName, stack);
 			throw e;
 		}
 	}
@@ -189,9 +199,11 @@ public class CloudFormationStack {
 			DeleteChangeSetRequest req = new DeleteChangeSetRequest().withChangeSetName(changeSetName).withStackName(this.stack);
 			this.client.deleteChangeSet(req);
 		} else {
+			this.listener.getLogger().format("Executing change set %s for stack %s %n", changeSetName, this.stack);
 			ExecuteChangeSetRequest req = new ExecuteChangeSetRequest().withChangeSetName(changeSetName).withStackName(this.stack);
 			this.client.executeChangeSet(req);
 			new EventPrinter(this.client, this.listener).waitAndPrintStackEvents(this.stack, this.client.waiters().stackUpdateComplete(), pollIntervallMillis);
+			this.listener.getLogger().format("Executed change set %s for stack %s %n", changeSetName, this.stack);
 		}
 	}
 
