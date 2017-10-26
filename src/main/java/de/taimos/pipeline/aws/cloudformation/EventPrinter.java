@@ -28,7 +28,12 @@ import java.util.Date;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 
-import com.amazonaws.services.cloudformation.model.*;
+import com.amazonaws.services.cloudformation.model.AmazonCloudFormationException;
+import com.amazonaws.services.cloudformation.model.DescribeChangeSetRequest;
+import com.amazonaws.services.cloudformation.model.DescribeStackEventsRequest;
+import com.amazonaws.services.cloudformation.model.DescribeStackEventsResult;
+import com.amazonaws.services.cloudformation.model.DescribeStacksRequest;
+import com.amazonaws.services.cloudformation.model.StackEvent;
 import org.apache.commons.lang.StringUtils;
 import org.apache.http.concurrent.BasicFuture;
 
