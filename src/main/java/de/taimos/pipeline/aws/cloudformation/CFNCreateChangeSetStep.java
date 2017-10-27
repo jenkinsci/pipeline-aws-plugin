@@ -120,7 +120,7 @@ public class CFNCreateChangeSetStep extends AbstractCFNCreateSetStep {
 			final String url = this.step.getUrl();
 			CloudFormationStack cfnStack = getCfnStack();
 			cfnStack.createChangeSet(changeSet, readTemplate(file), url, parameters, tags, getStep().getPollInterval(), ChangeSetType.UPDATE, getStep().getRoleArn());
-			return cfnStack.describeOutputs();
+			return null;
 		}
 
 		@Override
