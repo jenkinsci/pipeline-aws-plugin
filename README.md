@@ -421,6 +421,8 @@ def result = invokeLambda(
 * Add policy for withAWS support - allows an additional policy to be combined with the policy associated with the assumed role. 
 * add `cfnCreateChangeSet` step
 * add `cfnExecuteChangeSet` step
+* Add endpoint-url for withAWS support - allows configuring a non-AWS endpoint for internally-hosted clouds.
+* support additional S3 options: pathStyleAccessEnabled and payloadSigningEnabled
 
 ## 1.16
 * Add federatedUserId for withAWS support - generates temporary aws credentials for federated user which gets logged in CloudTrail 
