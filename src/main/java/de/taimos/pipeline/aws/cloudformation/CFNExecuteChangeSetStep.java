@@ -22,17 +22,10 @@
 package de.taimos.pipeline.aws.cloudformation;
 
 import com.amazonaws.services.cloudformation.AmazonCloudFormationClient;
-import com.amazonaws.services.cloudformation.model.ChangeSetType;
-import com.amazonaws.services.cloudformation.model.Parameter;
-import com.amazonaws.services.cloudformation.model.Tag;
 import com.google.common.base.Preconditions;
 import de.taimos.pipeline.aws.AWSClientFactory;
-import de.taimos.pipeline.aws.cloudformation.parser.JSONParameterFileParser;
-import de.taimos.pipeline.aws.cloudformation.parser.ParameterFileParser;
-import de.taimos.pipeline.aws.cloudformation.parser.YAMLParameterFileParser;
 import hudson.EnvVars;
 import hudson.Extension;
-import hudson.FilePath;
 import hudson.model.TaskListener;
 import org.jenkinsci.plugins.workflow.steps.AbstractStepDescriptorImpl;
 import org.jenkinsci.plugins.workflow.steps.AbstractStepExecutionImpl;
@@ -43,8 +36,6 @@ import org.kohsuke.stapler.DataBoundSetter;
 
 import javax.annotation.Nonnull;
 import javax.inject.Inject;
-import java.util.ArrayList;
-import java.util.Collection;
 
 public class CFNExecuteChangeSetStep extends AbstractStepImpl {
 

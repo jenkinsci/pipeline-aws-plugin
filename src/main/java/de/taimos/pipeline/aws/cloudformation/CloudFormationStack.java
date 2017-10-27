@@ -21,13 +21,7 @@
 
 package de.taimos.pipeline.aws.cloudformation;
 
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.concurrent.ExecutionException;
-
 import com.amazonaws.services.cloudformation.AmazonCloudFormationClient;
-
 import com.amazonaws.services.cloudformation.model.AmazonCloudFormationException;
 import com.amazonaws.services.cloudformation.model.Capability;
 import com.amazonaws.services.cloudformation.model.ChangeSetType;
@@ -45,8 +39,12 @@ import com.amazonaws.services.cloudformation.model.Parameter;
 import com.amazonaws.services.cloudformation.model.Stack;
 import com.amazonaws.services.cloudformation.model.Tag;
 import com.amazonaws.services.cloudformation.model.UpdateStackRequest;
-import com.amazonaws.waiters.WaiterUnrecoverableException;
 import hudson.model.TaskListener;
+
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.ExecutionException;
 
 public class CloudFormationStack {
 	
