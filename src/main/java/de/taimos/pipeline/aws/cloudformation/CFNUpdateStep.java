@@ -35,7 +35,7 @@ import org.kohsuke.stapler.DataBoundSetter;
 import javax.inject.Inject;
 import java.util.Collection;
 
-public class CFNUpdateStep extends AbstractCFNCreateSetStep {
+public class CFNUpdateStep extends AbstractCFNCreateStep {
 	
 	private Integer timeoutInMinutes;
 
@@ -71,7 +71,7 @@ public class CFNUpdateStep extends AbstractCFNCreateSetStep {
 		}
 	}
 
-	public static class Execution extends AbstractCFNCreateSetStep.Execution {
+	public static class Execution extends AbstractCFNCreateStep.Execution {
 		
 		@Inject
 		private transient CFNUpdateStep step;
@@ -83,7 +83,7 @@ public class CFNUpdateStep extends AbstractCFNCreateSetStep {
 		private transient TaskListener listener;
 
 		@Override
-		public AbstractCFNCreateSetStep getStep() {
+		public AbstractCFNCreateStep getStep() {
 			return step;
 		}
 

@@ -41,7 +41,7 @@ import javax.annotation.Nonnull;
 import java.util.ArrayList;
 import java.util.Collection;
 
-abstract class AbstractCFNCreateSetStep extends AbstractStepImpl {
+abstract class AbstractCFNCreateStep extends AbstractStepImpl {
 
 	private final String stack;
 	private String file;
@@ -54,7 +54,7 @@ abstract class AbstractCFNCreateSetStep extends AbstractStepImpl {
 	private Boolean create = true;
 	private String roleArn;
 
-	public AbstractCFNCreateSetStep(String stack) {
+	public AbstractCFNCreateStep(String stack) {
 		this.stack = stack;
 	}
 	
@@ -145,7 +145,7 @@ abstract class AbstractCFNCreateSetStep extends AbstractStepImpl {
 
 	abstract static class Execution extends AbstractStepExecutionImpl {
 
-		protected abstract AbstractCFNCreateSetStep getStep();
+		protected abstract AbstractCFNCreateStep getStep();
 		protected abstract EnvVars getEnvVars();
 		protected abstract FilePath getWorkspace();
 		protected abstract TaskListener getListener();

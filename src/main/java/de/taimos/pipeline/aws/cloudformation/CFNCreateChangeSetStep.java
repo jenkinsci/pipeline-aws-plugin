@@ -39,7 +39,7 @@ import javax.annotation.Nonnull;
 import javax.inject.Inject;
 import java.util.Collection;
 
-public class CFNCreateChangeSetStep extends AbstractCFNCreateSetStep {
+public class CFNCreateChangeSetStep extends AbstractCFNCreateStep {
 
 	private final String changeSet;
 
@@ -71,7 +71,7 @@ public class CFNCreateChangeSetStep extends AbstractCFNCreateSetStep {
 		}
 	}
 	
-	public static class Execution extends AbstractCFNCreateSetStep.Execution {
+	public static class Execution extends AbstractCFNCreateStep.Execution {
 		
 		@Inject
 		private transient CFNCreateChangeSetStep step;
@@ -83,7 +83,7 @@ public class CFNCreateChangeSetStep extends AbstractCFNCreateSetStep {
 		private transient TaskListener listener;
 
 		@Override
-		public AbstractCFNCreateSetStep getStep() {
+		public AbstractCFNCreateStep getStep() {
 			return step;
 		}
 
