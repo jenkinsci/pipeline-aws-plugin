@@ -81,22 +81,22 @@ public class CFNCreateChangeSetStep extends AbstractCFNCreateStep {
 
 		@Override
 		public AbstractCFNCreateStep getStep() {
-			return step;
+			return this.step;
 		}
 
 		@Override
 		public EnvVars getEnvVars() {
-			return envVars;
+			return this.envVars;
 		}
 
 		@Override
 		public FilePath getWorkspace() {
-			return workspace;
+			return this.workspace;
 		}
 
 		@Override
 		public TaskListener getListener() {
-			return listener;
+			return this.listener;
 		}
 
 		@Override
@@ -115,8 +115,7 @@ public class CFNCreateChangeSetStep extends AbstractCFNCreateStep {
 			final String changeSet = this.step.getChangeSet();
 			final String file = this.step.getFile();
 			final String url = this.step.getUrl();
-			CloudFormationStack cfnStack = getCfnStack();
-			cfnStack.createChangeSet(changeSet, readTemplate(file), url, parameters, tags, getStep().getPollInterval(), ChangeSetType.UPDATE, getStep().getRoleArn());
+			this.getCfnStack().createChangeSet(changeSet, this.readTemplate(file), url, parameters, tags, this.getStep().getPollInterval(), ChangeSetType.UPDATE, this.getStep().getRoleArn());
 			return null;
 		}
 
@@ -125,7 +124,7 @@ public class CFNCreateChangeSetStep extends AbstractCFNCreateStep {
 			final String changeSet = this.step.getChangeSet();
 			final String file = this.step.getFile();
 			final String url = this.step.getUrl();
-			getCfnStack().createChangeSet(changeSet, readTemplate(file), url, parameters, tags, getStep().getPollInterval(), ChangeSetType.CREATE, getStep().getRoleArn());
+			this.getCfnStack().createChangeSet(changeSet, this.readTemplate(file), url, parameters, tags, this.getStep().getPollInterval(), ChangeSetType.CREATE, this.getStep().getRoleArn());
 			return null;
 		}
 

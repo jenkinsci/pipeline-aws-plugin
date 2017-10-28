@@ -84,22 +84,22 @@ public class CFNUpdateStep extends AbstractCFNCreateStep {
 
 		@Override
 		public AbstractCFNCreateStep getStep() {
-			return step;
+			return this.step;
 		}
 
 		@Override
 		public EnvVars getEnvVars() {
-			return envVars;
+			return this.envVars;
 		}
 
 		@Override
 		public FilePath getWorkspace() {
-			return workspace;
+			return this.workspace;
 		}
 
 		@Override
 		public TaskListener getListener() {
-			return listener;
+			return this.listener;
 		}
 
 		@Override
@@ -112,19 +112,19 @@ public class CFNUpdateStep extends AbstractCFNCreateStep {
 
 		@Override
 		public Object whenStackExists(Collection<Parameter> parameters, Collection<Tag> tags) throws Exception {
-			final String file = getStep().getFile();
-			final String url = getStep().getUrl();
-			CloudFormationStack cfnStack = getCfnStack();
-			cfnStack.update(Execution.this.readTemplate(file), url, parameters, tags, getStep().getPollInterval(), getStep().getRoleArn());
+			final String file = this.getStep().getFile();
+			final String url = this.getStep().getUrl();
+			CloudFormationStack cfnStack = this.getCfnStack();
+			cfnStack.update(this.readTemplate(file), url, parameters, tags, this.getStep().getPollInterval(), this.getStep().getRoleArn());
 			return cfnStack.describeOutputs();
 		}
 
 		@Override
 		public Object whenStackMissing(Collection<Parameter> parameters, Collection<Tag> tags) throws Exception {
-			final String file = getStep().getFile();
-			final String url = getStep().getUrl();
-			CloudFormationStack cfnStack = getCfnStack();
-			cfnStack.create(Execution.this.readTemplate(file), url, parameters, tags, this.step.getTimeoutInMinutes(), getStep().getPollInterval(), getStep().getRoleArn());
+			final String file = this.getStep().getFile();
+			final String url = this.getStep().getUrl();
+			CloudFormationStack cfnStack = this.getCfnStack();
+			cfnStack.create(this.readTemplate(file), url, parameters, tags, this.step.getTimeoutInMinutes(), this.getStep().getPollInterval(), this.getStep().getRoleArn());
 			return cfnStack.describeOutputs();
 		}
 

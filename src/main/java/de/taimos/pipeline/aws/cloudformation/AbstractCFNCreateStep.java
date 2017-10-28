@@ -126,7 +126,7 @@ abstract class AbstractCFNCreateStep extends AbstractStepImpl {
 	}
 	
 	public Boolean getCreate() {
-		return create;
+		return this.create;
 	}
 	
 	@DataBoundSetter
@@ -135,7 +135,7 @@ abstract class AbstractCFNCreateStep extends AbstractStepImpl {
 	}
 	
 	public String getRoleArn() {
-		return roleArn;
+		return this.roleArn;
 	}
 	
 	@DataBoundSetter
@@ -156,69 +156,69 @@ abstract class AbstractCFNCreateStep extends AbstractStepImpl {
 		protected abstract Object whenStackMissing(Collection<Parameter> parameters, Collection<Tag> tags) throws Exception;
 
 		private String getStack() {
-			return getStep().getStack();
+			return this.getStep().getStack();
 		}
 
 		private String getParamsFile() {
-			return getStep().getParamsFile();
+			return this.getStep().getParamsFile();
 		}
 
 		private String[] getParams() {
-			return getStep().getParams();
+			return this.getStep().getParams();
 		}
 
 		private String[] getKeepParams() {
-			return getStep().getKeepParams();
+			return this.getStep().getKeepParams();
 		}
 
 		private String[] getTags() {
-			return getStep().getTags();
+			return this.getStep().getTags();
 		}
 
 		private String getRoleArn() {
-			return getStep().getRoleArn();
+			return this.getStep().getRoleArn();
 		}
 
 		private Boolean getCreate() {
-			return getStep().getCreate();
+			return this.getStep().getCreate();
 		}
 
 		@Override
 		public boolean start() throws Exception {
 
-			final String stack = getStack();
-			final String roleArn = getRoleArn();
-			final Boolean create = getCreate();
+			final String stack = this.getStack();
+			final String roleArn = this.getRoleArn();
+			final Boolean create = this.getCreate();
 
-			final Collection<Parameter> params = this.parseParamsFile(getParamsFile());
-			params.addAll(this.parseParams(getParams()));
+			final Collection<Parameter> params = this.parseParamsFile(this.getParamsFile());
+			params.addAll(this.parseParams(this.getParams()));
 
-			final Collection<Parameter> keepParams = this.parseKeepParams(getKeepParams());
-			final Collection<Tag> tags = this.parseTags(getTags());
+			final Collection<Parameter> keepParams = this.parseKeepParams(this.getKeepParams());
+			final Collection<Tag> tags = this.parseTags(this.getTags());
 
 			Preconditions.checkArgument(stack != null && !stack.isEmpty(), "Stack must not be null or empty");
 			Preconditions.checkArgument(roleArn == null || IamRoleUtils.validRoleArn(roleArn), "RoleArn must be a valid ARN.");
 
-			checkPreconditions();
+			this.checkPreconditions();
 
 			new Thread(getThreadName()) {
 				@Override
 				public void run() {
 					try {
-						AmazonCloudFormationClient client = AWSClientFactory.create(AmazonCloudFormationClient.class, getEnvVars());
-						CloudFormationStack cfnStack = new CloudFormationStack(client, stack, getListener());
+						AmazonCloudFormationClient client = AWSClientFactory.create(AmazonCloudFormationClient.class, Execution.this.getEnvVars());
+						CloudFormationStack cfnStack = new CloudFormationStack(client, stack, Execution.this.getListener());
 						if (cfnStack.exists()) {
 							ArrayList<Parameter> parameters = new ArrayList<>(params);
 							parameters.addAll(keepParams);
-							getContext().onSuccess(whenStackExists(parameters, tags));
+							Execution.this.getContext().onSuccess(Execution.this.whenStackExists(parameters, tags));
 						} else if (create) {
-							getContext().onSuccess(whenStackMissing(params, tags));
+							Execution.this.getContext().onSuccess(Execution.this.whenStackMissing(params, tags));
 						} else {
-							getListener().getLogger().println("No stack found with the name and skipped creation due to configuration.");
-							getContext().onSuccess(null);
+							Execution.this.getListener().getLogger().println("No stack found with the name and skipped creation due to configuration.");
+							Execution.this.getContext().onSuccess(null);
 						}
 					} catch (Exception e) {
-						getContext().onFailure(e);
+						Execution.this.getContext().onFailure(e);
 					}
 				}
 			}.start();
@@ -243,7 +243,7 @@ abstract class AbstractCFNCreateStep extends AbstractStepImpl {
 				} else {
 					throw new RuntimeException("Invalid file extension for parameter file (supports json/yaml)");
 				}
-				return parser.parseParams(getWorkspace().child(paramsFile).read());
+				return parser.parseParams(this.getWorkspace().child(paramsFile).read());
 			} catch (Exception e) {
 				throw new RuntimeException(e);
 			}
@@ -295,8 +295,8 @@ abstract class AbstractCFNCreateStep extends AbstractStepImpl {
 		}
 
 		protected CloudFormationStack getCfnStack() {
-			AmazonCloudFormationClient client = AWSClientFactory.create(AmazonCloudFormationClient.class, getEnvVars());
-			return new CloudFormationStack(client, getStep().getStack(), getListener());
+			AmazonCloudFormationClient client = AWSClientFactory.create(AmazonCloudFormationClient.class, this.getEnvVars());
+			return new CloudFormationStack(client, this.getStack(), this.getListener());
 		}
 
 		protected String readTemplate(String file) {
@@ -304,7 +304,7 @@ abstract class AbstractCFNCreateStep extends AbstractStepImpl {
 				return null;
 			}
 
-			FilePath child = getWorkspace().child(file);
+			FilePath child = this.getWorkspace().child(file);
 			try {
 				return child.readToString();
 			} catch (Exception e) {
