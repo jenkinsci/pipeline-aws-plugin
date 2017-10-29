@@ -18,6 +18,8 @@ This plugins adds Jenkins pipeline steps to interact with the AWS API.
 * [cfnDelete](#cfndelete)
 * [cfnDescribe](#cfndescribe)
 * [cfnExports](#cfnexports)
+* [cfnCreateChangeSet](#cfncreatechangeset)
+* [cfnExecuteChangeSet](#cfnexecutechangeset)
 * [snsPublish](#snspublish)
 * [deployAPI](#deployapi)
 * [awaitDeploymentCompletion](#awaitdeploymentcompletion)
@@ -268,6 +270,54 @@ The step returns the global CloudFormation exports as map.
 def globalExports = cfnExports()
 ```
 
+## cfnCreateChangeSet
+
+Create a change set to update the given CloudFormation stack using the given template from the workspace.
+You can specify an optional list of parameters.
+You can also specify a list of `keepParams` of parameters which will use the previous value on stack updates.
+
+If you have many parameters you can specify a `paramsFile` containing the parameters. The format is either a standard
+JSON file like with the cli or a YAML file for the [cfn-params](https://www.npmjs.com/package/cfn-params) command line utility.
+
+Additionally you can specify a list of tags that are set on the stack and all resources created by CloudFormation.
+The step returns the outputs of the stack as a map.
+
+To prevent running into rate limiting on the AWS API you can change the default polling interval of 1000 ms using the parameter `pollIntervall`. Using the value `0` disables event printing.
+
+```
+cfnCreateChangeSet(stack:'my-stack', changeSet:'my-change-set', file:'template.yaml', params:['InstanceType=t2.nano'], keepParams:['Version'], tags:['TagName=Value'], pollInterval:1000)
+```
+
+Alternatively, you can specify a URL to a template on S3 (you'll need this if you hit the 51200 byte limit on template):
+
+```
+cfnCreateChangeSet(stack:'my-stack', changeSet:'my-change-set', url:'https://s3.amazonaws.com/my-templates-bucket/template.yaml')
+```
+
+By default the `cfnCreateChangeSet` step creates a change set for creating a new stack if the specified stack does not exist, this behaviour can be overridden by passing `create: 'false'` as parameter :
+```
+cfnCreateChangeSet(stack:'my-stack', changeSet:'my-change-set', url:'https://s3.amazonaws.com/my-templates-bucket/template.yaml', create: 'false')
+```
+In above example if `my-stack` already exists, a change set stack with change set will be created, and if it doesnt exist no actions would be performed.
+
+
+In a case where CloudFormation needs to use a different IAM Role for creating or updating the stack than the one currently in effect, you can pass the complete Role ARN to be used as `roleArn` parameter. i.e:
+```
+cfnCreateChangeSet(stack:'my-stack', changeSet:'my-change-set', url:'https://s3.amazonaws.com/my-templates-bucket/template.yaml', roleArn: 'arn:aws:iam::123456789012:role/S3Access')
+```
+
+Note: When creating a change set for a non-existing stack, either `file` or `url` are required. When updating it, omitting both parameters will keep the stack's current template.
+
+## cfnExecuteChangeSet
+
+Execute a previously created change set to create or update a CloudFormation stack. All the necessary information, like parameters and tags, were provided earlier when the change set was created.
+
+To prevent running into rate limiting on the AWS API you can change the default polling interval of 1000 ms using the parameter `pollIntervall`. Using the value `0` disables event printing.
+
+```
+def outputs = cfnExecuteChangeSet(stack:'my-stack', changeSet:'my-change-set', pollInterval:1000)
+```
+
 ## snsPublish
 
 Publishes a message to SNS.
@@ -369,6 +419,8 @@ def result = invokeLambda(
 
 ## 1.17 (master)
 * Add policy for withAWS support - allows an additional policy to be combined with the policy associated with the assumed role. 
+* add `cfnCreateChangeSet` step
+* add `cfnExecuteChangeSet` step
 
 ## 1.16
 * Add federatedUserId for withAWS support - generates temporary aws credentials for federated user which gets logged in CloudTrail 

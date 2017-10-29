@@ -28,16 +28,17 @@ import java.util.Date;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 
+import com.amazonaws.services.cloudformation.model.AmazonCloudFormationException;
+import com.amazonaws.services.cloudformation.model.DescribeChangeSetRequest;
+import com.amazonaws.services.cloudformation.model.DescribeStackEventsRequest;
+import com.amazonaws.services.cloudformation.model.DescribeStackEventsResult;
+import com.amazonaws.services.cloudformation.model.DescribeStacksRequest;
+import com.amazonaws.services.cloudformation.model.StackEvent;
 import org.apache.commons.lang.StringUtils;
 import org.apache.http.concurrent.BasicFuture;
 
 import com.amazonaws.AmazonWebServiceRequest;
 import com.amazonaws.services.cloudformation.AmazonCloudFormationClient;
-import com.amazonaws.services.cloudformation.model.AmazonCloudFormationException;
-import com.amazonaws.services.cloudformation.model.DescribeStackEventsRequest;
-import com.amazonaws.services.cloudformation.model.DescribeStackEventsResult;
-import com.amazonaws.services.cloudformation.model.DescribeStacksRequest;
-import com.amazonaws.services.cloudformation.model.StackEvent;
 import com.amazonaws.waiters.Waiter;
 import com.amazonaws.waiters.WaiterHandler;
 import com.amazonaws.waiters.WaiterParameters;
@@ -53,10 +54,28 @@ public class EventPrinter {
 		this.client = client;
 		this.listener = listener;
 	}
-	
+
+	public void waitAndPrintChangeSetEvents(String stack, String changeSet, Waiter<DescribeChangeSetRequest> waiter, long pollIntervalMillis) throws ExecutionException {
+
+		final BasicFuture<AmazonWebServiceRequest> waitResult = new BasicFuture<>(null);
+
+		waiter.runAsync(new WaiterParameters<>(new DescribeChangeSetRequest().withStackName(stack).withChangeSetName(changeSet)), new WaiterHandler() {
+			@Override
+			public void onWaitSuccess(AmazonWebServiceRequest request) {
+				waitResult.completed(request);
+			}
+
+			@Override
+			public void onWaitFailure(Exception e) {
+				waitResult.failed(e);
+			}
+		});
+
+		waitAndPrintEvents(stack, pollIntervalMillis, waitResult);
+	}
+
 	public void waitAndPrintStackEvents(String stack, Waiter<DescribeStacksRequest> waiter, long pollIntervalMillis) throws ExecutionException {
-		Date startDate = new Date();
-		
+
 		final BasicFuture<AmazonWebServiceRequest> waitResult = new BasicFuture<>(null);
 		
 		waiter.runAsync(new WaiterParameters<>(new DescribeStacksRequest().withStackName(stack)), new WaiterHandler() {
@@ -70,14 +89,20 @@ public class EventPrinter {
 				waitResult.failed(e);
 			}
 		});
-		
+
+		waitAndPrintEvents(stack, pollIntervalMillis, waitResult);
+	}
+
+	private void waitAndPrintEvents(String stack, long pollIntervalMillis, BasicFuture<AmazonWebServiceRequest> waitResult) throws ExecutionException {
+		Date startDate = new Date();
+
 		String lastEventId = null;
 		this.printLine();
 		this.printStackName(stack);
 		this.printLine();
-		
+
 		SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
-		
+
 		if (pollIntervalMillis > 0) {
 			while (!waitResult.isDone()) {
 				try {
@@ -107,14 +132,14 @@ public class EventPrinter {
 				}
 			}
 		}
-		
+
 		try {
 			waitResult.get();
 		} catch (InterruptedException e) {
 			this.listener.getLogger().format("Failed to wait for CFN action to complete: %s", e.getMessage());
 		}
 	}
-	
+
 	private void printEvent(SimpleDateFormat sdf, StackEvent event) {
 		String time = this.padRight(sdf.format(event.getTimestamp()), 25);
 		String logicalResourceId = this.padRight(event.getLogicalResourceId(), 20);

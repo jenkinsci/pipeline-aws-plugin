@@ -21,8 +21,10 @@
 
 package de.taimos.pipeline.aws.cloudformation;
 
+import com.amazonaws.services.cloudformation.model.ChangeSetType;
 import com.amazonaws.services.cloudformation.model.Parameter;
 import com.amazonaws.services.cloudformation.model.Tag;
+import com.google.common.base.Preconditions;
 import hudson.EnvVars;
 import hudson.Extension;
 import hudson.FilePath;
@@ -30,27 +32,22 @@ import hudson.model.TaskListener;
 import org.jenkinsci.plugins.workflow.steps.AbstractStepDescriptorImpl;
 import org.jenkinsci.plugins.workflow.steps.StepContextParameter;
 import org.kohsuke.stapler.DataBoundConstructor;
-import org.kohsuke.stapler.DataBoundSetter;
 
 import javax.inject.Inject;
 import java.util.Collection;
 
-public class CFNUpdateStep extends AbstractCFNCreateStep {
-	
-	private Integer timeoutInMinutes;
+public class CFNCreateChangeSetStep extends AbstractCFNCreateStep {
+
+	private final String changeSet;
 
 	@DataBoundConstructor
-	public CFNUpdateStep(String stack) {
+	public CFNCreateChangeSetStep(String changeSet, String stack) {
 		super(stack);
+		this.changeSet = changeSet;
 	}
 
-	public Integer getTimeoutInMinutes() {
-		return this.timeoutInMinutes;
-	}
-	
-	@DataBoundSetter
-	public void setTimeoutInMinutes(Integer timeoutInMinutes) {
-		this.timeoutInMinutes = timeoutInMinutes;
+	public String getChangeSet() {
+		return this.changeSet;
 	}
 
 	@Extension
@@ -62,19 +59,19 @@ public class CFNUpdateStep extends AbstractCFNCreateStep {
 		
 		@Override
 		public String getFunctionName() {
-			return "cfnUpdate";
+			return "cfnCreateChangeSet";
 		}
 		
 		@Override
 		public String getDisplayName() {
-			return "Create or Update CloudFormation stack";
+			return "Create CloudFormation change set";
 		}
 	}
-
+	
 	public static class Execution extends AbstractCFNCreateStep.Execution {
 		
 		@Inject
-		private transient CFNUpdateStep step;
+		private transient CFNCreateChangeSetStep step;
 		@StepContextParameter
 		private transient EnvVars envVars;
 		@StepContextParameter
@@ -103,29 +100,32 @@ public class CFNUpdateStep extends AbstractCFNCreateStep {
 		}
 
 		@Override
-		public void checkPreconditions() {}
+		public void checkPreconditions() {
+			final String changeSet = this.step.getChangeSet();
+			Preconditions.checkArgument(changeSet != null && !changeSet.isEmpty(), "Change Set must not be null or empty");
+		}
 
 		@Override
 		public String getThreadName() {
-			return "cfnUpdate-" + this.step.getStack();
+			return "cfnCreateChangeSet-" + this.step.getChangeSet();
 		}
 
 		@Override
 		public Object whenStackExists(Collection<Parameter> parameters, Collection<Tag> tags) throws Exception {
-			final String file = this.getStep().getFile();
-			final String url = this.getStep().getUrl();
-			CloudFormationStack cfnStack = this.getCfnStack();
-			cfnStack.update(this.readTemplate(file), url, parameters, tags, this.getStep().getPollInterval(), this.getStep().getRoleArn());
-			return cfnStack.describeOutputs();
+			final String changeSet = this.step.getChangeSet();
+			final String file = this.step.getFile();
+			final String url = this.step.getUrl();
+			this.getCfnStack().createChangeSet(changeSet, this.readTemplate(file), url, parameters, tags, this.getStep().getPollInterval(), ChangeSetType.UPDATE, this.getStep().getRoleArn());
+			return null;
 		}
 
 		@Override
 		public Object whenStackMissing(Collection<Parameter> parameters, Collection<Tag> tags) throws Exception {
-			final String file = this.getStep().getFile();
-			final String url = this.getStep().getUrl();
-			CloudFormationStack cfnStack = this.getCfnStack();
-			cfnStack.create(this.readTemplate(file), url, parameters, tags, this.step.getTimeoutInMinutes(), this.getStep().getPollInterval(), this.getStep().getRoleArn());
-			return cfnStack.describeOutputs();
+			final String changeSet = this.step.getChangeSet();
+			final String file = this.step.getFile();
+			final String url = this.step.getUrl();
+			this.getCfnStack().createChangeSet(changeSet, this.readTemplate(file), url, parameters, tags, this.getStep().getPollInterval(), ChangeSetType.CREATE, this.getStep().getRoleArn());
+			return null;
 		}
 
 		private static final long serialVersionUID = 1L;
