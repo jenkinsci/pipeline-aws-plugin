@@ -29,20 +29,20 @@ import org.junit.Test;
 public class S3DownloadStepTest {
 	@Test
 	public void gettersWorkAsExpected() throws Exception {
-		S3DownloadStep step = new S3DownloadStep( "my-file", "my-bucket" );
+		S3DownloadStep step = new S3DownloadStep( "my-file", "my-bucket" , false, false);
 		Assert.assertEquals( "my-file", step.getFile() );
 		Assert.assertEquals( "my-bucket", step.getBucket() );
 	}
 
 	@Test
 	public void defaultPathIsEmpty() throws Exception {
-		S3DownloadStep step = new S3DownloadStep( "my-file", "my-bucket" );
+		S3DownloadStep step = new S3DownloadStep( "my-file", "my-bucket" , false, false);
 		Assert.assertEquals( "", step.getPath() );
 	}
 
 	@Test
 	public void defaultForceIsFalse() throws Exception {
-		S3DownloadStep step = new S3DownloadStep( "my-file", "my-bucket" );
+		S3DownloadStep step = new S3DownloadStep( "my-file", "my-bucket" , false, false);
 		Assert.assertFalse( step.isForce() );
 	}
 }

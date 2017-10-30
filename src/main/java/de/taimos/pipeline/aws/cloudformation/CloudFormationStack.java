@@ -21,6 +21,12 @@
 
 package de.taimos.pipeline.aws.cloudformation;
 
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.ExecutionException;
+
+import com.amazonaws.services.cloudformation.AmazonCloudFormation;
 import com.amazonaws.services.cloudformation.AmazonCloudFormationClient;
 import com.amazonaws.services.cloudformation.model.AmazonCloudFormationException;
 import com.amazonaws.services.cloudformation.model.Capability;
@@ -47,17 +53,17 @@ import java.util.Map;
 import java.util.concurrent.ExecutionException;
 
 public class CloudFormationStack {
-	
-	private final AmazonCloudFormationClient client;
+
+	private final AmazonCloudFormation client;
 	private final String stack;
 	private final TaskListener listener;
-	
-	public CloudFormationStack(AmazonCloudFormationClient client, String stack, TaskListener listener) {
+
+	public CloudFormationStack(AmazonCloudFormation client, String stack, TaskListener listener) {
 		this.client = client;
 		this.stack = stack;
 		this.listener = listener;
 	}
-	
+
 	public boolean exists() {
 		try {
 			DescribeStacksResult result = this.client.describeStacks(new DescribeStacksRequest().withStackName(this.stack));
@@ -70,7 +76,6 @@ public class CloudFormationStack {
 			return false;
 		}
 	}
-
 	public boolean changeSetExists(String changeSetName) {
 		try {
 			this.client.describeChangeSet(new DescribeChangeSetRequest().withStackName(this.stack).withChangeSetName(changeSetName));
@@ -88,7 +93,6 @@ public class CloudFormationStack {
 		DescribeChangeSetResult result = this.client.describeChangeSet(new DescribeChangeSetRequest().withStackName(this.stack).withChangeSetName(changeSetName));
 		return !result.getChanges().isEmpty();
 	}
-
 	public Map<String, String> describeOutputs() {
 		DescribeStacksResult result = this.client.describeStacks(new DescribeStacksRequest().withStackName(this.stack));
 		Stack cfnStack = result.getStacks().get(0);
@@ -98,25 +102,25 @@ public class CloudFormationStack {
 		}
 		return map;
 	}
-	
+
 	public void create(String templateBody, String templateUrl, Collection<Parameter> params, Collection<Tag> tags, Integer timeoutInMinutes, long pollIntervallMillis, String roleArn) throws ExecutionException {
 		if ((templateBody == null || templateBody.isEmpty()) && (templateUrl == null || templateUrl.isEmpty())) {
 			throw new IllegalArgumentException("Either a file or url for the template must be specified");
 		}
-		
+
 		CreateStackRequest req = new CreateStackRequest();
 		req.withStackName(this.stack).withCapabilities(Capability.CAPABILITY_IAM, Capability.CAPABILITY_NAMED_IAM);
 		req.withTemplateBody(templateBody).withTemplateURL(templateUrl).withParameters(params).withTags(tags).withTimeoutInMinutes(timeoutInMinutes).withRoleARN(roleArn);
 		this.client.createStack(req);
-		
+
 		new EventPrinter(this.client, this.listener).waitAndPrintStackEvents(this.stack, this.client.waiters().stackCreateComplete(), pollIntervallMillis);
 	}
-	
+
 	public void update(String templateBody, String templateUrl, Collection<Parameter> params, Collection<Tag> tags, long pollIntervallMillis, String roleArn) throws ExecutionException {
 		try {
 			UpdateStackRequest req = new UpdateStackRequest();
 			req.withStackName(this.stack).withCapabilities(Capability.CAPABILITY_IAM, Capability.CAPABILITY_NAMED_IAM);
-			
+
 			if (templateBody != null && !templateBody.isEmpty()) {
 				req.setTemplateBody(templateBody);
 			} else if (templateUrl != null && !templateUrl.isEmpty()) {
@@ -124,11 +128,11 @@ public class CloudFormationStack {
 			} else {
 				req.setUsePreviousTemplate(true);
 			}
-			
+
 			req.withParameters(params).withTags(tags).withRoleARN(roleArn);
-			
+
 			this.client.updateStack(req);
-			
+
 			new EventPrinter(this.client, this.listener).waitAndPrintStackEvents(this.stack, this.client.waiters().stackUpdateComplete(), pollIntervallMillis);
 
 			this.listener.getLogger().format("Updated CloudFormation stack %s %n", stack);
@@ -142,7 +146,6 @@ public class CloudFormationStack {
 			throw e;
 		}
 	}
-
 	public void createChangeSet(String changeSetName, String templateBody, String templateUrl, Collection<Parameter> params, Collection<Tag> tags, long pollIntervallMillis, ChangeSetType changeSetType, String roleArn) throws ExecutionException {
 		try {
 			CreateChangeSetRequest req = new CreateChangeSetRequest();
@@ -204,7 +207,6 @@ public class CloudFormationStack {
 			this.listener.getLogger().format("Executed change set %s for stack %s %n", changeSetName, this.stack);
 		}
 	}
-
 	public void delete(long pollIntervallMillis) throws ExecutionException {
 		this.client.deleteStack(new DeleteStackRequest().withStackName(this.stack));
 		new EventPrinter(this.client, this.listener).waitAndPrintStackEvents(this.stack, this.client.waiters().stackDeleteComplete(), pollIntervallMillis);

@@ -21,16 +21,16 @@
 
 package de.taimos.pipeline.aws;
 
-import java.util.Collection;
-
+import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import org.junit.Assert;
 import org.junit.Test;
 
-public class S3DeleteStepTest {
+public class AbstractS3StepTest {
 	@Test
 	public void gettersWorkAsExpected() throws Exception {
-		S3DeleteStep step = new S3DeleteStep( "my-bucket", "my-path" , false, false);
-		Assert.assertEquals( "my-bucket", step.getBucket() );
-		Assert.assertEquals( "my-path", step.getPath() );
+		S3DeleteStep step = new S3DeleteStep( "my-bucket", "my-path" , true, true);
+		final AmazonS3ClientBuilder amazonS3ClientBuilder = step.createAmazonS3ClientBuilder();
+		Assert.assertEquals( true, amazonS3ClientBuilder.isPathStyleAccessEnabled() );
+		Assert.assertEquals( true, amazonS3ClientBuilder.isPayloadSigningEnabled() );
 	}
 }

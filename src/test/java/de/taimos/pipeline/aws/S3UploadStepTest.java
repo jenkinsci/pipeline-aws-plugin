@@ -28,7 +28,7 @@ import org.junit.Test;
 public class S3UploadStepTest {
 	@Test
 	public void gettersWorkAsExpectedForFileCase() throws Exception {
-		S3UploadStep step = new S3UploadStep( "my-bucket" );
+		S3UploadStep step = new S3UploadStep( "my-bucket" , false, false);
 		step.setFile( "my-file" );
 		step.setAcl(CannedAccessControlList.PublicRead);
 		step.setCacheControl("my-cachecontrol");
@@ -38,10 +38,10 @@ public class S3UploadStepTest {
 		Assert.assertEquals( "my-cachecontrol", step.getCacheControl() );
 
 	}
-	
+
 	@Test
 	public void gettersWorkAsExpectedForPatternCase() throws Exception {
-		S3UploadStep step = new S3UploadStep( "my-bucket" );
+		S3UploadStep step = new S3UploadStep( "my-bucket", false, false);
 		step.setIncludePathPattern( "**" );
 		step.setExcludePathPattern( "**/*.svg" );
 		step.setWorkingDir( "dist" );
@@ -53,7 +53,7 @@ public class S3UploadStepTest {
 
 	@Test
 	public void defaultPathIsEmpty() throws Exception {
-		S3UploadStep step = new S3UploadStep( "my-bucket" );
+		S3UploadStep step = new S3UploadStep( "my-bucket", false, false );
 		step.setFile( "my-file" );
 		Assert.assertEquals( "", step.getPath() );
 	}

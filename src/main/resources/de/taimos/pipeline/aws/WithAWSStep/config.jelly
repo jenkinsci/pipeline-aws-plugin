@@ -3,6 +3,9 @@
 	<f:entry title="${%Region}" field="region">
 		<f:textbox />
 	</f:entry>
+	<f:entry title="${%Endpoint URL}" field="endpointUrl">
+		<f:textbox />
+	</f:entry>
 	<f:entry title="${%Credentials}" field="credentials">
 		<c:select />
 	</f:entry>

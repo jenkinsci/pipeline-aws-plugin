@@ -29,6 +29,8 @@ import java.util.Map;
 import javax.annotation.Nonnull;
 import javax.inject.Inject;
 
+import com.amazonaws.services.organizations.AWSOrganizations;
+import com.amazonaws.services.organizations.AWSOrganizationsClientBuilder;
 import org.jenkinsci.plugins.workflow.steps.AbstractStepDescriptorImpl;
 import org.jenkinsci.plugins.workflow.steps.AbstractStepExecutionImpl;
 import org.jenkinsci.plugins.workflow.steps.AbstractStepImpl;
@@ -46,49 +48,49 @@ import hudson.Extension;
 import hudson.model.TaskListener;
 
 public class ListAWSAccountsStep extends AbstractStepImpl {
-	
+
 	@DataBoundConstructor
 	public ListAWSAccountsStep() {
 		//
 	}
-	
+
 	@Extension
 	public static class DescriptorImpl extends AbstractStepDescriptorImpl {
-		
+
 		public DescriptorImpl() {
 			super(Execution.class);
 		}
-		
+
 		@Override
 		public String getFunctionName() {
 			return "listAWSAccounts";
 		}
-		
+
 		@Override
 		public String getDisplayName() {
 			return "List all AWS accounts of the organization";
 		}
 	}
-	
+
 	public static class Execution extends AbstractStepExecutionImpl {
-		
+
 		@Inject
 		private transient ListAWSAccountsStep step;
 		@StepContextParameter
 		private transient EnvVars envVars;
 		@StepContextParameter
 		private transient TaskListener listener;
-		
+
 		@Override
 		public boolean start() throws Exception {
 			this.listener.getLogger().format("Getting AWS accounts %n");
-			
+
 			new Thread("listAWSAccounts") {
 				@Override
 				public void run() {
-					AWSOrganizationsClient client = AWSClientFactory.create(AWSOrganizationsClient.class, Execution.this.envVars);
+					AWSOrganizations client = AWSClientFactory.create(AWSOrganizationsClientBuilder.standard(), Execution.this.envVars);
 					ListAccountsResult exports = client.listAccounts(new ListAccountsRequest());
-					
+
 					List<Map<String, String>> accounts = new ArrayList<>();
 					for (Account account : exports.getAccounts()) {
 						Map<String, String> awsAccount = new HashMap<>();
@@ -99,7 +101,7 @@ public class ListAWSAccountsStep extends AbstractStepImpl {
 						awsAccount.put("status", account.getStatus());
 						accounts.add(awsAccount);
 					}
-					
+
 					try {
 						Execution.this.getContext().onSuccess(accounts);
 					} catch (AmazonCloudFormationException e) {
@@ -109,22 +111,22 @@ public class ListAWSAccountsStep extends AbstractStepImpl {
 			}.start();
 			return false;
 		}
-		
+
 		@Override
 		public void stop(@Nonnull Throwable cause) throws Exception {
 			//
 		}
-		
+
 		private static final long serialVersionUID = 1L;
-		
+
 	}
-	
+
 	public static class SafeNameCreator {
-		
+
 		public static String createSafeName(String name) {
 			return name.replaceAll("[^A-Za-z0-9-]", "-").replaceAll("-+", "-").toLowerCase();
 		}
-		
+
 	}
-	
+
 }

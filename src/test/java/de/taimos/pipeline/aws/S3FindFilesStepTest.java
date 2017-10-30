@@ -33,19 +33,19 @@ import com.amazonaws.services.s3.model.S3ObjectSummary;
 public class S3FindFilesStepTest {
 	@Test
 	public void gettersWorkAsExpected() throws Exception {
-		S3FindFilesStep step = new S3FindFilesStep( "my-bucket" );
+		S3FindFilesStep step = new S3FindFilesStep( "my-bucket" , false, false);
 		Assert.assertEquals( "my-bucket", step.getBucket() );
 	}
 
 	@Test
 	public void defaultPathIsEmpty() throws Exception {
-		S3FindFilesStep step = new S3FindFilesStep( "my-bucket" );
+		S3FindFilesStep step = new S3FindFilesStep( "my-bucket" , false, false);
 		Assert.assertEquals( "", step.getPath() );
 	}
 
 	@Test
 	public void pathCanBeSet() throws Exception {
-		S3FindFilesStep step = new S3FindFilesStep( "my-bucket" );
+		S3FindFilesStep step = new S3FindFilesStep( "my-bucket" , false, false);
 		step.setPath( "path1" );
 		Assert.assertEquals( "path1", step.getPath() );
 		step.setPath( "path2" );
@@ -54,13 +54,13 @@ public class S3FindFilesStepTest {
 
 	@Test
 	public void defaultGlobIsEmpty() throws Exception {
-		S3FindFilesStep step = new S3FindFilesStep( "my-bucket" );
+		S3FindFilesStep step = new S3FindFilesStep( "my-bucket" , false, false);
 		Assert.assertEquals( "", step.getGlob() );
 	}
 
 	@Test
 	public void globCanBeSet() throws Exception {
-		S3FindFilesStep step = new S3FindFilesStep( "my-bucket" );
+		S3FindFilesStep step = new S3FindFilesStep( "my-bucket", false, false );
 		step.setGlob( "glob1" );
 		Assert.assertEquals( "glob1", step.getGlob() );
 		step.setGlob( "glob2" );
@@ -69,13 +69,13 @@ public class S3FindFilesStepTest {
 
 	@Test
 	public void defaultOnlyFilesIsFalse() throws Exception {
-		S3FindFilesStep step = new S3FindFilesStep( "my-bucket" );
+		S3FindFilesStep step = new S3FindFilesStep( "my-bucket" , false, false);
 		Assert.assertFalse( step.isOnlyFiles() );
 	}
 
 	@Test
 	public void onlyFilesCanBeSet() throws Exception {
-		S3FindFilesStep step = new S3FindFilesStep( "my-bucket" );
+		S3FindFilesStep step = new S3FindFilesStep( "my-bucket" , false, false);
 		step.setOnlyFiles( true );
 		Assert.assertTrue( step.isOnlyFiles() );
 		step.setOnlyFiles( false );
