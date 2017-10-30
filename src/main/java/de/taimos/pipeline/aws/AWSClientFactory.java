@@ -50,6 +50,10 @@ public class AWSClientFactory {
     }
 
     public static <B extends AwsSyncClientBuilder<?, T>, T> T create(B clientBuilder, EnvVars vars) {
+        return configureBuilder(clientBuilder, vars).build();
+    }
+
+    public static <B extends AwsSyncClientBuilder<?, ?>> B configureBuilder(final B clientBuilder, final EnvVars vars) {
         if (StringUtils.isNotBlank(vars.get(AWS_ENDPOINT_URL))) {
             clientBuilder.setEndpointConfiguration(new AwsClientBuilder.EndpointConfiguration(vars.get(AWS_ENDPOINT_URL), vars.get(AWS_REGION)));
         } else {
@@ -57,7 +61,7 @@ public class AWSClientFactory {
         }
         clientBuilder.setCredentials(AWSClientFactory.getCredentials(vars));
         clientBuilder.setClientConfiguration(AWSClientFactory.getClientConfiguration(vars));
-        return clientBuilder.build();
+        return clientBuilder;
     }
 
     private static ClientConfiguration getClientConfiguration(EnvVars vars) {

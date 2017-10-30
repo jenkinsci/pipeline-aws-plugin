@@ -21,88 +21,42 @@
 
 package de.taimos.pipeline.aws;
 
-import com.amazonaws.event.ProgressEvent;
-import com.amazonaws.event.ProgressEventType;
-import com.amazonaws.event.ProgressListener;
-import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3ClientBuilder;
-import com.amazonaws.services.s3.Headers;
-import com.amazonaws.services.s3.model.CannedAccessControlList;
-import com.amazonaws.services.s3.model.ObjectMetadata;
-import com.amazonaws.services.s3.model.PutObjectRequest;
-import com.amazonaws.services.s3.transfer.MultipleFileUpload;
-import com.amazonaws.services.s3.transfer.ObjectMetadataProvider;
-import com.amazonaws.services.s3.transfer.TransferManager;
-import com.amazonaws.services.s3.transfer.Upload;
-import com.google.common.base.Preconditions;
-import hudson.EnvVars;
-import hudson.Extension;
-import hudson.FilePath;
-import hudson.model.TaskListener;
-import hudson.remoting.VirtualChannel;
-import org.jenkinsci.plugins.workflow.steps.AbstractStepDescriptorImpl;
-import org.jenkinsci.plugins.workflow.steps.AbstractStepExecutionImpl;
 import org.jenkinsci.plugins.workflow.steps.AbstractStepImpl;
-import org.jenkinsci.plugins.workflow.steps.StepContextParameter;
-import org.jenkinsci.remoting.RoleChecker;
-import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
-
-import javax.annotation.Nonnull;
-import javax.inject.Inject;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 
 public class AbstractS3Step extends AbstractStepImpl {
 
-	boolean pathStyleAccessEnabled = false;
-	boolean payloadSigningEnabled = false;
+    protected boolean pathStyleAccessEnabled = false;
+    protected boolean payloadSigningEnabled = false;
 
-	public boolean isPathStyleAccessEnabled() {
-		return pathStyleAccessEnabled;
-	}
+    protected AbstractS3Step(final boolean pathStyleAccessEnabled, final boolean payloadSigningEnabled) {
+        this.pathStyleAccessEnabled = pathStyleAccessEnabled;
+        this.payloadSigningEnabled = payloadSigningEnabled;
+    }
 
-	@DataBoundSetter
-	public void setPathStyleAccessEnabled(final boolean pathStyleAccessEnabled) {
-		this.pathStyleAccessEnabled = pathStyleAccessEnabled;
-	}
+    public boolean isPathStyleAccessEnabled() {
+        return pathStyleAccessEnabled;
+    }
 
-	public boolean isPayloadSigningEnabled() {
-		return payloadSigningEnabled;
-	}
+    @DataBoundSetter
+    public void setPathStyleAccessEnabled(final boolean pathStyleAccessEnabled) {
+        this.pathStyleAccessEnabled = pathStyleAccessEnabled;
+    }
 
-	@DataBoundSetter
-	public void setPayloadSigningEnabled(final boolean payloadSigningEnabled) {
-		this.payloadSigningEnabled = payloadSigningEnabled;
-	}
+    public boolean isPayloadSigningEnabled() {
+        return payloadSigningEnabled;
+    }
 
-	protected AmazonS3ClientBuilder createAmazonS3ClientBuilder() {
-		final boolean pathStyleAccessEnabled = this.isPathStyleAccessEnabled();
-		final boolean payloadSigningEnabled = this.isPayloadSigningEnabled();
-		return AmazonS3ClientBuilder.standard()
-				.withPathStyleAccessEnabled(pathStyleAccessEnabled)
-				.withPayloadSigningEnabled(payloadSigningEnabled);
+    @DataBoundSetter
+    public void setPayloadSigningEnabled(final boolean payloadSigningEnabled) {
+        this.payloadSigningEnabled = payloadSigningEnabled;
+    }
 
-	}
+    protected AmazonS3ClientBuilder createAmazonS3ClientBuilder() {
+        return AmazonS3ClientBuilder.standard()
+                .withPathStyleAccessEnabled(this.isPathStyleAccessEnabled())
+                .withPayloadSigningEnabled(this.isPayloadSigningEnabled());
+    }
 
-	public abstract static class AbstractS3StepExecution<S extends AbstractS3Step> extends AbstractStepExecutionImpl {
-
-		protected static final long serialVersionUID = 1L;
-		@Inject
-		protected transient S step;
-		@StepContextParameter
-		protected transient EnvVars envVars;
-		@StepContextParameter
-		protected transient FilePath workspace;
-		@StepContextParameter
-		protected transient TaskListener listener;
-
-	}
 }

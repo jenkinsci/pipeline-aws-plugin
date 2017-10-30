@@ -62,7 +62,8 @@ public class S3DeleteStep extends AbstractS3Step {
 	private final String path;
 
 	@DataBoundConstructor
-	public S3DeleteStep(String bucket, String path) {
+	public S3DeleteStep(String bucket, String path, boolean pathStyleAccessEnabled, boolean payloadSigningEnabled) {
+		super(pathStyleAccessEnabled, payloadSigningEnabled);
 		this.bucket = bucket;
 		this.path = path;
 	}
@@ -93,7 +94,17 @@ public class S3DeleteStep extends AbstractS3Step {
 		}
 	}
 
-	public static class Execution extends AbstractS3StepExecution<S3DeleteStep> {
+	public static class Execution extends AbstractStepExecutionImpl {
+
+		protected static final long serialVersionUID = 1L;
+		@Inject
+		protected transient S3DeleteStep step;
+		@StepContextParameter
+		protected transient EnvVars envVars;
+		@StepContextParameter
+		protected transient FilePath workspace;
+		@StepContextParameter
+		protected transient TaskListener listener;
 
 		@Override
 		public boolean start() throws Exception {
@@ -188,8 +199,6 @@ public class S3DeleteStep extends AbstractS3Step {
 		public void stop(@Nonnull Throwable cause) throws Exception {
 			//
 		}
-
-		private static final long serialVersionUID = 1L;
 
 	}
 }

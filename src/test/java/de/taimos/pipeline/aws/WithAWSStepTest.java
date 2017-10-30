@@ -26,6 +26,7 @@ import java.util.List;
 import com.amazonaws.regions.Regions;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3Client;
+import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import hudson.EnvVars;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
@@ -86,27 +87,9 @@ public class WithAWSStepTest {
         final EnvVars envVars = new EnvVars();
         envVars.put(AWSClientFactory.AWS_ENDPOINT_URL, "https://minio.mycompany.com");
         envVars.put(AWSClientFactory.AWS_REGION, Regions.DEFAULT_REGION.getName());
-        final AmazonS3Client amazonS3Client = (AmazonS3Client) AWSClientFactory.create(AmazonS3ClientBuilder.builder(), envVars);
+        final AmazonS3ClientBuilder amazonS3ClientBuilder = AWSClientFactory.configureBuilder(AmazonS3ClientBuilder.standard(), envVars);
+        Assert.assertEquals( "https://minio.mycompany.com", amazonS3ClientBuilder.getEndpoint().getServiceEndpoint() );
 
-        String globalCredentialsId = "global-aws-creds";
-
-        List<String> credentialIds = new ArrayList<>();
-        credentialIds.add(globalCredentialsId);
-
-        StandardUsernamePasswordCredentials key = new UsernamePasswordCredentialsImpl(CredentialsScope.GLOBAL,
-                globalCredentialsId, "test-global-creds", "global-aws-access-key-id", "global-aws-secret-access-key");
-        SystemCredentialsProvider.getInstance().getCredentials().add(key);
-        SystemCredentialsProvider.getInstance().save();
-
-        WorkflowJob job = jenkinsRule.jenkins.createProject(WorkflowJob.class, "testStepWithGlobalCredentials");
-        job.setDefinition(new CpsFlowDefinition(""
-                + "node {\n"
-                + "  withAWS (credentials: '" + globalCredentialsId + "') {\n"
-                + "    echo 'It works!'\n"
-                + "  }\n"
-                + "}\n", true)
-        );
-        jenkinsRule.assertBuildStatusSuccess(job.scheduleBuild2(0));
     }
 
     @Test

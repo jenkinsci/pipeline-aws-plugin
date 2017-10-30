@@ -86,7 +86,8 @@ public class S3FindFilesStep extends AbstractS3Step {
 	private boolean onlyFiles = false;
 
 	@DataBoundConstructor
-	public S3FindFilesStep(String bucket) {
+	public S3FindFilesStep(String bucket, boolean pathStyleAccessEnabled, boolean payloadSigningEnabled) {
+		super(pathStyleAccessEnabled, payloadSigningEnabled);
 		this.bucket = bucket;
 	}
 

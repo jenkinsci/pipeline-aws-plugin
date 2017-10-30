@@ -62,7 +62,8 @@ public class S3DownloadStep extends AbstractS3Step {
 	private boolean force = false;
 
 	@DataBoundConstructor
-	public S3DownloadStep(String file, String bucket) {
+	public S3DownloadStep(String file, String bucket, boolean pathStyleAccessEnabled, boolean payloadSigningEnabled) {
+		super(pathStyleAccessEnabled, payloadSigningEnabled);
 		this.file = file;
 		this.bucket = bucket;
 	}
@@ -111,7 +112,17 @@ public class S3DownloadStep extends AbstractS3Step {
 		}
 	}
 
-	public static class Execution extends AbstractS3StepExecution<S3DownloadStep> {
+	public static class Execution extends AbstractStepExecutionImpl {
+
+		protected static final long serialVersionUID = 1L;
+		@Inject
+		protected transient S3DownloadStep step;
+		@StepContextParameter
+		protected transient EnvVars envVars;
+		@StepContextParameter
+		protected transient FilePath workspace;
+		@StepContextParameter
+		protected transient TaskListener listener;
 
 		@Override
 		public boolean start() throws Exception {
@@ -155,8 +166,6 @@ public class S3DownloadStep extends AbstractS3Step {
 		public void stop(@Nonnull Throwable cause) throws Exception {
 			//
 		}
-
-		private static final long serialVersionUID = 1L;
 
 	}
 

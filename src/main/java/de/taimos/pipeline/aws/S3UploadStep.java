@@ -34,6 +34,7 @@ import java.util.Map;
 import javax.annotation.Nonnull;
 import javax.inject.Inject;
 
+import com.amazonaws.services.dynamodbv2.xspec.S;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import org.jenkinsci.plugins.workflow.steps.AbstractStepDescriptorImpl;
@@ -78,7 +79,8 @@ public class S3UploadStep extends AbstractS3Step {
 	private String cacheControl;
 
 	@DataBoundConstructor
-	public S3UploadStep(String bucket) {
+	public S3UploadStep(String bucket, boolean pathStyleAccessEnabled, boolean payloadSigningEnabled) {
+		super(pathStyleAccessEnabled, payloadSigningEnabled);
 		this.bucket = bucket;
 	}
 
@@ -184,7 +186,17 @@ public class S3UploadStep extends AbstractS3Step {
 		}
 	}
 
-	public static class Execution extends AbstractS3StepExecution<S3UploadStep> {
+	public static class Execution extends AbstractStepExecutionImpl {
+
+		protected static final long serialVersionUID = 1L;
+		@Inject
+		protected transient S3UploadStep step;
+		@StepContextParameter
+		protected transient EnvVars envVars;
+		@StepContextParameter
+		protected transient FilePath workspace;
+		@StepContextParameter
+		protected transient TaskListener listener;
 
 		@Override
 		public boolean start() throws Exception {
