@@ -56,7 +56,6 @@ import hudson.remoting.VirtualChannel;
 
 public class S3DownloadStep extends AbstractS3Step {
 
-	protected static final long serialVersionUID = 1L;
 	private final String file;
 	private final String bucket;
 	private String path = "";
@@ -171,6 +170,8 @@ public class S3DownloadStep extends AbstractS3Step {
 	}
 
 	private static class RemoteDownloader implements FilePath.FileCallable<Void> {
+
+		protected static final long serialVersionUID = 1L;
 
 		private final transient AmazonS3ClientBuilder amazonS3ClientBuilder;
 		private final EnvVars envVars;
