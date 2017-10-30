@@ -21,7 +21,9 @@
 
 package de.taimos.pipeline.aws.cloudformation;
 
+import com.amazonaws.services.cloudformation.AmazonCloudFormation;
 import com.amazonaws.services.cloudformation.AmazonCloudFormationClient;
+import com.amazonaws.services.cloudformation.AmazonCloudFormationClientBuilder;
 import com.amazonaws.services.cloudformation.model.Parameter;
 import com.amazonaws.services.cloudformation.model.Tag;
 import com.google.common.base.Preconditions;
@@ -57,60 +59,60 @@ abstract class AbstractCFNCreateStep extends AbstractStepImpl {
 	public AbstractCFNCreateStep(String stack) {
 		this.stack = stack;
 	}
-	
+
 	public String getStack() {
 		return this.stack;
 	}
-	
+
 	public String getFile() {
 		return this.file;
 	}
-	
+
 	@DataBoundSetter
 	public void setFile(String file) {
 		this.file = file;
 	}
-	
+
 	public String getUrl() {
 		return this.url;
 	}
-	
+
 	@DataBoundSetter
 	public void setUrl(String url) {
 		this.url = url;
 	}
-	
+
 	public String[] getParams() {
 		return this.params != null ? this.params.clone() : null;
 	}
-	
+
 	@DataBoundSetter
 	public void setParams(String[] params) {
 		this.params = params.clone();
 	}
-	
+
 	public String[] getKeepParams() {
 		return this.keepParams != null ? this.keepParams.clone() : null;
 	}
-	
+
 	@DataBoundSetter
 	public void setKeepParams(String[] keepParams) {
 		this.keepParams = keepParams.clone();
 	}
-	
+
 	public String[] getTags() {
 		return this.tags != null ? this.tags.clone() : null;
 	}
-	
+
 	@DataBoundSetter
 	public void setTags(String[] tags) {
 		this.tags = tags.clone();
 	}
-	
+
 	public String getParamsFile() {
 		return this.paramsFile;
 	}
-	
+
 	@DataBoundSetter
 	public void setParamsFile(String paramsFile) {
 		this.paramsFile = paramsFile;
@@ -119,25 +121,25 @@ abstract class AbstractCFNCreateStep extends AbstractStepImpl {
 	public Long getPollInterval() {
 		return this.pollInterval;
 	}
-	
+
 	@DataBoundSetter
 	public void setPollInterval(Long pollInterval) {
 		this.pollInterval = pollInterval;
 	}
-	
+
 	public Boolean getCreate() {
 		return this.create;
 	}
-	
+
 	@DataBoundSetter
 	public void setCreate(Boolean create) {
 		this.create = create;
 	}
-	
+
 	public String getRoleArn() {
 		return this.roleArn;
 	}
-	
+
 	@DataBoundSetter
 	public void setRoleArn(String roleArn) {
 		this.roleArn = roleArn;
@@ -205,7 +207,7 @@ abstract class AbstractCFNCreateStep extends AbstractStepImpl {
 				@Override
 				public void run() {
 					try {
-						AmazonCloudFormationClient client = AWSClientFactory.create(AmazonCloudFormationClient.class, Execution.this.getEnvVars());
+						AmazonCloudFormation client = AWSClientFactory.create(AmazonCloudFormationClientBuilder.standard(), Execution.this.getEnvVars());
 						CloudFormationStack cfnStack = new CloudFormationStack(client, stack, Execution.this.getListener());
 						if (cfnStack.exists()) {
 							ArrayList<Parameter> parameters = new ArrayList<>(params);
@@ -295,7 +297,7 @@ abstract class AbstractCFNCreateStep extends AbstractStepImpl {
 		}
 
 		protected CloudFormationStack getCfnStack() {
-			AmazonCloudFormationClient client = AWSClientFactory.create(AmazonCloudFormationClient.class, this.getEnvVars());
+			AmazonCloudFormation client = AWSClientFactory.create(AmazonCloudFormationClientBuilder.standard(), this.getEnvVars());
 			return new CloudFormationStack(client, this.getStack(), this.getListener());
 		}
 
