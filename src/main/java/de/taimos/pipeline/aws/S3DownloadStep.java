@@ -56,6 +56,7 @@ import hudson.remoting.VirtualChannel;
 
 public class S3DownloadStep extends AbstractS3Step {
 
+	protected static final long serialVersionUID = 1L;
 	private final String file;
 	private final String bucket;
 	private String path = "";

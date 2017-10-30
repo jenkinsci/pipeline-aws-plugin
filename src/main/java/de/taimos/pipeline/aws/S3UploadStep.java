@@ -34,12 +34,9 @@ import java.util.Map;
 import javax.annotation.Nonnull;
 import javax.inject.Inject;
 
-import com.amazonaws.services.dynamodbv2.xspec.S;
-import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import org.jenkinsci.plugins.workflow.steps.AbstractStepDescriptorImpl;
 import org.jenkinsci.plugins.workflow.steps.AbstractStepExecutionImpl;
-import org.jenkinsci.plugins.workflow.steps.AbstractStepImpl;
 import org.jenkinsci.plugins.workflow.steps.StepContextParameter;
 import org.jenkinsci.remoting.RoleChecker;
 import org.kohsuke.stapler.DataBoundConstructor;
@@ -48,7 +45,6 @@ import org.kohsuke.stapler.DataBoundSetter;
 import com.amazonaws.event.ProgressEvent;
 import com.amazonaws.event.ProgressEventType;
 import com.amazonaws.event.ProgressListener;
-import com.amazonaws.services.s3.AmazonS3Client;
 import com.amazonaws.services.s3.Headers;
 import com.amazonaws.services.s3.model.CannedAccessControlList;
 import com.amazonaws.services.s3.model.ObjectMetadata;
@@ -282,6 +278,7 @@ public class S3UploadStep extends AbstractS3Step {
 
 	private static class RemoteUploader implements FilePath.FileCallable<Void> {
 
+		protected static final long serialVersionUID = 1L;
 		private final transient AmazonS3ClientBuilder amazonS3ClientBuilder;
 		private final EnvVars envVars;
 		private final TaskListener taskListener;
@@ -386,6 +383,7 @@ public class S3UploadStep extends AbstractS3Step {
 
 	private static class RemoteListUploader implements FilePath.FileCallable<Void> {
 
+		protected static final long serialVersionUID = 1L;
 		private final transient AmazonS3ClientBuilder amazonS3ClientBuilder;
 		private final EnvVars envVars;
 		private final TaskListener taskListener;
