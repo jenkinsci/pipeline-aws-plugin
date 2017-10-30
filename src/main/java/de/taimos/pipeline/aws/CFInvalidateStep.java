@@ -26,6 +26,7 @@ import java.util.Arrays;
 import javax.inject.Inject;
 
 import com.amazonaws.services.cloudfront.AmazonCloudFront;
+import com.amazonaws.services.cloudfront.AmazonCloudFrontClientBuilder;
 import org.jenkinsci.plugins.workflow.steps.AbstractStepDescriptorImpl;
 import org.jenkinsci.plugins.workflow.steps.AbstractStepImpl;
 import org.jenkinsci.plugins.workflow.steps.AbstractSynchronousStepExecution;
@@ -89,7 +90,7 @@ public class CFInvalidateStep extends AbstractStepImpl {
 
 		@Override
 		protected Void run() throws Exception {
-			AmazonCloudFront client = AWSClientFactory.createAmazonCloudFrontClient(this.envVars);
+			AmazonCloudFront client = AWSClientFactory.create(AmazonCloudFrontClientBuilder.standard(), this.envVars);
 
 			String distribution = this.step.getDistribution();
 			String[] paths = this.step.getPaths();

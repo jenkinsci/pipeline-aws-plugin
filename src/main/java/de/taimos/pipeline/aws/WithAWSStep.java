@@ -28,6 +28,7 @@ import javax.annotation.Nonnull;
 import javax.inject.Inject;
 
 import com.amazonaws.services.securitytoken.AWSSecurityTokenService;
+import com.amazonaws.services.securitytoken.AWSSecurityTokenServiceClientBuilder;
 import org.jenkinsci.plugins.workflow.steps.AbstractStepDescriptorImpl;
 import org.jenkinsci.plugins.workflow.steps.AbstractStepExecutionImpl;
 import org.jenkinsci.plugins.workflow.steps.AbstractStepImpl;
@@ -74,8 +75,6 @@ public class WithAWSStep extends AbstractStepImpl {
 	private String externalId = "";
 	private String federatedUserId = "";
 	private String policy = "";
-	private boolean pathStyleAccessEnabled = false;
-	private boolean payloadSigningEnabled = false;
 
 	@DataBoundConstructor
 	public WithAWSStep() {
@@ -162,24 +161,6 @@ public class WithAWSStep extends AbstractStepImpl {
 		this.policy = policy;
 	}
 
-	public boolean isPathStyleAccessEnabled() {
-		return pathStyleAccessEnabled;
-	}
-
-	@DataBoundSetter
-	public void setPathStyleAccessEnabled(final boolean pathStyleAccessEnabled) {
-		this.pathStyleAccessEnabled = pathStyleAccessEnabled;
-	}
-
-	public boolean isPayloadSigningEnabled() {
-		return payloadSigningEnabled;
-	}
-
-	@DataBoundSetter
-	public void setPayloadSigningEnabled(final boolean payloadSigningEnabled) {
-		this.payloadSigningEnabled = payloadSigningEnabled;
-	}
-
 	@Extension
 	public static class DescriptorImpl extends AbstractStepDescriptorImpl {
 
@@ -239,8 +220,6 @@ public class WithAWSStep extends AbstractStepImpl {
 			this.withEndpointUrl(awsEnv);
 			this.withRole(awsEnv);
 			this.withFederatedUserId(awsEnv);
-			this.withPathStyleAccessEnabled(awsEnv);
-			this.withPayloadSigningEnabled(awsEnv);
 
 			EnvironmentExpander expander = new EnvironmentExpander() {
 				@Override
@@ -260,7 +239,7 @@ public class WithAWSStep extends AbstractStepImpl {
 
 		private void withFederatedUserId(@Nonnull EnvVars localEnv) {
 			if (!StringUtils.isNullOrEmpty(this.step.getFederatedUserId())) {
-				AWSSecurityTokenService sts = AWSClientFactory.createAWSSecurityTokenServiceClient(this.envVars);
+				AWSSecurityTokenService sts = AWSClientFactory.create(AWSSecurityTokenServiceClientBuilder.standard(), this.envVars);
 				GetFederationTokenRequest getFederationTokenRequest = new GetFederationTokenRequest();
 				getFederationTokenRequest.setDurationSeconds(3600);
 				getFederationTokenRequest.setName(this.step.getFederatedUserId());
@@ -293,7 +272,7 @@ public class WithAWSStep extends AbstractStepImpl {
 
 		private void withRole(@Nonnull EnvVars localEnv) {
 			if (!StringUtils.isNullOrEmpty(this.step.getRole())) {
-				AWSSecurityTokenService sts = AWSClientFactory.createAWSSecurityTokenServiceClient(this.envVars);
+				AWSSecurityTokenService sts = AWSClientFactory.create(AWSSecurityTokenServiceClientBuilder.standard(), this.envVars);
 
 				final String accountId;
 				if (!StringUtils.isNullOrEmpty(this.step.getRoleAccount())) {
@@ -351,19 +330,6 @@ public class WithAWSStep extends AbstractStepImpl {
 				this.envVars.overrideAll(localEnv);
 			}
 		}
-
-		private void withPathStyleAccessEnabled(@Nonnull EnvVars localEnv) {
-            this.listener.getLogger().format("Setting AWS isPathStyleAccessEnabled %s %n ", this.step.isPathStyleAccessEnabled());
-            localEnv.override(AWSClientFactory.AWS_S3_PATH_STYLE_ACCESS_ENABLED, String.valueOf(this.step.isPathStyleAccessEnabled()));
-            this.envVars.overrideAll(localEnv);
-        }
-
-		private void withPayloadSigningEnabled(@Nonnull EnvVars localEnv) {
-            this.listener.getLogger().format("Setting AWS isPayloadSigningEnabled %s %n ", this.step.isPayloadSigningEnabled());
-            localEnv.override(AWSClientFactory.AWS_S3_PAYLOAD_SIGNING_ENABLED, String.valueOf(this.step.isPayloadSigningEnabled()));
-            this.envVars.overrideAll(localEnv);
-        }
-
 
 		private String createRoleSessionName() {
 			return RoleSessionNameBuilder

@@ -24,6 +24,7 @@ package de.taimos.pipeline.aws;
 import javax.inject.Inject;
 
 import com.amazonaws.services.ecr.AmazonECR;
+import com.amazonaws.services.ecr.AmazonECRClientBuilder;
 import org.apache.commons.codec.Charsets;
 import org.jenkinsci.plugins.workflow.steps.AbstractStepDescriptorImpl;
 import org.jenkinsci.plugins.workflow.steps.AbstractStepImpl;
@@ -88,7 +89,7 @@ public class ECRLoginStep extends AbstractStepImpl {
 
 		@Override
 		protected String run() throws Exception {
-			AmazonECR ecr = AWSClientFactory.createAmazonECRClient(this.envVars);
+			AmazonECR ecr = AWSClientFactory.create(AmazonECRClientBuilder.standard(), this.envVars);
 
 			GetAuthorizationTokenResult token = ecr.getAuthorizationToken(new GetAuthorizationTokenRequest());
 

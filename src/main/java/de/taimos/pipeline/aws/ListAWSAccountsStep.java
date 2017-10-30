@@ -30,6 +30,7 @@ import javax.annotation.Nonnull;
 import javax.inject.Inject;
 
 import com.amazonaws.services.organizations.AWSOrganizations;
+import com.amazonaws.services.organizations.AWSOrganizationsClientBuilder;
 import org.jenkinsci.plugins.workflow.steps.AbstractStepDescriptorImpl;
 import org.jenkinsci.plugins.workflow.steps.AbstractStepExecutionImpl;
 import org.jenkinsci.plugins.workflow.steps.AbstractStepImpl;
@@ -87,7 +88,7 @@ public class ListAWSAccountsStep extends AbstractStepImpl {
 			new Thread("listAWSAccounts") {
 				@Override
 				public void run() {
-					AWSOrganizations client = AWSClientFactory.createAWSOrganizationsClient(Execution.this.envVars);
+					AWSOrganizations client = AWSClientFactory.create(AWSOrganizationsClientBuilder.standard(), Execution.this.envVars);
 					ListAccountsResult exports = client.listAccounts(new ListAccountsRequest());
 
 					List<Map<String, String>> accounts = new ArrayList<>();

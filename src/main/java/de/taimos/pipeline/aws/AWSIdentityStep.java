@@ -27,6 +27,7 @@ import java.util.Map;
 import javax.inject.Inject;
 
 import com.amazonaws.services.securitytoken.AWSSecurityTokenService;
+import com.amazonaws.services.securitytoken.AWSSecurityTokenServiceClientBuilder;
 import org.jenkinsci.plugins.workflow.steps.AbstractStepDescriptorImpl;
 import org.jenkinsci.plugins.workflow.steps.AbstractStepImpl;
 import org.jenkinsci.plugins.workflow.steps.AbstractSynchronousStepExecution;
@@ -77,7 +78,7 @@ public class AWSIdentityStep extends AbstractStepImpl {
 
 		@Override
 		protected Map<String, String> run() throws Exception {
-			AWSSecurityTokenService sts = AWSClientFactory.createAWSSecurityTokenServiceClient(this.envVars);
+			AWSSecurityTokenService sts = AWSClientFactory.create(AWSSecurityTokenServiceClientBuilder.standard(), this.envVars);
 			GetCallerIdentityResult identity = sts.getCallerIdentity(new GetCallerIdentityRequest());
 
 			this.listener.getLogger().format("Current AWS identity: %s - %s - %s %n", identity.getAccount(), identity.getUserId(), identity.getArn());

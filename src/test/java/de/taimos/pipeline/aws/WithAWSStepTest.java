@@ -86,7 +86,7 @@ public class WithAWSStepTest {
         final EnvVars envVars = new EnvVars();
         envVars.put(AWSClientFactory.AWS_ENDPOINT_URL, "https://minio.mycompany.com");
         envVars.put(AWSClientFactory.AWS_REGION, Regions.DEFAULT_REGION.getName());
-        final AmazonS3Client amazonS3Client = (AmazonS3Client) AWSClientFactory.createAmazonS3Client(envVars);
+        final AmazonS3Client amazonS3Client = (AmazonS3Client) AWSClientFactory.create(AmazonS3ClientBuilder.builder(), envVars);
 
         String globalCredentialsId = "global-aws-creds";
 

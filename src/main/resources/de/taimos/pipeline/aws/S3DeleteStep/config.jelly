@@ -6,4 +6,10 @@
 	<f:entry title="${%Path}" field="path">
 		<f:textbox />
 	</f:entry>
+	<f:entry title="${%Enable Path-style Access}" field="pathStyleAccessEnabled">
+		<f:checkbox />
+	</f:entry>
+	<f:entry title="${%Enable Payload Signing}" field="payloadSigningEnabled">
+		<f:checkbox />
+	</f:entry>
 </j:jelly>

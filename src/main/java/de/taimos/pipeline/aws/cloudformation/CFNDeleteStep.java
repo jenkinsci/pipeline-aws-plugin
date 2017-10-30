@@ -25,6 +25,7 @@ import javax.annotation.Nonnull;
 import javax.inject.Inject;
 
 import com.amazonaws.services.cloudformation.AmazonCloudFormation;
+import com.amazonaws.services.cloudformation.AmazonCloudFormationClientBuilder;
 import org.jenkinsci.plugins.workflow.steps.AbstractStepDescriptorImpl;
 import org.jenkinsci.plugins.workflow.steps.AbstractStepExecutionImpl;
 import org.jenkinsci.plugins.workflow.steps.AbstractStepImpl;
@@ -102,7 +103,7 @@ public class CFNDeleteStep extends AbstractStepImpl {
 				@Override
 				public void run() {
 					try {
-						AmazonCloudFormation client = AWSClientFactory.createAmazonCloudFormationClient(Execution.this.envVars);
+						AmazonCloudFormation client = AWSClientFactory.create(AmazonCloudFormationClientBuilder.standard(), Execution.this.envVars);
 						CloudFormationStack cfnStack = new CloudFormationStack(client, stack, Execution.this.listener);
 						cfnStack.delete(Execution.this.step.getPollInterval());
 						Execution.this.listener.getLogger().println("Stack deletion complete");

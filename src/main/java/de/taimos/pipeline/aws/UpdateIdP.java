@@ -25,6 +25,7 @@ import javax.annotation.Nonnull;
 import javax.inject.Inject;
 
 import com.amazonaws.services.identitymanagement.AmazonIdentityManagement;
+import com.amazonaws.services.identitymanagement.AmazonIdentityManagementClientBuilder;
 import org.jenkinsci.plugins.workflow.steps.AbstractStepDescriptorImpl;
 import org.jenkinsci.plugins.workflow.steps.AbstractStepExecutionImpl;
 import org.jenkinsci.plugins.workflow.steps.AbstractStepImpl;
@@ -101,7 +102,7 @@ public class UpdateIdP extends AbstractStepImpl {
 				@Override
 				public void run() {
 					try {
-						AmazonIdentityManagement iamClient = AWSClientFactory.createAmazonIdentityManagementClient(Execution.this.envVars);
+						AmazonIdentityManagement iamClient = AWSClientFactory.create(AmazonIdentityManagementClientBuilder.standard(), Execution.this.envVars);
 
 						Execution.this.listener.getLogger().format("Checking for identity provider %s %n", name);
 						ListSAMLProvidersResult listResult = iamClient.listSAMLProviders();

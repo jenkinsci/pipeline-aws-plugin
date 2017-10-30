@@ -64,7 +64,7 @@ import hudson.model.TaskListener;
  * then this defaults to "*", which will match everything within `path`, but only
  * one level deep.  To match absolutely everything, use "**".
  */
-public class S3FindFilesStep extends AbstractStepImpl {
+public class S3FindFilesStep extends AbstractS3Step {
 	/**
 	 * This is the bucket name.
 	 */
@@ -162,7 +162,7 @@ public class S3FindFilesStep extends AbstractStepImpl {
 
 			Execution.this.listener.getLogger().format("Searching s3://%s/%s for glob:'%s' %s%n", bucket, path, glob, onlyFiles ? "(only files)" : "");
 
-			AmazonS3 s3Client = AWSClientFactory.createAmazonS3Client(Execution.this.envVars);
+			AmazonS3 s3Client = AWSClientFactory.create(Execution.this.step.createAmazonS3ClientBuilder(), Execution.this.envVars);
 
 			// Construct a PatternMatcher to match the files.
 			// Essentially, we're going to match against "${path}/${glob}".  Obviously,

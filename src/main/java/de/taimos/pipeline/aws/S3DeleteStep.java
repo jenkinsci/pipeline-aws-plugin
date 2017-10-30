@@ -28,6 +28,7 @@ import javax.annotation.Nonnull;
 import javax.inject.Inject;
 
 import com.amazonaws.services.s3.AmazonS3;
+import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import org.jenkinsci.plugins.workflow.steps.AbstractStepDescriptorImpl;
 import org.jenkinsci.plugins.workflow.steps.AbstractStepExecutionImpl;
 import org.jenkinsci.plugins.workflow.steps.AbstractStepImpl;
@@ -50,7 +51,7 @@ import hudson.model.TaskListener;
  * If the path ends with a "/", then this interprets the object as a folder
  * and removes all content, as well.
  */
-public class S3DeleteStep extends AbstractStepImpl {
+public class S3DeleteStep extends AbstractS3Step {
 	/**
 	 * This is the bucket name.
 	 */
@@ -92,16 +93,7 @@ public class S3DeleteStep extends AbstractStepImpl {
 		}
 	}
 
-	public static class Execution extends AbstractStepExecutionImpl {
-
-		@Inject
-		private transient S3DeleteStep step;
-		@StepContextParameter
-		private transient EnvVars envVars;
-		@StepContextParameter
-		private transient FilePath workspace;
-		@StepContextParameter
-		private transient TaskListener listener;
+	public static class Execution extends AbstractS3StepExecution<S3DeleteStep> {
 
 		@Override
 		public boolean start() throws Exception {
@@ -115,8 +107,8 @@ public class S3DeleteStep extends AbstractStepImpl {
 				public void run() {
 					try {
 						Execution.this.listener.getLogger().format("Deleting s3://%s/%s%n", bucket, path);
+						AmazonS3 s3Client = AWSClientFactory.create(Execution.this.step.createAmazonS3ClientBuilder(), Execution.this.envVars);
 
-						AmazonS3 s3Client = AWSClientFactory.createAmazonS3Client(Execution.this.envVars);
 						if (!path.endsWith("/")) {
 							// See if the thing that we were given is a file.
 							if (s3Client.doesObjectExist(bucket, path)) {

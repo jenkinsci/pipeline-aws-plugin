@@ -24,6 +24,7 @@ package de.taimos.pipeline.aws;
 import javax.inject.Inject;
 
 import com.amazonaws.services.codedeploy.AmazonCodeDeploy;
+import com.amazonaws.services.codedeploy.AmazonCodeDeployClientBuilder;
 import org.jenkinsci.plugins.workflow.steps.AbstractStepDescriptorImpl;
 import org.jenkinsci.plugins.workflow.steps.AbstractStepImpl;
 import org.jenkinsci.plugins.workflow.steps.AbstractSynchronousNonBlockingStepExecution;
@@ -93,7 +94,7 @@ public class WaitDeployStep extends AbstractStepImpl {
 
 		@Override
 		protected Void run() throws Exception {
-			AmazonCodeDeploy client = AWSClientFactory.createAmazonCodeDeployClient(this.envVars);
+			AmazonCodeDeploy client = AWSClientFactory.create(AmazonCodeDeployClientBuilder.standard(), this.envVars);
 
 			String deploymentId = this.step.getDeploymentId();
 			this.listener.getLogger().format("Checking Deployment(%s) status", deploymentId);

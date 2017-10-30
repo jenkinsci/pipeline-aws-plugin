@@ -25,6 +25,7 @@ import javax.annotation.Nonnull;
 import javax.inject.Inject;
 
 import com.amazonaws.services.sns.AmazonSNS;
+import com.amazonaws.services.sns.AmazonSNSClientBuilder;
 import org.jenkinsci.plugins.workflow.steps.AbstractStepDescriptorImpl;
 import org.jenkinsci.plugins.workflow.steps.AbstractStepExecutionImpl;
 import org.jenkinsci.plugins.workflow.steps.AbstractStepImpl;
@@ -100,7 +101,7 @@ public class SNSPublishStep extends AbstractStepImpl {
 				@Override
 				public void run() {
 					try {
-						AmazonSNS snsClient = AWSClientFactory.createAmazonSNSClient(Execution.this.envVars);
+						AmazonSNS snsClient = AWSClientFactory.create(AmazonSNSClientBuilder.standard(), Execution.this.envVars);
 
 						Execution.this.listener.getLogger().format("Publishing notification %s to %s %n", subject, topicArn);
 						PublishResult result = snsClient.publish(topicArn, message, subject);

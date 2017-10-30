@@ -25,6 +25,7 @@ import javax.annotation.Nonnull;
 import javax.inject.Inject;
 
 import com.amazonaws.services.cloudformation.AmazonCloudFormation;
+import com.amazonaws.services.cloudformation.AmazonCloudFormationClientBuilder;
 import org.jenkinsci.plugins.workflow.steps.AbstractStepDescriptorImpl;
 import org.jenkinsci.plugins.workflow.steps.AbstractStepExecutionImpl;
 import org.jenkinsci.plugins.workflow.steps.AbstractStepImpl;
@@ -91,7 +92,7 @@ public class CFNDescribeStep extends AbstractStepImpl {
 			new Thread("cfnDescribe-" + stack) {
 				@Override
 				public void run() {
-					AmazonCloudFormation client = AWSClientFactory.createAmazonCloudFormationClient(Execution.this.envVars);
+					AmazonCloudFormation client = AWSClientFactory.create(AmazonCloudFormationClientBuilder.standard(), Execution.this.envVars);
 					CloudFormationStack cfnStack = new CloudFormationStack(client, stack, Execution.this.listener);
 					try {
 						Execution.this.getContext().onSuccess(cfnStack.describeOutputs());

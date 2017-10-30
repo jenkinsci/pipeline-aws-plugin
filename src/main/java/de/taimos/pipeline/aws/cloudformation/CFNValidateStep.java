@@ -25,6 +25,7 @@ import javax.annotation.Nonnull;
 import javax.inject.Inject;
 
 import com.amazonaws.services.cloudformation.AmazonCloudFormation;
+import com.amazonaws.services.cloudformation.AmazonCloudFormationClientBuilder;
 import org.jenkinsci.plugins.workflow.steps.AbstractStepDescriptorImpl;
 import org.jenkinsci.plugins.workflow.steps.AbstractStepExecutionImpl;
 import org.jenkinsci.plugins.workflow.steps.AbstractStepImpl;
@@ -115,7 +116,7 @@ public class CFNValidateStep extends AbstractStepImpl {
 			new Thread("cfnValidate-" + file) {
 				@Override
 				public void run() {
-					AmazonCloudFormation client = AWSClientFactory.createAmazonCloudFormationClient(Execution.this.envVars);
+					AmazonCloudFormation client = AWSClientFactory.create(AmazonCloudFormationClientBuilder.standard(), Execution.this.envVars);
 					try {
 						ValidateTemplateRequest request = new ValidateTemplateRequest();
 						if (template != null) {

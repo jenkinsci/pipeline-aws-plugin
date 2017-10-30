@@ -54,7 +54,7 @@ import hudson.FilePath;
 import hudson.model.TaskListener;
 import hudson.remoting.VirtualChannel;
 
-public class S3DownloadStep extends AbstractStepImpl {
+public class S3DownloadStep extends AbstractS3Step {
 
 	private final String file;
 	private final String bucket;
@@ -111,16 +111,7 @@ public class S3DownloadStep extends AbstractStepImpl {
 		}
 	}
 
-	public static class Execution extends AbstractStepExecutionImpl {
-
-		@Inject
-		private transient S3DownloadStep step;
-		@StepContextParameter
-		private transient EnvVars envVars;
-		@StepContextParameter
-		private transient FilePath workspace;
-		@StepContextParameter
-		private transient TaskListener listener;
+	public static class Execution extends AbstractS3StepExecution<S3DownloadStep> {
 
 		@Override
 		public boolean start() throws Exception {
@@ -149,7 +140,7 @@ public class S3DownloadStep extends AbstractStepImpl {
 								return;
 							}
 						}
-						target.act(new RemoteDownloader(Execution.this.envVars, Execution.this.listener, bucket, path));
+						target.act(new RemoteDownloader(Execution.this.step.createAmazonS3ClientBuilder(), Execution.this.envVars, Execution.this.listener, bucket, path));
 						Execution.this.listener.getLogger().println("Download complete");
 						Execution.this.getContext().onSuccess(null);
 					} catch (Exception e) {
@@ -171,12 +162,14 @@ public class S3DownloadStep extends AbstractStepImpl {
 
 	private static class RemoteDownloader implements FilePath.FileCallable<Void> {
 
+		private final transient AmazonS3ClientBuilder amazonS3ClientBuilder;
 		private final EnvVars envVars;
 		private final TaskListener taskListener;
 		private final String bucket;
 		private final String path;
 
-		RemoteDownloader(EnvVars envVars, TaskListener taskListener, String bucket, String path) {
+		RemoteDownloader(AmazonS3ClientBuilder amazonS3ClientBuilder, EnvVars envVars, TaskListener taskListener, String bucket, String path) {
+			this.amazonS3ClientBuilder = amazonS3ClientBuilder;
 			this.envVars = envVars;
 			this.taskListener = taskListener;
 			this.bucket = bucket;
@@ -185,7 +178,9 @@ public class S3DownloadStep extends AbstractStepImpl {
 
 		@Override
 		public Void invoke(File localFile, VirtualChannel channel) throws IOException, InterruptedException {
-			TransferManager mgr = AWSClientFactory.createTransferManager(this.envVars);
+			TransferManager mgr = TransferManagerBuilder.standard()
+					.withS3Client(AWSClientFactory.create(amazonS3ClientBuilder, envVars))
+					.build();
 
 			if (this.path == null || this.path.isEmpty() || this.path.endsWith("/")) {
 				final MultipleFileDownload fileDownload = mgr.downloadDirectory(this.bucket, this.path, localFile);

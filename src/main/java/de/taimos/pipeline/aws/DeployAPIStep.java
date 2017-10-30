@@ -109,7 +109,7 @@ public class DeployAPIStep extends AbstractStepImpl {
 
 		@Override
 		protected Void run() throws Exception {
-			AmazonApiGateway client = AWSClientFactory.createAmazonApiGatewayClient(this.envVars);
+			AmazonApiGateway client = AWSClientFactory.create(AmazonApiGatewayClient.builder(), this.envVars);
 
 			String stage = this.step.getStage();
 			String api = this.step.getApi();

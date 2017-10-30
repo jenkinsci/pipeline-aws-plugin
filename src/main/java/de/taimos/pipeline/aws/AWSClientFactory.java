@@ -31,30 +31,6 @@ import com.amazonaws.client.builder.AwsClientBuilder;
 import com.amazonaws.client.builder.AwsSyncClientBuilder;
 import com.amazonaws.regions.Region;
 import com.amazonaws.regions.Regions;
-import com.amazonaws.services.apigateway.AmazonApiGateway;
-import com.amazonaws.services.apigateway.AmazonApiGatewayClientBuilder;
-import com.amazonaws.services.cloudformation.AmazonCloudFormation;
-import com.amazonaws.services.cloudformation.AmazonCloudFormationClientBuilder;
-import com.amazonaws.services.cloudfront.AmazonCloudFront;
-import com.amazonaws.services.cloudfront.AmazonCloudFrontClientBuilder;
-import com.amazonaws.services.codedeploy.AmazonCodeDeploy;
-import com.amazonaws.services.codedeploy.AmazonCodeDeployClientBuilder;
-import com.amazonaws.services.ecr.AmazonECR;
-import com.amazonaws.services.ecr.AmazonECRClientBuilder;
-import com.amazonaws.services.identitymanagement.AmazonIdentityManagement;
-import com.amazonaws.services.identitymanagement.AmazonIdentityManagementClientBuilder;
-import com.amazonaws.services.lambda.AWSLambda;
-import com.amazonaws.services.lambda.AWSLambdaClientBuilder;
-import com.amazonaws.services.organizations.AWSOrganizations;
-import com.amazonaws.services.organizations.AWSOrganizationsClientBuilder;
-import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.AmazonS3ClientBuilder;
-import com.amazonaws.services.s3.transfer.TransferManager;
-import com.amazonaws.services.s3.transfer.TransferManagerBuilder;
-import com.amazonaws.services.securitytoken.AWSSecurityTokenService;
-import com.amazonaws.services.securitytoken.AWSSecurityTokenServiceClientBuilder;
-import com.amazonaws.services.sns.AmazonSNS;
-import com.amazonaws.services.sns.AmazonSNSClientBuilder;
 import hudson.EnvVars;
 import org.apache.commons.lang.StringUtils;
 
@@ -68,10 +44,12 @@ public class AWSClientFactory {
     static final String AWS_DEFAULT_REGION = "AWS_DEFAULT_REGION";
     static final String AWS_REGION = "AWS_REGION";
     static final String AWS_ENDPOINT_URL = "AWS_ENDPOINT_URL";
-    static final String AWS_S3_PATH_STYLE_ACCESS_ENABLED = "AWS_S3_PATH_STYLE_ACCESS_ENABLED";
-    static final String AWS_S3_PAYLOAD_SIGNING_ENABLED = "AWS_S3_PAYLOAD_SIGNING_ENABLED";
 
-    private static <B extends AwsSyncClientBuilder<?, ?>> B configureAwsSyncClientBuilder(B clientBuilder, EnvVars vars) {
+    private AWSClientFactory() {
+        //
+    }
+
+    public static <B extends AwsSyncClientBuilder<?, T>, T> T create(B clientBuilder, EnvVars vars) {
         if (StringUtils.isNotBlank(vars.get(AWS_ENDPOINT_URL))) {
             clientBuilder.setEndpointConfiguration(new AwsClientBuilder.EndpointConfiguration(vars.get(AWS_ENDPOINT_URL), vars.get(AWS_REGION)));
         } else {
@@ -79,60 +57,7 @@ public class AWSClientFactory {
         }
         clientBuilder.setCredentials(AWSClientFactory.getCredentials(vars));
         clientBuilder.setClientConfiguration(AWSClientFactory.getClientConfiguration(vars));
-        return clientBuilder;
-    }
-
-    public static AmazonS3 createAmazonS3Client(EnvVars vars) {
-        return configureAwsSyncClientBuilder(AmazonS3ClientBuilder.standard(), vars)
-                .withPathStyleAccessEnabled(Boolean.valueOf(vars.get(AWS_S3_PATH_STYLE_ACCESS_ENABLED, Boolean.FALSE.toString())))
-                .withPayloadSigningEnabled(Boolean.valueOf(vars.get(AWS_S3_PAYLOAD_SIGNING_ENABLED, Boolean.FALSE.toString())))
-                .build();
-    }
-
-    public static TransferManager createTransferManager(EnvVars vars) {
-        return TransferManagerBuilder.standard()
-                .withS3Client(createAmazonS3Client(vars))
-                .build();
-    }
-
-    public static AmazonCloudFormation createAmazonCloudFormationClient(EnvVars vars) {
-        return configureAwsSyncClientBuilder(AmazonCloudFormationClientBuilder.standard(), vars).build();
-    }
-
-    public static AWSSecurityTokenService createAWSSecurityTokenServiceClient(EnvVars vars) {
-        return configureAwsSyncClientBuilder(AWSSecurityTokenServiceClientBuilder.standard(), vars).build();
-    }
-
-    public static AmazonCloudFront createAmazonCloudFrontClient(EnvVars vars) {
-        return configureAwsSyncClientBuilder(AmazonCloudFrontClientBuilder.standard(), vars).build();
-    }
-
-    public static AmazonApiGateway createAmazonApiGatewayClient(EnvVars vars) {
-        return configureAwsSyncClientBuilder(AmazonApiGatewayClientBuilder.standard(), vars).build();
-    }
-
-    public static AmazonECR createAmazonECRClient(EnvVars vars) {
-        return configureAwsSyncClientBuilder(AmazonECRClientBuilder.standard(), vars).build();
-    }
-
-    public static AWSLambda createAWSLambdaClient(EnvVars vars) {
-        return configureAwsSyncClientBuilder(AWSLambdaClientBuilder.standard(), vars).build();
-    }
-
-    public static AWSOrganizations createAWSOrganizationsClient(EnvVars vars) {
-        return configureAwsSyncClientBuilder(AWSOrganizationsClientBuilder.standard(), vars).build();
-    }
-
-    public static AmazonSNS createAmazonSNSClient(EnvVars vars) {
-        return configureAwsSyncClientBuilder(AmazonSNSClientBuilder.standard(), vars).build();
-    }
-
-    public static AmazonIdentityManagement createAmazonIdentityManagementClient(EnvVars vars) {
-        return configureAwsSyncClientBuilder(AmazonIdentityManagementClientBuilder.standard(), vars).build();
-    }
-
-    public static AmazonCodeDeploy createAmazonCodeDeployClient(EnvVars vars) {
-        return configureAwsSyncClientBuilder(AmazonCodeDeployClientBuilder.standard(), vars).build();
+        return clientBuilder.build();
     }
 
     private static ClientConfiguration getClientConfiguration(EnvVars vars) {
