@@ -38,10 +38,10 @@ import com.amazonaws.services.lambda.model.InvokeResult;
 import com.amazonaws.services.lambda.model.LogType;
 
 import groovy.json.JsonBuilder;
-import groovy.json.JsonSlurper;
 import hudson.EnvVars;
 import hudson.Extension;
 import hudson.model.TaskListener;
+import net.sf.json.JSONSerializer;
 
 public class InvokeLambdaStep extends AbstractStepImpl {
 	
@@ -122,11 +122,11 @@ public class InvokeLambdaStep extends AbstractStepImpl {
 			return this.getPayloadAsObject(result);
 		}
 		
-		private Object getPayloadAsObject(InvokeResult result) {
-			return new JsonSlurper().parseText(this.getPayloadAsString(result));
+		public Object getPayloadAsObject(InvokeResult result) {
+			return JSONSerializer.toJSON(this.getPayloadAsString(result));
 		}
 		
-		private String getPayloadAsString(InvokeResult result) {
+		public String getPayloadAsString(InvokeResult result) {
 			return new String(result.getPayload().array(), StandardCharsets.UTF_8);
 		}
 		

@@ -421,6 +421,7 @@ def result = invokeLambda(
 * Add policy for withAWS support - allows an additional policy to be combined with the policy associated with the assumed role. 
 * add `cfnCreateChangeSet` step
 * add `cfnExecuteChangeSet` step
+* Fix: return value of `invokeLambda` is now serializable
 
 ## 1.16
 * Add federatedUserId for withAWS support - generates temporary aws credentials for federated user which gets logged in CloudTrail 

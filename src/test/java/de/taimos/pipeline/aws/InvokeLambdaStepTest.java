@@ -1,5 +1,9 @@
 package de.taimos.pipeline.aws;
 
+import java.io.ByteArrayOutputStream;
+import java.io.ObjectOutputStream;
+import java.nio.ByteBuffer;
+
 /*-
  * #%L
  * Pipeline: AWS Steps
@@ -25,18 +29,33 @@ import java.util.Collections;
 import org.junit.Assert;
 import org.junit.Test;
 
-public class InvokeLambdaStepTest {
+import com.amazonaws.services.lambda.model.InvokeResult;
 
+import de.taimos.pipeline.aws.InvokeLambdaStep.Execution;
+
+public class InvokeLambdaStepTest {
+	
 	@Test
 	public void shouldConvertPayloadObjectToString() throws Exception {
 		InvokeLambdaStep invokeLambdaStep = new InvokeLambdaStep("test-lambda",
 				Collections.singletonMap("key", "value"));
 		Assert.assertEquals("{\"key\":\"value\"}", invokeLambdaStep.getPayloadAsString());
 	}
-
+	
 	@Test
 	public void shouldConvertPayloadListToString() throws Exception {
 		InvokeLambdaStep invokeLambdaStep = new InvokeLambdaStep("test-lambda", Collections.singletonList("elem"));
 		Assert.assertEquals("[\"elem\"]", invokeLambdaStep.getPayloadAsString());
+	}
+	
+	@Test
+	public void resultShouldBeSerializable() throws Exception {
+		InvokeResult invokeResult = new InvokeResult();
+		invokeResult.setPayload(ByteBuffer.wrap("{}".getBytes()));
+		
+		Object payloadAsObject = new InvokeLambdaStep.Execution().getPayloadAsObject(invokeResult);
+		
+		new ObjectOutputStream(new ByteArrayOutputStream()).writeObject(payloadAsObject);
+		// no exception -> ok
 	}
 }
