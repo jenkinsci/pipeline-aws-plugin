@@ -26,116 +26,134 @@ import java.nio.charset.StandardCharsets;
 import javax.inject.Inject;
 import javax.xml.bind.DatatypeConverter;
 
-import com.amazonaws.services.lambda.AWSLambda;
-import com.amazonaws.services.lambda.AWSLambdaClientBuilder;
 import org.jenkinsci.plugins.workflow.steps.AbstractStepDescriptorImpl;
 import org.jenkinsci.plugins.workflow.steps.AbstractStepImpl;
 import org.jenkinsci.plugins.workflow.steps.AbstractSynchronousStepExecution;
 import org.jenkinsci.plugins.workflow.steps.StepContextParameter;
 import org.kohsuke.stapler.DataBoundConstructor;
+import org.kohsuke.stapler.DataBoundSetter;
 
-import com.amazonaws.services.lambda.AWSLambdaClient;
+import com.amazonaws.services.lambda.AWSLambda;
+import com.amazonaws.services.lambda.AWSLambdaClientBuilder;
 import com.amazonaws.services.lambda.model.InvokeRequest;
 import com.amazonaws.services.lambda.model.InvokeResult;
 import com.amazonaws.services.lambda.model.LogType;
 
-import groovy.json.JsonBuilder;
-import groovy.json.JsonSlurper;
+import de.taimos.pipeline.aws.utils.JsonUtils;
 import hudson.EnvVars;
 import hudson.Extension;
 import hudson.model.TaskListener;
 
 public class InvokeLambdaStep extends AbstractStepImpl {
-
-	private final Object payload;
+	
+	private Object payload;
+	private String payloadAsString;
+	private boolean returnValueAsString = false;
 	private final String functionName;
-
+	
 	@DataBoundConstructor
-	public InvokeLambdaStep(String functionName, Object payload) {
+	public InvokeLambdaStep(String functionName) {
 		this.functionName = functionName;
-		this.payload = payload;
 	}
-
+	
 	public String getFunctionName() {
 		return this.functionName;
 	}
-
+	
 	public Object getPayload() {
 		return this.payload;
 	}
-
+	
+	@DataBoundSetter
+	public void setPayload(Object payload) {
+		this.payload = payload;
+	}
+	
 	public String getPayloadAsString() {
-		return this.toJsonString(this.payload);
+		if (this.payload != null) {
+			return JsonUtils.toString(this.payload);
+		}
+		return this.payloadAsString;
 	}
-
-	private String toJsonString(Object payloadObject) {
-		return (new JsonBuilder(payloadObject)).toString();
+	
+	@DataBoundSetter
+	public void setPayloadAsString(String payloadAsString) {
+		this.payloadAsString = payloadAsString;
 	}
-
+	
+	public boolean isReturnValueAsString() {
+		return this.returnValueAsString;
+	}
+	
+	@DataBoundSetter
+	public void setReturnValueAsString(boolean returnValueAsString) {
+		this.returnValueAsString = returnValueAsString;
+	}
+	
 	@Extension
 	public static class DescriptorImpl extends AbstractStepDescriptorImpl {
-
+		
 		public DescriptorImpl() {
 			super(Execution.class);
 		}
-
+		
 		@Override
 		public String getFunctionName() {
 			return "invokeLambda";
 		}
-
+		
 		@Override
 		public String getDisplayName() {
 			return "Invoke a given Lambda function";
 		}
 	}
-
+	
 	public static class Execution extends AbstractSynchronousStepExecution<Object> {
-
+		
 		private static final long serialVersionUID = 1L;
-
+		
 		@Inject
 		private transient InvokeLambdaStep step;
 		@StepContextParameter
 		private transient EnvVars envVars;
 		@StepContextParameter
 		private transient TaskListener listener;
-
+		
 		@Override
 		protected Object run() throws Exception {
 			AWSLambda client = AWSClientFactory.create(AWSLambdaClientBuilder.standard(), this.envVars);
-
+			
 			String functionName = this.step.getFunctionName();
-
+			
 			this.listener.getLogger().format("Invoke Lambda function %s%n", functionName);
-
+			
 			InvokeRequest request = new InvokeRequest();
 			request.withFunctionName(functionName);
 			request.withPayload(this.step.getPayloadAsString());
 			request.withLogType(LogType.Tail);
-
+			
 			InvokeResult result = client.invoke(request);
-
+			
 			this.listener.getLogger().append(this.getLogResult(result));
 			String functionError = result.getFunctionError();
 			if (functionError != null) {
 				throw new RuntimeException("Invoke lambda failed! " + this.getPayloadAsString(result));
 			}
-			return this.getPayloadAsObject(result);
+			if (this.step.isReturnValueAsString()) {
+				return this.getPayloadAsString(result);
+			} else {
+				return JsonUtils.fromString(this.getPayloadAsString(result));
+			}
 		}
-
-		private Object getPayloadAsObject(InvokeResult result) {
-			return new JsonSlurper().parseText(this.getPayloadAsString(result));
-		}
-
+		
 		private String getPayloadAsString(InvokeResult result) {
 			return new String(result.getPayload().array(), StandardCharsets.UTF_8);
 		}
-
+		
 		private String getLogResult(InvokeResult result) {
 			return new String(DatatypeConverter.parseBase64Binary(result.getLogResult()), StandardCharsets.UTF_8);
 		}
-
+		
 	}
-
+	
 }

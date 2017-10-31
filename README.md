@@ -436,6 +436,16 @@ def result = invokeLambda(
 )
 ```
 
+Alternatively payload and return value can be Strings instead of Objects:
+
+```
+String result = invokeLambda(
+	functionName: 'myLambdaFunction',
+	payloadAsString: '{"key": "value"}',
+	returnValueAsString: true
+)
+```
+
 # Changelog
 
 ## 1.17 (master)
@@ -444,6 +454,8 @@ def result = invokeLambda(
 * add `cfnExecuteChangeSet` step
 * Add endpoint-url for withAWS support - allows configuring a non-AWS endpoint for internally-hosted clouds.
 * support additional S3 options: pathStyleAccessEnabled and payloadSigningEnabled
+* add support for String payload and return value in `invokeLambda` step
+* Fix: return value of `invokeLambda` is now serializable
 
 ## 1.16
 * Add federatedUserId for withAWS support - generates temporary aws credentials for federated user which gets logged in CloudTrail 
