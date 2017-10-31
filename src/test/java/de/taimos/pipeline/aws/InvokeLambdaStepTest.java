@@ -37,14 +37,15 @@ public class InvokeLambdaStepTest {
 	
 	@Test
 	public void shouldConvertPayloadObjectToString() throws Exception {
-		InvokeLambdaStep invokeLambdaStep = new InvokeLambdaStep("test-lambda",
-				Collections.singletonMap("key", "value"));
+		InvokeLambdaStep invokeLambdaStep = new InvokeLambdaStep("test-lambda");
+		invokeLambdaStep.setPayload(Collections.singletonMap("key", "value"));
 		Assert.assertEquals("{\"key\":\"value\"}", invokeLambdaStep.getPayloadAsString());
 	}
 	
 	@Test
 	public void shouldConvertPayloadListToString() throws Exception {
-		InvokeLambdaStep invokeLambdaStep = new InvokeLambdaStep("test-lambda", Collections.singletonList("elem"));
+		InvokeLambdaStep invokeLambdaStep = new InvokeLambdaStep("test-lambda");
+		invokeLambdaStep.setPayload(Collections.singletonList("elem"));
 		Assert.assertEquals("[\"elem\"]", invokeLambdaStep.getPayloadAsString());
 	}
 	

@@ -415,12 +415,23 @@ def result = invokeLambda(
 )
 ```
 
+Alternatively payload and return value can be Strings instead of Objects:
+
+```
+String result = invokeLambda(
+	functionName: 'myLambdaFunction',
+	payload: '{"key": "value"}',
+	returnValueAsString: true
+)
+```
+
 # Changelog
 
 ## 1.17 (master)
 * Add policy for withAWS support - allows an additional policy to be combined with the policy associated with the assumed role. 
 * add `cfnCreateChangeSet` step
 * add `cfnExecuteChangeSet` step
+* add support for String payload and return value in `invokeLambda` step
 * Fix: return value of `invokeLambda` is now serializable
 
 ## 1.16

@@ -31,6 +31,7 @@ import org.jenkinsci.plugins.workflow.steps.AbstractStepImpl;
 import org.jenkinsci.plugins.workflow.steps.AbstractSynchronousStepExecution;
 import org.jenkinsci.plugins.workflow.steps.StepContextParameter;
 import org.kohsuke.stapler.DataBoundConstructor;
+import org.kohsuke.stapler.DataBoundSetter;
 
 import com.amazonaws.services.lambda.AWSLambdaClient;
 import com.amazonaws.services.lambda.model.InvokeRequest;
@@ -45,13 +46,14 @@ import net.sf.json.JSONSerializer;
 
 public class InvokeLambdaStep extends AbstractStepImpl {
 	
-	private final Object payload;
+	private Object payload;
+	private String payloadAsString;
+	private boolean returnValueAsString = false;
 	private final String functionName;
 	
 	@DataBoundConstructor
-	public InvokeLambdaStep(String functionName, Object payload) {
+	public InvokeLambdaStep(String functionName) {
 		this.functionName = functionName;
-		this.payload = payload;
 	}
 	
 	public String getFunctionName() {
@@ -62,12 +64,34 @@ public class InvokeLambdaStep extends AbstractStepImpl {
 		return this.payload;
 	}
 	
+	@DataBoundSetter
+	public void setPayload(Object payload) {
+		this.payload = payload;
+	}
+	
 	public String getPayloadAsString() {
-		return this.toJsonString(this.payload);
+		if (this.payload != null) {
+			return this.toJsonString(this.payload);
+		}
+		return this.payloadAsString;
+	}
+	
+	@DataBoundSetter
+	public void setPayloadAsString(String payloadAsString) {
+		this.payloadAsString = payloadAsString;
 	}
 	
 	private String toJsonString(Object payloadObject) {
 		return (new JsonBuilder(payloadObject)).toString();
+	}
+	
+	public boolean isReturnValueAsString() {
+		return this.returnValueAsString;
+	}
+	
+	@DataBoundSetter
+	public void setReturnValueAsString(boolean returnValueAsString) {
+		this.returnValueAsString = returnValueAsString;
 	}
 	
 	@Extension
@@ -119,7 +143,11 @@ public class InvokeLambdaStep extends AbstractStepImpl {
 			if (functionError != null) {
 				throw new RuntimeException("Invoke lambda failed! " + this.getPayloadAsString(result));
 			}
-			return this.getPayloadAsObject(result);
+			if (this.step.isReturnValueAsString()) {
+				return this.getPayloadAsString(result);
+			} else {
+				return this.getPayloadAsObject(result);
+			}
 		}
 		
 		public Object getPayloadAsObject(InvokeResult result) {
