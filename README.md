@@ -441,7 +441,7 @@ Alternatively payload and return value can be Strings instead of Objects:
 ```
 String result = invokeLambda(
 	functionName: 'myLambdaFunction',
-	payload: '{"key": "value"}',
+	payloadAsString: '{"key": "value"}',
 	returnValueAsString: true
 )
 ```
