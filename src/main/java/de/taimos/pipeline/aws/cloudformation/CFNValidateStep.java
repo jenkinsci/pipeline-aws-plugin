@@ -24,6 +24,8 @@ package de.taimos.pipeline.aws.cloudformation;
 import javax.annotation.Nonnull;
 import javax.inject.Inject;
 
+import com.amazonaws.services.cloudformation.AmazonCloudFormation;
+import com.amazonaws.services.cloudformation.AmazonCloudFormationClientBuilder;
 import org.jenkinsci.plugins.workflow.steps.AbstractStepDescriptorImpl;
 import org.jenkinsci.plugins.workflow.steps.AbstractStepExecutionImpl;
 import org.jenkinsci.plugins.workflow.steps.AbstractStepImpl;
@@ -42,53 +44,53 @@ import hudson.FilePath;
 import hudson.model.TaskListener;
 
 public class CFNValidateStep extends AbstractStepImpl {
-	
+
 	private String file;
 	private String url;
-	
+
 	@DataBoundConstructor
 	public CFNValidateStep() {
 		//
 	}
-	
+
 	public String getFile() {
 		return this.file;
 	}
-	
+
 	@DataBoundSetter
 	public void setFile(String file) {
 		this.file = file;
 	}
-	
+
 	public String getUrl() {
 		return this.url;
 	}
-	
+
 	@DataBoundSetter
 	public void setUrl(String url) {
 		this.url = url;
 	}
-	
+
 	@Extension
 	public static class DescriptorImpl extends AbstractStepDescriptorImpl {
-		
+
 		public DescriptorImpl() {
 			super(Execution.class);
 		}
-		
+
 		@Override
 		public String getFunctionName() {
 			return "cfnValidate";
 		}
-		
+
 		@Override
 		public String getDisplayName() {
 			return "Validate CloudFormation template";
 		}
 	}
-	
+
 	public static class Execution extends AbstractStepExecutionImpl {
-		
+
 		@Inject
 		private transient CFNValidateStep step;
 		@StepContextParameter
@@ -97,24 +99,24 @@ public class CFNValidateStep extends AbstractStepImpl {
 		private transient TaskListener listener;
 		@StepContextParameter
 		private transient FilePath workspace;
-		
+
 		@Override
 		public boolean start() throws Exception {
 			final String file = this.step.getFile();
 			final String url = this.step.getUrl();
-			
+
 			if ((file == null || file.isEmpty()) && (url == null || url.isEmpty())) {
 				throw new IllegalArgumentException("Either a file or url for the template must be specified");
 			}
-			
+
 			this.listener.getLogger().format("Validating CloudFormation template %s %n", file);
-			
+
 			final String template = this.readTemplate(file);
-			
+
 			new Thread("cfnValidate-" + file) {
 				@Override
 				public void run() {
-					AmazonCloudFormationClient client = AWSClientFactory.create(AmazonCloudFormationClient.class, Execution.this.envVars);
+					AmazonCloudFormation client = AWSClientFactory.create(AmazonCloudFormationClientBuilder.standard(), Execution.this.envVars);
 					try {
 						ValidateTemplateRequest request = new ValidateTemplateRequest();
 						if (template != null) {
@@ -131,7 +133,7 @@ public class CFNValidateStep extends AbstractStepImpl {
 			}.start();
 			return false;
 		}
-		
+
 		private String readTemplate(String file) {
 			if (file == null || file.isEmpty()) {
 				return null;
@@ -143,14 +145,14 @@ public class CFNValidateStep extends AbstractStepImpl {
 				throw new RuntimeException(e);
 			}
 		}
-		
+
 		@Override
 		public void stop(@Nonnull Throwable cause) throws Exception {
 			//
 		}
-		
+
 		private static final long serialVersionUID = 1L;
-		
+
 	}
-	
+
 }

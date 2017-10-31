@@ -25,6 +25,8 @@ import java.util.Arrays;
 
 import javax.inject.Inject;
 
+import com.amazonaws.services.cloudfront.AmazonCloudFront;
+import com.amazonaws.services.cloudfront.AmazonCloudFrontClientBuilder;
 import org.jenkinsci.plugins.workflow.steps.AbstractStepDescriptorImpl;
 import org.jenkinsci.plugins.workflow.steps.AbstractStepImpl;
 import org.jenkinsci.plugins.workflow.steps.AbstractSynchronousStepExecution;
@@ -41,70 +43,70 @@ import hudson.Extension;
 import hudson.model.TaskListener;
 
 public class CFInvalidateStep extends AbstractStepImpl {
-	
+
 	private final String distribution;
 	private final String[] paths;
-	
+
 	@DataBoundConstructor
 	public CFInvalidateStep(String distribution, String[] paths) {
 		this.distribution = distribution;
 		this.paths = paths.clone();
 	}
-	
+
 	public String getDistribution() {
 		return this.distribution;
 	}
-	
+
 	public String[] getPaths() {
 		return this.paths != null ? this.paths.clone() : null;
 	}
-	
+
 	@Extension
 	public static class DescriptorImpl extends AbstractStepDescriptorImpl {
-		
+
 		public DescriptorImpl() {
 			super(Execution.class);
 		}
-		
+
 		@Override
 		public String getFunctionName() {
 			return "cfInvalidate";
 		}
-		
+
 		@Override
 		public String getDisplayName() {
 			return "Invalidate given paths in CloudFront distribution";
 		}
 	}
-	
+
 	public static class Execution extends AbstractSynchronousStepExecution<Void> {
-		
+
 		@Inject
 		private transient CFInvalidateStep step;
 		@StepContextParameter
 		private transient EnvVars envVars;
 		@StepContextParameter
 		private transient TaskListener listener;
-		
+
 		@Override
 		protected Void run() throws Exception {
-			AmazonCloudFrontClient client = AWSClientFactory.create(AmazonCloudFrontClient.class, this.envVars);
-			
+			AmazonCloudFront client = AWSClientFactory.create(AmazonCloudFrontClientBuilder.standard(), this.envVars);
+
 			String distribution = this.step.getDistribution();
 			String[] paths = this.step.getPaths();
-			
+
 			this.listener.getLogger().format("Invalidating paths %s in distribution %s %n", Arrays.toString(paths), distribution);
-			
+
 			Paths invalidationPaths = new Paths().withItems(paths).withQuantity(paths.length);
 			InvalidationBatch batch = new InvalidationBatch(invalidationPaths, Long.toString(System.currentTimeMillis()));
 			client.createInvalidation(new CreateInvalidationRequest(distribution, batch));
-			
+
 			this.listener.getLogger().println("Invalidation complete");
 			return null;
 		}
-		
+
 		private static final long serialVersionUID = 1L;
-		
+
 	}
-	
+
 }

@@ -21,7 +21,9 @@
 
 package de.taimos.pipeline.aws.cloudformation;
 
+import com.amazonaws.services.cloudformation.AmazonCloudFormation;
 import com.amazonaws.services.cloudformation.AmazonCloudFormationClient;
+import com.amazonaws.services.cloudformation.AmazonCloudFormationClientBuilder;
 import com.google.common.base.Preconditions;
 import de.taimos.pipeline.aws.AWSClientFactory;
 import hudson.EnvVars;
@@ -60,39 +62,39 @@ public class CFNExecuteChangeSetStep extends AbstractStepImpl {
 	public Long getPollInterval() {
 		return this.pollInterval;
 	}
-	
+
 	@DataBoundSetter
 	public void setPollInterval(Long pollInterval) {
 		this.pollInterval = pollInterval;
 	}
-	
+
 	@Extension
 	public static class DescriptorImpl extends AbstractStepDescriptorImpl {
-		
+
 		public DescriptorImpl() {
 			super(Execution.class);
 		}
-		
+
 		@Override
 		public String getFunctionName() {
 			return "cfnExecuteChangeSet";
 		}
-		
+
 		@Override
 		public String getDisplayName() {
 			return "Execute CloudFormation change set";
 		}
 	}
-	
+
 	public static class Execution extends AbstractStepExecutionImpl {
-		
+
 		@Inject
 		private transient CFNExecuteChangeSetStep step;
 		@StepContextParameter
 		private transient EnvVars envVars;
 		@StepContextParameter
 		private transient TaskListener listener;
-		
+
 		@Override
 		public boolean start() throws Exception {
 			final String changeSet = this.step.getChangeSet();
@@ -103,12 +105,12 @@ public class CFNExecuteChangeSetStep extends AbstractStepImpl {
 			Preconditions.checkArgument(stack != null && !stack.isEmpty(), "Stack must not be null or empty");
 
 			this.listener.getLogger().format("Executing CloudFormation change set %s %n", changeSet);
-			
+
 			new Thread("cfnExecuteChangeSet-" + changeSet) {
 				@Override
 				public void run() {
 					try {
-						AmazonCloudFormationClient client = AWSClientFactory.create(AmazonCloudFormationClient.class, Execution.this.envVars);
+						AmazonCloudFormation client = AWSClientFactory.create(AmazonCloudFormationClientBuilder.standard(), Execution.this.envVars);
 						CloudFormationStack cfnStack = new CloudFormationStack(client, stack, Execution.this.listener);
 						cfnStack.executeChangeSet(changeSet, Execution.this.step.getPollInterval());
 						Execution.this.listener.getLogger().println("Execute change set complete");
@@ -120,14 +122,14 @@ public class CFNExecuteChangeSetStep extends AbstractStepImpl {
 			}.start();
 			return false;
 		}
-		
+
 		@Override
 		public void stop(@Nonnull Throwable cause) throws Exception {
 			//
 		}
-		
+
 		private static final long serialVersionUID = 1L;
-		
+
 	}
-	
+
 }

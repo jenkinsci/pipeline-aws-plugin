@@ -26,6 +26,8 @@ import java.nio.charset.StandardCharsets;
 import javax.inject.Inject;
 import javax.xml.bind.DatatypeConverter;
 
+import com.amazonaws.services.lambda.AWSLambda;
+import com.amazonaws.services.lambda.AWSLambdaClientBuilder;
 import org.jenkinsci.plugins.workflow.steps.AbstractStepDescriptorImpl;
 import org.jenkinsci.plugins.workflow.steps.AbstractStepImpl;
 import org.jenkinsci.plugins.workflow.steps.AbstractSynchronousStepExecution;
@@ -125,7 +127,7 @@ public class InvokeLambdaStep extends AbstractStepImpl {
 		
 		@Override
 		protected Object run() throws Exception {
-			AWSLambdaClient client = AWSClientFactory.create(AWSLambdaClient.class, this.envVars);
+			AWSLambda client = AWSClientFactory.create(AWSLambdaClientBuilder.standard(), this.envVars);
 			
 			String functionName = this.step.getFunctionName();
 			

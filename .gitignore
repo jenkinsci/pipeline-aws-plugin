@@ -2,3 +2,4 @@
 *.iml
 /target
 deploy.sh
+work/*

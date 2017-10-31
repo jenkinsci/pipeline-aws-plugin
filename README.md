@@ -39,13 +39,22 @@ You can provide region and profile information or let Jenkins
 assume a role in another or the same AWS account.
 You can mix all parameters in one `withAWS` block.
 
-Set region information:
+Set region information (note that region and endpointUrl are mutually exclusive):
 
 ```
 withAWS(region:'eu-west-1') {
     // do something
 }
 ```
+
+Use provided endpointUrl (endpointUrl is optional, however, region and endpointUrl are mutually exclusive):
+
+```
+withAWS(endpointUrl:'https://minio.mycompany.com',credentials:'nameOfSystemCredentials',federatedUserId:"${submitter}@${releaseVersion}") {
+    // do something
+}
+```
+
 
 Use Jenkins UsernamePassword credentials information (Username: AccessKeyId, Password: SecretAccessKey):
 
@@ -101,7 +110,19 @@ Invalidate given paths in CloudFront distribution.
 cfInvalidate(distribution:'someDistributionId', paths:['/*'])
 ```
 
-## s3Upload
+## S3 Steps
+
+All s3* steps take an optional pathStyleAccessEnabled and payloadSigningEnabled boolean parameter.
+
+```
+s3Upload(pathStyleAccessEnabled: true, payloadSigningEnabled: true, file:'file.txt', bucket:'my-bucket', path:'path/to/target/file.txt')
+s3Delete(pathStyleAccessEnabled: true, bucket:'my-bucket', path:'path/to/source/file.txt')
+s3Download(pathStyleAccessEnabled: true, file:'file.txt', bucket:'my-bucket', path:'path/to/source/file.txt', force:true)
+files = s3FindFiles(pathStyleAccessEnabled: true, bucket:'my-bucket')
+
+```
+
+### s3Upload
 
 Upload a file/folder from the workspace to an S3 bucket.
 If the `file` parameter denotes a directory, the complete directory including all subfolders will be uploaded.
@@ -136,7 +157,7 @@ s3Upload(file:'file.txt', bucket:'my-bucket', path:'path/to/target/file.txt', ac
 s3Upload(file:'someFolder', bucket:'my-bucket', path:'path/to/targetFolder/', acl:'BucketOwnerFullControl')
 ```
 
-## s3Download
+### s3Download
 
 Download a file/folder from S3 to the local workspace.
 Set optional parameter `force` to `true` to overwrite existing file in workspace.
@@ -147,7 +168,7 @@ s3Download(file:'file.txt', bucket:'my-bucket', path:'path/to/source/file.txt', 
 s3Download(file:'targetFolder/', bucket:'my-bucket', path:'path/to/sourceFolder/', force:true)
 ```
 
-## s3Delete
+### s3Delete
 
 Delete a file/folder from S3.
 If the path ends in a "/", then the path will be interpreted to be a folder, and all of its contents will be removed.
@@ -157,7 +178,7 @@ s3Delete(bucket:'my-bucket', path:'path/to/source/file.txt')
 s3Delete(bucket:'my-bucket', path:'path/to/sourceFolder/')
 ```
 
-## s3FindFiles
+### s3FindFiles
 
 This provides a way to query the files/folders in the S3 bucket, analogous to the `findFiles` step provided by "pipeline-utility-steps-plugin".
 If specified, the `path` limits the scope of the operation to that folder only.
@@ -431,6 +452,8 @@ String result = invokeLambda(
 * Add policy for withAWS support - allows an additional policy to be combined with the policy associated with the assumed role. 
 * add `cfnCreateChangeSet` step
 * add `cfnExecuteChangeSet` step
+* Add endpoint-url for withAWS support - allows configuring a non-AWS endpoint for internally-hosted clouds.
+* support additional S3 options: pathStyleAccessEnabled and payloadSigningEnabled
 * add support for String payload and return value in `invokeLambda` step
 * Fix: return value of `invokeLambda` is now serializable
 
