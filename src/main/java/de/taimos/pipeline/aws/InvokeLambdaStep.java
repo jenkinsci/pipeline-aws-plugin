@@ -26,8 +26,6 @@ import java.nio.charset.StandardCharsets;
 import javax.inject.Inject;
 import javax.xml.bind.DatatypeConverter;
 
-import com.amazonaws.services.lambda.AWSLambda;
-import com.amazonaws.services.lambda.AWSLambdaClientBuilder;
 import org.jenkinsci.plugins.workflow.steps.AbstractStepDescriptorImpl;
 import org.jenkinsci.plugins.workflow.steps.AbstractStepImpl;
 import org.jenkinsci.plugins.workflow.steps.AbstractSynchronousStepExecution;
@@ -35,16 +33,16 @@ import org.jenkinsci.plugins.workflow.steps.StepContextParameter;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
 
-import com.amazonaws.services.lambda.AWSLambdaClient;
+import com.amazonaws.services.lambda.AWSLambda;
+import com.amazonaws.services.lambda.AWSLambdaClientBuilder;
 import com.amazonaws.services.lambda.model.InvokeRequest;
 import com.amazonaws.services.lambda.model.InvokeResult;
 import com.amazonaws.services.lambda.model.LogType;
 
-import groovy.json.JsonBuilder;
+import de.taimos.pipeline.aws.utils.JsonUtils;
 import hudson.EnvVars;
 import hudson.Extension;
 import hudson.model.TaskListener;
-import net.sf.json.JSONSerializer;
 
 public class InvokeLambdaStep extends AbstractStepImpl {
 	
@@ -73,7 +71,7 @@ public class InvokeLambdaStep extends AbstractStepImpl {
 	
 	public String getPayloadAsString() {
 		if (this.payload != null) {
-			return this.toJsonString(this.payload);
+			return JsonUtils.toString(this.payload);
 		}
 		return this.payloadAsString;
 	}
@@ -81,10 +79,6 @@ public class InvokeLambdaStep extends AbstractStepImpl {
 	@DataBoundSetter
 	public void setPayloadAsString(String payloadAsString) {
 		this.payloadAsString = payloadAsString;
-	}
-	
-	private String toJsonString(Object payloadObject) {
-		return (new JsonBuilder(payloadObject)).toString();
 	}
 	
 	public boolean isReturnValueAsString() {
@@ -148,15 +142,11 @@ public class InvokeLambdaStep extends AbstractStepImpl {
 			if (this.step.isReturnValueAsString()) {
 				return this.getPayloadAsString(result);
 			} else {
-				return this.getPayloadAsObject(result);
+				return JsonUtils.fromString(this.getPayloadAsString(result));
 			}
 		}
 		
-		public Object getPayloadAsObject(InvokeResult result) {
-			return JSONSerializer.toJSON(this.getPayloadAsString(result));
-		}
-		
-		public String getPayloadAsString(InvokeResult result) {
+		private String getPayloadAsString(InvokeResult result) {
 			return new String(result.getPayload().array(), StandardCharsets.UTF_8);
 		}
 		

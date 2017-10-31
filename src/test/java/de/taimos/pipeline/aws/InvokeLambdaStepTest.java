@@ -1,9 +1,5 @@
 package de.taimos.pipeline.aws;
 
-import java.io.ByteArrayOutputStream;
-import java.io.ObjectOutputStream;
-import java.nio.ByteBuffer;
-
 /*-
  * #%L
  * Pipeline: AWS Steps
@@ -29,10 +25,6 @@ import java.util.Collections;
 import org.junit.Assert;
 import org.junit.Test;
 
-import com.amazonaws.services.lambda.model.InvokeResult;
-
-import de.taimos.pipeline.aws.InvokeLambdaStep.Execution;
-
 public class InvokeLambdaStepTest {
 	
 	@Test
@@ -49,14 +41,4 @@ public class InvokeLambdaStepTest {
 		Assert.assertEquals("[\"elem\"]", invokeLambdaStep.getPayloadAsString());
 	}
 	
-	@Test
-	public void resultShouldBeSerializable() throws Exception {
-		InvokeResult invokeResult = new InvokeResult();
-		invokeResult.setPayload(ByteBuffer.wrap("{}".getBytes()));
-		
-		Object payloadAsObject = new InvokeLambdaStep.Execution().getPayloadAsObject(invokeResult);
-		
-		new ObjectOutputStream(new ByteArrayOutputStream()).writeObject(payloadAsObject);
-		// no exception -> ok
-	}
 }
