@@ -24,15 +24,14 @@ package de.taimos.pipeline.aws.cloudformation;
 import javax.annotation.Nonnull;
 import javax.inject.Inject;
 
-import com.amazonaws.services.cloudformation.AmazonCloudFormation;
-import com.amazonaws.services.cloudformation.AmazonCloudFormationClientBuilder;
 import org.jenkinsci.plugins.workflow.steps.AbstractStepDescriptorImpl;
 import org.jenkinsci.plugins.workflow.steps.AbstractStepExecutionImpl;
 import org.jenkinsci.plugins.workflow.steps.AbstractStepImpl;
 import org.jenkinsci.plugins.workflow.steps.StepContextParameter;
 import org.kohsuke.stapler.DataBoundConstructor;
 
-import com.amazonaws.services.cloudformation.AmazonCloudFormationClient;
+import com.amazonaws.services.cloudformation.AmazonCloudFormation;
+import com.amazonaws.services.cloudformation.AmazonCloudFormationClientBuilder;
 import com.amazonaws.services.cloudformation.model.AmazonCloudFormationException;
 import com.google.common.base.Preconditions;
 
@@ -42,53 +41,53 @@ import hudson.Extension;
 import hudson.model.TaskListener;
 
 public class CFNDescribeStep extends AbstractStepImpl {
-
+	
 	private final String stack;
-
+	
 	@DataBoundConstructor
 	public CFNDescribeStep(String stack) {
 		this.stack = stack;
 	}
-
+	
 	public String getStack() {
 		return this.stack;
 	}
-
+	
 	@Extension
 	public static class DescriptorImpl extends AbstractStepDescriptorImpl {
-
+		
 		public DescriptorImpl() {
 			super(Execution.class);
 		}
-
+		
 		@Override
 		public String getFunctionName() {
 			return "cfnDescribe";
 		}
-
+		
 		@Override
 		public String getDisplayName() {
 			return "Describe outputs of CloudFormation stack";
 		}
 	}
-
+	
 	public static class Execution extends AbstractStepExecutionImpl {
-
+		
 		@Inject
 		private transient CFNDescribeStep step;
 		@StepContextParameter
 		private transient EnvVars envVars;
 		@StepContextParameter
 		private transient TaskListener listener;
-
+		
 		@Override
 		public boolean start() throws Exception {
 			final String stack = this.step.getStack();
-
+			
 			Preconditions.checkArgument(stack != null && !stack.isEmpty(), "Stack must not be null or empty");
-
+			
 			this.listener.getLogger().format("Getting outputs of CloudFormation stack %s %n", stack);
-
+			
 			new Thread("cfnDescribe-" + stack) {
 				@Override
 				public void run() {
@@ -103,14 +102,14 @@ public class CFNDescribeStep extends AbstractStepImpl {
 			}.start();
 			return false;
 		}
-
+		
 		@Override
 		public void stop(@Nonnull Throwable cause) throws Exception {
 			//
 		}
-
+		
 		private static final long serialVersionUID = 1L;
-
+		
 	}
-
+	
 }

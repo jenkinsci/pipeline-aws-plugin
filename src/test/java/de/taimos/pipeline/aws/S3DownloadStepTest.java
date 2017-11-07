@@ -21,8 +21,6 @@
 
 package de.taimos.pipeline.aws;
 
-import java.util.Collection;
-
 import org.junit.Assert;
 import org.junit.Test;
 

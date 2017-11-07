@@ -19,11 +19,11 @@
 		<f:textbox />
 	</f:entry>
 	<f:entry title="${%Metadatas}" field="metadatas">
-		<f:tab />
+		<f:textbox />
 	</f:entry>
 	<f:entry title="${%CacheControl}" field="cacheControl">
-    		<f:tab />
-    	</f:entry>
+        <f:textbox />
+    </f:entry>
 	<f:entry title="${%ACL}" field="acl" name="acl">
         <select name="acl">
             <option value="Private">Private</option>

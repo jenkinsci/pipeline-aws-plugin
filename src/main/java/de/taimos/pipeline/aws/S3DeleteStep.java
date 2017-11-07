@@ -27,15 +27,12 @@ import java.util.List;
 import javax.annotation.Nonnull;
 import javax.inject.Inject;
 
-import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import org.jenkinsci.plugins.workflow.steps.AbstractStepDescriptorImpl;
 import org.jenkinsci.plugins.workflow.steps.AbstractStepExecutionImpl;
-import org.jenkinsci.plugins.workflow.steps.AbstractStepImpl;
 import org.jenkinsci.plugins.workflow.steps.StepContextParameter;
 import org.kohsuke.stapler.DataBoundConstructor;
 
-import com.amazonaws.services.s3.AmazonS3Client;
+import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.ListObjectsRequest;
 import com.amazonaws.services.s3.model.ObjectListing;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
@@ -60,42 +57,42 @@ public class S3DeleteStep extends AbstractS3Step {
 	 * This is the path to the object.
 	 */
 	private final String path;
-
+	
 	@DataBoundConstructor
 	public S3DeleteStep(String bucket, String path, boolean pathStyleAccessEnabled, boolean payloadSigningEnabled) {
 		super(pathStyleAccessEnabled, payloadSigningEnabled);
 		this.bucket = bucket;
 		this.path = path;
 	}
-
+	
 	public String getBucket() {
 		return this.bucket;
 	}
-
+	
 	public String getPath() {
 		return this.path;
 	}
-
+	
 	@Extension
 	public static class DescriptorImpl extends AbstractStepDescriptorImpl {
-
+		
 		public DescriptorImpl() {
 			super(Execution.class);
 		}
-
+		
 		@Override
 		public String getFunctionName() {
 			return "s3Delete";
 		}
-
+		
 		@Override
 		public String getDisplayName() {
 			return "Delete file from S3";
 		}
 	}
-
+	
 	public static class Execution extends AbstractStepExecutionImpl {
-
+		
 		protected static final long serialVersionUID = 1L;
 		@Inject
 		protected transient S3DeleteStep step;
@@ -105,21 +102,21 @@ public class S3DeleteStep extends AbstractS3Step {
 		protected transient FilePath workspace;
 		@StepContextParameter
 		protected transient TaskListener listener;
-
+		
 		@Override
 		public boolean start() throws Exception {
 			final String bucket = this.step.getBucket();
 			final String path = this.step.getPath();
-
+			
 			Preconditions.checkArgument(bucket != null && !bucket.isEmpty(), "Bucket must not be null or empty");
-
+			
 			new Thread("s3Delete") {
 				@Override
 				public void run() {
 					try {
 						Execution.this.listener.getLogger().format("Deleting s3://%s/%s%n", bucket, path);
 						AmazonS3 s3Client = AWSClientFactory.create(Execution.this.step.createAmazonS3ClientBuilder(), Execution.this.envVars);
-
+						
 						if (!path.endsWith("/")) {
 							// See if the thing that we were given is a file.
 							if (s3Client.doesObjectExist(bucket, path)) {
@@ -129,25 +126,25 @@ public class S3DeleteStep extends AbstractS3Step {
 						} else {
 							// This is the list of keys to delete from the bucket.
 							List<String> objectsToDelete = new ArrayList<>();
-
+							
 							// See if the thing that we were given is a file.
 							if (s3Client.doesObjectExist(bucket, path)) {
 								objectsToDelete.add(path);
 							}
-
+							
 							// This is the list of folders that we need to investigate.
 							// We're going to start with the path that we've been given,
 							// and then we'll grow it from there.
 							List<String> folders = new ArrayList<>();
 							folders.add(path);
-
+							
 							// Go through all of the folders that we need to investigate,
 							// popping the first item off and working on it.  When they're
 							// all gone, we'll be done.
 							while (folders.size() > 0) {
 								// This is the folder to investigate.
 								String folder = folders.remove(0);
-
+								
 								// Create the request to list the objects within it.
 								ListObjectsRequest request = new ListObjectsRequest();
 								request.setBucketName(bucket);
@@ -156,7 +153,7 @@ public class S3DeleteStep extends AbstractS3Step {
 								if (!folder.endsWith("/")) {
 									request.setPrefix(folder + "/");
 								}
-
+								
 								// Get the list of objects within the folder.  Because AWS
 								// might paginate this, we're going to continue dealing with
 								// the "objectListing" object until it claims that it's done.
@@ -168,7 +165,7 @@ public class S3DeleteStep extends AbstractS3Step {
 									}
 									// Add any folders to the list of folders that we need to investigate.
 									folders.addAll(objectListing.getCommonPrefixes());
-
+									
 									// If this listing is complete, then we can stop.
 									if (!objectListing.isTruncated()) {
 										break;
@@ -177,14 +174,14 @@ public class S3DeleteStep extends AbstractS3Step {
 									objectListing = s3Client.listNextBatchOfObjects(objectListing);
 								}
 							}
-
+							
 							// Go through all of the objects that we want to delete and actually delete them.
 							for (String objectToDelete : objectsToDelete) {
 								Execution.this.listener.getLogger().format("Deleting object at s3://%s/%s%n", bucket, objectToDelete);
 								s3Client.deleteObject(bucket, objectToDelete);
 							}
 						}
-
+						
 						Execution.this.listener.getLogger().println("Delete complete");
 						Execution.this.getContext().onSuccess(null);
 					} catch (RuntimeException e) {
@@ -194,11 +191,11 @@ public class S3DeleteStep extends AbstractS3Step {
 			}.start();
 			return false;
 		}
-
+		
 		@Override
 		public void stop(@Nonnull Throwable cause) throws Exception {
 			//
 		}
-
+		
 	}
 }

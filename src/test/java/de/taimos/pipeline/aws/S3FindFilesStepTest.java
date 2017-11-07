@@ -22,7 +22,6 @@
 package de.taimos.pipeline.aws;
 
 import java.nio.file.Paths;
-import java.util.Collection;
 import java.util.Date;
 
 import org.junit.Assert;
@@ -84,7 +83,7 @@ public class S3FindFilesStepTest {
 
 	@Test
 	public void computeMatcherString() throws Exception {
-		String matcherString = null;
+		String matcherString;
 		matcherString = S3FindFilesStep.Execution.computeMatcherString( "", "" );
 		Assert.assertEquals( "glob:*", matcherString );
 		matcherString = S3FindFilesStep.Execution.computeMatcherString( "path", "file.*" );
@@ -97,7 +96,7 @@ public class S3FindFilesStepTest {
 
 	@Test
 	public void createFileWrapperFromFolder() throws Exception {
-		FileWrapper file = null;
+		FileWrapper file;
 
 		file = S3FindFilesStep.Execution.createFileWrapperFromFolder( 0, Paths.get("path/to/folder") );
 		Assert.assertEquals( "folder", file.getName() );
@@ -129,7 +128,7 @@ public class S3FindFilesStepTest {
 
 	@Test
 	public void createFileWrapperFromFile() throws Exception {
-		FileWrapper file = null;
+		FileWrapper file;
 		S3ObjectSummary s3ObjectSummary = new S3ObjectSummary();
 		s3ObjectSummary.setBucketName( "my-bucket" );
 		s3ObjectSummary.setKey( "path/to/my/file.ext" );

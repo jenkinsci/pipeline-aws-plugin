@@ -21,29 +21,32 @@
 
 package de.taimos.pipeline.aws.cloudformation;
 
-import com.amazonaws.services.cloudformation.model.Parameter;
-import com.amazonaws.services.cloudformation.model.Tag;
-import hudson.EnvVars;
-import hudson.Extension;
-import hudson.FilePath;
-import hudson.model.TaskListener;
+import java.util.Collection;
+
+import javax.inject.Inject;
+
 import org.jenkinsci.plugins.workflow.steps.AbstractStepDescriptorImpl;
 import org.jenkinsci.plugins.workflow.steps.StepContextParameter;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
 
-import javax.inject.Inject;
-import java.util.Collection;
+import com.amazonaws.services.cloudformation.model.Parameter;
+import com.amazonaws.services.cloudformation.model.Tag;
+
+import hudson.EnvVars;
+import hudson.Extension;
+import hudson.FilePath;
+import hudson.model.TaskListener;
 
 public class CFNUpdateStep extends AbstractCFNCreateStep {
 	
 	private Integer timeoutInMinutes;
-
+	
 	@DataBoundConstructor
 	public CFNUpdateStep(String stack) {
 		super(stack);
 	}
-
+	
 	public Integer getTimeoutInMinutes() {
 		return this.timeoutInMinutes;
 	}
@@ -52,7 +55,7 @@ public class CFNUpdateStep extends AbstractCFNCreateStep {
 	public void setTimeoutInMinutes(Integer timeoutInMinutes) {
 		this.timeoutInMinutes = timeoutInMinutes;
 	}
-
+	
 	@Extension
 	public static class DescriptorImpl extends AbstractStepDescriptorImpl {
 		
@@ -70,7 +73,7 @@ public class CFNUpdateStep extends AbstractCFNCreateStep {
 			return "Create or Update CloudFormation stack";
 		}
 	}
-
+	
 	public static class Execution extends AbstractCFNCreateStep.Execution {
 		
 		@Inject
@@ -81,35 +84,36 @@ public class CFNUpdateStep extends AbstractCFNCreateStep {
 		private transient FilePath workspace;
 		@StepContextParameter
 		private transient TaskListener listener;
-
+		
 		@Override
 		public AbstractCFNCreateStep getStep() {
 			return this.step;
 		}
-
+		
 		@Override
 		public EnvVars getEnvVars() {
 			return this.envVars;
 		}
-
+		
 		@Override
 		public FilePath getWorkspace() {
 			return this.workspace;
 		}
-
+		
 		@Override
 		public TaskListener getListener() {
 			return this.listener;
 		}
-
+		
 		@Override
-		public void checkPreconditions() {}
-
+		public void checkPreconditions() {
+		}
+		
 		@Override
 		public String getThreadName() {
 			return "cfnUpdate-" + this.step.getStack();
 		}
-
+		
 		@Override
 		public Object whenStackExists(Collection<Parameter> parameters, Collection<Tag> tags) throws Exception {
 			final String file = this.getStep().getFile();
@@ -118,7 +122,7 @@ public class CFNUpdateStep extends AbstractCFNCreateStep {
 			cfnStack.update(this.readTemplate(file), url, parameters, tags, this.getStep().getPollInterval(), this.getStep().getRoleArn());
 			return cfnStack.describeOutputs();
 		}
-
+		
 		@Override
 		public Object whenStackMissing(Collection<Parameter> parameters, Collection<Tag> tags) throws Exception {
 			final String file = this.getStep().getFile();
@@ -127,9 +131,9 @@ public class CFNUpdateStep extends AbstractCFNCreateStep {
 			cfnStack.create(this.readTemplate(file), url, parameters, tags, this.step.getTimeoutInMinutes(), this.getStep().getPollInterval(), this.getStep().getRoleArn());
 			return cfnStack.describeOutputs();
 		}
-
+		
 		private static final long serialVersionUID = 1L;
-
+		
 	}
 	
 }

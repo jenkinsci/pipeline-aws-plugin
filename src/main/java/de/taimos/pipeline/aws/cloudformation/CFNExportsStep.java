@@ -27,15 +27,14 @@ import java.util.Map;
 import javax.annotation.Nonnull;
 import javax.inject.Inject;
 
-import com.amazonaws.services.cloudformation.AmazonCloudFormation;
-import com.amazonaws.services.cloudformation.AmazonCloudFormationClientBuilder;
 import org.jenkinsci.plugins.workflow.steps.AbstractStepDescriptorImpl;
 import org.jenkinsci.plugins.workflow.steps.AbstractStepExecutionImpl;
 import org.jenkinsci.plugins.workflow.steps.AbstractStepImpl;
 import org.jenkinsci.plugins.workflow.steps.StepContextParameter;
 import org.kohsuke.stapler.DataBoundConstructor;
 
-import com.amazonaws.services.cloudformation.AmazonCloudFormationClient;
+import com.amazonaws.services.cloudformation.AmazonCloudFormation;
+import com.amazonaws.services.cloudformation.AmazonCloudFormationClientBuilder;
 import com.amazonaws.services.cloudformation.model.AmazonCloudFormationException;
 import com.amazonaws.services.cloudformation.model.Export;
 import com.amazonaws.services.cloudformation.model.ListExportsRequest;
@@ -47,49 +46,49 @@ import hudson.Extension;
 import hudson.model.TaskListener;
 
 public class CFNExportsStep extends AbstractStepImpl {
-
+	
 	@DataBoundConstructor
 	public CFNExportsStep() {
 		//
 	}
-
+	
 	@Extension
 	public static class DescriptorImpl extends AbstractStepDescriptorImpl {
-
+		
 		public DescriptorImpl() {
 			super(Execution.class);
 		}
-
+		
 		@Override
 		public String getFunctionName() {
 			return "cfnExports";
 		}
-
+		
 		@Override
 		public String getDisplayName() {
 			return "Describe CloudFormation global exports";
 		}
 	}
-
+	
 	public static class Execution extends AbstractStepExecutionImpl {
-
+		
 		@Inject
 		private transient CFNExportsStep step;
 		@StepContextParameter
 		private transient EnvVars envVars;
 		@StepContextParameter
 		private transient TaskListener listener;
-
+		
 		@Override
 		public boolean start() throws Exception {
 			this.listener.getLogger().format("Getting global exports of CloudFormation %n");
-
+			
 			new Thread("cfnExports") {
 				@Override
 				public void run() {
 					AmazonCloudFormation client = AWSClientFactory.create(AmazonCloudFormationClientBuilder.standard(), Execution.this.envVars);
 					ListExportsResult exports = client.listExports(new ListExportsRequest());
-
+					
 					Map<String, String> map = new HashMap<>();
 					for (Export export : exports.getExports()) {
 						map.put(export.getName(), export.getValue());
@@ -103,14 +102,14 @@ public class CFNExportsStep extends AbstractStepImpl {
 			}.start();
 			return false;
 		}
-
+		
 		@Override
 		public void stop(@Nonnull Throwable cause) throws Exception {
 			//
 		}
-
+		
 		private static final long serialVersionUID = 1L;
-
+		
 	}
-
+	
 }

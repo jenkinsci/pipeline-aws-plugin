@@ -23,11 +23,6 @@ package de.taimos.pipeline.aws;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.amazonaws.regions.Regions;
-import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.AmazonS3Client;
-import com.amazonaws.services.s3.AmazonS3ClientBuilder;
-import hudson.EnvVars;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
 import org.junit.Assert;
@@ -35,6 +30,8 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.jvnet.hudson.test.JenkinsRule;
 
+import com.amazonaws.regions.Regions;
+import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import com.cloudbees.hudson.plugins.folder.AbstractFolder;
 import com.cloudbees.hudson.plugins.folder.Folder;
 import com.cloudbees.hudson.plugins.folder.properties.FolderCredentialsProvider;
@@ -46,6 +43,7 @@ import com.cloudbees.plugins.credentials.common.StandardUsernamePasswordCredenti
 import com.cloudbees.plugins.credentials.domains.Domain;
 import com.cloudbees.plugins.credentials.impl.UsernamePasswordCredentialsImpl;
 
+import hudson.EnvVars;
 import hudson.util.ListBoxModel;
 
 /**
@@ -99,7 +97,7 @@ public class WithAWSStepTest {
 
         // Create a folder with credentials in its store
         Folder folder = jenkinsRule.jenkins.createProject(Folder.class, "folder" + jenkinsRule.jenkins.getItems().size());
-        CredentialsStore folderStore = getFolderStore(folder);
+        CredentialsStore folderStore = this.getFolderStore(folder);
         StandardUsernamePasswordCredentials inFolderCredentials = new UsernamePasswordCredentialsImpl(CredentialsScope.GLOBAL,
                 folderCredentialsId, "test-folder-creds", "folder-aws-access-key-id", "folder-aws-secret-access-key");
         folderStore.addCredentials(Domain.global(), inFolderCredentials);
@@ -124,7 +122,7 @@ public class WithAWSStepTest {
     @Test
     public void testListCredentials() throws Exception {
         Folder folder = jenkinsRule.jenkins.createProject(Folder.class, "folder" + jenkinsRule.jenkins.getItems().size());
-        CredentialsStore folderStore = getFolderStore(folder);
+        CredentialsStore folderStore = this.getFolderStore(folder);
         StandardUsernamePasswordCredentials folderCredentials = new UsernamePasswordCredentialsImpl(CredentialsScope.GLOBAL,
                 "folder-creds", "test-creds", "aws-access-key-id", "aws-secret-access-key");
         StandardUsernamePasswordCredentials globalCredentials = new UsernamePasswordCredentialsImpl(CredentialsScope.GLOBAL,

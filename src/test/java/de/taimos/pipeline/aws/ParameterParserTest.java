@@ -36,7 +36,7 @@ public class ParameterParserTest {
 	@Test
 	public void shouldParseYAML() throws Exception {
 		YAMLParameterFileParser parser = new YAMLParameterFileParser();
-		Collection<Parameter> parameters = parser.parseParams(getClass().getResourceAsStream("/params.yaml"));
+		Collection<Parameter> parameters = parser.parseParams(this.getClass().getResourceAsStream("/params.yaml"));
 		Parameter[] array = parameters.toArray(new Parameter[0]);
 		Assert.assertEquals(2, array.length);
 		
@@ -52,7 +52,7 @@ public class ParameterParserTest {
 	@Test
 	public void shouldParseJSON() throws Exception {
 		JSONParameterFileParser parser = new JSONParameterFileParser();
-		Collection<Parameter> parameters = parser.parseParams(getClass().getResourceAsStream("/params.json"));
+		Collection<Parameter> parameters = parser.parseParams(this.getClass().getResourceAsStream("/params.json"));
 		Parameter[] array = parameters.toArray(new Parameter[0]);
 		Assert.assertEquals(2, array.length);
 		

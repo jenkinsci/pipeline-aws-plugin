@@ -21,12 +21,21 @@
 
 package de.taimos.pipeline.aws.cloudformation;
 
+import java.util.ArrayList;
+import java.util.Collection;
+
+import javax.annotation.Nonnull;
+
+import org.jenkinsci.plugins.workflow.steps.AbstractStepExecutionImpl;
+import org.jenkinsci.plugins.workflow.steps.AbstractStepImpl;
+import org.kohsuke.stapler.DataBoundSetter;
+
 import com.amazonaws.services.cloudformation.AmazonCloudFormation;
-import com.amazonaws.services.cloudformation.AmazonCloudFormationClient;
 import com.amazonaws.services.cloudformation.AmazonCloudFormationClientBuilder;
 import com.amazonaws.services.cloudformation.model.Parameter;
 import com.amazonaws.services.cloudformation.model.Tag;
 import com.google.common.base.Preconditions;
+
 import de.taimos.pipeline.aws.AWSClientFactory;
 import de.taimos.pipeline.aws.cloudformation.parser.JSONParameterFileParser;
 import de.taimos.pipeline.aws.cloudformation.parser.ParameterFileParser;
@@ -35,16 +44,9 @@ import de.taimos.pipeline.aws.utils.IamRoleUtils;
 import hudson.EnvVars;
 import hudson.FilePath;
 import hudson.model.TaskListener;
-import org.jenkinsci.plugins.workflow.steps.AbstractStepExecutionImpl;
-import org.jenkinsci.plugins.workflow.steps.AbstractStepImpl;
-import org.kohsuke.stapler.DataBoundSetter;
-
-import javax.annotation.Nonnull;
-import java.util.ArrayList;
-import java.util.Collection;
 
 abstract class AbstractCFNCreateStep extends AbstractStepImpl {
-
+	
 	private final String stack;
 	private String file;
 	private String url;
@@ -55,155 +57,161 @@ abstract class AbstractCFNCreateStep extends AbstractStepImpl {
 	private Long pollInterval = 1000L;
 	private Boolean create = true;
 	private String roleArn;
-
+	
 	public AbstractCFNCreateStep(String stack) {
 		this.stack = stack;
 	}
-
+	
 	public String getStack() {
 		return this.stack;
 	}
-
+	
 	public String getFile() {
 		return this.file;
 	}
-
+	
 	@DataBoundSetter
 	public void setFile(String file) {
 		this.file = file;
 	}
-
+	
 	public String getUrl() {
 		return this.url;
 	}
-
+	
 	@DataBoundSetter
 	public void setUrl(String url) {
 		this.url = url;
 	}
-
+	
 	public String[] getParams() {
 		return this.params != null ? this.params.clone() : null;
 	}
-
+	
 	@DataBoundSetter
 	public void setParams(String[] params) {
 		this.params = params.clone();
 	}
-
+	
 	public String[] getKeepParams() {
 		return this.keepParams != null ? this.keepParams.clone() : null;
 	}
-
+	
 	@DataBoundSetter
 	public void setKeepParams(String[] keepParams) {
 		this.keepParams = keepParams.clone();
 	}
-
+	
 	public String[] getTags() {
 		return this.tags != null ? this.tags.clone() : null;
 	}
-
+	
 	@DataBoundSetter
 	public void setTags(String[] tags) {
 		this.tags = tags.clone();
 	}
-
+	
 	public String getParamsFile() {
 		return this.paramsFile;
 	}
-
+	
 	@DataBoundSetter
 	public void setParamsFile(String paramsFile) {
 		this.paramsFile = paramsFile;
 	}
-
+	
 	public Long getPollInterval() {
 		return this.pollInterval;
 	}
-
+	
 	@DataBoundSetter
 	public void setPollInterval(Long pollInterval) {
 		this.pollInterval = pollInterval;
 	}
-
+	
 	public Boolean getCreate() {
 		return this.create;
 	}
-
+	
 	@DataBoundSetter
 	public void setCreate(Boolean create) {
 		this.create = create;
 	}
-
+	
 	public String getRoleArn() {
 		return this.roleArn;
 	}
-
+	
 	@DataBoundSetter
 	public void setRoleArn(String roleArn) {
 		this.roleArn = roleArn;
 	}
-
+	
 	abstract static class Execution extends AbstractStepExecutionImpl {
-
+		
 		protected abstract AbstractCFNCreateStep getStep();
+		
 		protected abstract EnvVars getEnvVars();
+		
 		protected abstract FilePath getWorkspace();
+		
 		protected abstract TaskListener getListener();
-
+		
 		protected abstract void checkPreconditions();
+		
 		protected abstract String getThreadName();
+		
 		protected abstract Object whenStackExists(Collection<Parameter> parameters, Collection<Tag> tags) throws Exception;
+		
 		protected abstract Object whenStackMissing(Collection<Parameter> parameters, Collection<Tag> tags) throws Exception;
-
+		
 		private String getStack() {
 			return this.getStep().getStack();
 		}
-
+		
 		private String getParamsFile() {
 			return this.getStep().getParamsFile();
 		}
-
+		
 		private String[] getParams() {
 			return this.getStep().getParams();
 		}
-
+		
 		private String[] getKeepParams() {
 			return this.getStep().getKeepParams();
 		}
-
+		
 		private String[] getTags() {
 			return this.getStep().getTags();
 		}
-
+		
 		private String getRoleArn() {
 			return this.getStep().getRoleArn();
 		}
-
+		
 		private Boolean getCreate() {
 			return this.getStep().getCreate();
 		}
-
+		
 		@Override
 		public boolean start() throws Exception {
-
+			
 			final String stack = this.getStack();
 			final String roleArn = this.getRoleArn();
 			final Boolean create = this.getCreate();
-
+			
 			final Collection<Parameter> params = this.parseParamsFile(this.getParamsFile());
 			params.addAll(this.parseParams(this.getParams()));
-
+			
 			final Collection<Parameter> keepParams = this.parseKeepParams(this.getKeepParams());
 			final Collection<Tag> tags = this.parseTags(this.getTags());
-
+			
 			Preconditions.checkArgument(stack != null && !stack.isEmpty(), "Stack must not be null or empty");
 			Preconditions.checkArgument(roleArn == null || IamRoleUtils.validRoleArn(roleArn), "RoleArn must be a valid ARN.");
-
+			
 			this.checkPreconditions();
-
-			new Thread(getThreadName()) {
+			
+			new Thread(Execution.this.getThreadName()) {
 				@Override
 				public void run() {
 					try {
@@ -226,12 +234,12 @@ abstract class AbstractCFNCreateStep extends AbstractStepImpl {
 			}.start();
 			return false;
 		}
-
+		
 		@Override
 		public void stop(@Nonnull Throwable throwable) throws Exception {
-
+		
 		}
-
+		
 		private Collection<Parameter> parseParamsFile(String paramsFile) {
 			try {
 				if (paramsFile == null || paramsFile.isEmpty()) {
@@ -250,7 +258,7 @@ abstract class AbstractCFNCreateStep extends AbstractStepImpl {
 				throw new RuntimeException(e);
 			}
 		}
-
+		
 		private Collection<Tag> parseTags(String[] tags) {
 			Collection<Tag> tagList = new ArrayList<>();
 			if (tags == null) {
@@ -267,7 +275,7 @@ abstract class AbstractCFNCreateStep extends AbstractStepImpl {
 			}
 			return tagList;
 		}
-
+		
 		private Collection<Parameter> parseParams(String[] params) {
 			Collection<Parameter> parameters = new ArrayList<>();
 			if (params == null) {
@@ -284,7 +292,7 @@ abstract class AbstractCFNCreateStep extends AbstractStepImpl {
 			}
 			return parameters;
 		}
-
+		
 		private Collection<Parameter> parseKeepParams(String[] params) {
 			Collection<Parameter> parameters = new ArrayList<>();
 			if (params == null) {
@@ -295,17 +303,17 @@ abstract class AbstractCFNCreateStep extends AbstractStepImpl {
 			}
 			return parameters;
 		}
-
+		
 		protected CloudFormationStack getCfnStack() {
 			AmazonCloudFormation client = AWSClientFactory.create(AmazonCloudFormationClientBuilder.standard(), this.getEnvVars());
 			return new CloudFormationStack(client, this.getStack(), this.getListener());
 		}
-
+		
 		protected String readTemplate(String file) {
 			if (file == null) {
 				return null;
 			}
-
+			
 			FilePath child = this.getWorkspace().child(file);
 			try {
 				return child.readToString();
@@ -314,5 +322,5 @@ abstract class AbstractCFNCreateStep extends AbstractStepImpl {
 			}
 		}
 	}
-
+	
 }

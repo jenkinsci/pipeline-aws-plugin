@@ -21,15 +21,13 @@
 
 package de.taimos.pipeline.aws;
 
-import java.util.Collection;
-
 import org.junit.Assert;
 import org.junit.Test;
 
 public class FileWrapperTest {
 	@Test
 	public void constructorWorksAsExpected() throws Exception {
-		FileWrapper file = null;
+		FileWrapper file;
 
 		// Test a normal file.
 		file = new FileWrapper( "my-name", "my-path", false, 12, 9000 );
@@ -60,7 +58,7 @@ public class FileWrapperTest {
 
 	@Test
 	public void pathIsUsedInAStringContext() throws Exception {
-		FileWrapper file = null;
+		FileWrapper file;
 
 		// Test a normal file.
 		file = new FileWrapper( "my-name", "my-path", false, 12, 9000 );

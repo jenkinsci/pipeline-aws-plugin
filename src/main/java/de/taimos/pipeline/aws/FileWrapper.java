@@ -101,52 +101,56 @@ public class FileWrapper implements Serializable {
 	@Whitelisted
 	@Nonnull
 	public String getName() {
-		return name;
+		return this.name;
 	}
 	
 	@Whitelisted
 	@Nonnull
 	public String getPath() {
-		return path;
+		return this.path;
 	}
 	
 	@Whitelisted
 	public boolean isDirectory() {
-		return directory;
+		return this.directory;
 	}
 	
 	@Whitelisted
 	public long getLength() {
-		return length;
+		return this.length;
 	}
 	
 	@Whitelisted
 	public long getLastModified() {
-		return lastModified;
+		return this.lastModified;
 	}
 	
 	@Override
 	@Whitelisted
 	@Nonnull
 	public String toString() {
-		return getPath();
+		return this.getPath();
 	}
 	
 	@Override
 	@Whitelisted
 	public boolean equals(Object o) {
-		if (this == o) return true;
-		if (!(o instanceof FileWrapper)) return false;
+		if (this == o) {
+			return true;
+		}
+		if (!(o instanceof FileWrapper)) {
+			return false;
+		}
 		
 		FileWrapper that = (FileWrapper) o;
 		
-		return getPath().equals(that.getPath());
+		return this.getPath().equals(that.getPath());
 		
 	}
 	
 	@Override
 	@Whitelisted
 	public int hashCode() {
-		return getPath().hashCode();
+		return this.getPath().hashCode();
 	}
 }

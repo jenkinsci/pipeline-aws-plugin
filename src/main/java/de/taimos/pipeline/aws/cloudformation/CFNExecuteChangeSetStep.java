@@ -21,14 +21,9 @@
 
 package de.taimos.pipeline.aws.cloudformation;
 
-import com.amazonaws.services.cloudformation.AmazonCloudFormation;
-import com.amazonaws.services.cloudformation.AmazonCloudFormationClient;
-import com.amazonaws.services.cloudformation.AmazonCloudFormationClientBuilder;
-import com.google.common.base.Preconditions;
-import de.taimos.pipeline.aws.AWSClientFactory;
-import hudson.EnvVars;
-import hudson.Extension;
-import hudson.model.TaskListener;
+import javax.annotation.Nonnull;
+import javax.inject.Inject;
+
 import org.jenkinsci.plugins.workflow.steps.AbstractStepDescriptorImpl;
 import org.jenkinsci.plugins.workflow.steps.AbstractStepExecutionImpl;
 import org.jenkinsci.plugins.workflow.steps.AbstractStepImpl;
@@ -36,76 +31,82 @@ import org.jenkinsci.plugins.workflow.steps.StepContextParameter;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
 
-import javax.annotation.Nonnull;
-import javax.inject.Inject;
+import com.amazonaws.services.cloudformation.AmazonCloudFormation;
+import com.amazonaws.services.cloudformation.AmazonCloudFormationClientBuilder;
+import com.google.common.base.Preconditions;
+
+import de.taimos.pipeline.aws.AWSClientFactory;
+import hudson.EnvVars;
+import hudson.Extension;
+import hudson.model.TaskListener;
 
 public class CFNExecuteChangeSetStep extends AbstractStepImpl {
-
+	
 	private final String changeSet;
 	private final String stack;
 	private Long pollInterval = 1000L;
-
+	
 	@DataBoundConstructor
 	public CFNExecuteChangeSetStep(String changeSet, String stack) {
 		this.changeSet = changeSet;
 		this.stack = stack;
 	}
-
+	
 	public String getChangeSet() {
 		return this.changeSet;
 	}
-
+	
 	public String getStack() {
 		return this.stack;
 	}
-
+	
 	public Long getPollInterval() {
 		return this.pollInterval;
 	}
-
+	
 	@DataBoundSetter
 	public void setPollInterval(Long pollInterval) {
 		this.pollInterval = pollInterval;
 	}
-
+	
 	@Extension
 	public static class DescriptorImpl extends AbstractStepDescriptorImpl {
-
+		
 		public DescriptorImpl() {
 			super(Execution.class);
 		}
-
+		
 		@Override
 		public String getFunctionName() {
 			return "cfnExecuteChangeSet";
 		}
-
+		
 		@Override
 		public String getDisplayName() {
 			return "Execute CloudFormation change set";
 		}
 	}
-
+	
 	public static class Execution extends AbstractStepExecutionImpl {
-
+		
 		@Inject
 		private transient CFNExecuteChangeSetStep step;
 		@StepContextParameter
 		private transient EnvVars envVars;
 		@StepContextParameter
 		private transient TaskListener listener;
-
+		
 		@Override
 		public boolean start() throws Exception {
 			final String changeSet = this.step.getChangeSet();
 			final String stack = this.step.getStack();
-
+			
 			Preconditions.checkArgument(changeSet != null && !changeSet.isEmpty(), "Change Set must not be null or empty");
-
+			
 			Preconditions.checkArgument(stack != null && !stack.isEmpty(), "Stack must not be null or empty");
-
+			
 			this.listener.getLogger().format("Executing CloudFormation change set %s %n", changeSet);
-
+			
 			new Thread("cfnExecuteChangeSet-" + changeSet) {
 				@Override
 				public void run() {
@@ -122,14 +123,14 @@ public class CFNExecuteChangeSetStep extends AbstractStepImpl {
 			}.start();
 			return false;
 		}
-
+		
 		@Override
 		public void stop(@Nonnull Throwable cause) throws Exception {
 			//
 		}
-
+		
 		private static final long serialVersionUID = 1L;
-
+		
 	}
-
+	
 }

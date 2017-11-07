@@ -34,10 +34,10 @@ final class RoleSessionNameBuilder {
 	}
 	
 	String build() {
-		final String jobNameWithoutWhitespaces = jobName.replace(" ", "");
+		final String jobNameWithoutWhitespaces = this.jobName.replace(" ", "");
 		final String jobNameWithoutSlashes = jobNameWithoutWhitespaces.replace("/", "-");
 		
-		final int maxJobNameLength = ROLE_SESSION_NAME_MAX_LENGTH - (SESSION_NAME_PREFIX.length() + buildNumber.length() + NUMBER_OF_SEPARATORS);
+		final int maxJobNameLength = ROLE_SESSION_NAME_MAX_LENGTH - (SESSION_NAME_PREFIX.length() + this.buildNumber.length() + NUMBER_OF_SEPARATORS);
 		
 		final int jobNameLength = jobNameWithoutSlashes.length();
 		String finalJobName = jobNameWithoutSlashes;

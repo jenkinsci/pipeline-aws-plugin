@@ -448,7 +448,7 @@ String result = invokeLambda(
 
 # Changelog
 
-## 1.17 (master)
+## current master
 * Add policy for withAWS support - allows an additional policy to be combined with the policy associated with the assumed role. 
 * add `cfnCreateChangeSet` step
 * add `cfnExecuteChangeSet` step
@@ -456,6 +456,7 @@ String result = invokeLambda(
 * support additional S3 options: pathStyleAccessEnabled and payloadSigningEnabled
 * add support for String payload and return value in `invokeLambda` step
 * Fix: return value of `invokeLambda` is now serializable
+* update AWS SDK to 1.11.221
 
 ## 1.16
 * Add federatedUserId for withAWS support - generates temporary aws credentials for federated user which gets logged in CloudTrail 

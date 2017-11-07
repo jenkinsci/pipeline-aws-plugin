@@ -23,8 +23,6 @@ package de.taimos.pipeline.aws;
 
 import javax.inject.Inject;
 
-import com.amazonaws.services.ecr.AmazonECR;
-import com.amazonaws.services.ecr.AmazonECRClientBuilder;
 import org.apache.commons.codec.Charsets;
 import org.jenkinsci.plugins.workflow.steps.AbstractStepDescriptorImpl;
 import org.jenkinsci.plugins.workflow.steps.AbstractStepImpl;
@@ -33,7 +31,8 @@ import org.jenkinsci.plugins.workflow.steps.StepContextParameter;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
 
-import com.amazonaws.services.ecr.AmazonECRClient;
+import com.amazonaws.services.ecr.AmazonECR;
+import com.amazonaws.services.ecr.AmazonECRClientBuilder;
 import com.amazonaws.services.ecr.model.AuthorizationData;
 import com.amazonaws.services.ecr.model.GetAuthorizationTokenRequest;
 import com.amazonaws.services.ecr.model.GetAuthorizationTokenResult;
@@ -43,60 +42,60 @@ import hudson.Extension;
 import hudson.model.TaskListener;
 
 public class ECRLoginStep extends AbstractStepImpl {
-
+	
 	private Boolean email = false;
-
+	
 	@DataBoundConstructor
 	public ECRLoginStep() {
 		//
 	}
-
+	
 	@DataBoundSetter
 	public void setEmail(Boolean email) {
 		this.email = email;
 	}
-
+	
 	public Boolean getEmail() {
 		return this.email;
 	}
-
+	
 	@Extension
 	public static class DescriptorImpl extends AbstractStepDescriptorImpl {
-
+		
 		public DescriptorImpl() {
 			super(Execution.class);
 		}
-
+		
 		@Override
 		public String getFunctionName() {
 			return "ecrLogin";
 		}
-
+		
 		@Override
 		public String getDisplayName() {
 			return "Create and return the ECR login string";
 		}
 	}
-
+	
 	public static class Execution extends AbstractSynchronousStepExecution<String> {
-
+		
 		@Inject
 		private transient ECRLoginStep step;
 		@StepContextParameter
 		private transient EnvVars envVars;
 		@StepContextParameter
 		private transient TaskListener listener;
-
+		
 		@Override
 		protected String run() throws Exception {
 			AmazonECR ecr = AWSClientFactory.create(AmazonECRClientBuilder.standard(), this.envVars);
-
+			
 			GetAuthorizationTokenResult token = ecr.getAuthorizationToken(new GetAuthorizationTokenRequest());
-
+			
 			if (token.getAuthorizationData().size() != 1) {
 				throw new RuntimeException("Did not get authorizationData from AWS");
 			}
-
+			
 			AuthorizationData authorizationData = token.getAuthorizationData().get(0);
 			byte[] bytes = org.apache.commons.codec.binary.Base64.decodeBase64(authorizationData.getAuthorizationToken());
 			String data = new String(bytes, Charsets.UTF_8);
@@ -104,13 +103,13 @@ public class ECRLoginStep extends AbstractStepImpl {
 			if (parts.length != 2) {
 				throw new RuntimeException("Got invalid authorizationData from AWS");
 			}
-
+			
 			String emailString = this.step.getEmail() ? "-e none" : "";
 			return String.format("docker login -u %s -p %s %s %s", parts[0], parts[1], emailString, authorizationData.getProxyEndpoint());
 		}
-
+		
 		private static final long serialVersionUID = 1L;
-
+		
 	}
-
+	
 }

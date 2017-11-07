@@ -21,42 +21,43 @@
 
 package de.taimos.pipeline.aws;
 
-import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import org.jenkinsci.plugins.workflow.steps.AbstractStepImpl;
 import org.kohsuke.stapler.DataBoundSetter;
 
+import com.amazonaws.services.s3.AmazonS3ClientBuilder;
+
 public class AbstractS3Step extends AbstractStepImpl {
-
-    protected boolean pathStyleAccessEnabled = false;
-    protected boolean payloadSigningEnabled = false;
-
-    protected AbstractS3Step(final boolean pathStyleAccessEnabled, final boolean payloadSigningEnabled) {
-        this.pathStyleAccessEnabled = pathStyleAccessEnabled;
-        this.payloadSigningEnabled = payloadSigningEnabled;
-    }
-
-    public boolean isPathStyleAccessEnabled() {
-        return pathStyleAccessEnabled;
-    }
-
-    @DataBoundSetter
-    public void setPathStyleAccessEnabled(final boolean pathStyleAccessEnabled) {
-        this.pathStyleAccessEnabled = pathStyleAccessEnabled;
-    }
-
-    public boolean isPayloadSigningEnabled() {
-        return payloadSigningEnabled;
-    }
-
-    @DataBoundSetter
-    public void setPayloadSigningEnabled(final boolean payloadSigningEnabled) {
-        this.payloadSigningEnabled = payloadSigningEnabled;
-    }
-
-    protected AmazonS3ClientBuilder createAmazonS3ClientBuilder() {
-        return AmazonS3ClientBuilder.standard()
-                .withPathStyleAccessEnabled(this.isPathStyleAccessEnabled())
-                .withPayloadSigningEnabled(this.isPayloadSigningEnabled());
-    }
-
+	
+	protected boolean pathStyleAccessEnabled = false;
+	protected boolean payloadSigningEnabled = false;
+	
+	protected AbstractS3Step(final boolean pathStyleAccessEnabled, final boolean payloadSigningEnabled) {
+		this.pathStyleAccessEnabled = pathStyleAccessEnabled;
+		this.payloadSigningEnabled = payloadSigningEnabled;
+	}
+	
+	public boolean isPathStyleAccessEnabled() {
+		return this.pathStyleAccessEnabled;
+	}
+	
+	@DataBoundSetter
+	public void setPathStyleAccessEnabled(final boolean pathStyleAccessEnabled) {
+		this.pathStyleAccessEnabled = pathStyleAccessEnabled;
+	}
+	
+	public boolean isPayloadSigningEnabled() {
+		return this.payloadSigningEnabled;
+	}
+	
+	@DataBoundSetter
+	public void setPayloadSigningEnabled(final boolean payloadSigningEnabled) {
+		this.payloadSigningEnabled = payloadSigningEnabled;
+	}
+	
+	protected AmazonS3ClientBuilder createAmazonS3ClientBuilder() {
+		return AmazonS3ClientBuilder.standard()
+				.withPathStyleAccessEnabled(this.isPathStyleAccessEnabled())
+				.withPayloadSigningEnabled(this.isPayloadSigningEnabled());
+	}
+	
 }
