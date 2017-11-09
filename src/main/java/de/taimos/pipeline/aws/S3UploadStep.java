@@ -22,7 +22,6 @@
 package de.taimos.pipeline.aws;
 
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -315,13 +314,11 @@ public class S3UploadStep extends AbstractS3Step {
 					if (this.cacheControl != null && !this.cacheControl.isEmpty()) {
 						metas.setCacheControl(this.cacheControl);
 					}
-					FileInputStream stream = new FileInputStream(localFile);
-					PutObjectRequest request = new PutObjectRequest(this.bucket, this.path, stream, metas);
+					PutObjectRequest request = new PutObjectRequest(this.bucket, this.path, localFile).withMetadata(metas);
 					if (this.acl != null) {
 						request = request.withCannedAcl(this.acl);
 					}
 					upload = mgr.upload(request);
-					stream.close();
 				} else {
 					PutObjectRequest request = new PutObjectRequest(this.bucket, this.path, localFile);
 					if (this.acl != null) {
