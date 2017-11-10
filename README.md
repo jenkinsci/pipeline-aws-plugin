@@ -449,6 +449,7 @@ String result = invokeLambda(
 # Changelog
 
 ## current master
+* Fixed regression added by #27 (#JENKINS-47912)
 
 ## 1.17
 * Add policy for withAWS support - allows an additional policy to be combined with the policy associated with the assumed role. 

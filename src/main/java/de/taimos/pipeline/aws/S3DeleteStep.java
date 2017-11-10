@@ -115,7 +115,7 @@ public class S3DeleteStep extends AbstractS3Step {
 				public void run() {
 					try {
 						Execution.this.listener.getLogger().format("Deleting s3://%s/%s%n", bucket, path);
-						AmazonS3 s3Client = AWSClientFactory.create(Execution.this.step.createAmazonS3ClientBuilder(), Execution.this.envVars);
+						AmazonS3 s3Client = AWSClientFactory.create(Execution.this.step.createS3ClientOptions().createAmazonS3ClientBuilder(), Execution.this.envVars);
 						
 						if (!path.endsWith("/")) {
 							// See if the thing that we were given is a file.

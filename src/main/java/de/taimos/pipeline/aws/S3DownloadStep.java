@@ -37,7 +37,6 @@ import org.kohsuke.stapler.DataBoundSetter;
 import com.amazonaws.event.ProgressEvent;
 import com.amazonaws.event.ProgressEventType;
 import com.amazonaws.event.ProgressListener;
-import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import com.amazonaws.services.s3.transfer.Download;
 import com.amazonaws.services.s3.transfer.MultipleFileDownload;
 import com.amazonaws.services.s3.transfer.TransferManager;
@@ -147,7 +146,7 @@ public class S3DownloadStep extends AbstractS3Step {
 								return;
 							}
 						}
-						target.act(new RemoteDownloader(Execution.this.step.createAmazonS3ClientBuilder(), Execution.this.envVars, Execution.this.listener, bucket, path));
+						target.act(new RemoteDownloader(Execution.this.step.createS3ClientOptions(), Execution.this.envVars, Execution.this.listener, bucket, path));
 						Execution.this.listener.getLogger().println("Download complete");
 						Execution.this.getContext().onSuccess(null);
 					} catch (Exception e) {
@@ -169,14 +168,14 @@ public class S3DownloadStep extends AbstractS3Step {
 		
 		protected static final long serialVersionUID = 1L;
 		
-		private final transient AmazonS3ClientBuilder amazonS3ClientBuilder;
+		private final S3ClientOptions amazonS3ClientOptions;
 		private final EnvVars envVars;
 		private final TaskListener taskListener;
 		private final String bucket;
 		private final String path;
 		
-		RemoteDownloader(AmazonS3ClientBuilder amazonS3ClientBuilder, EnvVars envVars, TaskListener taskListener, String bucket, String path) {
-			this.amazonS3ClientBuilder = amazonS3ClientBuilder;
+		RemoteDownloader(S3ClientOptions amazonS3ClientOptions, EnvVars envVars, TaskListener taskListener, String bucket, String path) {
+			this.amazonS3ClientOptions = amazonS3ClientOptions;
 			this.envVars = envVars;
 			this.taskListener = taskListener;
 			this.bucket = bucket;
@@ -186,7 +185,7 @@ public class S3DownloadStep extends AbstractS3Step {
 		@Override
 		public Void invoke(File localFile, VirtualChannel channel) throws IOException, InterruptedException {
 			TransferManager mgr = TransferManagerBuilder.standard()
-					.withS3Client(AWSClientFactory.create(this.amazonS3ClientBuilder, this.envVars))
+					.withS3Client(AWSClientFactory.create(this.amazonS3ClientOptions.createAmazonS3ClientBuilder(), this.envVars))
 					.build();
 			
 			if (this.path == null || this.path.isEmpty() || this.path.endsWith("/")) {

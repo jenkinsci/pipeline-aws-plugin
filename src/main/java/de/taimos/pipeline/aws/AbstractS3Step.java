@@ -21,6 +21,8 @@
 
 package de.taimos.pipeline.aws;
 
+import java.io.Serializable;
+
 import org.jenkinsci.plugins.workflow.steps.AbstractStepImpl;
 import org.kohsuke.stapler.DataBoundSetter;
 
@@ -54,10 +56,38 @@ public class AbstractS3Step extends AbstractStepImpl {
 		this.payloadSigningEnabled = payloadSigningEnabled;
 	}
 	
-	protected AmazonS3ClientBuilder createAmazonS3ClientBuilder() {
-		return AmazonS3ClientBuilder.standard()
-				.withPathStyleAccessEnabled(this.isPathStyleAccessEnabled())
-				.withPayloadSigningEnabled(this.isPayloadSigningEnabled());
+	protected S3ClientOptions createS3ClientOptions() {
+		S3ClientOptions options = new S3ClientOptions();
+		options.setPathStyleAccessEnabled(this.isPathStyleAccessEnabled());
+		options.setPayloadSigningEnabled(this.isPayloadSigningEnabled());
+		return options;
+	}
+	
+	public static class S3ClientOptions implements Serializable {
+		private boolean pathStyleAccessEnabled = false;
+		private boolean payloadSigningEnabled = false;
+		
+		public boolean isPathStyleAccessEnabled() {
+			return this.pathStyleAccessEnabled;
+		}
+		
+		public void setPathStyleAccessEnabled(final boolean pathStyleAccessEnabled) {
+			this.pathStyleAccessEnabled = pathStyleAccessEnabled;
+		}
+		
+		public boolean isPayloadSigningEnabled() {
+			return this.payloadSigningEnabled;
+		}
+		
+		public void setPayloadSigningEnabled(final boolean payloadSigningEnabled) {
+			this.payloadSigningEnabled = payloadSigningEnabled;
+		}
+		
+		protected AmazonS3ClientBuilder createAmazonS3ClientBuilder() {
+			return AmazonS3ClientBuilder.standard()
+					.withPathStyleAccessEnabled(this.isPathStyleAccessEnabled())
+					.withPayloadSigningEnabled(this.isPayloadSigningEnabled());
+		}
 	}
 	
 }
