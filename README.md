@@ -449,9 +449,11 @@ String result = invokeLambda(
 # Changelog
 
 ## current master
+
+## 1.18
 * Fixed regression added by #27 (#JENKINS-47912)
 
-## 1.17
+## 1.17 (*use > 1.18!!*)
 * Add policy for withAWS support - allows an additional policy to be combined with the policy associated with the assumed role. 
 * Add `cfnCreateChangeSet` step
 * Add `cfnExecuteChangeSet` step
