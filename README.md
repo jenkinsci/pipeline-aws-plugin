@@ -449,12 +449,13 @@ String result = invokeLambda(
 # Changelog
 
 ## current master
+* Fix: RoleSessionName (decoding job name HTML url encoding) in `withAWS` step for assume role.  
 
 ## 1.18
 * Fixed regression added by #27 (#JENKINS-47912)
 
 ## 1.17 (*use > 1.18!!*)
-* Add policy for withAWS support - allows an additional policy to be combined with the policy associated with the assumed role. 
+* Add policy for withAWS support - allows an additional policy to be combined with the policy associated with the assumed role.
 * Add `cfnCreateChangeSet` step
 * Add `cfnExecuteChangeSet` step
 * Add endpoint-url for withAWS support - allows configuring a non-AWS endpoint for internally-hosted clouds.
@@ -464,7 +465,7 @@ String result = invokeLambda(
 * Fix: return value of `invokeLambda` is now serializable
 
 ## 1.16
-* Add federatedUserId for withAWS support - generates temporary aws credentials for federated user which gets logged in CloudTrail 
+* Add federatedUserId for withAWS support - generates temporary aws credentials for federated user which gets logged in CloudTrail
 * Add return value to `awsIdentity` step
 * Add `ecrLogin` step
 * Add `invokeLambda` step
@@ -480,7 +481,7 @@ String result = invokeLambda(
 * Fix: Rendering the paths for S3* steps manually (Windows)
 * fixes JENKINS-46247: Fix credentials scope in withAWS step and add a credentials dropdown
 * add `safeName` to `listAWSAccounts` step
- 
+
 ## 1.13
 * Add `s3FindFiles` step
 * add `updateIdP` step
