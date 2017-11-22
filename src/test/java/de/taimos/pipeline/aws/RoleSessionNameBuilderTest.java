@@ -57,4 +57,14 @@ public class RoleSessionNameBuilderTest {
 		assertEquals("The result should be equal to the limit", 64, result.length());
 	}
 
+	@Test
+	public void htmlEncodingJobName() throws Exception {
+		String jobName = "withHTMLEncoding%2FJobName";
+		String buildNumber = "123";
+		final RoleSessionNameBuilder roleSessionNameBuilder = RoleSessionNameBuilder
+				.withJobName(jobName)
+				.withBuildNumber(buildNumber);
+		final String result = roleSessionNameBuilder.build();
+		assertEquals("The result should not have any encoded html characters", "Jenkins-withHTMLEncoding-JobName-123", result);
+	}
 }
