@@ -56,6 +56,9 @@ public class AWSClientFactory {
 	}
 	
 	public static <B extends AwsSyncClientBuilder<?, ?>> B configureBuilder(final B clientBuilder, final EnvVars vars) {
+		if (clientBuilder == null) {
+			throw new IllegalArgumentException("ClientBuilder must not be null");
+		}
 		if (StringUtils.isNotBlank(vars.get(AWS_ENDPOINT_URL))) {
 			clientBuilder.setEndpointConfiguration(new AwsClientBuilder.EndpointConfiguration(vars.get(AWS_ENDPOINT_URL), vars.get(AWS_REGION)));
 		} else {

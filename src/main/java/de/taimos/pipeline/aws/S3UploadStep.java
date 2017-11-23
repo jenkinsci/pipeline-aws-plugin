@@ -43,7 +43,6 @@ import org.kohsuke.stapler.DataBoundSetter;
 import com.amazonaws.event.ProgressEvent;
 import com.amazonaws.event.ProgressEventType;
 import com.amazonaws.event.ProgressListener;
-import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import com.amazonaws.services.s3.Headers;
 import com.amazonaws.services.s3.model.CannedAccessControlList;
 import com.amazonaws.services.s3.model.ObjectMetadata;
@@ -246,7 +245,7 @@ public class S3UploadStep extends AbstractS3Step {
 								return;
 							}
 							
-							child.act(new RemoteUploader(Execution.this.step.createAmazonS3ClientBuilder(), Execution.this.envVars, Execution.this.listener, bucket, path, metadatas, acl, cacheControl));
+							child.act(new RemoteUploader(Execution.this.step.createS3ClientOptions(), Execution.this.envVars, Execution.this.listener, bucket, path, metadatas, acl, cacheControl));
 							
 							Execution.this.listener.getLogger().println("Upload complete");
 							Execution.this.getContext().onSuccess(null);
@@ -256,7 +255,7 @@ public class S3UploadStep extends AbstractS3Step {
 							for (FilePath child : children) {
 								child.act(new FeedList(fileList));
 							}
-							dir.act(new RemoteListUploader(Execution.this.step.createAmazonS3ClientBuilder(), Execution.this.envVars, Execution.this.listener, fileList, bucket, path, metadatas, acl, cacheControl));
+							dir.act(new RemoteListUploader(Execution.this.step.createS3ClientOptions(), Execution.this.envVars, Execution.this.listener, fileList, bucket, path, metadatas, acl, cacheControl));
 							Execution.this.listener.getLogger().println("Upload complete");
 							Execution.this.getContext().onSuccess(null);
 						}
@@ -278,7 +277,7 @@ public class S3UploadStep extends AbstractS3Step {
 	private static class RemoteUploader implements FilePath.FileCallable<Void> {
 		
 		protected static final long serialVersionUID = 1L;
-		private final transient AmazonS3ClientBuilder amazonS3ClientBuilder;
+		private final S3ClientOptions amazonS3ClientOptions;
 		private final EnvVars envVars;
 		private final TaskListener taskListener;
 		private final String bucket;
@@ -287,8 +286,8 @@ public class S3UploadStep extends AbstractS3Step {
 		private final CannedAccessControlList acl;
 		private final String cacheControl;
 		
-		RemoteUploader(AmazonS3ClientBuilder amazonS3ClientBuilder, EnvVars envVars, TaskListener taskListener, String bucket, String path, Map<String, String> metadatas, CannedAccessControlList acl, String cacheControl) {
-			this.amazonS3ClientBuilder = amazonS3ClientBuilder;
+		RemoteUploader(S3ClientOptions amazonS3ClientOptions, EnvVars envVars, TaskListener taskListener, String bucket, String path, Map<String, String> metadatas, CannedAccessControlList acl, String cacheControl) {
+			this.amazonS3ClientOptions = amazonS3ClientOptions;
 			this.envVars = envVars;
 			this.taskListener = taskListener;
 			this.bucket = bucket;
@@ -301,7 +300,7 @@ public class S3UploadStep extends AbstractS3Step {
 		@Override
 		public Void invoke(File localFile, VirtualChannel channel) throws IOException, InterruptedException {
 			TransferManager mgr = TransferManagerBuilder.standard()
-					.withS3Client(AWSClientFactory.create(this.amazonS3ClientBuilder, this.envVars))
+					.withS3Client(AWSClientFactory.create(this.amazonS3ClientOptions.createAmazonS3ClientBuilder(), this.envVars))
 					.build();
 			if (localFile.isFile()) {
 				Preconditions.checkArgument(this.path != null && !this.path.isEmpty(), "Path must not be null or empty when uploading file");
@@ -381,7 +380,7 @@ public class S3UploadStep extends AbstractS3Step {
 	private static class RemoteListUploader implements FilePath.FileCallable<Void> {
 		
 		protected static final long serialVersionUID = 1L;
-		private final transient AmazonS3ClientBuilder amazonS3ClientBuilder;
+		private final S3ClientOptions amazonS3ClientOptions;
 		private final EnvVars envVars;
 		private final TaskListener taskListener;
 		private final String bucket;
@@ -391,8 +390,8 @@ public class S3UploadStep extends AbstractS3Step {
 		private final CannedAccessControlList acl;
 		private final String cacheControl;
 		
-		RemoteListUploader(AmazonS3ClientBuilder amazonS3ClientBuilder, EnvVars envVars, TaskListener taskListener, List<File> fileList, String bucket, String path, Map<String, String> metadatas, CannedAccessControlList acl, final String cacheControl) {
-			this.amazonS3ClientBuilder = amazonS3ClientBuilder;
+		RemoteListUploader(S3ClientOptions amazonS3ClientOptions, EnvVars envVars, TaskListener taskListener, List<File> fileList, String bucket, String path, Map<String, String> metadatas, CannedAccessControlList acl, final String cacheControl) {
+			this.amazonS3ClientOptions = amazonS3ClientOptions;
 			this.envVars = envVars;
 			this.taskListener = taskListener;
 			this.fileList = fileList;
@@ -406,7 +405,7 @@ public class S3UploadStep extends AbstractS3Step {
 		@Override
 		public Void invoke(File localFile, VirtualChannel channel) throws IOException, InterruptedException {
 			TransferManager mgr = TransferManagerBuilder.standard()
-					.withS3Client(AWSClientFactory.create(this.amazonS3ClientBuilder, this.envVars))
+					.withS3Client(AWSClientFactory.create(this.amazonS3ClientOptions.createAmazonS3ClientBuilder(), this.envVars))
 					.build();
 			Preconditions.checkArgument(this.path != null && !this.path.isEmpty(), "Path must not be null or empty when uploading file");
 			final MultipleFileUpload fileUpload;
