@@ -318,7 +318,7 @@ public class S3UploadStep extends AbstractS3Step {
 			if (localFile.isFile()) {
 				Preconditions.checkArgument(this.path != null && !this.path.isEmpty(), "Path must not be null or empty when uploading file");
 				final Upload upload;
-				if ((this.metadatas != null && this.metadatas.size() > 0) || (this.cacheControl != null && !this.cacheControl.isEmpty())) {
+				if ((this.metadatas != null && this.metadatas.size() > 0) || (this.cacheControl != null && !this.cacheControl.isEmpty()) || (this.contentType != null && !this.contentType.isEmpty()) ) {
 					ObjectMetadata metas = new ObjectMetadata();
 					if (this.metadatas != null && this.metadatas.size() > 0) {
 						metas.setUserMetadata(this.metadatas);
