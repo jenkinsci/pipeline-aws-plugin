@@ -128,7 +128,7 @@ public class CFNUpdateStep extends AbstractCFNCreateStep {
 			final String file = this.getStep().getFile();
 			final String url = this.getStep().getUrl();
 			CloudFormationStack cfnStack = this.getCfnStack();
-			cfnStack.create(this.readTemplate(file), url, parameters, tags, this.step.getTimeoutInMinutes(), this.getStep().getPollInterval(), this.getStep().getRoleArn());
+			cfnStack.create(this.readTemplate(file), url, parameters, tags, this.step.getTimeoutInMinutes(), this.getStep().getPollInterval(), this.getStep().getRoleArn(),this.getStep().getOnFailure());
 			return cfnStack.describeOutputs();
 		}
 		

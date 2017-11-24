@@ -32,6 +32,7 @@ import org.kohsuke.stapler.DataBoundSetter;
 
 import com.amazonaws.services.cloudformation.AmazonCloudFormation;
 import com.amazonaws.services.cloudformation.AmazonCloudFormationClientBuilder;
+import com.amazonaws.services.cloudformation.model.OnFailure;
 import com.amazonaws.services.cloudformation.model.Parameter;
 import com.amazonaws.services.cloudformation.model.Tag;
 import com.google.common.base.Preconditions;
@@ -57,6 +58,7 @@ abstract class AbstractCFNCreateStep extends AbstractStepImpl {
 	private Long pollInterval = 1000L;
 	private Boolean create = true;
 	private String roleArn;
+	private String onFailure = OnFailure.ROLLBACK.toString();
 	
 	public AbstractCFNCreateStep(String stack) {
 		this.stack = stack;
@@ -145,6 +147,15 @@ abstract class AbstractCFNCreateStep extends AbstractStepImpl {
 	@DataBoundSetter
 	public void setRoleArn(String roleArn) {
 		this.roleArn = roleArn;
+	}
+
+	public String getOnFailure() {
+		return this.onFailure;
+	}
+
+	@DataBoundSetter
+	public void setOnFailure(String onFailure) {
+		this.onFailure = onFailure;
 	}
 	
 	abstract static class Execution extends AbstractStepExecutionImpl {
