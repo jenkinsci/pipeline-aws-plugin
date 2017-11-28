@@ -141,13 +141,19 @@ s3Upload(bucket:"my-bucket", path:'path/to/targetFolder/', includePathPattern:'*
 Specific metadatas can be add to upload files
 
 ```
-s3Upload(bucket:"my-bucket", path:'path/to/targetFolder/', includePathPattern:'**/*.svg', workingDir:'dist', metadatas:['Content-type:image/svg+xml','Another:Value'])
+s3Upload(bucket:"my-bucket", path:'path/to/targetFolder/', includePathPattern:'**/*.svg', workingDir:'dist', metadatas:['Key:SomeValue','Another:Value'])
 ```
 
 Specific cachecontrol can be add to upload files
 
 ```
 s3Upload(bucket:"my-bucket", path:'path/to/targetFolder/', includePathPattern:'**/*.svg', workingDir:'dist', cacheControl:'public,max-age=31536000')
+```
+
+Specific content type can be add to upload files
+
+```
+s3Upload(bucket:"my-bucket", path:'path/to/targetFolder/', includePathPattern:'**/*.ttf', workingDir:'dist', contentType:'application/x-font-ttf')
 ```
 
 Canned ACLs can be add to upload requests.
