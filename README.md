@@ -269,6 +269,11 @@ In a case where CloudFormation needs to use a different IAM Role for creating th
 def outputs = cfnUpdate(stack:'my-stack', url:'https://s3.amazonaws.com/my-templates-bucket/template.yaml', roleArn: 'arn:aws:iam::123456789012:role/S3Access')
 ```
 
+It's possible to override the default behaviour of ROLLBACK a stack when the creation fails by using "onFailure". Allowed values are DO_NOTHING, ROLLBACK, or DELETE
+```
+def outputs = cfnUpdate(stack:'my-stack', url:'https://s3.amazonaws.com/my-templates-bucket/template.yaml', onFailure:'DELETE')
+```
+
 Note: When creating a stack, either `file` or `url` are required. When updating it, omitting both parameters will keep the stack's current template.
 
 ## cfnDelete
@@ -455,7 +460,8 @@ String result = invokeLambda(
 # Changelog
 
 ## current master
-* Fix: RoleSessionName (decoding job name HTML url encoding) in `withAWS` step for assume role.  
+* Fix: RoleSessionName (decoding job name HTML url encoding) in `withAWS` step for assume role.
+* Add `onFailure` option when creating a stack to allow changed behaviour.
 
 ## 1.18
 * Fixed regression added by #27 (#JENKINS-47912)
