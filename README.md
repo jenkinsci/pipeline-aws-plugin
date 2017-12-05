@@ -463,6 +463,7 @@ String result = invokeLambda(
 * Fix: RoleSessionName (decoding job name HTML url encoding) in `withAWS` step for assume role.
 * Add `onFailure` option when creating a stack to allow changed behaviour.
 * Add the possibility to define specific content-type for s3Upload step.
+* Support roleArns with paths
 
 ## 1.18
 * Fixed regression added by #27 (#JENKINS-47912)
