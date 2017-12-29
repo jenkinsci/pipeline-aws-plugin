@@ -25,6 +25,7 @@ This plugins adds Jenkins pipeline steps to interact with the AWS API.
 * [awaitDeploymentCompletion](#awaitdeploymentcompletion)
 * [listAWSAccounts](#listawsaccounts)
 * [updateIdP](#updateidp)
+* [setAccountAlias](#setaccountalias)
 * [ecrLogin](#ecrlogin)
 * [invokeLambda](#invokelambda)
 
@@ -418,6 +419,16 @@ The step returns the ARN of the created identity provider.
 def idp = updateIdP(name: 'nameToCreateOrUpdate', metadata: 'pathToMetadataFile')
 ```
 
+## setAccountAlias
+
+Create or update the AWS account alias.
+
+The step returns the ARN of the created identity provider.
+
+```
+def idp = setAccountAlias(name: 'awsAlias')
+```
+
 ## ecrLogin
 
 Create login string to authenticate docker with the ECR.
@@ -464,6 +475,7 @@ String result = invokeLambda(
 * Add `onFailure` option when creating a stack to allow changed behaviour.
 * Add the possibility to define specific content-type for s3Upload step.
 * Support roleArns with paths
+* add `setAccountAlias` step
 
 ## 1.18
 * Fixed regression added by #27 (#JENKINS-47912)
