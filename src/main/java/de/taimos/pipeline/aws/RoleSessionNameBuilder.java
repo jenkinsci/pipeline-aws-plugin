@@ -20,9 +20,9 @@ package de.taimos.pipeline.aws;
  * #L%
  */
 
-import com.google.common.base.Joiner;
-import java.net.URLDecoder;
 import java.io.UnsupportedEncodingException;
+
+import com.google.common.base.Joiner;
 
 final class RoleSessionNameBuilder {
 	private static final int ROLE_SESSION_NAME_MAX_LENGTH = 64;
@@ -30,11 +30,11 @@ final class RoleSessionNameBuilder {
 	private static final int NUMBER_OF_SEPARATORS = 2;
 	private final String jobName;
 	private String buildNumber;
-
+	
 	private RoleSessionNameBuilder(String jobName) {
 		this.jobName = jobName;
 	}
-
+	
 	String build() {
 		String jobNameWithoutEncoding = "";
 		try {
@@ -44,9 +44,9 @@ final class RoleSessionNameBuilder {
 		}
 		final String jobNameWithoutWhitespaces = jobNameWithoutEncoding.replace(" ", "");
 		final String jobNameWithoutSlashes = jobNameWithoutWhitespaces.replace("/", "-");
-
+		
 		final int maxJobNameLength = ROLE_SESSION_NAME_MAX_LENGTH - (SESSION_NAME_PREFIX.length() + this.buildNumber.length() + NUMBER_OF_SEPARATORS);
-
+		
 		final int jobNameLength = jobNameWithoutSlashes.length();
 		String finalJobName = jobNameWithoutSlashes;
 		if (jobNameLength > maxJobNameLength) {
@@ -54,11 +54,11 @@ final class RoleSessionNameBuilder {
 		}
 		return Joiner.on("-").join(SESSION_NAME_PREFIX, finalJobName, this.buildNumber);
 	}
-
+	
 	static RoleSessionNameBuilder withJobName(final String jobName) {
 		return new RoleSessionNameBuilder(jobName);
 	}
-
+	
 	RoleSessionNameBuilder withBuildNumber(final String buildNumber) {
 		this.buildNumber = buildNumber;
 		return this;

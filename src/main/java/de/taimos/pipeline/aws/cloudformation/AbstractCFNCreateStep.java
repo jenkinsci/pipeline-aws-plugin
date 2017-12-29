@@ -148,11 +148,11 @@ abstract class AbstractCFNCreateStep extends AbstractStepImpl {
 	public void setRoleArn(String roleArn) {
 		this.roleArn = roleArn;
 	}
-
+	
 	public String getOnFailure() {
 		return this.onFailure;
 	}
-
+	
 	@DataBoundSetter
 	public void setOnFailure(String onFailure) {
 		this.onFailure = onFailure;
