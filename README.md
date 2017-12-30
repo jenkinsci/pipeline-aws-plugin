@@ -471,6 +471,8 @@ String result = invokeLambda(
 # Changelog
 
 ## current master
+
+## 1.19
 * Fix: RoleSessionName (decoding job name HTML url encoding) in `withAWS` step for assume role.
 * Add `onFailure` option when creating a stack to allow changed behaviour.
 * Add the possibility to define specific content-type for s3Upload step.
