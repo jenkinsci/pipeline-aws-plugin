@@ -423,10 +423,8 @@ def idp = updateIdP(name: 'nameToCreateOrUpdate', metadata: 'pathToMetadataFile'
 
 Create or update the AWS account alias.
 
-The step returns the ARN of the created identity provider.
-
 ```
-def idp = setAccountAlias(name: 'awsAlias')
+setAccountAlias(name: 'awsAlias')
 ```
 
 ## ecrLogin
