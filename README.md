@@ -469,9 +469,11 @@ String result = invokeLambda(
 # Changelog
 
 ## current master
+
+## 1.20
 * Fix: `setAccountAlias` broken during code cleanup
 
-## 1.19
+## 1.19 (*use >= 1.20!!*)
 * Fix: RoleSessionName (decoding job name HTML url encoding) in `withAWS` step for assume role.
 * Add `onFailure` option when creating a stack to allow changed behaviour.
 * Add the possibility to define specific content-type for s3Upload step.
@@ -481,7 +483,7 @@ String result = invokeLambda(
 ## 1.18
 * Fixed regression added by #27 (#JENKINS-47912)
 
-## 1.17 (*use > 1.18!!*)
+## 1.17 (*use >= 1.18!!*)
 * Add policy for withAWS support - allows an additional policy to be combined with the policy associated with the assumed role.
 * Add `cfnCreateChangeSet` step
 * Add `cfnExecuteChangeSet` step
