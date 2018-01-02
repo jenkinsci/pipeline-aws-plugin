@@ -87,7 +87,7 @@ public class SetAccountAliasStep extends AbstractStepImpl {
 			ListAccountAliasesResult listResult = iamClient.listAccountAliases();
 			
 			// no or different alias set
-			if (listResult.getAccountAliases() != null || !listResult.getAccountAliases().contains(name)) {
+			if (listResult.getAccountAliases() == null || listResult.getAccountAliases().isEmpty() || !listResult.getAccountAliases().contains(name)) {
 				// Update alias
 				iamClient.createAccountAlias(new CreateAccountAliasRequest().withAccountAlias(name));
 				Execution.this.listener.getLogger().format("Created account alias %s %n", name);

@@ -469,6 +469,7 @@ String result = invokeLambda(
 # Changelog
 
 ## current master
+* Fix: `setAccountAlias` broken during code cleanup
 
 ## 1.19
 * Fix: RoleSessionName (decoding job name HTML url encoding) in `withAWS` step for assume role.
