@@ -109,7 +109,7 @@ public class UpdateIdP extends AbstractStepImpl {
 						String providerARN = null;
 						for (SAMLProviderListEntry entry : listResult.getSAMLProviderList()) {
 							String entryArn = entry.getArn();
-							String entryName = entryArn.substring(entryArn.lastIndexOf("/") + 1);
+							String entryName = entryArn.substring(entryArn.lastIndexOf('/') + 1);
 							if (entryName.equals(name)) {
 								providerARN = entryArn;
 								break;
@@ -145,11 +145,10 @@ public class UpdateIdP extends AbstractStepImpl {
 			if (file == null) {
 				return null;
 			}
-			
 			try {
 				return this.workspace.child(file).readToString();
 			} catch (Exception e) {
-				throw new RuntimeException(e);
+				throw new IllegalArgumentException(e);
 			}
 		}
 		

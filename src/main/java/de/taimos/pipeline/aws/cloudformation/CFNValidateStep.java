@@ -141,7 +141,7 @@ public class CFNValidateStep extends AbstractStepImpl {
 			try {
 				return child.readToString();
 			} catch (Exception e) {
-				throw new RuntimeException(e);
+				throw new IllegalArgumentException(e);
 			}
 		}
 		

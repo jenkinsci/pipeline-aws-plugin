@@ -122,6 +122,10 @@ public class ListAWSAccountsStep extends AbstractStepImpl {
 	
 	public static class SafeNameCreator {
 		
+		private SafeNameCreator() {
+			// hidden constructor
+		}
+		
 		public static String createSafeName(String name) {
 			return name.replaceAll("[^A-Za-z0-9-]", "-").replaceAll("-+", "-").toLowerCase();
 		}

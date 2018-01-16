@@ -107,6 +107,7 @@ public class CFNUpdateStep extends AbstractCFNCreateStep {
 		
 		@Override
 		public void checkPreconditions() {
+			// nothing to do here
 		}
 		
 		@Override

@@ -137,9 +137,9 @@ public class DeployAPIStep extends AbstractStepImpl {
 		private Map<String, String> parseVariables(String[] variables) {
 			Map<String, String> map = new HashMap<>();
 			for (String var : variables) {
-				int i = var.indexOf("=");
+				int i = var.indexOf('=');
 				if (i < 0) {
-					throw new RuntimeException("Missing = in variable " + var);
+					throw new IllegalArgumentException("Missing = in variable " + var);
 				}
 				map.put(var.substring(0, i), var.substring(i + 1));
 			}

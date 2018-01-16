@@ -44,6 +44,10 @@ class ProxyConfiguration {
 	private static final int HTTP_PORT = 80;
 	private static final int HTTPS_PORT = 443;
 	
+	private ProxyConfiguration() {
+		// hidden constructor
+	}
+	
 	static void configure(EnvVars vars, ClientConfiguration config) {
 		if (config.getProtocol() == Protocol.HTTP) {
 			configureHTTP(vars, config);

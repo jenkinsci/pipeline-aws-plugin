@@ -209,7 +209,8 @@ public class S3DownloadStep extends AbstractS3Step {
 		}
 		
 		@Override
-		public void checkRoles(RoleChecker roleChecker) throws SecurityException {
+		public void checkRoles(RoleChecker roleChecker) {
+			// nothing to do here
 		}
 	}
 }

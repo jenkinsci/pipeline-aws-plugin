@@ -262,11 +262,11 @@ abstract class AbstractCFNCreateStep extends AbstractStepImpl {
 				} else if (paramsFile.endsWith(".yaml")) {
 					parser = new YAMLParameterFileParser();
 				} else {
-					throw new RuntimeException("Invalid file extension for parameter file (supports json/yaml)");
+					throw new IllegalArgumentException("Invalid file extension for parameter file (supports json/yaml)");
 				}
 				return parser.parseParams(this.getWorkspace().child(paramsFile).read());
 			} catch (Exception e) {
-				throw new RuntimeException(e);
+				throw new IllegalArgumentException(e);
 			}
 		}
 		
@@ -276,9 +276,9 @@ abstract class AbstractCFNCreateStep extends AbstractStepImpl {
 				return tagList;
 			}
 			for (String tag : tags) {
-				int i = tag.indexOf("=");
+				int i = tag.indexOf('=');
 				if (i < 0) {
-					throw new RuntimeException("Missing = in tag " + tag);
+					throw new IllegalArgumentException("Missing = in tag " + tag);
 				}
 				String key = tag.substring(0, i);
 				String value = tag.substring(i + 1);
@@ -293,9 +293,9 @@ abstract class AbstractCFNCreateStep extends AbstractStepImpl {
 				return parameters;
 			}
 			for (String param : params) {
-				int i = param.indexOf("=");
+				int i = param.indexOf('=');
 				if (i < 0) {
-					throw new RuntimeException("Missing = in param " + param);
+					throw new IllegalArgumentException("Missing = in param " + param);
 				}
 				String key = param.substring(0, i);
 				String value = param.substring(i + 1);

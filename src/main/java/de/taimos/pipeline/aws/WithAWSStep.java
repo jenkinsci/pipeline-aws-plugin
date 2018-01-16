@@ -234,7 +234,7 @@ public class WithAWSStep extends AbstractStepImpl {
 			return false;
 		}
 		
-		private final String ALLOW_ALL_POLICY = "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Action\":\"*\","
+		private static final String ALLOW_ALL_POLICY = "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Action\":\"*\","
 				+ "\"Effect\":\"Allow\",\"Resource\":\"*\"}]}";
 		
 		private void withFederatedUserId(@Nonnull EnvVars localEnv) {
@@ -243,7 +243,7 @@ public class WithAWSStep extends AbstractStepImpl {
 				GetFederationTokenRequest getFederationTokenRequest = new GetFederationTokenRequest();
 				getFederationTokenRequest.setDurationSeconds(3600);
 				getFederationTokenRequest.setName(this.step.getFederatedUserId());
-				getFederationTokenRequest.setPolicy(this.ALLOW_ALL_POLICY);
+				getFederationTokenRequest.setPolicy(ALLOW_ALL_POLICY);
 				
 				GetFederationTokenResult federationTokenResult = sts.getFederationToken(getFederationTokenRequest);
 				

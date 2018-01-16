@@ -65,6 +65,7 @@ import hudson.FilePath;
  */
 public class FileWrapper implements Serializable {
 	private static final long serialVersionUID = 1L;
+	private static final String PATH_SUFFIX = "/";
 	
 	@Nonnull
 	private final String name;
@@ -79,8 +80,8 @@ public class FileWrapper implements Serializable {
 		this.directory = directory;
 		this.length = length;
 		this.lastModified = lastModified;
-		if (directory && !path.endsWith("/")) {
-			this.path = path + "/";
+		if (directory && !path.endsWith(PATH_SUFFIX)) {
+			this.path = path + PATH_SUFFIX;
 		} else {
 			this.path = path;
 		}

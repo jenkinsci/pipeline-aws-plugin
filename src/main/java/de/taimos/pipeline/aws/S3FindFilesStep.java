@@ -192,7 +192,7 @@ public class S3FindFilesStep extends AbstractS3Step {
 			// Go through all of the folders that we need to investigate,
 			// popping the first item off and working on it.  When they're
 			// all gone, we'll be done.
-			while (folders.size() > 0) {
+			while (!folders.isEmpty()) {
 				// This is the folder to investigate.
 				String folder = folders.remove(0);
 				

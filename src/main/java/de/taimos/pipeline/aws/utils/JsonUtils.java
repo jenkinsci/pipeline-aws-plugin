@@ -25,6 +25,10 @@ import net.sf.json.JSONSerializer;
 
 public class JsonUtils {
 	
+	private JsonUtils() {
+		// hidden constructor
+	}
+	
 	public static Object fromString(String string) {
 		return JSONSerializer.toJSON(string);
 	}

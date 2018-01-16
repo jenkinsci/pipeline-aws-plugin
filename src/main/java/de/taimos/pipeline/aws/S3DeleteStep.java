@@ -118,74 +118,87 @@ public class S3DeleteStep extends AbstractS3Step {
 						AmazonS3 s3Client = AWSClientFactory.create(Execution.this.step.createS3ClientOptions().createAmazonS3ClientBuilder(), Execution.this.envVars);
 						
 						if (!path.endsWith("/")) {
-							// See if the thing that we were given is a file.
-							if (s3Client.doesObjectExist(bucket, path)) {
-								Execution.this.listener.getLogger().format("Deleting object at s3://%s/%s%n", bucket, path);
-								s3Client.deleteObject(bucket, path);
-							}
+							this.deleteFile(s3Client);
 						} else {
-							// This is the list of keys to delete from the bucket.
-							List<String> objectsToDelete = new ArrayList<>();
-							
-							// See if the thing that we were given is a file.
-							if (s3Client.doesObjectExist(bucket, path)) {
-								objectsToDelete.add(path);
-							}
-							
-							// This is the list of folders that we need to investigate.
-							// We're going to start with the path that we've been given,
-							// and then we'll grow it from there.
-							List<String> folders = new ArrayList<>();
-							folders.add(path);
-							
-							// Go through all of the folders that we need to investigate,
-							// popping the first item off and working on it.  When they're
-							// all gone, we'll be done.
-							while (folders.size() > 0) {
-								// This is the folder to investigate.
-								String folder = folders.remove(0);
-								
-								// Create the request to list the objects within it.
-								ListObjectsRequest request = new ListObjectsRequest();
-								request.setBucketName(bucket);
-								request.setPrefix(folder);
-								request.setDelimiter("/");
-								if (!folder.endsWith("/")) {
-									request.setPrefix(folder + "/");
-								}
-								
-								// Get the list of objects within the folder.  Because AWS
-								// might paginate this, we're going to continue dealing with
-								// the "objectListing" object until it claims that it's done.
-								ObjectListing objectListing = s3Client.listObjects(request);
-								while (true) {
-									// Add any real objects to the list of objects to delete.
-									for (S3ObjectSummary entry : objectListing.getObjectSummaries()) {
-										objectsToDelete.add(entry.getKey());
-									}
-									// Add any folders to the list of folders that we need to investigate.
-									folders.addAll(objectListing.getCommonPrefixes());
-									
-									// If this listing is complete, then we can stop.
-									if (!objectListing.isTruncated()) {
-										break;
-									}
-									// Otherwise, we need to get the next batch and repeat.
-									objectListing = s3Client.listNextBatchOfObjects(objectListing);
-								}
-							}
-							
-							// Go through all of the objects that we want to delete and actually delete them.
-							for (String objectToDelete : objectsToDelete) {
-								Execution.this.listener.getLogger().format("Deleting object at s3://%s/%s%n", bucket, objectToDelete);
-								s3Client.deleteObject(bucket, objectToDelete);
-							}
+							this.deleteFolder(s3Client);
 						}
 						
 						Execution.this.listener.getLogger().println("Delete complete");
 						Execution.this.getContext().onSuccess(null);
 					} catch (RuntimeException e) {
 						Execution.this.getContext().onFailure(e);
+					}
+				}
+				
+				private void deleteFolder(AmazonS3 s3Client) {
+					// This is the list of keys to delete from the bucket.
+					List<String> objectsToDelete = new ArrayList<>();
+					
+					// See if the thing that we were given is a file.
+					if (s3Client.doesObjectExist(bucket, path)) {
+						objectsToDelete.add(path);
+					}
+					
+					this.searchObjectsRecursively(s3Client, objectsToDelete);
+					
+					// Go through all of the objects that we want to delete and actually delete them.
+					for (String objectToDelete : objectsToDelete) {
+						Execution.this.listener.getLogger().format("Deleting object at s3://%s/%s%n", bucket, objectToDelete);
+						// TODO Use deleteObjects to reduce API calls
+						s3Client.deleteObject(bucket, objectToDelete);
+					}
+				}
+				
+				private void searchObjectsRecursively(AmazonS3 s3Client, List<String> objectsToDelete) {
+					// This is the list of folders that we need to investigate.
+					// We're going to start with the path that we've been given,
+					// and then we'll grow it from there.
+					List<String> folders = new ArrayList<>();
+					folders.add(path);
+					
+					// Go through all of the folders that we need to investigate,
+					// popping the first item off and working on it.  When they're
+					// all gone, we'll be done.
+					while (!folders.isEmpty()) {
+						// This is the folder to investigate.
+						String folder = folders.remove(0);
+						
+						// Create the request to list the objects within it.
+						ListObjectsRequest request = new ListObjectsRequest();
+						request.setBucketName(bucket);
+						request.setPrefix(folder);
+						request.setDelimiter("/");
+						if (!folder.endsWith("/")) {
+							request.setPrefix(folder + "/");
+						}
+						
+						// Get the list of objects within the folder.  Because AWS
+						// might paginate this, we're going to continue dealing with
+						// the "objectListing" object until it claims that it's done.
+						ObjectListing objectListing = s3Client.listObjects(request);
+						while (true) {
+							// Add any real objects to the list of objects to delete.
+							for (S3ObjectSummary entry : objectListing.getObjectSummaries()) {
+								objectsToDelete.add(entry.getKey());
+							}
+							// Add any folders to the list of folders that we need to investigate.
+							folders.addAll(objectListing.getCommonPrefixes());
+							
+							// If this listing is complete, then we can stop.
+							if (!objectListing.isTruncated()) {
+								break;
+							}
+							// Otherwise, we need to get the next batch and repeat.
+							objectListing = s3Client.listNextBatchOfObjects(objectListing);
+						}
+					}
+				}
+				
+				private void deleteFile(AmazonS3 s3Client) {
+					// See if the thing that we were given is a file.
+					if (s3Client.doesObjectExist(bucket, path)) {
+						Execution.this.listener.getLogger().format("Deleting object at s3://%s/%s%n", bucket, path);
+						s3Client.deleteObject(bucket, path);
 					}
 				}
 			}.start();
