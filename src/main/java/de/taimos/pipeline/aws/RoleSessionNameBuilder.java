@@ -36,23 +36,17 @@ final class RoleSessionNameBuilder {
 	}
 	
 	String build() {
-		String jobNameWithoutEncoding = "";
-		try {
-			jobNameWithoutEncoding = java.net.URLDecoder.decode(this.jobName, "UTF-8");
-		} catch (UnsupportedEncodingException e) {
-			// UTF-8 is always supported
-		}
-		final String jobNameWithoutWhitespaces = jobNameWithoutEncoding.replace(" ", "");
-		final String jobNameWithoutSlashes = jobNameWithoutWhitespaces.replace("/", "-");
+		final String sanitizedJobName = this.sanitizeString(this.jobName);
+		final String sanitizedBuildNumber = this.sanitizeString(this.buildNumber);
 		
-		final int maxJobNameLength = ROLE_SESSION_NAME_MAX_LENGTH - (SESSION_NAME_PREFIX.length() + this.buildNumber.length() + NUMBER_OF_SEPARATORS);
+		final int maxJobNameLength = ROLE_SESSION_NAME_MAX_LENGTH - (SESSION_NAME_PREFIX.length() + sanitizedBuildNumber.length() + NUMBER_OF_SEPARATORS);
 		
-		final int jobNameLength = jobNameWithoutSlashes.length();
-		String finalJobName = jobNameWithoutSlashes;
+		final int jobNameLength = sanitizedJobName.length();
+		String finalJobName = sanitizedJobName;
 		if (jobNameLength > maxJobNameLength) {
-			finalJobName = jobNameWithoutSlashes.substring(0, maxJobNameLength);
+			finalJobName = sanitizedJobName.substring(0, maxJobNameLength);
 		}
-		return Joiner.on("-").join(SESSION_NAME_PREFIX, finalJobName, this.buildNumber);
+		return Joiner.on("-").join(SESSION_NAME_PREFIX, finalJobName, sanitizedBuildNumber);
 	}
 	
 	static RoleSessionNameBuilder withJobName(final String jobName) {
@@ -62,5 +56,15 @@ final class RoleSessionNameBuilder {
 	RoleSessionNameBuilder withBuildNumber(final String buildNumber) {
 		this.buildNumber = buildNumber;
 		return this;
+	}
+	
+	private String sanitizeString(String s) {
+		String stringWithoutEncoding = "";
+		try {
+			stringWithoutEncoding = java.net.URLDecoder.decode(s, "UTF-8");
+		} catch (UnsupportedEncodingException e) {
+			// UTF-8 is always supported
+		}
+		return stringWithoutEncoding.replace(" ", "").replace("/", "-");
 	}
 }

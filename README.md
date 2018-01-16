@@ -469,6 +469,7 @@ String result = invokeLambda(
 # Changelog
 
 ## current master
+* Fix: RoleSessionName (slashes in buildNumber) in `withAWS` step for assume role. (#JENKINS-45807)
 
 ## 1.20
 * Fix: `setAccountAlias` broken during code cleanup
