@@ -139,25 +139,25 @@ Another way to use it with include/exclude pattern in a subdirectory (workingDir
 s3Upload(bucket:"my-bucket", path:'path/to/targetFolder/', includePathPattern:'**/*', workingDir:'dist', excludePathPattern:'**/*.svg')
 ```
 
-Specific metadatas can be add to upload files
+Specific user metadatas can be added to uploaded files
 
 ```
 s3Upload(bucket:"my-bucket", path:'path/to/targetFolder/', includePathPattern:'**/*.svg', workingDir:'dist', metadatas:['Key:SomeValue','Another:Value'])
 ```
 
-Specific cachecontrol can be add to upload files
+Specific cachecontrol can be added to uploaded files
 
 ```
 s3Upload(bucket:"my-bucket", path:'path/to/targetFolder/', includePathPattern:'**/*.svg', workingDir:'dist', cacheControl:'public,max-age=31536000')
 ```
 
-Specific content type can be add to upload files
+Specific content type can be added to uploaded files
 
 ```
 s3Upload(bucket:"my-bucket", path:'path/to/targetFolder/', includePathPattern:'**/*.ttf', workingDir:'dist', contentType:'application/x-font-ttf')
 ```
 
-Canned ACLs can be add to upload requests.
+Canned ACLs can be added to upload requests.
 
 ```
 s3Upload(file:'file.txt', bucket:'my-bucket', path:'path/to/target/file.txt', acl:'PublicRead')
@@ -470,6 +470,7 @@ String result = invokeLambda(
 
 ## current master
 * Fix: RoleSessionName (slashes in buildNumber) in `withAWS` step for assume role. (#JENKINS-45807)
+* Doc: Clarify usage of metadata
 
 ## 1.20
 * Fix: `setAccountAlias` broken during code cleanup
