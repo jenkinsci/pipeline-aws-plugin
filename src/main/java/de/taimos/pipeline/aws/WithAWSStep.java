@@ -265,7 +265,7 @@ public class WithAWSStep extends AbstractStepImpl {
 					localEnv.override(AWSClientFactory.AWS_SECRET_ACCESS_KEY, usernamePasswordCredentials.getPassword().getPlainText());
 					this.envVars.overrideAll(localEnv);
 				} else {
-					throw new RuntimeException("Cannot find Jenkins credentials with name " + this.step.getCredentials());
+					throw new RuntimeException("Cannot find Jenkins credentials with the ID " + this.step.getCredentials());
 				}
 			}
 		}
