@@ -36,7 +36,6 @@ import javax.inject.Inject;
 import org.jenkinsci.plugins.workflow.steps.AbstractStepDescriptorImpl;
 import org.jenkinsci.plugins.workflow.steps.AbstractStepExecutionImpl;
 import org.jenkinsci.plugins.workflow.steps.StepContextParameter;
-import org.jenkinsci.remoting.RoleChecker;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
 
@@ -59,6 +58,7 @@ import hudson.Extension;
 import hudson.FilePath;
 import hudson.model.TaskListener;
 import hudson.remoting.VirtualChannel;
+import jenkins.MasterToSlaveFileCallable;
 
 public class S3UploadStep extends AbstractS3Step {
 	
@@ -285,7 +285,7 @@ public class S3UploadStep extends AbstractS3Step {
 		
 	}
 	
-	private static class RemoteUploader implements FilePath.FileCallable<Void> {
+	private static class RemoteUploader extends MasterToSlaveFileCallable<Void> {
 		
 		protected static final long serialVersionUID = 1L;
 		private final S3ClientOptions amazonS3ClientOptions;
@@ -391,12 +391,9 @@ public class S3UploadStep extends AbstractS3Step {
 			return null;
 		}
 		
-		@Override
-		public void checkRoles(RoleChecker roleChecker) throws SecurityException {
-		}
 	}
 	
-	private static class RemoteListUploader implements FilePath.FileCallable<Void> {
+	private static class RemoteListUploader extends MasterToSlaveFileCallable<Void> {
 		
 		protected static final long serialVersionUID = 1L;
 		private final S3ClientOptions amazonS3ClientOptions;
@@ -464,12 +461,9 @@ public class S3UploadStep extends AbstractS3Step {
 			return null;
 		}
 		
-		@Override
-		public void checkRoles(RoleChecker roleChecker) throws SecurityException {
-		}
 	}
 	
-	private static class FeedList implements FilePath.FileCallable<Void> {
+	private static class FeedList extends MasterToSlaveFileCallable<Void> {
 		
 		private final List<File> fileList;
 		
@@ -483,9 +477,6 @@ public class S3UploadStep extends AbstractS3Step {
 			return null;
 		}
 		
-		@Override
-		public void checkRoles(RoleChecker arg0) throws SecurityException {
-		}
 	}
 	
 }
