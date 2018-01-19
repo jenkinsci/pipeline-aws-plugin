@@ -469,6 +469,8 @@ String result = invokeLambda(
 # Changelog
 
 ## current master
+
+## 1.21
 * Fix: `s3Upload` did not work in Jenkins 2.102+ (#JENKINS-49025)
 * Fix: RoleSessionName (slashes in buildNumber) in `withAWS` step for assume role. (#JENKINS-45807)
 * Doc: Clarify usage of metadata
