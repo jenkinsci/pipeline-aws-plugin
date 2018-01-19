@@ -30,7 +30,6 @@ import javax.inject.Inject;
 import org.jenkinsci.plugins.workflow.steps.AbstractStepDescriptorImpl;
 import org.jenkinsci.plugins.workflow.steps.AbstractStepExecutionImpl;
 import org.jenkinsci.plugins.workflow.steps.StepContextParameter;
-import org.jenkinsci.remoting.RoleChecker;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
 
@@ -48,6 +47,7 @@ import hudson.Extension;
 import hudson.FilePath;
 import hudson.model.TaskListener;
 import hudson.remoting.VirtualChannel;
+import jenkins.MasterToSlaveFileCallable;
 
 public class S3DownloadStep extends AbstractS3Step {
 	
@@ -164,7 +164,7 @@ public class S3DownloadStep extends AbstractS3Step {
 		
 	}
 	
-	private static class RemoteDownloader implements FilePath.FileCallable<Void> {
+	private static class RemoteDownloader extends MasterToSlaveFileCallable<Void> {
 		
 		protected static final long serialVersionUID = 1L;
 		
@@ -208,9 +208,5 @@ public class S3DownloadStep extends AbstractS3Step {
 			}
 		}
 		
-		@Override
-		public void checkRoles(RoleChecker roleChecker) {
-			// nothing to do here
-		}
 	}
 }
