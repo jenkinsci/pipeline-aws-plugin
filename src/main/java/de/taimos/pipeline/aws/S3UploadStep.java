@@ -343,7 +343,7 @@ public class S3UploadStep extends AbstractS3Step {
 					}
 					PutObjectRequest request;
 					if (this.kmsId != null && !this.kmsId.isEmpty()) {
-						RemoteUploader.this.taskListener.getLogger().format("Using KMS: %s", this.kmsId);
+						RemoteUploader.this.taskListener.getLogger().format("Using KMS: %s%n", this.kmsId);
 						request = new PutObjectRequest(this.bucket, this.path, localFile)
 								.withMetadata(metas)
 								.withSSEAwsKeyManagementParams(new SSEAwsKeyManagementParams(this.kmsId));
