@@ -21,6 +21,8 @@
 
 package de.taimos.pipeline.aws;
 
+import javax.annotation.Nonnull;
+import javax.inject.Inject;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -30,15 +32,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import javax.annotation.Nonnull;
-import javax.inject.Inject;
-
-import org.jenkinsci.plugins.workflow.steps.AbstractStepDescriptorImpl;
-import org.jenkinsci.plugins.workflow.steps.AbstractStepExecutionImpl;
-import org.jenkinsci.plugins.workflow.steps.StepContextParameter;
-import org.kohsuke.stapler.DataBoundConstructor;
-import org.kohsuke.stapler.DataBoundSetter;
-
 import com.amazonaws.event.ProgressEvent;
 import com.amazonaws.event.ProgressEventType;
 import com.amazonaws.event.ProgressListener;
@@ -46,25 +39,32 @@ import com.amazonaws.services.s3.Headers;
 import com.amazonaws.services.s3.model.CannedAccessControlList;
 import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.PutObjectRequest;
+import com.amazonaws.services.s3.model.SSEAlgorithm;
+import com.amazonaws.services.s3.model.SSEAwsKeyManagementParams;
 import com.amazonaws.services.s3.transfer.MultipleFileUpload;
 import com.amazonaws.services.s3.transfer.ObjectMetadataProvider;
 import com.amazonaws.services.s3.transfer.TransferManager;
 import com.amazonaws.services.s3.transfer.TransferManagerBuilder;
 import com.amazonaws.services.s3.transfer.Upload;
 import com.google.common.base.Preconditions;
-
 import hudson.EnvVars;
 import hudson.Extension;
 import hudson.FilePath;
 import hudson.model.TaskListener;
 import hudson.remoting.VirtualChannel;
 import jenkins.MasterToSlaveFileCallable;
+import org.jenkinsci.plugins.workflow.steps.AbstractStepDescriptorImpl;
+import org.jenkinsci.plugins.workflow.steps.AbstractStepExecutionImpl;
+import org.jenkinsci.plugins.workflow.steps.StepContextParameter;
+import org.kohsuke.stapler.DataBoundConstructor;
+import org.kohsuke.stapler.DataBoundSetter;
 
 public class S3UploadStep extends AbstractS3Step {
 	
 	private final String bucket;
 	private String file;
 	private String path = "";
+	private String kmsId;
 	private String includePathPattern;
 	private String excludePathPattern;
 	private String workingDir;
@@ -95,7 +95,16 @@ public class S3UploadStep extends AbstractS3Step {
 	public String getPath() {
 		return this.path;
 	}
-	
+
+	public String getKmsId() {
+		return this.kmsId;
+	}
+
+	@DataBoundSetter
+	public void setKmsId(String kmsId) {
+		this.kmsId = kmsId;
+	}
+
 	@DataBoundSetter
 	public void setPath(String path) {
 		this.path = path;
@@ -207,6 +216,7 @@ public class S3UploadStep extends AbstractS3Step {
 			final String file = this.step.getFile();
 			final String bucket = this.step.getBucket();
 			final String path = this.step.getPath();
+			final String kmsId = this.step.getKmsId();
 			final String includePathPattern = this.step.getIncludePathPattern();
 			final String excludePathPattern = this.step.getExcludePathPattern();
 			final String workingDir = this.step.getWorkingDir();
@@ -256,7 +266,7 @@ public class S3UploadStep extends AbstractS3Step {
 								return;
 							}
 							
-							child.act(new RemoteUploader(Execution.this.step.createS3ClientOptions(), Execution.this.envVars, Execution.this.listener, bucket, path, metadatas, acl, cacheControl, contentType));
+							child.act(new RemoteUploader(Execution.this.step.createS3ClientOptions(), Execution.this.envVars, Execution.this.listener, bucket, path, metadatas, acl, cacheControl, contentType, kmsId));
 							
 							Execution.this.listener.getLogger().println("Upload complete");
 							Execution.this.getContext().onSuccess(null);
@@ -266,7 +276,7 @@ public class S3UploadStep extends AbstractS3Step {
 							for (FilePath child : children) {
 								child.act(new FeedList(fileList));
 							}
-							dir.act(new RemoteListUploader(Execution.this.step.createS3ClientOptions(), Execution.this.envVars, Execution.this.listener, fileList, bucket, path, metadatas, acl, cacheControl, contentType));
+							dir.act(new RemoteListUploader(Execution.this.step.createS3ClientOptions(), Execution.this.envVars, Execution.this.listener, fileList, bucket, path, metadatas, acl, cacheControl, contentType, kmsId));
 							Execution.this.listener.getLogger().println("Upload complete");
 							Execution.this.getContext().onSuccess(null);
 						}
@@ -297,8 +307,9 @@ public class S3UploadStep extends AbstractS3Step {
 		private final CannedAccessControlList acl;
 		private final String cacheControl;
 		private final String contentType;
-		
-		RemoteUploader(S3ClientOptions amazonS3ClientOptions, EnvVars envVars, TaskListener taskListener, String bucket, String path, Map<String, String> metadatas, CannedAccessControlList acl, String cacheControl, String contentType) {
+		private final String kmsId;
+
+		RemoteUploader(S3ClientOptions amazonS3ClientOptions, EnvVars envVars, TaskListener taskListener, String bucket, String path, Map<String, String> metadatas, CannedAccessControlList acl, String cacheControl, String contentType, String kmsId) {
 			this.amazonS3ClientOptions = amazonS3ClientOptions;
 			this.envVars = envVars;
 			this.taskListener = taskListener;
@@ -308,8 +319,9 @@ public class S3UploadStep extends AbstractS3Step {
 			this.acl = acl;
 			this.cacheControl = cacheControl;
 			this.contentType = contentType;
+			this.kmsId = kmsId;
 		}
-		
+
 		@Override
 		public Void invoke(File localFile, VirtualChannel channel) throws IOException, InterruptedException {
 			TransferManager mgr = TransferManagerBuilder.standard()
@@ -318,7 +330,7 @@ public class S3UploadStep extends AbstractS3Step {
 			if (localFile.isFile()) {
 				Preconditions.checkArgument(this.path != null && !this.path.isEmpty(), "Path must not be null or empty when uploading file");
 				final Upload upload;
-				if ((this.metadatas != null && this.metadatas.size() > 0) || (this.cacheControl != null && !this.cacheControl.isEmpty()) || (this.contentType != null && !this.contentType.isEmpty())) {
+				if ((this.metadatas != null && this.metadatas.size() > 0) || (this.cacheControl != null && !this.cacheControl.isEmpty()) || (this.contentType != null && !this.contentType.isEmpty()) || (this.kmsId != null && !this.kmsId.isEmpty())) {
 					ObjectMetadata metas = new ObjectMetadata();
 					if (this.metadatas != null && this.metadatas.size() > 0) {
 						metas.setUserMetadata(this.metadatas);
@@ -329,12 +341,22 @@ public class S3UploadStep extends AbstractS3Step {
 					if (this.contentType != null && !this.contentType.isEmpty()) {
 						metas.setContentType(contentType);
 					}
-					PutObjectRequest request = new PutObjectRequest(this.bucket, this.path, localFile).withMetadata(metas);
+					PutObjectRequest request;
+					if (this.kmsId != null && !this.kmsId.isEmpty()) {
+						RemoteUploader.this.taskListener.getLogger().format("Using KMS: %s", this.kmsId);
+						request = new PutObjectRequest(this.bucket, this.path, localFile)
+								.withMetadata(metas)
+								.withSSEAwsKeyManagementParams(new SSEAwsKeyManagementParams(this.kmsId));
+					} else {
+						 request = new PutObjectRequest(this.bucket, this.path, localFile).withMetadata(metas);
+					}
+
 					if (this.acl != null) {
 						request = request.withCannedAcl(this.acl);
 					}
 					upload = mgr.upload(request);
 				} else {
+
 					PutObjectRequest request = new PutObjectRequest(this.bucket, this.path, localFile);
 					if (this.acl != null) {
 						request = request.withCannedAcl(this.acl);
@@ -354,7 +376,7 @@ public class S3UploadStep extends AbstractS3Step {
 			}
 			if (localFile.isDirectory()) {
 				final MultipleFileUpload fileUpload;
-				ObjectMetadataProvider metadatasProvider = new ObjectMetadataProvider() {
+				final ObjectMetadataProvider metadatasProvider = new ObjectMetadataProvider() {
 					@Override
 					public void provideObjectMetadata(File file, ObjectMetadata meta) {
 						if (meta != null) {
@@ -369,6 +391,14 @@ public class S3UploadStep extends AbstractS3Step {
 							}
 							if (RemoteUploader.this.contentType != null && !RemoteUploader.this.contentType.isEmpty()) {
 								meta.setContentType(contentType);
+							}
+							if (RemoteUploader.this.kmsId != null && !RemoteUploader.this.kmsId.isEmpty()) {
+								final SSEAwsKeyManagementParams sseAwsKeyManagementParams = new SSEAwsKeyManagementParams(RemoteUploader.this.kmsId);
+								meta.setSSEAlgorithm(SSEAlgorithm.KMS.getAlgorithm());
+								meta.setHeader(
+										Headers.SERVER_SIDE_ENCRYPTION_AWS_KMS_KEYID,
+										sseAwsKeyManagementParams.getAwsKmsKeyId()
+								);
 							}
 						}
 						
@@ -406,8 +436,9 @@ public class S3UploadStep extends AbstractS3Step {
 		private final CannedAccessControlList acl;
 		private final String cacheControl;
 		private final String contentType;
+		private final String kmsId;
 		
-		RemoteListUploader(S3ClientOptions amazonS3ClientOptions, EnvVars envVars, TaskListener taskListener, List<File> fileList, String bucket, String path, Map<String, String> metadatas, CannedAccessControlList acl, final String cacheControl, final String contentType) {
+		RemoteListUploader(S3ClientOptions amazonS3ClientOptions, EnvVars envVars, TaskListener taskListener, List<File> fileList, String bucket, String path, Map<String, String> metadatas, CannedAccessControlList acl, final String cacheControl, final String contentType, String kmsId) {
 			this.amazonS3ClientOptions = amazonS3ClientOptions;
 			this.envVars = envVars;
 			this.taskListener = taskListener;
@@ -418,14 +449,15 @@ public class S3UploadStep extends AbstractS3Step {
 			this.acl = acl;
 			this.cacheControl = cacheControl;
 			this.contentType = contentType;
+			this.kmsId = kmsId;
 		}
 		
 		@Override
 		public Void invoke(File localFile, VirtualChannel channel) throws IOException, InterruptedException {
+			Preconditions.checkArgument(this.path != null && !this.path.isEmpty(), "Path must not be null or empty when uploading file");
 			TransferManager mgr = TransferManagerBuilder.standard()
 					.withS3Client(AWSClientFactory.create(this.amazonS3ClientOptions.createAmazonS3ClientBuilder(), this.envVars))
 					.build();
-			Preconditions.checkArgument(this.path != null && !this.path.isEmpty(), "Path must not be null or empty when uploading file");
 			final MultipleFileUpload fileUpload;
 			ObjectMetadataProvider metadatasProvider = new ObjectMetadataProvider() {
 				@Override
@@ -443,6 +475,15 @@ public class S3UploadStep extends AbstractS3Step {
 						if (RemoteListUploader.this.contentType != null && !RemoteListUploader.this.contentType.isEmpty()) {
 							meta.setContentType(RemoteListUploader.this.contentType);
 						}
+						if (RemoteListUploader.this.kmsId != null && !RemoteListUploader.this.contentType.isEmpty()) {
+							final SSEAwsKeyManagementParams sseAwsKeyManagementParams = new SSEAwsKeyManagementParams(RemoteListUploader.this.kmsId);
+							meta.setSSEAlgorithm(sseAwsKeyManagementParams.getAwsKmsKeyId());
+							meta.setHeader(
+									Headers.SERVER_SIDE_ENCRYPTION_AWS_KMS_KEYID,
+									sseAwsKeyManagementParams.getAwsKmsKeyId()
+							);
+						}
+
 					}
 				}
 			};
@@ -460,9 +501,9 @@ public class S3UploadStep extends AbstractS3Step {
 			fileUpload.waitForCompletion();
 			return null;
 		}
-		
+
 	}
-	
+
 	private static class FeedList extends MasterToSlaveFileCallable<Void> {
 		
 		private final List<File> fileList;

@@ -30,13 +30,14 @@ public class S3UploadStepTest {
 	public void gettersWorkAsExpectedForFileCase() throws Exception {
 		S3UploadStep step = new S3UploadStep( "my-bucket" , false, false);
 		step.setFile( "my-file" );
+		step.setKmsId("alias/foo");
 		step.setAcl(CannedAccessControlList.PublicRead);
 		step.setCacheControl("my-cachecontrol");
 		Assert.assertEquals( "my-file", step.getFile() );
 		Assert.assertEquals( "my-bucket", step.getBucket() );
 		Assert.assertEquals( CannedAccessControlList.PublicRead, step.getAcl() );
 		Assert.assertEquals( "my-cachecontrol", step.getCacheControl() );
-
+		Assert.assertEquals("alias/foo", step.getKmsId());
 	}
 
 	@Test

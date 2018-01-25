@@ -164,6 +164,14 @@ s3Upload(file:'file.txt', bucket:'my-bucket', path:'path/to/target/file.txt', ac
 s3Upload(file:'someFolder', bucket:'my-bucket', path:'path/to/targetFolder/', acl:'BucketOwnerFullControl')
 ```
 
+A KMS alias or KMS id can be used to encrypt the uploaded file or directory at rest.
+
+```
+s3Upload(file: 'foo.txt', bucket: 'my-bucket', path: 'path/to/target/file.txt', kmsId: 'alias/foo')
+s3Upload(file: 'foo.txt', bucket: 'my-bucket', path: 'path/to/target/file.txt', kmsId: '8e1d420d-bf94-4a15-a07a-8ad965abb30f')
+s3upload(file: 'bar-dir', bucket: 'my-bucket', path: 'path/to/target', kmsId: 'alias/bar')
+```
+
 ### s3Download
 
 Download a file/folder from S3 to the local workspace.

@@ -74,7 +74,7 @@ public class WithAWSStep extends AbstractStepImpl {
 	private String externalId = "";
 	private String federatedUserId = "";
 	private String policy = "";
-	
+
 	@DataBoundConstructor
 	public WithAWSStep() {
 		//
@@ -330,7 +330,7 @@ public class WithAWSStep extends AbstractStepImpl {
 				this.envVars.overrideAll(localEnv);
 			}
 		}
-		
+
 		private String createRoleSessionName() {
 			return RoleSessionNameBuilder
 					.withJobName(this.envVars.get("JOB_NAME"))
