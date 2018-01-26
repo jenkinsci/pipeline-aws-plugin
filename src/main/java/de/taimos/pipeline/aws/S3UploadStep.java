@@ -330,6 +330,9 @@ public class S3UploadStep extends AbstractS3Step {
 			if (localFile.isFile()) {
 				Preconditions.checkArgument(this.path != null && !this.path.isEmpty(), "Path must not be null or empty when uploading file");
 				final Upload upload;
+				PutObjectRequest request = new PutObjectRequest(this.bucket, this.path, localFile);
+
+				// Add metadata
 				if ((this.metadatas != null && this.metadatas.size() > 0) || (this.cacheControl != null && !this.cacheControl.isEmpty()) || (this.contentType != null && !this.contentType.isEmpty())) {
 					ObjectMetadata metas = new ObjectMetadata();
 					if (this.metadatas != null && this.metadatas.size() > 0) {
@@ -341,22 +344,22 @@ public class S3UploadStep extends AbstractS3Step {
 					if (this.contentType != null && !this.contentType.isEmpty()) {
 						metas.setContentType(contentType);
 					}
-					PutObjectRequest request = new PutObjectRequest(this.bucket, this.path, localFile).withMetadata(metas);
-					if (this.acl != null) {
-						request = request.withCannedAcl(this.acl);
-					}
-					upload = mgr.upload(request);
-				} else {
-					PutObjectRequest request = new PutObjectRequest(this.bucket, this.path, localFile);
-					if (this.acl != null) {
-						request = request.withCannedAcl(this.acl);
-					}
-					if (this.kmsId != null && !this.kmsId.isEmpty()) {
-						RemoteUploader.this.taskListener.getLogger().format("Using KMS: %s%n", this.kmsId);
-						request = request.withSSEAwsKeyManagementParams(new SSEAwsKeyManagementParams(this.kmsId));
-					}
-					upload = mgr.upload(request);
+					request.withMetadata(metas);
 				}
+
+				// Add acl
+				if (this.acl != null) {
+					request.withCannedAcl(this.acl);
+				}
+
+				// Add kms
+				if (this.kmsId != null && !this.kmsId.isEmpty()) {
+					RemoteUploader.this.taskListener.getLogger().format("Using KMS: %s%n", this.kmsId);
+					request.withSSEAwsKeyManagementParams(new SSEAwsKeyManagementParams(this.kmsId));
+				}
+
+				upload = mgr.upload(request);
+
 				upload.addProgressListener(new ProgressListener() {
 					@Override
 					public void progressChanged(ProgressEvent progressEvent) {
@@ -395,7 +398,6 @@ public class S3UploadStep extends AbstractS3Step {
 								);
 							}
 						}
-						
 					}
 				};
 				fileUpload = mgr.uploadDirectory(this.bucket, this.path, localFile, true, metadatasProvider);
