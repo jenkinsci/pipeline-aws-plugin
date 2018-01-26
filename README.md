@@ -477,6 +477,7 @@ String result = invokeLambda(
 # Changelog
 
 ## current master
+* Add `kmsId` parameter to `s3Upload`.
 
 ## 1.21
 * Fix: `s3Upload` did not work in Jenkins 2.102+ (#JENKINS-49025)
