@@ -330,7 +330,7 @@ public class S3UploadStep extends AbstractS3Step {
 			if (localFile.isFile()) {
 				Preconditions.checkArgument(this.path != null && !this.path.isEmpty(), "Path must not be null or empty when uploading file");
 				final Upload upload;
-				if ((this.metadatas != null && this.metadatas.size() > 0) || (this.cacheControl != null && !this.cacheControl.isEmpty()) || (this.contentType != null && !this.contentType.isEmpty()) || (this.kmsId != null && !this.kmsId.isEmpty())) {
+				if ((this.metadatas != null && this.metadatas.size() > 0) || (this.cacheControl != null && !this.cacheControl.isEmpty()) || (this.contentType != null && !this.contentType.isEmpty())) {
 					ObjectMetadata metas = new ObjectMetadata();
 					if (this.metadatas != null && this.metadatas.size() > 0) {
 						metas.setUserMetadata(this.metadatas);
@@ -342,19 +342,18 @@ public class S3UploadStep extends AbstractS3Step {
 						metas.setContentType(contentType);
 					}
 					PutObjectRequest request = new PutObjectRequest(this.bucket, this.path, localFile).withMetadata(metas);
-					if (this.kmsId != null && !this.kmsId.isEmpty()) {
-						RemoteUploader.this.taskListener.getLogger().format("Using KMS: %s%n", this.kmsId);
-						request = request.withSSEAwsKeyManagementParams(new SSEAwsKeyManagementParams(this.kmsId));
-					}
 					if (this.acl != null) {
 						request = request.withCannedAcl(this.acl);
 					}
 					upload = mgr.upload(request);
 				} else {
-
 					PutObjectRequest request = new PutObjectRequest(this.bucket, this.path, localFile);
 					if (this.acl != null) {
 						request = request.withCannedAcl(this.acl);
+					}
+					if (this.kmsId != null && !this.kmsId.isEmpty()) {
+						RemoteUploader.this.taskListener.getLogger().format("Using KMS: %s%n", this.kmsId);
+						request = request.withSSEAwsKeyManagementParams(new SSEAwsKeyManagementParams(this.kmsId));
 					}
 					upload = mgr.upload(request);
 				}
