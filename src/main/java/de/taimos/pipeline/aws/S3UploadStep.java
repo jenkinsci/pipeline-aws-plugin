@@ -470,7 +470,7 @@ public class S3UploadStep extends AbstractS3Step {
 						if (RemoteListUploader.this.contentType != null && !RemoteListUploader.this.contentType.isEmpty()) {
 							meta.setContentType(RemoteListUploader.this.contentType);
 						}
-						if (RemoteListUploader.this.kmsId != null && !RemoteListUploader.this.contentType.isEmpty()) {
+						if (RemoteListUploader.this.kmsId != null && !RemoteListUploader.this.kmsId.isEmpty()) {
 							final SSEAwsKeyManagementParams sseAwsKeyManagementParams = new SSEAwsKeyManagementParams(RemoteListUploader.this.kmsId);
 							meta.setSSEAlgorithm(sseAwsKeyManagementParams.getAwsKmsKeyId());
 							meta.setHeader(
