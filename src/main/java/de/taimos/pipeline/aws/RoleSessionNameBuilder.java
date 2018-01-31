@@ -65,6 +65,8 @@ final class RoleSessionNameBuilder {
 		} catch (UnsupportedEncodingException e) {
 			// UTF-8 is always supported
 		}
-		return stringWithoutEncoding.replace(" ", "").replace("/", "-");
+		return stringWithoutEncoding
+				.replaceAll("[/\\()]", "-")
+				.replaceAll("^-|[ \"']|-$", "");
 	}
 }

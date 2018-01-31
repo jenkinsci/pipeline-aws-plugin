@@ -78,4 +78,15 @@ public class RoleSessionNameBuilderTest {
 		final String result = roleSessionNameBuilder.build();
 		assertEquals("The result should not have any encoded html characters", "Jenkins-jobName-withHTMLEncoding-Number", result);
 	}
+
+	@Test
+	public void sanitizeJobName() {
+		String jobName = "\"jobName' space / slash (paran)";
+		String buildNumber = "(some)123";
+		final RoleSessionNameBuilder roleSessionNameBuilder = RoleSessionNameBuilder
+				.withJobName(jobName)
+				.withBuildNumber(buildNumber);
+		final String result = roleSessionNameBuilder.build();
+		assertEquals("The result should not have any special characters", "Jenkins-jobNamespace-slash-paran-some-123", result);
+	}
 }
