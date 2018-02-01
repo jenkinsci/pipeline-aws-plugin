@@ -254,6 +254,8 @@ JSON file like with the cli or a YAML file for the [cfn-params](https://www.npmj
 Additionally you can specify a list of tags that are set on the stack and all resources created by CloudFormation.
 The step returns the outputs of the stack as a map.
 
+When cfnUpdate creates a stack and the creation fails, the stack is deleted instead of being left in a broken state.
+
 To prevent running into rate limiting on the AWS API you can change the default polling interval of 1000 ms using the parameter `pollIntervall`. Using the value `0` disables event printing.
 
 ```
@@ -278,7 +280,8 @@ In a case where CloudFormation needs to use a different IAM Role for creating th
 def outputs = cfnUpdate(stack:'my-stack', url:'https://s3.amazonaws.com/my-templates-bucket/template.yaml', roleArn: 'arn:aws:iam::123456789012:role/S3Access')
 ```
 
-It's possible to override the default behaviour of ROLLBACK a stack when the creation fails by using "onFailure". Allowed values are DO_NOTHING, ROLLBACK, or DELETE
+It's possible to override the behaviour of a stack when the creation fails by using "onFailure". Allowed values are DO_NOTHING, ROLLBACK, or DELETE
+Because the normal default value of ROLLBACK behaves strangely in a CI/CD environment. cfnUpdate uses DELETE as default.
 ```
 def outputs = cfnUpdate(stack:'my-stack', url:'https://s3.amazonaws.com/my-templates-bucket/template.yaml', onFailure:'DELETE')
 ```
@@ -480,6 +483,7 @@ String result = invokeLambda(
 * Add `kmsId` parameter to `s3Upload`.
 * Fix more characters in RoleSessionName
 * Allow upload of multiple files to bucket root (#41)
+* Use DELETE method for failed stack creation. (*Changed behavior*)
 
 ## 1.21
 * Fix: `s3Upload` did not work in Jenkins 2.102+ (#JENKINS-49025)

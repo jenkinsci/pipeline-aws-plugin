@@ -58,7 +58,7 @@ abstract class AbstractCFNCreateStep extends AbstractStepImpl {
 	private Long pollInterval = 1000L;
 	private Boolean create = true;
 	private String roleArn;
-	private String onFailure = OnFailure.ROLLBACK.toString();
+	private String onFailure = OnFailure.DELETE.toString();
 	
 	public AbstractCFNCreateStep(String stack) {
 		this.stack = stack;
