@@ -21,6 +21,7 @@
 package de.taimos.pipeline.aws;
 
 import org.apache.commons.lang.StringUtils;
+import org.jenkinsci.plugins.workflow.steps.StepContext;
 
 import com.amazonaws.ClientConfiguration;
 import com.amazonaws.auth.AWSCredentialsProvider;
@@ -51,10 +52,18 @@ public class AWSClientFactory {
 		//
 	}
 	
+	public static <B extends AwsSyncClientBuilder<?, T>, T> T create(B clientBuilder, StepContext context) {
+		try {
+			return configureBuilder(clientBuilder, context.get(EnvVars.class)).build();
+		} catch (Exception e) {
+			throw new IllegalArgumentException(e);
+		}
+	}
+
 	public static <B extends AwsSyncClientBuilder<?, T>, T> T create(B clientBuilder, EnvVars vars) {
 		return configureBuilder(clientBuilder, vars).build();
 	}
-	
+
 	public static <B extends AwsSyncClientBuilder<?, ?>> B configureBuilder(final B clientBuilder, final EnvVars vars) {
 		if (clientBuilder == null) {
 			throw new IllegalArgumentException("ClientBuilder must not be null");

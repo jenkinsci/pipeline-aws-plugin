@@ -23,13 +23,15 @@ package de.taimos.pipeline.aws;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 
-import javax.inject.Inject;
+import javax.annotation.Nonnull;
 
-import org.jenkinsci.plugins.workflow.steps.AbstractStepDescriptorImpl;
-import org.jenkinsci.plugins.workflow.steps.AbstractStepImpl;
-import org.jenkinsci.plugins.workflow.steps.AbstractSynchronousStepExecution;
-import org.jenkinsci.plugins.workflow.steps.StepContextParameter;
+import org.jenkinsci.plugins.workflow.steps.Step;
+import org.jenkinsci.plugins.workflow.steps.StepContext;
+import org.jenkinsci.plugins.workflow.steps.StepDescriptor;
+import org.jenkinsci.plugins.workflow.steps.StepExecution;
+import org.jenkinsci.plugins.workflow.steps.SynchronousStepExecution;
 import org.kohsuke.stapler.DataBoundConstructor;
 
 import com.amazonaws.services.securitytoken.AWSSecurityTokenService;
@@ -37,24 +39,25 @@ import com.amazonaws.services.securitytoken.AWSSecurityTokenServiceClientBuilder
 import com.amazonaws.services.securitytoken.model.GetCallerIdentityRequest;
 import com.amazonaws.services.securitytoken.model.GetCallerIdentityResult;
 
-import hudson.EnvVars;
+import de.taimos.pipeline.aws.utils.StepUtils;
 import hudson.Extension;
 import hudson.model.TaskListener;
 
-public class AWSIdentityStep extends AbstractStepImpl {
+public class AWSIdentityStep extends Step {
 	
 	@DataBoundConstructor
 	public AWSIdentityStep() {
 		//
 	}
-	
+
+	@Override
+	public StepExecution start(StepContext context) {
+		return new AWSIdentityStep.Execution(context);
+	}
+
 	@Extension
-	public static class DescriptorImpl extends AbstractStepDescriptorImpl {
-		
-		public DescriptorImpl() {
-			super(Execution.class);
-		}
-		
+	public static class DescriptorImpl extends StepDescriptor {
+
 		@Override
 		public String getFunctionName() {
 			return "awsIdentity";
@@ -64,23 +67,25 @@ public class AWSIdentityStep extends AbstractStepImpl {
 		public String getDisplayName() {
 			return "Print and return the AWS identity";
 		}
+
+		@Override
+		public Set<? extends Class<?>> getRequiredContext() {
+			return StepUtils.requiresDefault();
+		}
 	}
 	
-	public static class Execution extends AbstractSynchronousStepExecution<Map<String, String>> {
+	public static class Execution extends SynchronousStepExecution<Map<String, String>> {
 		
-		@Inject
-		private transient AWSIdentityStep step;
-		@StepContextParameter
-		private transient EnvVars envVars;
-		@StepContextParameter
-		private transient TaskListener listener;
-		
+		protected Execution(@Nonnull StepContext context) {
+			super(context);
+		}
+
 		@Override
 		protected Map<String, String> run() throws Exception {
-			AWSSecurityTokenService sts = AWSClientFactory.create(AWSSecurityTokenServiceClientBuilder.standard(), this.envVars);
+			AWSSecurityTokenService sts = AWSClientFactory.create(AWSSecurityTokenServiceClientBuilder.standard(), this.getContext());
 			GetCallerIdentityResult identity = sts.getCallerIdentity(new GetCallerIdentityRequest());
 			
-			this.listener.getLogger().format("Current AWS identity: %s - %s - %s %n", identity.getAccount(), identity.getUserId(), identity.getArn());
+			this.getContext().get(TaskListener.class).getLogger().format("Current AWS identity: %s - %s - %s %n", identity.getAccount(), identity.getUserId(), identity.getArn());
 			
 			Map<String, String> info = new HashMap<>();
 			info.put("account", identity.getAccount());

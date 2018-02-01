@@ -22,14 +22,15 @@
 package de.taimos.pipeline.aws;
 
 import java.nio.charset.StandardCharsets;
+import java.util.Set;
 
-import javax.inject.Inject;
 import javax.xml.bind.DatatypeConverter;
 
-import org.jenkinsci.plugins.workflow.steps.AbstractStepDescriptorImpl;
-import org.jenkinsci.plugins.workflow.steps.AbstractStepImpl;
-import org.jenkinsci.plugins.workflow.steps.AbstractSynchronousStepExecution;
-import org.jenkinsci.plugins.workflow.steps.StepContextParameter;
+import org.jenkinsci.plugins.workflow.steps.Step;
+import org.jenkinsci.plugins.workflow.steps.StepContext;
+import org.jenkinsci.plugins.workflow.steps.StepDescriptor;
+import org.jenkinsci.plugins.workflow.steps.StepExecution;
+import org.jenkinsci.plugins.workflow.steps.SynchronousStepExecution;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
 
@@ -40,11 +41,11 @@ import com.amazonaws.services.lambda.model.InvokeResult;
 import com.amazonaws.services.lambda.model.LogType;
 
 import de.taimos.pipeline.aws.utils.JsonUtils;
-import hudson.EnvVars;
+import de.taimos.pipeline.aws.utils.StepUtils;
 import hudson.Extension;
 import hudson.model.TaskListener;
 
-public class InvokeLambdaStep extends AbstractStepImpl {
+public class InvokeLambdaStep extends Step {
 	
 	private Object payload;
 	private String payloadAsString;
@@ -89,14 +90,20 @@ public class InvokeLambdaStep extends AbstractStepImpl {
 	public void setReturnValueAsString(boolean returnValueAsString) {
 		this.returnValueAsString = returnValueAsString;
 	}
-	
+
+	@Override
+	public StepExecution start(StepContext context) throws Exception {
+		return new InvokeLambdaStep.Execution(this, context);
+	}
+
 	@Extension
-	public static class DescriptorImpl extends AbstractStepDescriptorImpl {
+	public static class DescriptorImpl extends StepDescriptor {
 		
-		public DescriptorImpl() {
-			super(Execution.class);
+		@Override
+		public Set<? extends Class<?>> getRequiredContext() {
+			return StepUtils.requiresDefault();
 		}
-		
+
 		@Override
 		public String getFunctionName() {
 			return "invokeLambda";
@@ -108,24 +115,25 @@ public class InvokeLambdaStep extends AbstractStepImpl {
 		}
 	}
 	
-	public static class Execution extends AbstractSynchronousStepExecution<Object> {
+	public static class Execution extends SynchronousStepExecution<Object> {
 		
 		private static final long serialVersionUID = 1L;
 		
-		@Inject
-		private transient InvokeLambdaStep step;
-		@StepContextParameter
-		private transient EnvVars envVars;
-		@StepContextParameter
-		private transient TaskListener listener;
-		
+		private final transient InvokeLambdaStep step;
+
+		public Execution(InvokeLambdaStep step, StepContext context) {
+			super(context);
+			this.step = step;
+		}
+
 		@Override
 		protected Object run() throws Exception {
-			AWSLambda client = AWSClientFactory.create(AWSLambdaClientBuilder.standard(), this.envVars);
+			TaskListener listener = this.getContext().get(TaskListener.class);
+			AWSLambda client = AWSClientFactory.create(AWSLambdaClientBuilder.standard(), this.getContext());
 			
 			String functionName = this.step.getFunctionName();
 			
-			this.listener.getLogger().format("Invoke Lambda function %s%n", functionName);
+			listener.getLogger().format("Invoke Lambda function %s%n", functionName);
 			
 			InvokeRequest request = new InvokeRequest();
 			request.withFunctionName(functionName);
@@ -134,7 +142,7 @@ public class InvokeLambdaStep extends AbstractStepImpl {
 			
 			InvokeResult result = client.invoke(request);
 			
-			this.listener.getLogger().append(this.getLogResult(result));
+			listener.getLogger().append(this.getLogResult(result));
 			String functionError = result.getFunctionError();
 			if (functionError != null) {
 				throw new RuntimeException("Invoke lambda failed! " + this.getPayloadAsString(result));

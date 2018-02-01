@@ -21,24 +21,25 @@
 
 package de.taimos.pipeline.aws;
 
-import javax.annotation.Nonnull;
-import javax.inject.Inject;
+import java.util.Set;
 
-import org.jenkinsci.plugins.workflow.steps.AbstractStepDescriptorImpl;
-import org.jenkinsci.plugins.workflow.steps.AbstractStepExecutionImpl;
-import org.jenkinsci.plugins.workflow.steps.AbstractStepImpl;
-import org.jenkinsci.plugins.workflow.steps.StepContextParameter;
+import javax.annotation.Nonnull;
+
+import org.jenkinsci.plugins.workflow.steps.Step;
+import org.jenkinsci.plugins.workflow.steps.StepContext;
+import org.jenkinsci.plugins.workflow.steps.StepDescriptor;
+import org.jenkinsci.plugins.workflow.steps.StepExecution;
 import org.kohsuke.stapler.DataBoundConstructor;
 
 import com.amazonaws.services.sns.AmazonSNS;
 import com.amazonaws.services.sns.AmazonSNSClientBuilder;
 import com.amazonaws.services.sns.model.PublishResult;
 
-import hudson.EnvVars;
+import de.taimos.pipeline.aws.utils.StepUtils;
 import hudson.Extension;
 import hudson.model.TaskListener;
 
-public class SNSPublishStep extends AbstractStepImpl {
+public class SNSPublishStep extends Step {
 	
 	private final String topicArn;
 	private final String subject;
@@ -62,14 +63,20 @@ public class SNSPublishStep extends AbstractStepImpl {
 	public String getMessage() {
 		return this.message;
 	}
-	
+
+	@Override
+	public StepExecution start(StepContext context) throws Exception {
+		return new SNSPublishStep.Execution(this, context);
+	}
+
 	@Extension
-	public static class DescriptorImpl extends AbstractStepDescriptorImpl {
-		
-		public DescriptorImpl() {
-			super(Execution.class);
+	public static class DescriptorImpl extends StepDescriptor {
+
+		@Override
+		public Set<? extends Class<?>> getRequiredContext() {
+			return StepUtils.requiresDefault();
 		}
-		
+
 		@Override
 		public String getFunctionName() {
 			return "snsPublish";
@@ -81,15 +88,15 @@ public class SNSPublishStep extends AbstractStepImpl {
 		}
 	}
 	
-	public static class Execution extends AbstractStepExecutionImpl {
+	public static class Execution extends StepExecution {
 		
-		@Inject
-		private transient SNSPublishStep step;
-		@StepContextParameter
-		private transient EnvVars envVars;
-		@StepContextParameter
-		private transient TaskListener listener;
-		
+		private final transient SNSPublishStep step;
+
+		public Execution(SNSPublishStep step, StepContext context) {
+			super(context);
+			this.step = step;
+		}
+
 		@Override
 		public boolean start() throws Exception {
 			final String topicArn = this.step.getTopicArn();
@@ -100,11 +107,12 @@ public class SNSPublishStep extends AbstractStepImpl {
 				@Override
 				public void run() {
 					try {
-						AmazonSNS snsClient = AWSClientFactory.create(AmazonSNSClientBuilder.standard(), Execution.this.envVars);
-						
-						Execution.this.listener.getLogger().format("Publishing notification %s to %s %n", subject, topicArn);
+						TaskListener listener = Execution.this.getContext().get(TaskListener.class);
+						AmazonSNS snsClient = AWSClientFactory.create(AmazonSNSClientBuilder.standard(), Execution.this.getContext());
+
+						listener.getLogger().format("Publishing notification %s to %s %n", subject, topicArn);
 						PublishResult result = snsClient.publish(topicArn, message, subject);
-						Execution.this.listener.getLogger().format("Message published as %s %n", result.getMessageId());
+						listener.getLogger().format("Message published as %s %n", result.getMessageId());
 						Execution.this.getContext().onSuccess(null);
 					} catch (Exception e) {
 						Execution.this.getContext().onFailure(e);

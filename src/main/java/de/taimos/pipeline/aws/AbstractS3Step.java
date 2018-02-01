@@ -23,12 +23,12 @@ package de.taimos.pipeline.aws;
 
 import java.io.Serializable;
 
-import org.jenkinsci.plugins.workflow.steps.AbstractStepImpl;
+import org.jenkinsci.plugins.workflow.steps.Step;
 import org.kohsuke.stapler.DataBoundSetter;
 
 import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 
-public class AbstractS3Step extends AbstractStepImpl {
+public abstract class AbstractS3Step extends Step {
 	
 	protected boolean pathStyleAccessEnabled = false;
 	protected boolean payloadSigningEnabled = false;
@@ -62,7 +62,7 @@ public class AbstractS3Step extends AbstractStepImpl {
 		options.setPayloadSigningEnabled(this.isPayloadSigningEnabled());
 		return options;
 	}
-	
+
 	public static class S3ClientOptions implements Serializable {
 		private boolean pathStyleAccessEnabled = false;
 		private boolean payloadSigningEnabled = false;

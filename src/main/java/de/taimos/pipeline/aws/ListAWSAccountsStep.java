@@ -25,14 +25,14 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import javax.annotation.Nonnull;
-import javax.inject.Inject;
 
-import org.jenkinsci.plugins.workflow.steps.AbstractStepDescriptorImpl;
-import org.jenkinsci.plugins.workflow.steps.AbstractStepExecutionImpl;
-import org.jenkinsci.plugins.workflow.steps.AbstractStepImpl;
-import org.jenkinsci.plugins.workflow.steps.StepContextParameter;
+import org.jenkinsci.plugins.workflow.steps.Step;
+import org.jenkinsci.plugins.workflow.steps.StepContext;
+import org.jenkinsci.plugins.workflow.steps.StepDescriptor;
+import org.jenkinsci.plugins.workflow.steps.StepExecution;
 import org.kohsuke.stapler.DataBoundConstructor;
 
 import com.amazonaws.services.cloudformation.model.AmazonCloudFormationException;
@@ -42,24 +42,30 @@ import com.amazonaws.services.organizations.model.Account;
 import com.amazonaws.services.organizations.model.ListAccountsRequest;
 import com.amazonaws.services.organizations.model.ListAccountsResult;
 
-import hudson.EnvVars;
+import de.taimos.pipeline.aws.utils.StepUtils;
 import hudson.Extension;
 import hudson.model.TaskListener;
 
-public class ListAWSAccountsStep extends AbstractStepImpl {
+public class ListAWSAccountsStep extends Step {
 	
 	@DataBoundConstructor
 	public ListAWSAccountsStep() {
 		//
 	}
-	
+
+	@Override
+	public StepExecution start(StepContext context) throws Exception {
+		return new ListAWSAccountsStep.Execution(context);
+	}
+
 	@Extension
-	public static class DescriptorImpl extends AbstractStepDescriptorImpl {
+	public static class DescriptorImpl extends StepDescriptor {
 		
-		public DescriptorImpl() {
-			super(Execution.class);
+		@Override
+		public Set<? extends Class<?>> getRequiredContext() {
+			return StepUtils.requiresDefault();
 		}
-		
+
 		@Override
 		public String getFunctionName() {
 			return "listAWSAccounts";
@@ -71,23 +77,20 @@ public class ListAWSAccountsStep extends AbstractStepImpl {
 		}
 	}
 	
-	public static class Execution extends AbstractStepExecutionImpl {
-		
-		@Inject
-		private transient ListAWSAccountsStep step;
-		@StepContextParameter
-		private transient EnvVars envVars;
-		@StepContextParameter
-		private transient TaskListener listener;
-		
+	public static class Execution extends StepExecution {
+
+		public Execution(StepContext context) {
+			super(context);
+		}
+
 		@Override
 		public boolean start() throws Exception {
-			this.listener.getLogger().format("Getting AWS accounts %n");
+			this.getContext().get(TaskListener.class).getLogger().format("Getting AWS accounts %n");
 			
 			new Thread("listAWSAccounts") {
 				@Override
 				public void run() {
-					AWSOrganizations client = AWSClientFactory.create(AWSOrganizationsClientBuilder.standard(), Execution.this.envVars);
+					AWSOrganizations client = AWSClientFactory.create(AWSOrganizationsClientBuilder.standard(), Execution.this.getContext());
 					ListAccountsResult exports = client.listAccounts(new ListAccountsRequest());
 					
 					List<Map<String, String>> accounts = new ArrayList<>();

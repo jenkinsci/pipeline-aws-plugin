@@ -22,13 +22,13 @@
 package de.taimos.pipeline.aws;
 
 import java.util.Arrays;
+import java.util.Set;
 
-import javax.inject.Inject;
-
-import org.jenkinsci.plugins.workflow.steps.AbstractStepDescriptorImpl;
-import org.jenkinsci.plugins.workflow.steps.AbstractStepImpl;
-import org.jenkinsci.plugins.workflow.steps.AbstractSynchronousStepExecution;
-import org.jenkinsci.plugins.workflow.steps.StepContextParameter;
+import org.jenkinsci.plugins.workflow.steps.Step;
+import org.jenkinsci.plugins.workflow.steps.StepContext;
+import org.jenkinsci.plugins.workflow.steps.StepDescriptor;
+import org.jenkinsci.plugins.workflow.steps.StepExecution;
+import org.jenkinsci.plugins.workflow.steps.SynchronousStepExecution;
 import org.kohsuke.stapler.DataBoundConstructor;
 
 import com.amazonaws.services.cloudfront.AmazonCloudFront;
@@ -37,11 +37,11 @@ import com.amazonaws.services.cloudfront.model.CreateInvalidationRequest;
 import com.amazonaws.services.cloudfront.model.InvalidationBatch;
 import com.amazonaws.services.cloudfront.model.Paths;
 
-import hudson.EnvVars;
+import de.taimos.pipeline.aws.utils.StepUtils;
 import hudson.Extension;
 import hudson.model.TaskListener;
 
-public class CFInvalidateStep extends AbstractStepImpl {
+public class CFInvalidateStep extends Step {
 	
 	private final String distribution;
 	private final String[] paths;
@@ -59,14 +59,20 @@ public class CFInvalidateStep extends AbstractStepImpl {
 	public String[] getPaths() {
 		return this.paths != null ? this.paths.clone() : null;
 	}
-	
+
+	@Override
+	public StepExecution start(StepContext context) throws Exception {
+		return new CFInvalidateStep.Execution(this, context);
+	}
+
 	@Extension
-	public static class DescriptorImpl extends AbstractStepDescriptorImpl {
-		
-		public DescriptorImpl() {
-			super(Execution.class);
+	public static class DescriptorImpl extends StepDescriptor {
+
+		@Override
+		public Set<? extends Class<?>> getRequiredContext() {
+			return StepUtils.requiresDefault();
 		}
-		
+
 		@Override
 		public String getFunctionName() {
 			return "cfInvalidate";
@@ -78,29 +84,31 @@ public class CFInvalidateStep extends AbstractStepImpl {
 		}
 	}
 	
-	public static class Execution extends AbstractSynchronousStepExecution<Void> {
+	public static class Execution extends SynchronousStepExecution<Void> {
 		
-		@Inject
-		private transient CFInvalidateStep step;
-		@StepContextParameter
-		private transient EnvVars envVars;
-		@StepContextParameter
-		private transient TaskListener listener;
-		
+		private final transient CFInvalidateStep step;
+
+		public Execution(CFInvalidateStep step, StepContext context) {
+			super(context);
+			this.step = step;
+		}
+
 		@Override
 		protected Void run() throws Exception {
-			AmazonCloudFront client = AWSClientFactory.create(AmazonCloudFrontClientBuilder.standard(), this.envVars);
+			TaskListener listener = this.getContext().get(TaskListener.class);
+
+			AmazonCloudFront client = AWSClientFactory.create(AmazonCloudFrontClientBuilder.standard(), this.getContext());
 			
 			String distribution = this.step.getDistribution();
 			String[] paths = this.step.getPaths();
 			
-			this.listener.getLogger().format("Invalidating paths %s in distribution %s %n", Arrays.toString(paths), distribution);
+			listener.getLogger().format("Invalidating paths %s in distribution %s %n", Arrays.toString(paths), distribution);
 			
 			Paths invalidationPaths = new Paths().withItems(paths).withQuantity(paths.length);
 			InvalidationBatch batch = new InvalidationBatch(invalidationPaths, Long.toString(System.currentTimeMillis()));
 			client.createInvalidation(new CreateInvalidationRequest(distribution, batch));
 			
-			this.listener.getLogger().println("Invalidation complete");
+			listener.getLogger().println("Invalidation complete");
 			return null;
 		}
 		

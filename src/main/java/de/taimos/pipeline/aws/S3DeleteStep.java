@@ -21,15 +21,16 @@
 
 package de.taimos.pipeline.aws;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 import javax.annotation.Nonnull;
-import javax.inject.Inject;
 
-import org.jenkinsci.plugins.workflow.steps.AbstractStepDescriptorImpl;
-import org.jenkinsci.plugins.workflow.steps.AbstractStepExecutionImpl;
-import org.jenkinsci.plugins.workflow.steps.StepContextParameter;
+import org.jenkinsci.plugins.workflow.steps.StepContext;
+import org.jenkinsci.plugins.workflow.steps.StepDescriptor;
+import org.jenkinsci.plugins.workflow.steps.StepExecution;
 import org.kohsuke.stapler.DataBoundConstructor;
 
 import com.amazonaws.services.s3.AmazonS3;
@@ -38,9 +39,8 @@ import com.amazonaws.services.s3.model.ObjectListing;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
 import com.google.common.base.Preconditions;
 
-import hudson.EnvVars;
+import de.taimos.pipeline.aws.utils.StepUtils;
 import hudson.Extension;
-import hudson.FilePath;
 import hudson.model.TaskListener;
 
 /**
@@ -72,14 +72,20 @@ public class S3DeleteStep extends AbstractS3Step {
 	public String getPath() {
 		return this.path;
 	}
-	
+
+	@Override
+	public StepExecution start(StepContext context) throws Exception {
+		return new S3DeleteStep.Execution(this, context);
+	}
+
 	@Extension
-	public static class DescriptorImpl extends AbstractStepDescriptorImpl {
-		
-		public DescriptorImpl() {
-			super(Execution.class);
+	public static class DescriptorImpl extends StepDescriptor {
+
+		@Override
+		public Set<? extends Class<?>> getRequiredContext() {
+			return StepUtils.requiresDefault();
 		}
-		
+
 		@Override
 		public String getFunctionName() {
 			return "s3Delete";
@@ -91,18 +97,17 @@ public class S3DeleteStep extends AbstractS3Step {
 		}
 	}
 	
-	public static class Execution extends AbstractStepExecutionImpl {
+	public static class Execution extends StepExecution {
 		
 		protected static final long serialVersionUID = 1L;
-		@Inject
+
 		protected transient S3DeleteStep step;
-		@StepContextParameter
-		protected transient EnvVars envVars;
-		@StepContextParameter
-		protected transient FilePath workspace;
-		@StepContextParameter
-		protected transient TaskListener listener;
-		
+
+		public Execution(S3DeleteStep step, StepContext context) {
+			super(context);
+			this.step = step;
+		}
+
 		@Override
 		public boolean start() throws Exception {
 			final String bucket = this.step.getBucket();
@@ -114,8 +119,9 @@ public class S3DeleteStep extends AbstractS3Step {
 				@Override
 				public void run() {
 					try {
-						Execution.this.listener.getLogger().format("Deleting s3://%s/%s%n", bucket, path);
-						AmazonS3 s3Client = AWSClientFactory.create(Execution.this.step.createS3ClientOptions().createAmazonS3ClientBuilder(), Execution.this.envVars);
+						TaskListener listener = Execution.this.getContext().get(TaskListener.class);
+						listener.getLogger().format("Deleting s3://%s/%s%n", bucket, path);
+						AmazonS3 s3Client = AWSClientFactory.create(Execution.this.step.createS3ClientOptions().createAmazonS3ClientBuilder(), Execution.this.getContext());
 						
 						if (!path.endsWith("/")) {
 							this.deleteFile(s3Client);
@@ -123,14 +129,14 @@ public class S3DeleteStep extends AbstractS3Step {
 							this.deleteFolder(s3Client);
 						}
 						
-						Execution.this.listener.getLogger().println("Delete complete");
+						listener.getLogger().println("Delete complete");
 						Execution.this.getContext().onSuccess(null);
-					} catch (RuntimeException e) {
+					} catch (Exception e) {
 						Execution.this.getContext().onFailure(e);
 					}
 				}
 				
-				private void deleteFolder(AmazonS3 s3Client) {
+				private void deleteFolder(AmazonS3 s3Client) throws IOException, InterruptedException {
 					// This is the list of keys to delete from the bucket.
 					List<String> objectsToDelete = new ArrayList<>();
 					
@@ -143,7 +149,7 @@ public class S3DeleteStep extends AbstractS3Step {
 					
 					// Go through all of the objects that we want to delete and actually delete them.
 					for (String objectToDelete : objectsToDelete) {
-						Execution.this.listener.getLogger().format("Deleting object at s3://%s/%s%n", bucket, objectToDelete);
+						Execution.this.getContext().get(TaskListener.class).getLogger().format("Deleting object at s3://%s/%s%n", bucket, objectToDelete);
 						// TODO Use deleteObjects to reduce API calls
 						s3Client.deleteObject(bucket, objectToDelete);
 					}
@@ -194,10 +200,10 @@ public class S3DeleteStep extends AbstractS3Step {
 					}
 				}
 				
-				private void deleteFile(AmazonS3 s3Client) {
+				private void deleteFile(AmazonS3 s3Client) throws IOException, InterruptedException {
 					// See if the thing that we were given is a file.
 					if (s3Client.doesObjectExist(bucket, path)) {
-						Execution.this.listener.getLogger().format("Deleting object at s3://%s/%s%n", bucket, path);
+						Execution.this.getContext().get(TaskListener.class).getLogger().format("Deleting object at s3://%s/%s%n", bucket, path);
 						s3Client.deleteObject(bucket, path);
 					}
 				}

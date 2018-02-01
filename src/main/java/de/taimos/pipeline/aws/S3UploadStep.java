@@ -29,13 +29,14 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import javax.annotation.Nonnull;
-import javax.inject.Inject;
 
-import org.jenkinsci.plugins.workflow.steps.AbstractStepDescriptorImpl;
 import org.jenkinsci.plugins.workflow.steps.AbstractStepExecutionImpl;
-import org.jenkinsci.plugins.workflow.steps.StepContextParameter;
+import org.jenkinsci.plugins.workflow.steps.StepContext;
+import org.jenkinsci.plugins.workflow.steps.StepDescriptor;
+import org.jenkinsci.plugins.workflow.steps.StepExecution;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
 
@@ -55,6 +56,7 @@ import com.amazonaws.services.s3.transfer.TransferManagerBuilder;
 import com.amazonaws.services.s3.transfer.Upload;
 import com.google.common.base.Preconditions;
 
+import de.taimos.pipeline.aws.utils.StepUtils;
 import hudson.EnvVars;
 import hudson.Extension;
 import hudson.FilePath;
@@ -176,21 +178,27 @@ public class S3UploadStep extends AbstractS3Step {
 	}
 	
 	public String getContentType() {
-		return contentType;
+		return this.contentType;
 	}
 	
 	@DataBoundSetter
 	public void setContentType(String contentType) {
 		this.contentType = contentType;
 	}
-	
+
+	@Override
+	public StepExecution start(StepContext context) throws Exception {
+		return new S3UploadStep.Execution(this, context);
+	}
+
 	@Extension
-	public static class DescriptorImpl extends AbstractStepDescriptorImpl {
-		
-		public DescriptorImpl() {
-			super(Execution.class);
+	public static class DescriptorImpl extends StepDescriptor {
+
+		@Override
+		public Set<? extends Class<?>> getRequiredContext() {
+			return StepUtils.requires(TaskListener.class, EnvVars.class, FilePath.class);
 		}
-		
+
 		@Override
 		public String getFunctionName() {
 			return "s3Upload";
@@ -205,15 +213,14 @@ public class S3UploadStep extends AbstractS3Step {
 	public static class Execution extends AbstractStepExecutionImpl {
 		
 		protected static final long serialVersionUID = 1L;
-		@Inject
-		protected transient S3UploadStep step;
-		@StepContextParameter
-		protected transient EnvVars envVars;
-		@StepContextParameter
-		protected transient FilePath workspace;
-		@StepContextParameter
-		protected transient TaskListener listener;
-		
+
+		protected final transient S3UploadStep step;
+
+		public Execution(S3UploadStep step, StepContext context) {
+			super(context);
+			this.step = step;
+		}
+
 		@Override
 		public boolean start() throws Exception {
 			final String file = this.step.getFile();
@@ -243,9 +250,9 @@ public class S3UploadStep extends AbstractS3Step {
 			final List<FilePath> children = new ArrayList<>();
 			final FilePath dir;
 			if (workingDir != null && !"".equals(workingDir.trim())) {
-				dir = this.workspace.child(workingDir);
+				dir = this.getContext().get(FilePath.class).child(workingDir);
 			} else {
-				dir = this.workspace;
+				dir = this.getContext().get(FilePath.class);
 			}
 			if (file != null) {
 				children.add(dir.child(file));
@@ -260,27 +267,28 @@ public class S3UploadStep extends AbstractS3Step {
 				@Override
 				public void run() {
 					try {
+						TaskListener listener = getContext().get(TaskListener.class);
 						if (children.size() == 1) {
 							FilePath child = children.get(0);
-							Execution.this.listener.getLogger().format("Uploading %s to s3://%s/%s %n", child.toURI(), bucket, path);
+							listener.getLogger().format("Uploading %s to s3://%s/%s %n", child.toURI(), bucket, path);
 							if (!child.exists()) {
-								Execution.this.listener.getLogger().println("Upload failed due to missing source file");
+								listener.getLogger().println("Upload failed due to missing source file");
 								Execution.this.getContext().onFailure(new FileNotFoundException(child.toURI().toString()));
 								return;
 							}
 							
-							child.act(new RemoteUploader(Execution.this.step.createS3ClientOptions(), Execution.this.envVars, Execution.this.listener, bucket, path, metadatas, acl, cacheControl, contentType, kmsId));
+							child.act(new RemoteUploader(Execution.this.step.createS3ClientOptions(), Execution.this.getContext().get(EnvVars.class), listener, bucket, path, metadatas, acl, cacheControl, contentType, kmsId));
 							
-							Execution.this.listener.getLogger().println("Upload complete");
+							listener.getLogger().println("Upload complete");
 							Execution.this.getContext().onSuccess(null);
 						} else if (children.size() > 1) {
 							List<File> fileList = new ArrayList<>();
-							Execution.this.listener.getLogger().format("Uploading %s to s3://%s/%s %n", includePathPattern, bucket, path);
+							listener.getLogger().format("Uploading %s to s3://%s/%s %n", includePathPattern, bucket, path);
 							for (FilePath child : children) {
 								child.act(new FeedList(fileList));
 							}
-							dir.act(new RemoteListUploader(Execution.this.step.createS3ClientOptions(), Execution.this.envVars, Execution.this.listener, fileList, bucket, path, metadatas, acl, cacheControl, contentType, kmsId));
-							Execution.this.listener.getLogger().println("Upload complete");
+							dir.act(new RemoteListUploader(Execution.this.step.createS3ClientOptions(), Execution.this.getContext().get(EnvVars.class), listener, fileList, bucket, path, metadatas, acl, cacheControl, contentType, kmsId));
+							listener.getLogger().println("Upload complete");
 							Execution.this.getContext().onSuccess(null);
 						}
 					} catch (Exception e) {

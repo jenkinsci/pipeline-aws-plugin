@@ -23,13 +23,13 @@ package de.taimos.pipeline.aws;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 
-import javax.inject.Inject;
-
-import org.jenkinsci.plugins.workflow.steps.AbstractStepDescriptorImpl;
-import org.jenkinsci.plugins.workflow.steps.AbstractStepImpl;
-import org.jenkinsci.plugins.workflow.steps.AbstractSynchronousStepExecution;
-import org.jenkinsci.plugins.workflow.steps.StepContextParameter;
+import org.jenkinsci.plugins.workflow.steps.Step;
+import org.jenkinsci.plugins.workflow.steps.StepContext;
+import org.jenkinsci.plugins.workflow.steps.StepDescriptor;
+import org.jenkinsci.plugins.workflow.steps.StepExecution;
+import org.jenkinsci.plugins.workflow.steps.SynchronousStepExecution;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
 
@@ -37,11 +37,11 @@ import com.amazonaws.services.apigateway.AmazonApiGateway;
 import com.amazonaws.services.apigateway.AmazonApiGatewayClient;
 import com.amazonaws.services.apigateway.model.CreateDeploymentRequest;
 
-import hudson.EnvVars;
+import de.taimos.pipeline.aws.utils.StepUtils;
 import hudson.Extension;
 import hudson.model.TaskListener;
 
-public class DeployAPIStep extends AbstractStepImpl {
+public class DeployAPIStep extends Step {
 	
 	private final String stage;
 	private final String api;
@@ -79,14 +79,20 @@ public class DeployAPIStep extends AbstractStepImpl {
 	public void setVariables(String[] variables) {
 		this.variables = variables.clone();
 	}
-	
+
+	@Override
+	public StepExecution start(StepContext context) throws Exception {
+		return new DeployAPIStep.Execution(this, context);
+	}
+
 	@Extension
-	public static class DescriptorImpl extends AbstractStepDescriptorImpl {
-		
-		public DescriptorImpl() {
-			super(Execution.class);
+	public static class DescriptorImpl extends StepDescriptor {
+
+		@Override
+		public Set<? extends Class<?>> getRequiredContext() {
+			return StepUtils.requiresDefault();
 		}
-		
+
 		@Override
 		public String getFunctionName() {
 			return "deployAPI";
@@ -98,23 +104,24 @@ public class DeployAPIStep extends AbstractStepImpl {
 		}
 	}
 	
-	public static class Execution extends AbstractSynchronousStepExecution<Void> {
+	public static class Execution extends SynchronousStepExecution<Void> {
 		
-		@Inject
-		private transient DeployAPIStep step;
-		@StepContextParameter
-		private transient EnvVars envVars;
-		@StepContextParameter
-		private transient TaskListener listener;
-		
+		private final transient DeployAPIStep step;
+
+		public Execution(DeployAPIStep step, StepContext context) {
+			super(context);
+			this.step = step;
+		}
+
 		@Override
 		protected Void run() throws Exception {
-			AmazonApiGateway client = AWSClientFactory.create(AmazonApiGatewayClient.builder(), this.envVars);
+			TaskListener listener = this.getContext().get(TaskListener.class);
+			AmazonApiGateway client = AWSClientFactory.create(AmazonApiGatewayClient.builder(), this.getContext());
 			
 			String stage = this.step.getStage();
 			String api = this.step.getApi();
 			
-			this.listener.getLogger().format("Deploying API %s to stage %s %n", api, stage);
+			listener.getLogger().format("Deploying API %s to stage %s %n", api, stage);
 			
 			CreateDeploymentRequest request = new CreateDeploymentRequest();
 			request.withRestApiId(api);
@@ -128,7 +135,7 @@ public class DeployAPIStep extends AbstractStepImpl {
 			
 			client.createDeployment(request);
 			
-			this.listener.getLogger().println("Deployment complete");
+			listener.getLogger().println("Deployment complete");
 			return null;
 		}
 		

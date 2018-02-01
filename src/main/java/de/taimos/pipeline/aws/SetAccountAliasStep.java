@@ -21,12 +21,13 @@
 
 package de.taimos.pipeline.aws;
 
-import javax.inject.Inject;
+import java.util.Set;
 
-import org.jenkinsci.plugins.workflow.steps.AbstractStepDescriptorImpl;
-import org.jenkinsci.plugins.workflow.steps.AbstractStepImpl;
-import org.jenkinsci.plugins.workflow.steps.AbstractSynchronousStepExecution;
-import org.jenkinsci.plugins.workflow.steps.StepContextParameter;
+import org.jenkinsci.plugins.workflow.steps.Step;
+import org.jenkinsci.plugins.workflow.steps.StepContext;
+import org.jenkinsci.plugins.workflow.steps.StepDescriptor;
+import org.jenkinsci.plugins.workflow.steps.StepExecution;
+import org.jenkinsci.plugins.workflow.steps.SynchronousStepExecution;
 import org.kohsuke.stapler.DataBoundConstructor;
 
 import com.amazonaws.services.identitymanagement.AmazonIdentityManagement;
@@ -34,11 +35,12 @@ import com.amazonaws.services.identitymanagement.AmazonIdentityManagementClientB
 import com.amazonaws.services.identitymanagement.model.CreateAccountAliasRequest;
 import com.amazonaws.services.identitymanagement.model.ListAccountAliasesResult;
 
-import hudson.EnvVars;
+import de.taimos.pipeline.aws.utils.StepUtils;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import hudson.Extension;
 import hudson.model.TaskListener;
 
-public class SetAccountAliasStep extends AbstractStepImpl {
+public class SetAccountAliasStep extends Step {
 	
 	private final String name;
 	
@@ -50,14 +52,20 @@ public class SetAccountAliasStep extends AbstractStepImpl {
 	public String getName() {
 		return this.name;
 	}
-	
+
+	@Override
+	public StepExecution start(StepContext context) throws Exception {
+		return new SetAccountAliasStep.Execution(this.name, context);
+	}
+
 	@Extension
-	public static class DescriptorImpl extends AbstractStepDescriptorImpl {
-		
-		public DescriptorImpl() {
-			super(Execution.class);
+	public static class DescriptorImpl extends StepDescriptor {
+
+		@Override
+		public Set<? extends Class<?>> getRequiredContext() {
+			return StepUtils.requiresDefault();
 		}
-		
+
 		@Override
 		public String getFunctionName() {
 			return "setAccountAlias";
@@ -69,31 +77,32 @@ public class SetAccountAliasStep extends AbstractStepImpl {
 		}
 	}
 	
-	public static class Execution extends AbstractSynchronousStepExecution<Void> {
-		
-		@Inject
-		private transient SetAccountAliasStep step;
-		@StepContextParameter
-		private transient EnvVars envVars;
-		@StepContextParameter
-		private transient TaskListener listener;
-		
+	public static class Execution extends SynchronousStepExecution<Void> {
+
+		@SuppressFBWarnings(value="SE_TRANSIENT_FIELD_NOT_RESTORED", justification="Only used when starting.")
+		private final transient String name;
+
+		public Execution(String name, StepContext context) {
+			super(context);
+			this.name = name;
+		}
+
 		@Override
 		protected Void run() throws Exception {
-			String name = this.step.getName();
-			AmazonIdentityManagement iamClient = AWSClientFactory.create(AmazonIdentityManagementClientBuilder.standard(), Execution.this.envVars);
+			TaskListener listener = this.getContext().get(TaskListener.class);
+			AmazonIdentityManagement iamClient = AWSClientFactory.create(AmazonIdentityManagementClientBuilder.standard(), Execution.this.getContext());
 			
-			Execution.this.listener.getLogger().format("Checking for account alias %s %n", name);
+			listener.getLogger().format("Checking for account alias %s %n", this.name);
 			ListAccountAliasesResult listResult = iamClient.listAccountAliases();
 			
 			// no or different alias set
-			if (listResult.getAccountAliases() == null || listResult.getAccountAliases().isEmpty() || !listResult.getAccountAliases().contains(name)) {
+			if (listResult.getAccountAliases() == null || listResult.getAccountAliases().isEmpty() || !listResult.getAccountAliases().contains(this.name)) {
 				// Update alias
-				iamClient.createAccountAlias(new CreateAccountAliasRequest().withAccountAlias(name));
-				Execution.this.listener.getLogger().format("Created account alias %s %n", name);
+				iamClient.createAccountAlias(new CreateAccountAliasRequest().withAccountAlias(this.name));
+				listener.getLogger().format("Created account alias %s %n", this.name);
 			} else {
 				// Nothing to do
-				Execution.this.listener.getLogger().format("Account alias already set %s %n", name);
+				listener.getLogger().format("Account alias already set %s %n", this.name);
 			}
 			return null;
 		}

@@ -23,16 +23,16 @@ package de.taimos.pipeline.aws;
 
 import java.io.IOException;
 import java.util.Collections;
+import java.util.Set;
 
 import javax.annotation.Nonnull;
-import javax.inject.Inject;
 
-import org.jenkinsci.plugins.workflow.steps.AbstractStepDescriptorImpl;
-import org.jenkinsci.plugins.workflow.steps.AbstractStepExecutionImpl;
-import org.jenkinsci.plugins.workflow.steps.AbstractStepImpl;
 import org.jenkinsci.plugins.workflow.steps.BodyExecutionCallback;
 import org.jenkinsci.plugins.workflow.steps.EnvironmentExpander;
-import org.jenkinsci.plugins.workflow.steps.StepContextParameter;
+import org.jenkinsci.plugins.workflow.steps.Step;
+import org.jenkinsci.plugins.workflow.steps.StepContext;
+import org.jenkinsci.plugins.workflow.steps.StepDescriptor;
+import org.jenkinsci.plugins.workflow.steps.StepExecution;
 import org.kohsuke.stapler.AncestorInPath;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
@@ -53,6 +53,7 @@ import com.cloudbees.plugins.credentials.common.StandardUsernamePasswordCredenti
 import com.cloudbees.plugins.credentials.domains.DomainRequirement;
 
 import de.taimos.pipeline.aws.utils.IamRoleUtils;
+import de.taimos.pipeline.aws.utils.StepUtils;
 import hudson.EnvVars;
 import hudson.Extension;
 import hudson.model.Item;
@@ -63,7 +64,7 @@ import hudson.model.queue.Tasks;
 import hudson.security.ACL;
 import hudson.util.ListBoxModel;
 
-public class WithAWSStep extends AbstractStepImpl {
+public class WithAWSStep extends Step {
 	
 	private String role = "";
 	private String roleAccount = "";
@@ -79,7 +80,7 @@ public class WithAWSStep extends AbstractStepImpl {
 	public WithAWSStep() {
 		//
 	}
-	
+
 	public String getRole() {
 		return this.role;
 	}
@@ -160,14 +161,20 @@ public class WithAWSStep extends AbstractStepImpl {
 	public void setPolicy(String policy) {
 		this.policy = policy;
 	}
-	
+
+	@Override
+	public StepExecution start(StepContext context) throws Exception {
+		return new WithAWSStep.Execution(this, context);
+	}
+
 	@Extension
-	public static class DescriptorImpl extends AbstractStepDescriptorImpl {
-		
-		public DescriptorImpl() {
-			super(Execution.class);
+	public static class DescriptorImpl extends StepDescriptor {
+
+		@Override
+		public Set<? extends Class<?>> getRequiredContext() {
+			return StepUtils.requires(TaskListener.class, EnvVars.class, Run.class);
 		}
-		
+
 		@Override
 		public String getFunctionName() {
 			return "withAWS";
@@ -202,15 +209,22 @@ public class WithAWSStep extends AbstractStepImpl {
 		}
 	}
 	
-	public static class Execution extends AbstractStepExecutionImpl {
+	public static class Execution extends StepExecution {
 		
-		@Inject
-		private transient WithAWSStep step;
-		@StepContextParameter
-		private transient TaskListener listener;
-		@StepContextParameter
-		private transient EnvVars envVars;
-		
+		private final transient WithAWSStep step;
+
+		private final EnvVars envVars;
+
+		public Execution(WithAWSStep step, StepContext context) {
+			super(context);
+			this.step = step;
+			try {
+				this.envVars = context.get(EnvVars.class);
+			} catch (Exception e) {
+				throw new IllegalStateException(e);
+			}
+		}
+
 		@Override
 		public boolean start() throws Exception {
 			final EnvVars awsEnv = new EnvVars();
@@ -270,7 +284,7 @@ public class WithAWSStep extends AbstractStepImpl {
 			}
 		}
 		
-		private void withRole(@Nonnull EnvVars localEnv) {
+		private void withRole(@Nonnull EnvVars localEnv) throws IOException, InterruptedException {
 			if (!StringUtils.isNullOrEmpty(this.step.getRole())) {
 				AWSSecurityTokenService sts = AWSClientFactory.create(AWSSecurityTokenServiceClientBuilder.standard(), this.envVars);
 				
@@ -290,12 +304,12 @@ public class WithAWSStep extends AbstractStepImpl {
 					request.withExternalId(this.step.getExternalId());
 				}
 				if (!StringUtils.isNullOrEmpty(this.step.getPolicy())) {
-					this.listener.getLogger().format("Requesting additional policy to be applied: %s %n ", this.step.getPolicy());
+					this.getContext().get(TaskListener.class).getLogger().format("Requesting additional policy to be applied: %s %n ", this.step.getPolicy());
 					request.withPolicy(this.step.getPolicy());
 				}
 				AssumeRoleResult assumeRole = sts.assumeRole(request);
-				
-				this.listener.getLogger().format("Assumed role %s with id %s %n ", roleARN, assumeRole.getAssumedRoleUser().getAssumedRoleId());
+
+				this.getContext().get(TaskListener.class).getLogger().format("Assumed role %s with id %s %n ", roleARN, assumeRole.getAssumedRoleUser().getAssumedRoleId());
 				
 				Credentials credentials = assumeRole.getCredentials();
 				localEnv.override(AWSClientFactory.AWS_ACCESS_KEY_ID, credentials.getAccessKeyId());
@@ -305,26 +319,26 @@ public class WithAWSStep extends AbstractStepImpl {
 			}
 		}
 		
-		private void withRegion(@Nonnull EnvVars localEnv) {
+		private void withRegion(@Nonnull EnvVars localEnv) throws IOException, InterruptedException {
 			if (!StringUtils.isNullOrEmpty(this.step.getRegion())) {
-				this.listener.getLogger().format("Setting AWS region %s %n ", this.step.getRegion());
+				this.getContext().get(TaskListener.class).getLogger().format("Setting AWS region %s %n ", this.step.getRegion());
 				localEnv.override(AWSClientFactory.AWS_DEFAULT_REGION, this.step.getRegion());
 				localEnv.override(AWSClientFactory.AWS_REGION, this.step.getRegion());
 				this.envVars.overrideAll(localEnv);
 			}
 		}
 		
-		private void withEndpointUrl(@Nonnull EnvVars localEnv) {
+		private void withEndpointUrl(@Nonnull EnvVars localEnv) throws IOException, InterruptedException {
 			if (!StringUtils.isNullOrEmpty(this.step.getEndpointUrl())) {
-				this.listener.getLogger().format("Setting AWS endpointUrl %s %n ", this.step.getEndpointUrl());
+				this.getContext().get(TaskListener.class).getLogger().format("Setting AWS endpointUrl %s %n ", this.step.getEndpointUrl());
 				localEnv.override(AWSClientFactory.AWS_ENDPOINT_URL, this.step.getEndpointUrl());
 				this.envVars.overrideAll(localEnv);
 			}
 		}
 		
-		private void withProfile(@Nonnull EnvVars localEnv) {
+		private void withProfile(@Nonnull EnvVars localEnv) throws IOException, InterruptedException {
 			if (!StringUtils.isNullOrEmpty(this.step.getProfile())) {
-				this.listener.getLogger().format("Setting AWS profile %s %n ", this.step.getProfile());
+				this.getContext().get(TaskListener.class).getLogger().format("Setting AWS profile %s %n ", this.step.getProfile());
 				localEnv.override(AWSClientFactory.AWS_DEFAULT_PROFILE, this.step.getProfile());
 				localEnv.override(AWSClientFactory.AWS_PROFILE, this.step.getProfile());
 				this.envVars.overrideAll(localEnv);

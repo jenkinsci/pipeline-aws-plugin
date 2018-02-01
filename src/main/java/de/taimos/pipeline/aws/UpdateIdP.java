@@ -21,13 +21,15 @@
 
 package de.taimos.pipeline.aws;
 
-import javax.annotation.Nonnull;
-import javax.inject.Inject;
+import java.io.IOException;
+import java.util.Set;
 
-import org.jenkinsci.plugins.workflow.steps.AbstractStepDescriptorImpl;
-import org.jenkinsci.plugins.workflow.steps.AbstractStepExecutionImpl;
-import org.jenkinsci.plugins.workflow.steps.AbstractStepImpl;
-import org.jenkinsci.plugins.workflow.steps.StepContextParameter;
+import javax.annotation.Nonnull;
+
+import org.jenkinsci.plugins.workflow.steps.Step;
+import org.jenkinsci.plugins.workflow.steps.StepContext;
+import org.jenkinsci.plugins.workflow.steps.StepDescriptor;
+import org.jenkinsci.plugins.workflow.steps.StepExecution;
 import org.kohsuke.stapler.DataBoundConstructor;
 
 import com.amazonaws.services.identitymanagement.AmazonIdentityManagement;
@@ -39,12 +41,13 @@ import com.amazonaws.services.identitymanagement.model.SAMLProviderListEntry;
 import com.amazonaws.services.identitymanagement.model.UpdateSAMLProviderRequest;
 import com.amazonaws.services.identitymanagement.model.UpdateSAMLProviderResult;
 
+import de.taimos.pipeline.aws.utils.StepUtils;
 import hudson.EnvVars;
 import hudson.Extension;
 import hudson.FilePath;
 import hudson.model.TaskListener;
 
-public class UpdateIdP extends AbstractStepImpl {
+public class UpdateIdP extends Step {
 	
 	private final String name;
 	private final String metadata;
@@ -62,14 +65,20 @@ public class UpdateIdP extends AbstractStepImpl {
 	public String getMetadata() {
 		return this.metadata;
 	}
-	
+
+	@Override
+	public StepExecution start(StepContext context) throws Exception {
+		return new UpdateIdP.Execution(this, context);
+	}
+
 	@Extension
-	public static class DescriptorImpl extends AbstractStepDescriptorImpl {
-		
-		public DescriptorImpl() {
-			super(Execution.class);
+	public static class DescriptorImpl extends StepDescriptor {
+
+		@Override
+		public Set<? extends Class<?>> getRequiredContext() {
+			return StepUtils.requires(TaskListener.class, EnvVars.class, FilePath.class);
 		}
-		
+
 		@Override
 		public String getFunctionName() {
 			return "updateIdP";
@@ -81,17 +90,15 @@ public class UpdateIdP extends AbstractStepImpl {
 		}
 	}
 	
-	public static class Execution extends AbstractStepExecutionImpl {
+	public static class Execution extends StepExecution {
 		
-		@Inject
-		private transient UpdateIdP step;
-		@StepContextParameter
-		private transient EnvVars envVars;
-		@StepContextParameter
-		private transient FilePath workspace;
-		@StepContextParameter
-		private transient TaskListener listener;
-		
+		private final transient UpdateIdP step;
+
+		public Execution(UpdateIdP step, StepContext context) {
+			super(context);
+			this.step = step;
+		}
+
 		@Override
 		public boolean start() throws Exception {
 			final String name = this.step.getName();
@@ -101,9 +108,10 @@ public class UpdateIdP extends AbstractStepImpl {
 				@Override
 				public void run() {
 					try {
-						AmazonIdentityManagement iamClient = AWSClientFactory.create(AmazonIdentityManagementClientBuilder.standard(), Execution.this.envVars);
+						TaskListener listener = Execution.this.getContext().get(TaskListener.class);
+						AmazonIdentityManagement iamClient = AWSClientFactory.create(AmazonIdentityManagementClientBuilder.standard(), Execution.this.getContext());
 						
-						Execution.this.listener.getLogger().format("Checking for identity provider %s %n", name);
+						listener.getLogger().format("Checking for identity provider %s %n", name);
 						ListSAMLProvidersResult listResult = iamClient.listSAMLProviders();
 						
 						String providerARN = null;
@@ -122,7 +130,7 @@ public class UpdateIdP extends AbstractStepImpl {
 							request.withSAMLProviderArn(providerARN);
 							request.withSAMLMetadataDocument(Execution.this.readMetadata(metadata));
 							UpdateSAMLProviderResult result = iamClient.updateSAMLProvider(request);
-							Execution.this.listener.getLogger().format("Updated identity provider %s %n", result.getSAMLProviderArn());
+							listener.getLogger().format("Updated identity provider %s %n", result.getSAMLProviderArn());
 						} else {
 							// Create IdP
 							CreateSAMLProviderRequest request = new CreateSAMLProviderRequest();
@@ -130,10 +138,12 @@ public class UpdateIdP extends AbstractStepImpl {
 							request.withSAMLMetadataDocument(Execution.this.readMetadata(metadata));
 							CreateSAMLProviderResult result = iamClient.createSAMLProvider(request);
 							providerARN = result.getSAMLProviderArn();
-							Execution.this.listener.getLogger().format("Created identity provider %s %n", providerARN);
+							listener.getLogger().format("Created identity provider %s %n", providerARN);
 						}
 						Execution.this.getContext().onSuccess(providerARN);
-					} catch (Exception e) {
+					} catch (IOException e) {
+						Execution.this.getContext().onFailure(e);
+					} catch (InterruptedException e) {
 						Execution.this.getContext().onFailure(e);
 					}
 				}
@@ -146,7 +156,7 @@ public class UpdateIdP extends AbstractStepImpl {
 				return null;
 			}
 			try {
-				return this.workspace.child(file).readToString();
+				return this.getContext().get(FilePath.class).child(file).readToString();
 			} catch (Exception e) {
 				throw new IllegalArgumentException(e);
 			}
