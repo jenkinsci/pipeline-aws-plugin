@@ -484,6 +484,7 @@ String result = invokeLambda(
 * Fix more characters in RoleSessionName
 * Allow upload of multiple files to bucket root (#41)
 * Use DELETE method for failed stack creation. (*Changed behavior*)
+* Use Jenkins proxy config when available
 
 ## 1.21
 * Fix: `s3Upload` did not work in Jenkins 2.102+ (#JENKINS-49025)

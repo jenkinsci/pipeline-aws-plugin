@@ -29,6 +29,7 @@ import com.amazonaws.Protocol;
 import com.google.common.base.Joiner;
 
 import hudson.EnvVars;
+import jenkins.model.Jenkins;
 
 class ProxyConfiguration {
 	
@@ -49,6 +50,8 @@ class ProxyConfiguration {
 	}
 	
 	static void configure(EnvVars vars, ClientConfiguration config) {
+		useJenkinsProxy(config);
+
 		if (config.getProtocol() == Protocol.HTTP) {
 			configureHTTP(vars, config);
 		} else {
@@ -56,7 +59,20 @@ class ProxyConfiguration {
 		}
 		configureNonProxyHosts(vars, config);
 	}
-	
+
+	private static void useJenkinsProxy(ClientConfiguration config) {
+		hudson.ProxyConfiguration proxyConfiguration = Jenkins.getInstance().proxy;
+		if (proxyConfiguration != null) {
+			config.setProxyHost(proxyConfiguration.name);
+			config.setProxyPort(proxyConfiguration.port);
+			config.setProxyUsername(proxyConfiguration.getUserName());
+			config.setProxyPassword(proxyConfiguration.getPassword());
+
+			String[] noProxyParts = proxyConfiguration.noProxyHost.split("[ \t\n,|]+");
+			config.setNonProxyHosts(Joiner.on('|').join(noProxyParts));
+		}
+	}
+
 	private static void configureNonProxyHosts(EnvVars vars, ClientConfiguration config) {
 		String noProxy = vars.get(NO_PROXY, vars.get(NO_PROXY_LC));
 		if (noProxy != null) {
