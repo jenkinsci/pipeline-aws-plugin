@@ -32,23 +32,23 @@ import hudson.EnvVars;
 import jenkins.model.Jenkins;
 
 class ProxyConfiguration {
-	
+
 	static final String HTTP_PROXY = "HTTP_PROXY";
 	static final String HTTP_PROXY_LC = "http_proxy";
 	static final String HTTPS_PROXY = "HTTPS_PROXY";
 	static final String HTTPS_PROXY_LC = "https_proxy";
 	static final String NO_PROXY = "NO_PROXY";
 	static final String NO_PROXY_LC = "no_proxy";
-	
+
 	private static final String PROXY_PATTERN = "(https?)://(([^:]+)(:(.+))?@)?([\\da-zA-Z.-]+)(:(\\d+))?/?";
-	
+
 	private static final int HTTP_PORT = 80;
 	private static final int HTTPS_PORT = 443;
-	
+
 	private ProxyConfiguration() {
 		// hidden constructor
 	}
-	
+
 	static void configure(EnvVars vars, ClientConfiguration config) {
 		useJenkinsProxy(config);
 
@@ -61,15 +61,17 @@ class ProxyConfiguration {
 	}
 
 	private static void useJenkinsProxy(ClientConfiguration config) {
-		hudson.ProxyConfiguration proxyConfiguration = Jenkins.getInstance().proxy;
-		if (proxyConfiguration != null) {
-			config.setProxyHost(proxyConfiguration.name);
-			config.setProxyPort(proxyConfiguration.port);
-			config.setProxyUsername(proxyConfiguration.getUserName());
-			config.setProxyPassword(proxyConfiguration.getPassword());
+		if (Jenkins.getInstance() != null) {
+			hudson.ProxyConfiguration proxyConfiguration = Jenkins.getInstance().proxy;
+			if (proxyConfiguration != null) {
+				config.setProxyHost(proxyConfiguration.name);
+				config.setProxyPort(proxyConfiguration.port);
+				config.setProxyUsername(proxyConfiguration.getUserName());
+				config.setProxyPassword(proxyConfiguration.getPassword());
 
-			String[] noProxyParts = proxyConfiguration.noProxyHost.split("[ \t\n,|]+");
-			config.setNonProxyHosts(Joiner.on('|').join(noProxyParts));
+				String[] noProxyParts = proxyConfiguration.noProxyHost.split("[ \t\n,|]+");
+				config.setNonProxyHosts(Joiner.on('|').join(noProxyParts));
+			}
 		}
 	}
 
@@ -79,21 +81,21 @@ class ProxyConfiguration {
 			config.setNonProxyHosts(Joiner.on('|').join(noProxy.split(",")));
 		}
 	}
-	
+
 	private static void configureHTTP(EnvVars vars, ClientConfiguration config) {
 		String env = vars.get(HTTP_PROXY, vars.get(HTTP_PROXY_LC));
 		if (env != null) {
 			configureProxy(config, env, HTTP_PORT);
 		}
 	}
-	
+
 	private static void configureHTTPS(EnvVars vars, ClientConfiguration config) {
 		String env = vars.get(HTTPS_PROXY, vars.get(HTTPS_PROXY_LC));
 		if (env != null) {
 			configureProxy(config, env, HTTPS_PORT);
 		}
 	}
-	
+
 	private static void configureProxy(ClientConfiguration config, String env, int defaultPort) {
 		Pattern pattern = Pattern.compile(PROXY_PATTERN);
 		Matcher matcher = pattern.matcher(env);
@@ -112,5 +114,5 @@ class ProxyConfiguration {
 			}
 		}
 	}
-	
+
 }
