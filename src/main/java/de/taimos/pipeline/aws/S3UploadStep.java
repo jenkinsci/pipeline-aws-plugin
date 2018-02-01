@@ -21,8 +21,6 @@
 
 package de.taimos.pipeline.aws;
 
-import javax.annotation.Nonnull;
-import javax.inject.Inject;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -31,6 +29,15 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import javax.annotation.Nonnull;
+import javax.inject.Inject;
+
+import org.jenkinsci.plugins.workflow.steps.AbstractStepDescriptorImpl;
+import org.jenkinsci.plugins.workflow.steps.AbstractStepExecutionImpl;
+import org.jenkinsci.plugins.workflow.steps.StepContextParameter;
+import org.kohsuke.stapler.DataBoundConstructor;
+import org.kohsuke.stapler.DataBoundSetter;
 
 import com.amazonaws.event.ProgressEvent;
 import com.amazonaws.event.ProgressEventType;
@@ -47,17 +54,13 @@ import com.amazonaws.services.s3.transfer.TransferManager;
 import com.amazonaws.services.s3.transfer.TransferManagerBuilder;
 import com.amazonaws.services.s3.transfer.Upload;
 import com.google.common.base.Preconditions;
+
 import hudson.EnvVars;
 import hudson.Extension;
 import hudson.FilePath;
 import hudson.model.TaskListener;
 import hudson.remoting.VirtualChannel;
 import jenkins.MasterToSlaveFileCallable;
-import org.jenkinsci.plugins.workflow.steps.AbstractStepDescriptorImpl;
-import org.jenkinsci.plugins.workflow.steps.AbstractStepExecutionImpl;
-import org.jenkinsci.plugins.workflow.steps.StepContextParameter;
-import org.kohsuke.stapler.DataBoundConstructor;
-import org.kohsuke.stapler.DataBoundSetter;
 
 public class S3UploadStep extends AbstractS3Step {
 	
@@ -342,7 +345,7 @@ public class S3UploadStep extends AbstractS3Step {
 						metas.setCacheControl(this.cacheControl);
 					}
 					if (this.contentType != null && !this.contentType.isEmpty()) {
-						metas.setContentType(contentType);
+						metas.setContentType(this.contentType);
 					}
 					request.withMetadata(metas);
 				}
@@ -387,7 +390,7 @@ public class S3UploadStep extends AbstractS3Step {
 								meta.setCacheControl(RemoteUploader.this.cacheControl);
 							}
 							if (RemoteUploader.this.contentType != null && !RemoteUploader.this.contentType.isEmpty()) {
-								meta.setContentType(contentType);
+								meta.setContentType(RemoteUploader.this.contentType);
 							}
 							if (RemoteUploader.this.kmsId != null && !RemoteUploader.this.kmsId.isEmpty()) {
 								final SSEAwsKeyManagementParams sseAwsKeyManagementParams = new SSEAwsKeyManagementParams(RemoteUploader.this.kmsId);
@@ -450,7 +453,6 @@ public class S3UploadStep extends AbstractS3Step {
 		
 		@Override
 		public Void invoke(File localFile, VirtualChannel channel) throws IOException, InterruptedException {
-			Preconditions.checkArgument(this.path != null && !this.path.isEmpty(), "Path must not be null or empty when uploading file");
 			TransferManager mgr = TransferManagerBuilder.standard()
 					.withS3Client(AWSClientFactory.create(this.amazonS3ClientOptions.createAmazonS3ClientBuilder(), this.envVars))
 					.build();

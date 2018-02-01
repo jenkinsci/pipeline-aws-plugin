@@ -478,6 +478,8 @@ String result = invokeLambda(
 
 ## current master
 * Add `kmsId` parameter to `s3Upload`.
+* Fix more characters in RoleSessionName
+* Allow upload of multiple files to bucket root (#41)
 
 ## 1.21
 * Fix: `s3Upload` did not work in Jenkins 2.102+ (#JENKINS-49025)
