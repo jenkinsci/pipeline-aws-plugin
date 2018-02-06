@@ -45,6 +45,7 @@ import com.amazonaws.services.cloudformation.model.Parameter;
 import com.amazonaws.services.cloudformation.model.Stack;
 import com.amazonaws.services.cloudformation.model.Tag;
 import com.amazonaws.services.cloudformation.model.UpdateStackRequest;
+import com.amazonaws.waiters.Waiter;
 
 import hudson.model.TaskListener;
 
@@ -200,9 +201,17 @@ public class CloudFormationStack {
 			this.client.deleteChangeSet(req);
 		} else {
 			this.listener.getLogger().format("Executing change set %s for stack %s %n", changeSetName, this.stack);
+
+			final Waiter<DescribeStacksRequest> waiter;
+			if (this.exists()) {
+				waiter = this.client.waiters().stackUpdateComplete();
+			} else {
+				waiter = this.client.waiters().stackCreateComplete();
+			}
+
 			ExecuteChangeSetRequest req = new ExecuteChangeSetRequest().withChangeSetName(changeSetName).withStackName(this.stack);
 			this.client.executeChangeSet(req);
-			new EventPrinter(this.client, this.listener).waitAndPrintStackEvents(this.stack, this.client.waiters().stackUpdateComplete(), pollIntervallMillis);
+			new EventPrinter(this.client, this.listener).waitAndPrintStackEvents(this.stack, waiter, pollIntervallMillis);
 			this.listener.getLogger().format("Executed change set %s for stack %s %n", changeSetName, this.stack);
 		}
 	}

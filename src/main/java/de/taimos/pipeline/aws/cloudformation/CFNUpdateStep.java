@@ -22,17 +22,20 @@
 package de.taimos.pipeline.aws.cloudformation;
 
 import java.util.Collection;
+import java.util.Set;
 
-import javax.inject.Inject;
+import javax.annotation.Nonnull;
 
-import org.jenkinsci.plugins.workflow.steps.AbstractStepDescriptorImpl;
-import org.jenkinsci.plugins.workflow.steps.StepContextParameter;
+import org.jenkinsci.plugins.workflow.steps.StepContext;
+import org.jenkinsci.plugins.workflow.steps.StepDescriptor;
+import org.jenkinsci.plugins.workflow.steps.StepExecution;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
 
 import com.amazonaws.services.cloudformation.model.Parameter;
 import com.amazonaws.services.cloudformation.model.Tag;
 
+import de.taimos.pipeline.aws.utils.StepUtils;
 import hudson.EnvVars;
 import hudson.Extension;
 import hudson.FilePath;
@@ -55,14 +58,20 @@ public class CFNUpdateStep extends AbstractCFNCreateStep {
 	public void setTimeoutInMinutes(Integer timeoutInMinutes) {
 		this.timeoutInMinutes = timeoutInMinutes;
 	}
-	
+
+	@Override
+	public StepExecution start(StepContext context) throws Exception {
+		return new CFNUpdateStep.Execution(this, context);
+	}
+
 	@Extension
-	public static class DescriptorImpl extends AbstractStepDescriptorImpl {
+	public static class DescriptorImpl extends StepDescriptor {
 		
-		public DescriptorImpl() {
-			super(Execution.class);
+		@Override
+		public Set<? extends Class<?>> getRequiredContext() {
+			return StepUtils.requires(EnvVars.class, TaskListener.class, FilePath.class);
 		}
-		
+
 		@Override
 		public String getFunctionName() {
 			return "cfnUpdate";
@@ -74,37 +83,12 @@ public class CFNUpdateStep extends AbstractCFNCreateStep {
 		}
 	}
 	
-	public static class Execution extends AbstractCFNCreateStep.Execution {
+	public static class Execution extends AbstractCFNCreateStep.Execution<CFNUpdateStep> {
 		
-		@Inject
-		private transient CFNUpdateStep step;
-		@StepContextParameter
-		private transient EnvVars envVars;
-		@StepContextParameter
-		private transient FilePath workspace;
-		@StepContextParameter
-		private transient TaskListener listener;
-		
-		@Override
-		public AbstractCFNCreateStep getStep() {
-			return this.step;
+		protected Execution(CFNUpdateStep step, @Nonnull StepContext context) {
+			super(step, context);
 		}
-		
-		@Override
-		public EnvVars getEnvVars() {
-			return this.envVars;
-		}
-		
-		@Override
-		public FilePath getWorkspace() {
-			return this.workspace;
-		}
-		
-		@Override
-		public TaskListener getListener() {
-			return this.listener;
-		}
-		
+
 		@Override
 		public void checkPreconditions() {
 			// nothing to do here
@@ -112,7 +96,7 @@ public class CFNUpdateStep extends AbstractCFNCreateStep {
 		
 		@Override
 		public String getThreadName() {
-			return "cfnUpdate-" + this.step.getStack();
+			return "cfnUpdate-" + this.getStep().getStack();
 		}
 		
 		@Override
@@ -129,7 +113,7 @@ public class CFNUpdateStep extends AbstractCFNCreateStep {
 			final String file = this.getStep().getFile();
 			final String url = this.getStep().getUrl();
 			CloudFormationStack cfnStack = this.getCfnStack();
-			cfnStack.create(this.readTemplate(file), url, parameters, tags, this.step.getTimeoutInMinutes(), this.getStep().getPollInterval(), this.getStep().getRoleArn(), this.getStep().getOnFailure());
+			cfnStack.create(this.readTemplate(file), url, parameters, tags, this.getStep().getTimeoutInMinutes(), this.getStep().getPollInterval(), this.getStep().getRoleArn(), this.getStep().getOnFailure());
 			return cfnStack.describeOutputs();
 		}
 		

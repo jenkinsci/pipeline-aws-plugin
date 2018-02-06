@@ -21,13 +21,15 @@
 
 package de.taimos.pipeline.aws.cloudformation;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 
 import javax.annotation.Nonnull;
 
-import org.jenkinsci.plugins.workflow.steps.AbstractStepExecutionImpl;
-import org.jenkinsci.plugins.workflow.steps.AbstractStepImpl;
+import org.jenkinsci.plugins.workflow.steps.Step;
+import org.jenkinsci.plugins.workflow.steps.StepContext;
+import org.jenkinsci.plugins.workflow.steps.StepExecution;
 import org.kohsuke.stapler.DataBoundSetter;
 
 import com.amazonaws.services.cloudformation.AmazonCloudFormation;
@@ -46,7 +48,7 @@ import hudson.EnvVars;
 import hudson.FilePath;
 import hudson.model.TaskListener;
 
-abstract class AbstractCFNCreateStep extends AbstractStepImpl {
+abstract class AbstractCFNCreateStep extends Step {
 	
 	private final String stack;
 	private String file;
@@ -158,16 +160,10 @@ abstract class AbstractCFNCreateStep extends AbstractStepImpl {
 		this.onFailure = onFailure;
 	}
 	
-	abstract static class Execution extends AbstractStepExecutionImpl {
-		
-		protected abstract AbstractCFNCreateStep getStep();
-		
-		protected abstract EnvVars getEnvVars();
-		
-		protected abstract FilePath getWorkspace();
-		
-		protected abstract TaskListener getListener();
-		
+	abstract static class Execution<C extends AbstractCFNCreateStep> extends StepExecution {
+
+		private final transient C step;
+
 		protected abstract void checkPreconditions();
 		
 		protected abstract String getThreadName();
@@ -175,7 +171,12 @@ abstract class AbstractCFNCreateStep extends AbstractStepImpl {
 		protected abstract Object whenStackExists(Collection<Parameter> parameters, Collection<Tag> tags) throws Exception;
 		
 		protected abstract Object whenStackMissing(Collection<Parameter> parameters, Collection<Tag> tags) throws Exception;
-		
+
+		protected Execution(C step, @Nonnull StepContext context) {
+			super(context);
+			this.step = step;
+		}
+
 		private String getStack() {
 			return this.getStep().getStack();
 		}
@@ -314,21 +315,55 @@ abstract class AbstractCFNCreateStep extends AbstractStepImpl {
 			}
 			return parameters;
 		}
-		
+
 		protected CloudFormationStack getCfnStack() {
 			AmazonCloudFormation client = AWSClientFactory.create(AmazonCloudFormationClientBuilder.standard(), this.getEnvVars());
 			return new CloudFormationStack(client, this.getStack(), this.getListener());
 		}
-		
+
 		protected String readTemplate(String file) {
 			if (file == null) {
 				return null;
 			}
-			
+
 			FilePath child = this.getWorkspace().child(file);
 			try {
 				return child.readToString();
 			} catch (Exception e) {
+				throw new RuntimeException(e);
+			}
+		}
+
+		public C getStep() {
+			return this.step;
+		}
+
+		public TaskListener getListener() {
+			try {
+				return this.getContext().get(TaskListener.class);
+			} catch (IOException e) {
+				throw new RuntimeException(e);
+			} catch (InterruptedException e) {
+				throw new RuntimeException(e);
+			}
+		}
+
+		public EnvVars getEnvVars() {
+			try {
+				return this.getContext().get(EnvVars.class);
+			} catch (IOException e) {
+				throw new RuntimeException(e);
+			} catch (InterruptedException e) {
+				throw new RuntimeException(e);
+			}
+		}
+
+		public FilePath getWorkspace() {
+			try {
+				return this.getContext().get(FilePath.class);
+			} catch (IOException e) {
+				throw new RuntimeException(e);
+			} catch (InterruptedException e) {
 				throw new RuntimeException(e);
 			}
 		}

@@ -23,14 +23,14 @@ package de.taimos.pipeline.aws.cloudformation;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 
 import javax.annotation.Nonnull;
-import javax.inject.Inject;
 
-import org.jenkinsci.plugins.workflow.steps.AbstractStepDescriptorImpl;
-import org.jenkinsci.plugins.workflow.steps.AbstractStepExecutionImpl;
-import org.jenkinsci.plugins.workflow.steps.AbstractStepImpl;
-import org.jenkinsci.plugins.workflow.steps.StepContextParameter;
+import org.jenkinsci.plugins.workflow.steps.Step;
+import org.jenkinsci.plugins.workflow.steps.StepContext;
+import org.jenkinsci.plugins.workflow.steps.StepDescriptor;
+import org.jenkinsci.plugins.workflow.steps.StepExecution;
 import org.kohsuke.stapler.DataBoundConstructor;
 
 import com.amazonaws.services.cloudformation.AmazonCloudFormation;
@@ -41,24 +41,30 @@ import com.amazonaws.services.cloudformation.model.ListExportsRequest;
 import com.amazonaws.services.cloudformation.model.ListExportsResult;
 
 import de.taimos.pipeline.aws.AWSClientFactory;
-import hudson.EnvVars;
+import de.taimos.pipeline.aws.utils.StepUtils;
 import hudson.Extension;
 import hudson.model.TaskListener;
 
-public class CFNExportsStep extends AbstractStepImpl {
+public class CFNExportsStep extends Step {
 	
 	@DataBoundConstructor
 	public CFNExportsStep() {
 		//
 	}
-	
+
+	@Override
+	public StepExecution start(StepContext context) throws Exception {
+		return new CFNExportsStep.Execution(context);
+	}
+
 	@Extension
-	public static class DescriptorImpl extends AbstractStepDescriptorImpl {
-		
-		public DescriptorImpl() {
-			super(Execution.class);
+	public static class DescriptorImpl extends StepDescriptor {
+
+		@Override
+		public Set<? extends Class<?>> getRequiredContext() {
+			return StepUtils.requiresDefault();
 		}
-		
+
 		@Override
 		public String getFunctionName() {
 			return "cfnExports";
@@ -70,23 +76,22 @@ public class CFNExportsStep extends AbstractStepImpl {
 		}
 	}
 	
-	public static class Execution extends AbstractStepExecutionImpl {
+	public static class Execution extends StepExecution {
 		
-		@Inject
 		private transient CFNExportsStep step;
-		@StepContextParameter
-		private transient EnvVars envVars;
-		@StepContextParameter
-		private transient TaskListener listener;
-		
+
+		public Execution(StepContext context) {
+			super(context);
+		}
+
 		@Override
 		public boolean start() throws Exception {
-			this.listener.getLogger().format("Getting global exports of CloudFormation %n");
+			this.getContext().get(TaskListener.class).getLogger().format("Getting global exports of CloudFormation %n");
 			
 			new Thread("cfnExports") {
 				@Override
 				public void run() {
-					AmazonCloudFormation client = AWSClientFactory.create(AmazonCloudFormationClientBuilder.standard(), Execution.this.envVars);
+					AmazonCloudFormation client = AWSClientFactory.create(AmazonCloudFormationClientBuilder.standard(), Execution.this.getContext());
 					ListExportsResult exports = client.listExports(new ListExportsRequest());
 					
 					Map<String, String> map = new HashMap<>();

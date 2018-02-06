@@ -21,13 +21,14 @@
 
 package de.taimos.pipeline.aws.cloudformation;
 
-import javax.annotation.Nonnull;
-import javax.inject.Inject;
+import java.util.Set;
 
-import org.jenkinsci.plugins.workflow.steps.AbstractStepDescriptorImpl;
-import org.jenkinsci.plugins.workflow.steps.AbstractStepExecutionImpl;
-import org.jenkinsci.plugins.workflow.steps.AbstractStepImpl;
-import org.jenkinsci.plugins.workflow.steps.StepContextParameter;
+import javax.annotation.Nonnull;
+
+import org.jenkinsci.plugins.workflow.steps.Step;
+import org.jenkinsci.plugins.workflow.steps.StepContext;
+import org.jenkinsci.plugins.workflow.steps.StepDescriptor;
+import org.jenkinsci.plugins.workflow.steps.StepExecution;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
 
@@ -36,11 +37,11 @@ import com.amazonaws.services.cloudformation.AmazonCloudFormationClientBuilder;
 import com.google.common.base.Preconditions;
 
 import de.taimos.pipeline.aws.AWSClientFactory;
-import hudson.EnvVars;
+import de.taimos.pipeline.aws.utils.StepUtils;
 import hudson.Extension;
 import hudson.model.TaskListener;
 
-public class CFNExecuteChangeSetStep extends AbstractStepImpl {
+public class CFNExecuteChangeSetStep extends Step {
 	
 	private final String changeSet;
 	private final String stack;
@@ -68,14 +69,20 @@ public class CFNExecuteChangeSetStep extends AbstractStepImpl {
 	public void setPollInterval(Long pollInterval) {
 		this.pollInterval = pollInterval;
 	}
-	
+
+	@Override
+	public StepExecution start(StepContext context) throws Exception {
+		return new CFNExecuteChangeSetStep.Execution(this, context);
+	}
+
 	@Extension
-	public static class DescriptorImpl extends AbstractStepDescriptorImpl {
-		
-		public DescriptorImpl() {
-			super(Execution.class);
+	public static class DescriptorImpl extends StepDescriptor {
+
+		@Override
+		public Set<? extends Class<?>> getRequiredContext() {
+			return StepUtils.requiresDefault();
 		}
-		
+
 		@Override
 		public String getFunctionName() {
 			return "cfnExecuteChangeSet";
@@ -87,34 +94,35 @@ public class CFNExecuteChangeSetStep extends AbstractStepImpl {
 		}
 	}
 	
-	public static class Execution extends AbstractStepExecutionImpl {
+	public static class Execution extends StepExecution {
 		
-		@Inject
-		private transient CFNExecuteChangeSetStep step;
-		@StepContextParameter
-		private transient EnvVars envVars;
-		@StepContextParameter
-		private transient TaskListener listener;
-		
+		private final transient CFNExecuteChangeSetStep step;
+
+		public Execution(CFNExecuteChangeSetStep step, StepContext context) {
+			super(context);
+			this.step = step;
+		}
+
 		@Override
 		public boolean start() throws Exception {
 			final String changeSet = this.step.getChangeSet();
 			final String stack = this.step.getStack();
+			final TaskListener listener = this.getContext().get(TaskListener.class);
 			
 			Preconditions.checkArgument(changeSet != null && !changeSet.isEmpty(), "Change Set must not be null or empty");
 			
 			Preconditions.checkArgument(stack != null && !stack.isEmpty(), "Stack must not be null or empty");
 			
-			this.listener.getLogger().format("Executing CloudFormation change set %s %n", changeSet);
+			listener.getLogger().format("Executing CloudFormation change set %s %n", changeSet);
 			
 			new Thread("cfnExecuteChangeSet-" + changeSet) {
 				@Override
 				public void run() {
 					try {
-						AmazonCloudFormation client = AWSClientFactory.create(AmazonCloudFormationClientBuilder.standard(), Execution.this.envVars);
-						CloudFormationStack cfnStack = new CloudFormationStack(client, stack, Execution.this.listener);
+						AmazonCloudFormation client = AWSClientFactory.create(AmazonCloudFormationClientBuilder.standard(), Execution.this.getContext());
+						CloudFormationStack cfnStack = new CloudFormationStack(client, stack, listener);
 						cfnStack.executeChangeSet(changeSet, Execution.this.step.getPollInterval());
-						Execution.this.listener.getLogger().println("Execute change set complete");
+						listener.getLogger().println("Execute change set complete");
 						Execution.this.getContext().onSuccess(cfnStack.describeOutputs());
 					} catch (Exception e) {
 						Execution.this.getContext().onFailure(e);

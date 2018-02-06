@@ -21,13 +21,14 @@
 
 package de.taimos.pipeline.aws.cloudformation;
 
-import javax.annotation.Nonnull;
-import javax.inject.Inject;
+import java.util.Set;
 
-import org.jenkinsci.plugins.workflow.steps.AbstractStepDescriptorImpl;
-import org.jenkinsci.plugins.workflow.steps.AbstractStepExecutionImpl;
-import org.jenkinsci.plugins.workflow.steps.AbstractStepImpl;
-import org.jenkinsci.plugins.workflow.steps.StepContextParameter;
+import javax.annotation.Nonnull;
+
+import org.jenkinsci.plugins.workflow.steps.Step;
+import org.jenkinsci.plugins.workflow.steps.StepContext;
+import org.jenkinsci.plugins.workflow.steps.StepDescriptor;
+import org.jenkinsci.plugins.workflow.steps.StepExecution;
 import org.kohsuke.stapler.DataBoundConstructor;
 
 import com.amazonaws.services.cloudformation.AmazonCloudFormation;
@@ -36,63 +37,70 @@ import com.amazonaws.services.cloudformation.model.AmazonCloudFormationException
 import com.google.common.base.Preconditions;
 
 import de.taimos.pipeline.aws.AWSClientFactory;
-import hudson.EnvVars;
+import de.taimos.pipeline.aws.utils.StepUtils;
 import hudson.Extension;
 import hudson.model.TaskListener;
 
-public class CFNDescribeStep extends AbstractStepImpl {
-	
+public class CFNDescribeStep extends Step {
+
 	private final String stack;
-	
+
 	@DataBoundConstructor
 	public CFNDescribeStep(String stack) {
 		this.stack = stack;
 	}
-	
+
 	public String getStack() {
 		return this.stack;
 	}
-	
+
+	@Override
+	public StepExecution start(StepContext context) throws Exception {
+		return new CFNDescribeStep.Execution(this, context);
+	}
+
 	@Extension
-	public static class DescriptorImpl extends AbstractStepDescriptorImpl {
-		
-		public DescriptorImpl() {
-			super(Execution.class);
+	public static class DescriptorImpl extends StepDescriptor {
+
+		@Override
+		public Set<? extends Class<?>> getRequiredContext() {
+			return StepUtils.requiresDefault();
 		}
-		
+
 		@Override
 		public String getFunctionName() {
 			return "cfnDescribe";
 		}
-		
+
 		@Override
 		public String getDisplayName() {
 			return "Describe outputs of CloudFormation stack";
 		}
 	}
-	
-	public static class Execution extends AbstractStepExecutionImpl {
-		
-		@Inject
-		private transient CFNDescribeStep step;
-		@StepContextParameter
-		private transient EnvVars envVars;
-		@StepContextParameter
-		private transient TaskListener listener;
-		
+
+	public static class Execution extends StepExecution {
+
+		private transient final CFNDescribeStep step;
+
+		public Execution(CFNDescribeStep step, StepContext context) {
+			super(context);
+			this.step = step;
+		}
+
 		@Override
 		public boolean start() throws Exception {
 			final String stack = this.step.getStack();
-			
+			final TaskListener listener = this.getContext().get(TaskListener.class);
+
 			Preconditions.checkArgument(stack != null && !stack.isEmpty(), "Stack must not be null or empty");
-			
-			this.listener.getLogger().format("Getting outputs of CloudFormation stack %s %n", stack);
-			
+
+			listener.getLogger().format("Getting outputs of CloudFormation stack %s %n", stack);
+
 			new Thread("cfnDescribe-" + stack) {
 				@Override
 				public void run() {
-					AmazonCloudFormation client = AWSClientFactory.create(AmazonCloudFormationClientBuilder.standard(), Execution.this.envVars);
-					CloudFormationStack cfnStack = new CloudFormationStack(client, stack, Execution.this.listener);
+					AmazonCloudFormation client = AWSClientFactory.create(AmazonCloudFormationClientBuilder.standard(), Execution.this.getContext());
+					CloudFormationStack cfnStack = new CloudFormationStack(client, stack, listener);
 					try {
 						Execution.this.getContext().onSuccess(cfnStack.describeOutputs());
 					} catch (AmazonCloudFormationException e) {
@@ -102,14 +110,14 @@ public class CFNDescribeStep extends AbstractStepImpl {
 			}.start();
 			return false;
 		}
-		
+
 		@Override
 		public void stop(@Nonnull Throwable cause) throws Exception {
 			//
 		}
-		
+
 		private static final long serialVersionUID = 1L;
-		
+
 	}
-	
+
 }

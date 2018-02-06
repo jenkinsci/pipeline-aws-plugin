@@ -22,11 +22,11 @@
 package de.taimos.pipeline.aws.cloudformation;
 
 import java.util.Collection;
+import java.util.Set;
 
-import javax.inject.Inject;
-
-import org.jenkinsci.plugins.workflow.steps.AbstractStepDescriptorImpl;
-import org.jenkinsci.plugins.workflow.steps.StepContextParameter;
+import org.jenkinsci.plugins.workflow.steps.StepContext;
+import org.jenkinsci.plugins.workflow.steps.StepDescriptor;
+import org.jenkinsci.plugins.workflow.steps.StepExecution;
 import org.kohsuke.stapler.DataBoundConstructor;
 
 import com.amazonaws.services.cloudformation.model.ChangeSetType;
@@ -34,6 +34,7 @@ import com.amazonaws.services.cloudformation.model.Parameter;
 import com.amazonaws.services.cloudformation.model.Tag;
 import com.google.common.base.Preconditions;
 
+import de.taimos.pipeline.aws.utils.StepUtils;
 import hudson.EnvVars;
 import hudson.Extension;
 import hudson.FilePath;
@@ -52,14 +53,15 @@ public class CFNCreateChangeSetStep extends AbstractCFNCreateStep {
 	public String getChangeSet() {
 		return this.changeSet;
 	}
-	
+
+	@Override
+	public StepExecution start(StepContext context) throws Exception {
+		return new CFNCreateChangeSetStep.Execution(this, context);
+	}
+
 	@Extension
-	public static class DescriptorImpl extends AbstractStepDescriptorImpl {
-		
-		public DescriptorImpl() {
-			super(Execution.class);
-		}
-		
+	public static class DescriptorImpl extends StepDescriptor {
+
 		@Override
 		public String getFunctionName() {
 			return "cfnCreateChangeSet";
@@ -69,64 +71,44 @@ public class CFNCreateChangeSetStep extends AbstractCFNCreateStep {
 		public String getDisplayName() {
 			return "Create CloudFormation change set";
 		}
+
+		@Override
+		public Set<? extends Class<?>> getRequiredContext() {
+			return StepUtils.requires(EnvVars.class, TaskListener.class, FilePath.class);
+		}
 	}
 	
-	public static class Execution extends AbstractCFNCreateStep.Execution {
-		
-		@Inject
-		private transient CFNCreateChangeSetStep step;
-		@StepContextParameter
-		private transient EnvVars envVars;
-		@StepContextParameter
-		private transient FilePath workspace;
-		@StepContextParameter
-		private transient TaskListener listener;
-		
-		@Override
-		public AbstractCFNCreateStep getStep() {
-			return this.step;
+	public static class Execution extends AbstractCFNCreateStep.Execution<CFNCreateChangeSetStep> {
+
+		public Execution(CFNCreateChangeSetStep step, StepContext context) {
+			super(step, context);
 		}
-		
-		@Override
-		public EnvVars getEnvVars() {
-			return this.envVars;
-		}
-		
-		@Override
-		public FilePath getWorkspace() {
-			return this.workspace;
-		}
-		
-		@Override
-		public TaskListener getListener() {
-			return this.listener;
-		}
-		
+
 		@Override
 		public void checkPreconditions() {
-			final String changeSet = this.step.getChangeSet();
+			final String changeSet = this.getStep().getChangeSet();
 			Preconditions.checkArgument(changeSet != null && !changeSet.isEmpty(), "Change Set must not be null or empty");
 		}
 		
 		@Override
 		public String getThreadName() {
-			return "cfnCreateChangeSet-" + this.step.getChangeSet();
+			return "cfnCreateChangeSet-" + this.getStep().getChangeSet();
 		}
 		
 		@Override
 		public Object whenStackExists(Collection<Parameter> parameters, Collection<Tag> tags) throws Exception {
-			final String changeSet = this.step.getChangeSet();
-			final String file = this.step.getFile();
-			final String url = this.step.getUrl();
+			final String changeSet = this.getStep().getChangeSet();
+			final String file = this.getStep().getFile();
+			final String url = this.getStep().getUrl();
 			this.getCfnStack().createChangeSet(changeSet, this.readTemplate(file), url, parameters, tags, this.getStep().getPollInterval(), ChangeSetType.UPDATE, this.getStep().getRoleArn());
 			return null;
 		}
 		
 		@Override
 		public Object whenStackMissing(Collection<Parameter> parameters, Collection<Tag> tags) throws Exception {
-			final String changeSet = this.step.getChangeSet();
-			final String file = this.step.getFile();
-			final String url = this.step.getUrl();
+			final String changeSet = this.getStep().getChangeSet();
+			final String file = this.getStep().getFile();
+			final String url = this.getStep().getUrl();
 			this.getCfnStack().createChangeSet(changeSet, this.readTemplate(file), url, parameters, tags, this.getStep().getPollInterval(), ChangeSetType.CREATE, this.getStep().getRoleArn());
 			return null;
 		}

@@ -21,13 +21,14 @@
 
 package de.taimos.pipeline.aws.cloudformation;
 
-import javax.annotation.Nonnull;
-import javax.inject.Inject;
+import java.util.Set;
 
-import org.jenkinsci.plugins.workflow.steps.AbstractStepDescriptorImpl;
-import org.jenkinsci.plugins.workflow.steps.AbstractStepExecutionImpl;
-import org.jenkinsci.plugins.workflow.steps.AbstractStepImpl;
-import org.jenkinsci.plugins.workflow.steps.StepContextParameter;
+import javax.annotation.Nonnull;
+
+import org.jenkinsci.plugins.workflow.steps.Step;
+import org.jenkinsci.plugins.workflow.steps.StepContext;
+import org.jenkinsci.plugins.workflow.steps.StepDescriptor;
+import org.jenkinsci.plugins.workflow.steps.StepExecution;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
 
@@ -37,85 +38,90 @@ import com.amazonaws.services.cloudformation.model.AmazonCloudFormationException
 import com.amazonaws.services.cloudformation.model.ValidateTemplateRequest;
 
 import de.taimos.pipeline.aws.AWSClientFactory;
+import de.taimos.pipeline.aws.utils.StepUtils;
 import hudson.EnvVars;
 import hudson.Extension;
 import hudson.FilePath;
 import hudson.model.TaskListener;
 
-public class CFNValidateStep extends AbstractStepImpl {
-	
+public class CFNValidateStep extends Step {
+
 	private String file;
 	private String url;
-	
+
 	@DataBoundConstructor
 	public CFNValidateStep() {
 		//
 	}
-	
+
 	public String getFile() {
 		return this.file;
 	}
-	
+
 	@DataBoundSetter
 	public void setFile(String file) {
 		this.file = file;
 	}
-	
+
 	public String getUrl() {
 		return this.url;
 	}
-	
+
 	@DataBoundSetter
 	public void setUrl(String url) {
 		this.url = url;
 	}
-	
+
+	@Override
+	public StepExecution start(StepContext context) throws Exception {
+		return new CFNValidateStep.Execution(this, context);
+	}
+
 	@Extension
-	public static class DescriptorImpl extends AbstractStepDescriptorImpl {
-		
-		public DescriptorImpl() {
-			super(Execution.class);
+	public static class DescriptorImpl extends StepDescriptor {
+
+		@Override
+		public Set<? extends Class<?>> getRequiredContext() {
+			return StepUtils.requires(TaskListener.class, EnvVars.class, FilePath.class);
 		}
-		
+
 		@Override
 		public String getFunctionName() {
 			return "cfnValidate";
 		}
-		
+
 		@Override
 		public String getDisplayName() {
 			return "Validate CloudFormation template";
 		}
 	}
-	
-	public static class Execution extends AbstractStepExecutionImpl {
-		
-		@Inject
-		private transient CFNValidateStep step;
-		@StepContextParameter
-		private transient EnvVars envVars;
-		@StepContextParameter
-		private transient TaskListener listener;
-		@StepContextParameter
-		private transient FilePath workspace;
-		
+
+	public static class Execution extends StepExecution {
+
+		private final transient CFNValidateStep step;
+
+		public Execution(CFNValidateStep step, @Nonnull StepContext context) {
+			super(context);
+			this.step = step;
+		}
+
 		@Override
 		public boolean start() throws Exception {
 			final String file = this.step.getFile();
 			final String url = this.step.getUrl();
-			
+
 			if ((file == null || file.isEmpty()) && (url == null || url.isEmpty())) {
 				throw new IllegalArgumentException("Either a file or url for the template must be specified");
 			}
-			
-			this.listener.getLogger().format("Validating CloudFormation template %s %n", file);
-			
+
+			this.getContext().get(TaskListener.class).getLogger().format("Validating CloudFormation template %s %n", file);
+
 			final String template = this.readTemplate(file);
-			
+
 			new Thread("cfnValidate-" + file) {
 				@Override
 				public void run() {
-					AmazonCloudFormation client = AWSClientFactory.create(AmazonCloudFormationClientBuilder.standard(), Execution.this.envVars);
+					AmazonCloudFormation client = AWSClientFactory.create(AmazonCloudFormationClientBuilder.standard(), Execution.this.getContext());
 					try {
 						ValidateTemplateRequest request = new ValidateTemplateRequest();
 						if (template != null) {
@@ -132,26 +138,25 @@ public class CFNValidateStep extends AbstractStepImpl {
 			}.start();
 			return false;
 		}
-		
+
 		private String readTemplate(String file) {
 			if (file == null || file.isEmpty()) {
 				return null;
 			}
-			FilePath child = this.workspace.child(file);
 			try {
-				return child.readToString();
+				return this.getContext().get(FilePath.class).readToString();
 			} catch (Exception e) {
 				throw new IllegalArgumentException(e);
 			}
 		}
-		
+
 		@Override
 		public void stop(@Nonnull Throwable cause) throws Exception {
 			//
 		}
-		
+
 		private static final long serialVersionUID = 1L;
-		
+
 	}
-	
+
 }
