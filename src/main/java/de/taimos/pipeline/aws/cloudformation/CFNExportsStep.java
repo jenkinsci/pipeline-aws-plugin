@@ -92,12 +92,7 @@ public class CFNExportsStep extends Step {
 				@Override
 				public void run() {
 					AmazonCloudFormation client = AWSClientFactory.create(AmazonCloudFormationClientBuilder.standard(), Execution.this.getContext());
-					ListExportsResult exports = client.listExports(new ListExportsRequest());
-					
-					Map<String, String> map = new HashMap<>();
-					for (Export export : exports.getExports()) {
-						map.put(export.getName(), export.getValue());
-					}
+					Map<String, String> map = Execution.this.getExports(client, null);
 					try {
 						Execution.this.getContext().onSuccess(map);
 					} catch (AmazonCloudFormationException e) {
@@ -106,6 +101,19 @@ public class CFNExportsStep extends Step {
 				}
 			}.start();
 			return false;
+		}
+
+		private Map<String, String> getExports(AmazonCloudFormation client, String nextToken) {
+			ListExportsResult exports = client.listExports(new ListExportsRequest().withNextToken(nextToken));
+
+			Map<String, String> map = new HashMap<>();
+			for (Export export : exports.getExports()) {
+				map.put(export.getName(), export.getValue());
+			}
+			if (exports.getNextToken() != null) {
+				map.putAll(this.getExports(client, exports.getNextToken()));
+			}
+			return map;
 		}
 		
 		@Override
