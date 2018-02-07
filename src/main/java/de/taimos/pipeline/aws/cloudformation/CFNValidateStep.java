@@ -144,7 +144,7 @@ public class CFNValidateStep extends Step {
 				return null;
 			}
 			try {
-				return this.getContext().get(FilePath.class).readToString();
+				return this.getContext().get(FilePath.class).child(file).readToString();
 			} catch (Exception e) {
 				throw new IllegalArgumentException(e);
 			}
