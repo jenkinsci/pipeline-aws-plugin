@@ -486,6 +486,7 @@ String result = invokeLambda(
 * Use DELETE method for failed stack creation. (*Changed behavior*)
 * Use Jenkins proxy config when available
 * retrieve all CloudFormation exports (#42)
+* s3Upload returns the S3 URL of the target
 
 ## 1.21
 * Fix: `s3Upload` did not work in Jenkins 2.102+ (#JENKINS-49025)

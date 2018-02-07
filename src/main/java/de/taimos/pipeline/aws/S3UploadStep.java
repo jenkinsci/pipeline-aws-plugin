@@ -33,7 +33,6 @@ import java.util.Set;
 
 import javax.annotation.Nonnull;
 
-import org.jenkinsci.plugins.workflow.steps.AbstractStepExecutionImpl;
 import org.jenkinsci.plugins.workflow.steps.StepContext;
 import org.jenkinsci.plugins.workflow.steps.StepDescriptor;
 import org.jenkinsci.plugins.workflow.steps.StepExecution;
@@ -57,6 +56,7 @@ import com.amazonaws.services.s3.transfer.Upload;
 import com.google.common.base.Preconditions;
 
 import de.taimos.pipeline.aws.utils.StepUtils;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import hudson.EnvVars;
 import hudson.Extension;
 import hudson.FilePath;
@@ -210,7 +210,7 @@ public class S3UploadStep extends AbstractS3Step {
 		}
 	}
 	
-	public static class Execution extends AbstractStepExecutionImpl {
+	public static class Execution extends StepExecution {
 		
 		protected static final long serialVersionUID = 1L;
 
@@ -265,10 +265,14 @@ public class S3UploadStep extends AbstractS3Step {
 			
 			new Thread("s3Upload") {
 				@Override
+				@SuppressFBWarnings(value = "REC_CATCH_EXCEPTION", justification = "RuntimeExceptions need to be catched")
 				public void run() {
 					try {
-						TaskListener listener = getContext().get(TaskListener.class);
-						if (children.size() == 1) {
+						TaskListener listener = Execution.this.getContext().get(TaskListener.class);
+						if (children.isEmpty()) {
+							listener.getLogger().println("Nothing to upload");
+							Execution.this.getContext().onSuccess(null);
+						} else if (children.size() == 1) {
 							FilePath child = children.get(0);
 							listener.getLogger().format("Uploading %s to s3://%s/%s %n", child.toURI(), bucket, path);
 							if (!child.exists()) {
@@ -280,8 +284,8 @@ public class S3UploadStep extends AbstractS3Step {
 							child.act(new RemoteUploader(Execution.this.step.createS3ClientOptions(), Execution.this.getContext().get(EnvVars.class), listener, bucket, path, metadatas, acl, cacheControl, contentType, kmsId));
 							
 							listener.getLogger().println("Upload complete");
-							Execution.this.getContext().onSuccess(null);
-						} else if (children.size() > 1) {
+							Execution.this.getContext().onSuccess(String.format("s3://%s/%s", bucket, path));
+						} else {
 							List<File> fileList = new ArrayList<>();
 							listener.getLogger().format("Uploading %s to s3://%s/%s %n", includePathPattern, bucket, path);
 							for (FilePath child : children) {
@@ -289,7 +293,7 @@ public class S3UploadStep extends AbstractS3Step {
 							}
 							dir.act(new RemoteListUploader(Execution.this.step.createS3ClientOptions(), Execution.this.getContext().get(EnvVars.class), listener, fileList, bucket, path, metadatas, acl, cacheControl, contentType, kmsId));
 							listener.getLogger().println("Upload complete");
-							Execution.this.getContext().onSuccess(null);
+							Execution.this.getContext().onSuccess(String.format("s3://%s/%s", bucket, path));
 						}
 					} catch (Exception e) {
 						Execution.this.getContext().onFailure(e);
