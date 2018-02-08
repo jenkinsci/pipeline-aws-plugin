@@ -480,6 +480,8 @@ String result = invokeLambda(
 # Changelog
 
 ## current master
+
+## 1.22
 * Add `kmsId` parameter to `s3Upload`.
 * Fix more characters in RoleSessionName
 * Allow upload of multiple files to bucket root (#41)
