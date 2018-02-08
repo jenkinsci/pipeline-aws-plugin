@@ -1,0 +1,356 @@
+/*
+ * -
+ * #%L
+ * Pipeline: AWS Steps
+ * %%
+ * Copyright (C) 2017 Taimos GmbH
+ * %%
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ * #L%
+ */
+
+package de.taimos.pipeline.aws.cloudformation.stacksets;
+
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collection;
+
+import javax.annotation.Nonnull;
+
+import org.jenkinsci.plugins.workflow.steps.Step;
+import org.jenkinsci.plugins.workflow.steps.StepContext;
+import org.jenkinsci.plugins.workflow.steps.StepExecution;
+import org.kohsuke.stapler.DataBoundSetter;
+
+import com.amazonaws.services.cloudformation.AmazonCloudFormation;
+import com.amazonaws.services.cloudformation.AmazonCloudFormationClientBuilder;
+import com.amazonaws.services.cloudformation.model.OnFailure;
+import com.amazonaws.services.cloudformation.model.Parameter;
+import com.amazonaws.services.cloudformation.model.Tag;
+import com.google.common.base.Preconditions;
+
+import de.taimos.pipeline.aws.AWSClientFactory;
+import de.taimos.pipeline.aws.cloudformation.parser.JSONParameterFileParser;
+import de.taimos.pipeline.aws.cloudformation.parser.ParameterFileParser;
+import de.taimos.pipeline.aws.cloudformation.parser.YAMLParameterFileParser;
+import de.taimos.pipeline.aws.utils.IamRoleUtils;
+import hudson.EnvVars;
+import hudson.FilePath;
+import hudson.model.TaskListener;
+
+abstract class AbstractCFNCreateStackSetStep extends Step {
+
+	private final String stackSet;
+	private String file;
+	private String url;
+	private String[] params;
+	private String[] keepParams;
+	private String[] tags;
+	private String paramsFile;
+	private Long pollInterval = 1000L;
+	private Boolean create = true;
+	private String onFailure = OnFailure.DELETE.toString();
+
+	public AbstractCFNCreateStackSetStep(String stackSet) {
+		this.stackSet = stackSet;
+	}
+
+	public String getStackSet() {
+		return this.stackSet;
+	}
+
+	public String getFile() {
+		return this.file;
+	}
+
+	@DataBoundSetter
+	public void setFile(String file) {
+		this.file = file;
+	}
+
+	public String getUrl() {
+		return this.url;
+	}
+
+	@DataBoundSetter
+	public void setUrl(String url) {
+		this.url = url;
+	}
+
+	public String[] getParams() {
+		return this.params != null ? this.params.clone() : null;
+	}
+
+	@DataBoundSetter
+	public void setParams(String[] params) {
+		this.params = params.clone();
+	}
+
+	public String[] getKeepParams() {
+		return this.keepParams != null ? this.keepParams.clone() : null;
+	}
+
+	@DataBoundSetter
+	public void setKeepParams(String[] keepParams) {
+		this.keepParams = keepParams.clone();
+	}
+
+	public String[] getTags() {
+		return this.tags != null ? this.tags.clone() : null;
+	}
+
+	@DataBoundSetter
+	public void setTags(String[] tags) {
+		this.tags = tags.clone();
+	}
+
+	public String getParamsFile() {
+		return this.paramsFile;
+	}
+
+	@DataBoundSetter
+	public void setParamsFile(String paramsFile) {
+		this.paramsFile = paramsFile;
+	}
+
+	public Long getPollInterval() {
+		return this.pollInterval;
+	}
+
+	@DataBoundSetter
+	public void setPollInterval(Long pollInterval) {
+		this.pollInterval = pollInterval;
+	}
+
+	public Boolean getCreate() {
+		return this.create;
+	}
+
+	@DataBoundSetter
+	public void setCreate(Boolean create) {
+		this.create = create;
+	}
+
+	public String getOnFailure() {
+		return this.onFailure;
+	}
+
+	@DataBoundSetter
+	public void setOnFailure(String onFailure) {
+		this.onFailure = onFailure;
+	}
+
+	abstract static class Execution<C extends AbstractCFNCreateStackSetStep> extends StepExecution {
+
+		private final transient C step;
+
+		protected abstract void checkPreconditions();
+
+		protected abstract String getThreadName();
+
+		protected abstract Object whenStackSetExists(Collection<Parameter> parameters, Collection<Tag> tags) throws Exception;
+
+		protected abstract Object whenStackSetMissing(Collection<Parameter> parameters, Collection<Tag> tags) throws Exception;
+
+		protected Execution(C step, @Nonnull StepContext context) {
+			super(context);
+			this.step = step;
+		}
+
+		private String getStackSet() {
+			return this.getStep().getStackSet();
+		}
+
+		private String getParamsFile() {
+			return this.getStep().getParamsFile();
+		}
+
+		private String[] getParams() {
+			return this.getStep().getParams();
+		}
+
+		private String[] getKeepParams() {
+			return this.getStep().getKeepParams();
+		}
+
+		private String[] getTags() {
+			return this.getStep().getTags();
+		}
+
+		private Boolean getCreate() {
+			return this.getStep().getCreate();
+		}
+
+		@Override
+		public boolean start() throws Exception {
+
+			final String stackSet = this.getStackSet();
+			final Boolean create = this.getCreate();
+
+			final Collection<Parameter> params = this.parseParamsFile(this.getParamsFile());
+			params.addAll(this.parseParams(this.getParams()));
+
+			final Collection<Parameter> keepParams = this.parseKeepParams(this.getKeepParams());
+			final Collection<Tag> tags = this.parseTags(this.getTags());
+
+			Preconditions.checkArgument(stackSet != null && !stackSet.isEmpty(), "Stack set must not be null or empty");
+
+			this.checkPreconditions();
+
+			new Thread(Execution.this.getThreadName()) {
+				@Override
+				public void run() {
+					try {
+						AmazonCloudFormation client = AWSClientFactory.create(AmazonCloudFormationClientBuilder.standard(), Execution.this.getEnvVars());
+						CloudFormationStackSet cfnStackSet = new CloudFormationStackSet(client, stackSet, Execution.this.getListener());
+						if (cfnStackSet.exists()) {
+							ArrayList<Parameter> parameters = new ArrayList<>(params);
+							parameters.addAll(keepParams);
+							Execution.this.getContext().onSuccess(Execution.this.whenStackSetExists(parameters, tags));
+						} else if (create) {
+							Execution.this.getContext().onSuccess(Execution.this.whenStackSetMissing(params, tags));
+						} else {
+							Execution.this.getListener().getLogger().println("No stack set found with the name=" + stackSet + " and skipped creation due to configuration.");
+							Execution.this.getContext().onSuccess(null);
+						}
+					} catch (Exception e) {
+						Execution.this.getContext().onFailure(e);
+					}
+				}
+			}.start();
+			return false;
+		}
+
+		@Override
+		public void stop(@Nonnull Throwable throwable) throws Exception {
+		}
+
+		private Collection<Parameter> parseParamsFile(String paramsFile) {
+			try {
+				if (paramsFile == null || paramsFile.isEmpty()) {
+					return new ArrayList<>();
+				}
+				final ParameterFileParser parser;
+				if (paramsFile.endsWith(".json")) {
+					parser = new JSONParameterFileParser();
+				} else if (paramsFile.endsWith(".yaml")) {
+					parser = new YAMLParameterFileParser();
+				} else {
+					throw new IllegalArgumentException("Invalid file extension for parameter file (supports json/yaml)");
+				}
+				return parser.parseParams(this.getWorkspace().child(paramsFile).read());
+			} catch (Exception e) {
+				throw new IllegalArgumentException(e);
+			}
+		}
+
+		private Collection<Tag> parseTags(String[] tags) {
+			Collection<Tag> tagList = new ArrayList<>();
+			if (tags == null) {
+				return tagList;
+			}
+			for (String tag : tags) {
+				int i = tag.indexOf('=');
+				if (i < 0) {
+					throw new IllegalArgumentException("Missing = in tag " + tag);
+				}
+				String key = tag.substring(0, i);
+				String value = tag.substring(i + 1);
+				tagList.add(new Tag().withKey(key).withValue(value));
+			}
+			return tagList;
+		}
+
+		private Collection<Parameter> parseParams(String[] params) {
+			Collection<Parameter> parameters = new ArrayList<>();
+			if (params == null) {
+				return parameters;
+			}
+			for (String param : params) {
+				int i = param.indexOf('=');
+				if (i < 0) {
+					throw new IllegalArgumentException("Missing = in param " + param);
+				}
+				String key = param.substring(0, i);
+				String value = param.substring(i + 1);
+				parameters.add(new Parameter().withParameterKey(key).withParameterValue(value));
+			}
+			return parameters;
+		}
+
+		private Collection<Parameter> parseKeepParams(String[] params) {
+			Collection<Parameter> parameters = new ArrayList<>();
+			if (params == null) {
+				return parameters;
+			}
+			for (String param : params) {
+				parameters.add(new Parameter().withParameterKey(param).withUsePreviousValue(true));
+			}
+			return parameters;
+		}
+
+		protected CloudFormationStackSet getCfnStackSet() {
+			AmazonCloudFormation client = AWSClientFactory.create(AmazonCloudFormationClientBuilder.standard(), this.getEnvVars());
+			return new CloudFormationStackSet(client, this.getStackSet(), this.getListener());
+		}
+
+		protected String readTemplate(String file) {
+			if (file == null) {
+				return null;
+			}
+
+			FilePath child = this.getWorkspace().child(file);
+			try {
+				return child.readToString();
+			} catch (Exception e) {
+				throw new RuntimeException(e);
+			}
+		}
+
+		public C getStep() {
+			return this.step;
+		}
+
+		public TaskListener getListener() {
+			try {
+				return this.getContext().get(TaskListener.class);
+			} catch (IOException e) {
+				throw new RuntimeException(e);
+			} catch (InterruptedException e) {
+				throw new RuntimeException(e);
+			}
+		}
+
+		public EnvVars getEnvVars() {
+			try {
+				return this.getContext().get(EnvVars.class);
+			} catch (IOException e) {
+				throw new RuntimeException(e);
+			} catch (InterruptedException e) {
+				throw new RuntimeException(e);
+			}
+		}
+
+		public FilePath getWorkspace() {
+			try {
+				return this.getContext().get(FilePath.class);
+			} catch (IOException e) {
+				throw new RuntimeException(e);
+			} catch (InterruptedException e) {
+				throw new RuntimeException(e);
+			}
+		}
+	}
+
+}
