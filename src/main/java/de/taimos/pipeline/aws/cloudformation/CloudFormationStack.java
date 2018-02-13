@@ -69,8 +69,11 @@ public class CloudFormationStack {
 			if ("AccessDenied".equals(e.getErrorCode())) {
 				this.listener.getLogger().format("Got error from describeStacks: %s %n", e.getErrorMessage());
 				throw e;
+			} else if ("ValidationError".equals(e.getErrorCode()) && e.getErrorMessage().contains("does not exist")) {
+				return false;
+			} else {
+				throw e;
 			}
-			return false;
 		}
 	}
 	
@@ -87,7 +90,7 @@ public class CloudFormationStack {
 		}
 	}
 	
-	public boolean changeSetHasChanges(String changeSetName) {
+	private boolean changeSetHasChanges(String changeSetName) {
 		DescribeChangeSetResult result = this.client.describeChangeSet(new DescribeChangeSetRequest().withStackName(this.stack).withChangeSetName(changeSetName));
 		return !result.getChanges().isEmpty();
 	}
