@@ -50,8 +50,9 @@ public class CFNCreateChangeSetTests {
     }
 
     @Test
-    public void createChangeSet() throws Exception {
+    public void createChangeSetStackExists() throws Exception {
         WorkflowJob job = jenkinsRule.jenkins.createProject(WorkflowJob.class, "cfnTest");
+        Mockito.when(stack.exists()).thenReturn(true);
         job.setDefinition(new CpsFlowDefinition(""
                 + "node {\n"
                 + "  cfnCreateChangeSet(stack: 'foo', changeSet: 'bar')"
@@ -60,7 +61,22 @@ public class CFNCreateChangeSetTests {
         jenkinsRule.assertBuildStatusSuccess(job.scheduleBuild2(0));
 
         PowerMockito.verifyNew(CloudFormationStack.class, Mockito.atLeastOnce()).withArguments(Mockito.any(AmazonCloudFormation.class), Mockito.eq("foo"), Mockito.any(TaskListener.class));
-        Mockito.verify(stack).createChangeSet(Mockito.eq("bar"), Mockito.anyString(), Mockito.anyString(), Mockito.<Parameter>anyCollection(), Mockito.<Tag>anyCollection(), Mockito.anyInt(), Mockito.any(ChangeSetType.class), Mockito.anyString());
+        Mockito.verify(stack).createChangeSet(Mockito.eq("bar"), Mockito.anyString(), Mockito.anyString(), Mockito.<Parameter>anyCollection(), Mockito.<Tag>anyCollection(), Mockito.anyInt(), Mockito.eq(ChangeSetType.UPDATE), Mockito.anyString());
+    }
+
+    @Test
+    public void createChangeSetStackDoesNotExist() throws Exception {
+        WorkflowJob job = jenkinsRule.jenkins.createProject(WorkflowJob.class, "cfnTest");
+        Mockito.when(stack.exists()).thenReturn(false);
+        job.setDefinition(new CpsFlowDefinition(""
+                + "node {\n"
+                + "  cfnCreateChangeSet(stack: 'foo', changeSet: 'bar')"
+                + "}\n", true)
+        );
+        jenkinsRule.assertBuildStatusSuccess(job.scheduleBuild2(0));
+
+        PowerMockito.verifyNew(CloudFormationStack.class, Mockito.atLeastOnce()).withArguments(Mockito.any(AmazonCloudFormation.class), Mockito.eq("foo"), Mockito.any(TaskListener.class));
+        Mockito.verify(stack).createChangeSet(Mockito.eq("bar"), Mockito.anyString(), Mockito.anyString(), Mockito.<Parameter>anyCollection(), Mockito.<Tag>anyCollection(), Mockito.anyInt(), Mockito.eq(ChangeSetType.CREATE), Mockito.anyString());
     }
 
 }
