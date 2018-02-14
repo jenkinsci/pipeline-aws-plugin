@@ -45,7 +45,7 @@ import hudson.model.TaskListener;
 public class CFNDeleteStep extends Step {
 
 	private final String stack;
-	private Long pollInterval = 1000L;
+	private long pollInterval = 1000L;
 
 	@DataBoundConstructor
 	public CFNDeleteStep(String stack) {
@@ -56,12 +56,12 @@ public class CFNDeleteStep extends Step {
 		return this.stack;
 	}
 
-	public Long getPollInterval() {
+	public long getPollInterval() {
 		return this.pollInterval;
 	}
 
 	@DataBoundSetter
-	public void setPollInterval(Long pollInterval) {
+	public void setPollInterval(long pollInterval) {
 		this.pollInterval = pollInterval;
 	}
 
