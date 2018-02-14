@@ -21,7 +21,10 @@
 
 package de.taimos.pipeline.aws.cloudformation.stacksets;
 
-import com.amazonaws.services.cloudformation.model.*;
+import com.amazonaws.services.cloudformation.model.Parameter;
+import com.amazonaws.services.cloudformation.model.StackSetStatus;
+import com.amazonaws.services.cloudformation.model.Tag;
+import com.amazonaws.services.cloudformation.model.UpdateStackSetResult;
 import hudson.EnvVars;
 import hudson.Extension;
 import hudson.FilePath;
@@ -34,112 +37,110 @@ import org.kohsuke.stapler.DataBoundConstructor;
 import javax.annotation.Nonnull;
 import java.io.IOException;
 import java.util.Collection;
-import java.util.concurrent.ExecutionException;
 
 public class CFNUpdateStackSetStep extends AbstractCFNCreateStackSetStep {
 
-    @DataBoundConstructor
-    public CFNUpdateStackSetStep(String stackSet) {
-        super(stackSet);
-    }
+	@DataBoundConstructor
+	public CFNUpdateStackSetStep(String stackSet) {
+		super(stackSet);
+	}
 
-    @Extension
-    public static class DescriptorImpl extends AbstractStepDescriptorImpl {
+	@Extension
+	public static class DescriptorImpl extends AbstractStepDescriptorImpl {
 
-        public DescriptorImpl() {
-            super(Execution.class);
-        }
+		public DescriptorImpl() {
+			super(Execution.class);
+		}
 
-        @Override
-        public String getFunctionName() {
-            return "cfnUpdateStackSet";
-        }
+		@Override
+		public String getFunctionName() {
+			return "cfnUpdateStackSet";
+		}
 
-        @Override
-        public String getDisplayName() {
-            return "Create or Update CloudFormation Stack Set";
-        }
-    }
+		@Override
+		public String getDisplayName() {
+			return "Create or Update CloudFormation Stack Set";
+		}
+	}
 
-    @Override
-    public StepExecution start(StepContext context) throws Exception {
-        return new CFNUpdateStackSetStep.Execution(this, context);
-    }
+	@Override
+	public StepExecution start(StepContext context) throws Exception {
+		return new CFNUpdateStackSetStep.Execution(this, context);
+	}
 
-    public static class Execution extends AbstractCFNCreateStackSetStep.Execution<CFNUpdateStackSetStep> {
+	public static class Execution extends AbstractCFNCreateStackSetStep.Execution<CFNUpdateStackSetStep> {
 
-        protected Execution(CFNUpdateStackSetStep step, @Nonnull StepContext context) {
-            super(step, context);
-        }
+		protected Execution(CFNUpdateStackSetStep step, @Nonnull StepContext context) {
+			super(step, context);
+		}
 
-        @Override
-        public EnvVars getEnvVars() {
-            try {
-                return this.getContext().get(EnvVars.class);
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            } catch (InterruptedException e) {
-                Thread.interrupted();
-                throw new RuntimeException(e);
-            }
-        }
+		@Override
+		public EnvVars getEnvVars() {
+			try {
+				return this.getContext().get(EnvVars.class);
+			} catch (IOException e) {
+				throw new RuntimeException(e);
+			} catch (InterruptedException e) {
+				Thread.interrupted();
+				throw new RuntimeException(e);
+			}
+		}
 
-        @Override
-        public FilePath getWorkspace() {
-            try {
-                return this.getContext().get(FilePath.class);
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            } catch (InterruptedException e) {
-                Thread.interrupted();
-                throw new RuntimeException(e);
-            }
-        }
+		@Override
+		public FilePath getWorkspace() {
+			try {
+				return this.getContext().get(FilePath.class);
+			} catch (IOException e) {
+				throw new RuntimeException(e);
+			} catch (InterruptedException e) {
+				Thread.interrupted();
+				throw new RuntimeException(e);
+			}
+		}
 
-        @Override
-        public TaskListener getListener() {
-            try {
-                return this.getContext().get(TaskListener.class);
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            } catch (InterruptedException e) {
-                Thread.interrupted();
-                throw new RuntimeException(e);
-            }
-        }
+		@Override
+		public TaskListener getListener() {
+			try {
+				return this.getContext().get(TaskListener.class);
+			} catch (IOException e) {
+				throw new RuntimeException(e);
+			} catch (InterruptedException e) {
+				Thread.interrupted();
+				throw new RuntimeException(e);
+			}
+		}
 
-        @Override
-        public void checkPreconditions() {
-        }
+		@Override
+		public void checkPreconditions() {
+		}
 
-        @Override
-        public String getThreadName() {
-            return "cfnUpdateStackSet-" + getStep().getStackSet();
-        }
+		@Override
+		public String getThreadName() {
+			return "cfnUpdateStackSet-" + getStep().getStackSet();
+		}
 
-        @Override
-        public Object whenStackSetExists(Collection<Parameter> parameters, Collection<Tag> tags) throws Exception {
-            final String file = this.getStep().getFile();
-            final String url = this.getStep().getUrl();
-            CloudFormationStackSet cfnStackSet = this.getCfnStackSet();
-            UpdateStackSetResult operation = cfnStackSet.update(this.readTemplate(file), url, parameters, tags);
-            cfnStackSet.waitForOperationToComplete(operation.getOperationId(), getStep().getPollInterval());
-            return cfnStackSet.describe();
-        }
+		@Override
+		public Object whenStackSetExists(Collection<Parameter> parameters, Collection<Tag> tags) throws Exception {
+			final String file = this.getStep().getFile();
+			final String url = this.getStep().getUrl();
+			CloudFormationStackSet cfnStackSet = this.getCfnStackSet();
+			UpdateStackSetResult operation = cfnStackSet.update(this.readTemplate(file), url, parameters, tags);
+			cfnStackSet.waitForOperationToComplete(operation.getOperationId(), getStep().getPollInterval());
+			return cfnStackSet.describe();
+		}
 
 
+		@Override
+		public Object whenStackSetMissing(Collection<Parameter> parameters, Collection<Tag> tags) throws Exception {
+			final String file = getStep().getFile();
+			final String url = getStep().getUrl();
+			CloudFormationStackSet cfnStack = this.getCfnStackSet();
+			cfnStack.create(this.readTemplate(file), url, parameters, tags);
+			return cfnStack.waitForStackState(StackSetStatus.ACTIVE, getStep().getPollInterval());
+		}
 
-        @Override
-        public Object whenStackSetMissing(Collection<Parameter> parameters, Collection<Tag> tags) throws Exception {
-            final String file = getStep().getFile();
-            final String url = getStep().getUrl();
-            CloudFormationStackSet cfnStack = this.getCfnStackSet();
-            cfnStack.create(this.readTemplate(file), url, parameters, tags);
-            return cfnStack.waitForStackState(StackSetStatus.ACTIVE, getStep().getPollInterval());
-        }
+		private static final long serialVersionUID = 1L;
 
-        private static final long serialVersionUID = 1L;
-
-    }
+	}
 
 }

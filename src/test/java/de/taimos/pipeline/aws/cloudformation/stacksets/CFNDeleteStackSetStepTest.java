@@ -2,9 +2,6 @@ package de.taimos.pipeline.aws.cloudformation.stacksets;
 
 import com.amazonaws.client.builder.AwsSyncClientBuilder;
 import com.amazonaws.services.cloudformation.AmazonCloudFormation;
-import com.amazonaws.services.cloudformation.model.Parameter;
-import com.amazonaws.services.cloudformation.model.Tag;
-import com.amazonaws.services.cloudformation.model.UpdateStackSetResult;
 import de.taimos.pipeline.aws.AWSClientFactory;
 import hudson.EnvVars;
 import hudson.model.TaskListener;
@@ -21,44 +18,42 @@ import org.powermock.core.classloader.annotations.PowerMockIgnore;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
 
-import java.util.UUID;
-
 @RunWith(PowerMockRunner.class)
 @PrepareForTest(
-        value = AWSClientFactory.class,
-        fullyQualifiedNames = "de.taimos.pipeline.aws.cloudformation.stacksets.*"
+		value = AWSClientFactory.class,
+		fullyQualifiedNames = "de.taimos.pipeline.aws.cloudformation.stacksets.*"
 )
 @PowerMockIgnore("javax.crypto.*")
 public class CFNDeleteStackSetStepTest {
 
-    @Rule
-    private JenkinsRule jenkinsRule = new JenkinsRule();
-    private CloudFormationStackSet stackSet;
+	@Rule
+	private JenkinsRule jenkinsRule = new JenkinsRule();
+	private CloudFormationStackSet stackSet;
 
-    @Before
-    public void setupSdk() throws Exception {
-        stackSet = Mockito.mock(CloudFormationStackSet.class);
-        PowerMockito.mockStatic(AWSClientFactory.class);
-        PowerMockito.whenNew(CloudFormationStackSet.class)
-                .withAnyArguments()
-                .thenReturn(stackSet);
-        AmazonCloudFormation cloudFormation = Mockito.mock(AmazonCloudFormation.class);
-        PowerMockito.when(AWSClientFactory.create(Mockito.any(AwsSyncClientBuilder.class), Mockito.any(EnvVars.class)))
-                .thenReturn(cloudFormation);
-    }
+	@Before
+	public void setupSdk() throws Exception {
+		stackSet = Mockito.mock(CloudFormationStackSet.class);
+		PowerMockito.mockStatic(AWSClientFactory.class);
+		PowerMockito.whenNew(CloudFormationStackSet.class)
+				.withAnyArguments()
+				.thenReturn(stackSet);
+		AmazonCloudFormation cloudFormation = Mockito.mock(AmazonCloudFormation.class);
+		PowerMockito.when(AWSClientFactory.create(Mockito.any(AwsSyncClientBuilder.class), Mockito.any(EnvVars.class)))
+				.thenReturn(cloudFormation);
+	}
 
-    @Test
-    public void deleteStackSet() throws Exception {
-        WorkflowJob job = jenkinsRule.jenkins.createProject(WorkflowJob.class, "testStepWithGlobalCredentials");
-        job.setDefinition(new CpsFlowDefinition(""
-                + "node {\n"
-                + "  cfnDeleteStackSet(stackSet: 'foo')"
-                + "}\n", true)
-        );
-        jenkinsRule.assertBuildStatusSuccess(job.scheduleBuild2(0));
+	@Test
+	public void deleteStackSet() throws Exception {
+		WorkflowJob job = jenkinsRule.jenkins.createProject(WorkflowJob.class, "testStepWithGlobalCredentials");
+		job.setDefinition(new CpsFlowDefinition(""
+				+ "node {\n"
+				+ "  cfnDeleteStackSet(stackSet: 'foo')"
+				+ "}\n", true)
+		);
+		jenkinsRule.assertBuildStatusSuccess(job.scheduleBuild2(0));
 
-        PowerMockito.verifyNew(CloudFormationStackSet.class)
-                .withArguments(Mockito.any(AmazonCloudFormation.class), Mockito.eq("foo"), Mockito.any(TaskListener.class));
-        Mockito.verify(stackSet).delete();
-    }
+		PowerMockito.verifyNew(CloudFormationStackSet.class)
+				.withArguments(Mockito.any(AmazonCloudFormation.class), Mockito.eq("foo"), Mockito.any(TaskListener.class));
+		Mockito.verify(stackSet).delete();
+	}
 }

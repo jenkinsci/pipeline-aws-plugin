@@ -26,82 +26,82 @@ import java.util.UUID;
 
 @RunWith(PowerMockRunner.class)
 @PrepareForTest(
-        value = AWSClientFactory.class,
-        fullyQualifiedNames = "de.taimos.pipeline.aws.cloudformation.stacksets.*"
+		value = AWSClientFactory.class,
+		fullyQualifiedNames = "de.taimos.pipeline.aws.cloudformation.stacksets.*"
 )
 @PowerMockIgnore("javax.crypto.*")
 public class CFNUpdateStackSetStepTest {
 
-    @Rule
-    private JenkinsRule jenkinsRule = new JenkinsRule();
-    private CloudFormationStackSet stackSet;
+	@Rule
+	private JenkinsRule jenkinsRule = new JenkinsRule();
+	private CloudFormationStackSet stackSet;
 
-    @Before
-    public void setupSdk() throws Exception {
-        stackSet = Mockito.mock(CloudFormationStackSet.class);
-        PowerMockito.mockStatic(AWSClientFactory.class);
-        PowerMockito.whenNew(CloudFormationStackSet.class)
-                .withAnyArguments()
-                .thenReturn(stackSet);
-        AmazonCloudFormation cloudFormation = Mockito.mock(AmazonCloudFormation.class);
-        PowerMockito.when(AWSClientFactory.create(Mockito.any(AwsSyncClientBuilder.class), Mockito.any(EnvVars.class)))
-                .thenReturn(cloudFormation);
-    }
+	@Before
+	public void setupSdk() throws Exception {
+		stackSet = Mockito.mock(CloudFormationStackSet.class);
+		PowerMockito.mockStatic(AWSClientFactory.class);
+		PowerMockito.whenNew(CloudFormationStackSet.class)
+				.withAnyArguments()
+				.thenReturn(stackSet);
+		AmazonCloudFormation cloudFormation = Mockito.mock(AmazonCloudFormation.class);
+		PowerMockito.when(AWSClientFactory.create(Mockito.any(AwsSyncClientBuilder.class), Mockito.any(EnvVars.class)))
+				.thenReturn(cloudFormation);
+	}
 
-    @Test
-    public void createNonExistantStack() throws Exception {
-        WorkflowJob job = jenkinsRule.jenkins.createProject(WorkflowJob.class, "testStepWithGlobalCredentials");
-        Mockito.when(stackSet.exists()).thenReturn(false);
-        job.setDefinition(new CpsFlowDefinition(""
-                + "node {\n"
-                + "  cfnUpdateStackSet(stackSet: 'foo')"
-                + "}\n", true)
-        );
-        jenkinsRule.assertBuildStatusSuccess(job.scheduleBuild2(0));
+	@Test
+	public void createNonExistantStack() throws Exception {
+		WorkflowJob job = jenkinsRule.jenkins.createProject(WorkflowJob.class, "testStepWithGlobalCredentials");
+		Mockito.when(stackSet.exists()).thenReturn(false);
+		job.setDefinition(new CpsFlowDefinition(""
+				+ "node {\n"
+				+ "  cfnUpdateStackSet(stackSet: 'foo')"
+				+ "}\n", true)
+		);
+		jenkinsRule.assertBuildStatusSuccess(job.scheduleBuild2(0));
 
-        PowerMockito.verifyNew(CloudFormationStackSet.class, Mockito.atLeastOnce())
-                .withArguments(Mockito.any(AmazonCloudFormation.class), Mockito.eq("foo"), Mockito.any(TaskListener.class));
-        Mockito.verify(stackSet).create(Mockito.anyString(), Mockito.anyString(), Mockito.<Parameter>anyCollection(), Mockito.<Tag>anyCollection());
-    }
+		PowerMockito.verifyNew(CloudFormationStackSet.class, Mockito.atLeastOnce())
+				.withArguments(Mockito.any(AmazonCloudFormation.class), Mockito.eq("foo"), Mockito.any(TaskListener.class));
+		Mockito.verify(stackSet).create(Mockito.anyString(), Mockito.anyString(), Mockito.<Parameter>anyCollection(), Mockito.<Tag>anyCollection());
+	}
 
-    @Test
-    public void updateExistantStack() throws Exception {
-        WorkflowJob job = jenkinsRule.jenkins.createProject(WorkflowJob.class, "cfnTest");
-        Mockito.when(stackSet.exists()).thenReturn(true);
-        String operationId = UUID.randomUUID().toString();
-        Mockito.when(stackSet.update(Mockito.anyString(), Mockito.anyString(), Mockito.<Parameter>anyCollection(), Mockito.<Tag>anyCollection()))
-                .thenReturn(new UpdateStackSetResult()
-                        .withOperationId(operationId)
-                );
-        job.setDefinition(new CpsFlowDefinition(""
-                + "node {\n"
-                + "  cfnUpdateStackSet(stackSet: 'foo', pollInterval: 27, params: ['foo=bar'])"
-                + "}\n", true)
-        );
-        jenkinsRule.assertBuildStatusSuccess(job.scheduleBuild2(0));
+	@Test
+	public void updateExistantStack() throws Exception {
+		WorkflowJob job = jenkinsRule.jenkins.createProject(WorkflowJob.class, "cfnTest");
+		Mockito.when(stackSet.exists()).thenReturn(true);
+		String operationId = UUID.randomUUID().toString();
+		Mockito.when(stackSet.update(Mockito.anyString(), Mockito.anyString(), Mockito.<Parameter>anyCollection(), Mockito.<Tag>anyCollection()))
+				.thenReturn(new UpdateStackSetResult()
+						.withOperationId(operationId)
+				);
+		job.setDefinition(new CpsFlowDefinition(""
+				+ "node {\n"
+				+ "  cfnUpdateStackSet(stackSet: 'foo', pollInterval: 27, params: ['foo=bar'])"
+				+ "}\n", true)
+		);
+		jenkinsRule.assertBuildStatusSuccess(job.scheduleBuild2(0));
 
-        PowerMockito.verifyNew(CloudFormationStackSet.class, Mockito.atLeastOnce())
-                .withArguments(Mockito.any(AmazonCloudFormation.class), Mockito.eq("foo"), Mockito.any(TaskListener.class));
-        Mockito.verify(stackSet).update(Mockito.anyString(), Mockito.anyString(), Mockito.eq(Collections.singletonList(new Parameter()
-                .withParameterKey("foo")
-                .withParameterValue("bar")
-        )), Mockito.<Tag>anyCollection());
-        Mockito.verify(stackSet).waitForOperationToComplete(operationId, 27);
-    }
+		PowerMockito.verifyNew(CloudFormationStackSet.class, Mockito.atLeastOnce())
+				.withArguments(Mockito.any(AmazonCloudFormation.class), Mockito.eq("foo"), Mockito.any(TaskListener.class));
+		Mockito.verify(stackSet).update(Mockito.anyString(), Mockito.anyString(), Mockito.eq(Collections.singletonList(new Parameter()
+				.withParameterKey("foo")
+				.withParameterValue("bar")
+		)), Mockito.<Tag>anyCollection());
+		Mockito.verify(stackSet).waitForOperationToComplete(operationId, 27);
+	}
 
-    @Test
-    public void doNotCreateNonExistantStack() throws Exception {
-        WorkflowJob job = jenkinsRule.jenkins.createProject(WorkflowJob.class, "cfnTest");
-        Mockito.when(stackSet.exists()).thenReturn(false);
-        job.setDefinition(new CpsFlowDefinition(""
-                + "node {\n"
-                + "  cfnUpdateStackSet(stackSet: 'foo', create: false)"
-                + "}\n", true)
-        );
-        jenkinsRule.assertBuildStatusSuccess(job.scheduleBuild2(0));
+	@Test
+	public void doNotCreateNonExistantStack() throws Exception {
+		WorkflowJob job = jenkinsRule.jenkins.createProject(WorkflowJob.class, "cfnTest");
+		Mockito.when(stackSet.exists()).thenReturn(false);
+		job.setDefinition(new CpsFlowDefinition(""
+				+ "node {\n"
+				+ "  cfnUpdateStackSet(stackSet: 'foo', create: false)"
+				+ "}\n", true)
+		);
+		jenkinsRule.assertBuildStatusSuccess(job.scheduleBuild2(0));
 
-        PowerMockito.verifyNew(CloudFormationStackSet.class)
-                .withArguments(Mockito.any(AmazonCloudFormation.class), Mockito.eq("foo"), Mockito.any(TaskListener.class));
-        Mockito.verify(stackSet, Mockito.never()).create(Mockito.anyString(), Mockito.anyString(), Mockito.<Parameter>anyCollection(), Mockito.<Tag>anyCollection());
-    }
+		PowerMockito.verifyNew(CloudFormationStackSet.class)
+				.withArguments(Mockito.any(AmazonCloudFormation.class), Mockito.eq("foo"), Mockito.any(TaskListener.class));
+		Mockito.verify(stackSet, Mockito.never()).create(Mockito.anyString(), Mockito.anyString(), Mockito.<Parameter>anyCollection(), Mockito.<Tag>anyCollection());
+	}
 }

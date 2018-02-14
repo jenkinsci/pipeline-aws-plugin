@@ -39,19 +39,19 @@ import javax.annotation.Nonnull;
 import javax.inject.Inject;
 
 public class CFNDeleteStackSetStep extends AbstractStepImpl {
-	
+
 	private final String stackSet;
 	private Long pollInterval = 1000L;
-	
+
 	@DataBoundConstructor
 	public CFNDeleteStackSetStep(String stackSet) {
 		this.stackSet = stackSet;
 	}
-	
+
 	public String getStackSet() {
 		return this.stackSet;
 	}
-	
+
 	public Long getPollInterval() {
 		return this.pollInterval;
 	}
@@ -60,42 +60,42 @@ public class CFNDeleteStackSetStep extends AbstractStepImpl {
 	public void setPollInterval(Long pollInterval) {
 		this.pollInterval = pollInterval;
 	}
-	
+
 	@Extension
 	public static class DescriptorImpl extends AbstractStepDescriptorImpl {
-		
+
 		public DescriptorImpl() {
 			super(Execution.class);
 		}
-		
+
 		@Override
 		public String getFunctionName() {
 			return "cfnDeleteStackSet";
 		}
-		
+
 		@Override
 		public String getDisplayName() {
 			return "Delete CloudFormation Stack Set";
 		}
 	}
-	
+
 	public static class Execution extends AbstractStepExecutionImpl {
-		
+
 		@Inject
 		private transient CFNDeleteStackSetStep step;
 		@StepContextParameter
 		private transient EnvVars envVars;
 		@StepContextParameter
 		private transient TaskListener listener;
-		
+
 		@Override
 		public boolean start() throws Exception {
 			final String stackSet = this.step.getStackSet();
-			
+
 			Preconditions.checkArgument(stackSet != null && !stackSet.isEmpty(), "StackSet must not be null or empty");
-			
+
 			this.listener.getLogger().format("Removing CloudFormation stack set %s %n", stackSet);
-			
+
 			new Thread("cfnDeleteStackSet-" + stackSet) {
 				@Override
 				public void run() {
@@ -112,14 +112,14 @@ public class CFNDeleteStackSetStep extends AbstractStepImpl {
 			}.start();
 			return false;
 		}
-		
+
 		@Override
 		public void stop(@Nonnull Throwable cause) throws Exception {
 			//
 		}
-		
+
 		private static final long serialVersionUID = 1L;
-		
+
 	}
-	
+
 }

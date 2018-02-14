@@ -21,11 +21,11 @@
 
 package de.taimos.pipeline.aws.cloudformation.parser;
 
+import com.amazonaws.services.cloudformation.model.Parameter;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Collection;
-
-import com.amazonaws.services.cloudformation.model.Parameter;
 
 public interface ParameterFileParser {
 
