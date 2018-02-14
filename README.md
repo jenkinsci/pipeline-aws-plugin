@@ -480,6 +480,7 @@ String result = invokeLambda(
 # Changelog
 
 ## current master
+* add updateTrustPolicy step (#48)
 
 ## 1.22
 * Add `kmsId` parameter to `s3Upload`.
