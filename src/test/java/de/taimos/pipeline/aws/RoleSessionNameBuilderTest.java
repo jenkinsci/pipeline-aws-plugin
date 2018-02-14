@@ -36,7 +36,7 @@ public class RoleSessionNameBuilderTest {
 		final String result = roleSessionNameBuilder.build();
 		assertEquals("roleSessionNameBuilder should not be strapped", "Jenkins-shortName-1", result);
 	}
-	
+
 	@Test
 	public void nameLongerThanAWSLimitAreStripped() {
 		String jobName = org.apache.commons.lang.StringUtils.repeat("s", 64);
@@ -46,7 +46,7 @@ public class RoleSessionNameBuilderTest {
 		final String result = roleSessionNameBuilder.build();
 		assertEquals("The result should be equal to the limit", 64, result.length());
 	}
-	
+
 	@Test
 	public void nameEqualToAWSLimitAreStripped() {
 		String jobName = org.apache.commons.lang.StringUtils.repeat("s", 52);
@@ -56,7 +56,7 @@ public class RoleSessionNameBuilderTest {
 		final String result = roleSessionNameBuilder.build();
 		assertEquals("The result should be equal to the limit", 64, result.length());
 	}
-	
+
 	@Test
 	public void htmlEncodingJobName() {
 		String jobName = "withHTMLEncoding%2FJobName";
@@ -67,7 +67,7 @@ public class RoleSessionNameBuilderTest {
 		final String result = roleSessionNameBuilder.build();
 		assertEquals("The result should not have any encoded html characters", "Jenkins-withHTMLEncoding-JobName-123", result);
 	}
-	
+
 	@Test
 	public void htmlEncodingBuildNumber() {
 		String jobName = "jobName";

@@ -65,7 +65,7 @@ import hudson.security.ACL;
 import hudson.util.ListBoxModel;
 
 public class WithAWSStep extends Step {
-	
+
 	private String role = "";
 	private String roleAccount = "";
 	private String region = "";
@@ -84,79 +84,79 @@ public class WithAWSStep extends Step {
 	public String getRole() {
 		return this.role;
 	}
-	
+
 	@DataBoundSetter
 	public void setRole(String role) {
 		this.role = role;
 	}
-	
+
 	public String getRoleAccount() {
 		return this.roleAccount;
 	}
-	
+
 	@DataBoundSetter
 	public void setRoleAccount(String roleAccount) {
 		this.roleAccount = roleAccount;
 	}
-	
+
 	public String getRegion() {
 		return this.region;
 	}
-	
+
 	@DataBoundSetter
 	public void setRegion(String region) {
 		this.region = region;
 	}
-	
+
 	public String getEndpointUrl() {
 		return this.endpointUrl;
 	}
-	
+
 	@DataBoundSetter
 	public void setEndpointUrl(String endpointUrl) {
 		this.endpointUrl = endpointUrl;
 	}
-	
+
 	public String getProfile() {
 		return this.profile;
 	}
-	
+
 	@DataBoundSetter
 	public void setProfile(String profile) {
 		this.profile = profile;
 	}
-	
+
 	public String getCredentials() {
 		return this.credentials;
 	}
-	
+
 	@DataBoundSetter
 	public void setCredentials(String credentials) {
 		this.credentials = credentials;
 	}
-	
+
 	public String getExternalId() {
 		return this.externalId;
 	}
-	
+
 	@DataBoundSetter
 	public void setExternalId(String externalId) {
 		this.externalId = externalId;
 	}
-	
+
 	public String getFederatedUserId() {
 		return this.federatedUserId;
 	}
-	
+
 	@DataBoundSetter
 	public void setFederatedUserId(String federatedUserId) {
 		this.federatedUserId = federatedUserId;
 	}
-	
+
 	public String getPolicy() {
 		return this.policy;
 	}
-	
+
 	@DataBoundSetter
 	public void setPolicy(String policy) {
 		this.policy = policy;
@@ -179,23 +179,23 @@ public class WithAWSStep extends Step {
 		public String getFunctionName() {
 			return "withAWS";
 		}
-		
+
 		@Override
 		public String getDisplayName() {
 			return "set AWS settings for nested block";
 		}
-		
+
 		@Override
 		public boolean takesImplicitBlockArgument() {
 			return true;
 		}
-		
+
 		public ListBoxModel doFillCredentialsItems(@AncestorInPath Item context) {
-			
+
 			if (context == null || !context.hasPermission(Item.CONFIGURE)) {
 				return new ListBoxModel();
 			}
-			
+
 			return new StandardListBoxModel()
 					.includeEmptyValue()
 					.includeMatchingAs(
@@ -208,9 +208,9 @@ public class WithAWSStep extends Step {
 							CredentialsMatchers.instanceOf(StandardUsernamePasswordCredentials.class));
 		}
 	}
-	
+
 	public static class Execution extends StepExecution {
-		
+
 		private final transient WithAWSStep step;
 
 		private final EnvVars envVars;
@@ -234,7 +234,7 @@ public class WithAWSStep extends Step {
 			this.withEndpointUrl(awsEnv);
 			this.withRole(awsEnv);
 			this.withFederatedUserId(awsEnv);
-			
+
 			EnvironmentExpander expander = new EnvironmentExpander() {
 				@Override
 				public void expand(@Nonnull EnvVars envVars) throws IOException, InterruptedException {
@@ -247,10 +247,10 @@ public class WithAWSStep extends Step {
 					.start();
 			return false;
 		}
-		
+
 		private static final String ALLOW_ALL_POLICY = "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Action\":\"*\","
 				+ "\"Effect\":\"Allow\",\"Resource\":\"*\"}]}";
-		
+
 		private void withFederatedUserId(@Nonnull EnvVars localEnv) {
 			if (!StringUtils.isNullOrEmpty(this.step.getFederatedUserId())) {
 				AWSSecurityTokenService sts = AWSClientFactory.create(AWSSecurityTokenServiceClientBuilder.standard(), this.envVars);
@@ -258,18 +258,18 @@ public class WithAWSStep extends Step {
 				getFederationTokenRequest.setDurationSeconds(3600);
 				getFederationTokenRequest.setName(this.step.getFederatedUserId());
 				getFederationTokenRequest.setPolicy(ALLOW_ALL_POLICY);
-				
+
 				GetFederationTokenResult federationTokenResult = sts.getFederationToken(getFederationTokenRequest);
-				
+
 				Credentials credentials = federationTokenResult.getCredentials();
 				localEnv.override(AWSClientFactory.AWS_ACCESS_KEY_ID, credentials.getAccessKeyId());
 				localEnv.override(AWSClientFactory.AWS_SECRET_ACCESS_KEY, credentials.getSecretAccessKey());
 				localEnv.override(AWSClientFactory.AWS_SESSION_TOKEN, credentials.getSessionToken());
 				this.envVars.overrideAll(localEnv);
 			}
-			
+
 		}
-		
+
 		private void withCredentials(@Nonnull Run<?, ?> run, @Nonnull EnvVars localEnv) {
 			if (!StringUtils.isNullOrEmpty(this.step.getCredentials())) {
 				StandardUsernamePasswordCredentials usernamePasswordCredentials = CredentialsProvider.findCredentialById(this.step.getCredentials(),
@@ -283,20 +283,20 @@ public class WithAWSStep extends Step {
 				}
 			}
 		}
-		
+
 		private void withRole(@Nonnull EnvVars localEnv) throws IOException, InterruptedException {
 			if (!StringUtils.isNullOrEmpty(this.step.getRole())) {
 				AWSSecurityTokenService sts = AWSClientFactory.create(AWSSecurityTokenServiceClientBuilder.standard(), this.envVars);
-				
+
 				final String accountId;
 				if (!StringUtils.isNullOrEmpty(this.step.getRoleAccount())) {
 					accountId = this.step.getRoleAccount();
 				} else {
 					accountId = sts.getCallerIdentity(new GetCallerIdentityRequest()).getAccount();
 				}
-				
+
 				String roleARN = IamRoleUtils.validRoleArn(this.step.getRole()) ? this.step.getRole() : String.format("arn:%s:iam::%s:role/%s", IamRoleUtils.selectPartitionName(this.step.getRegion()), accountId, this.step.getRole());
-				
+
 				AssumeRoleRequest request = new AssumeRoleRequest()
 						.withRoleArn(roleARN)
 						.withRoleSessionName(this.createRoleSessionName());
@@ -310,7 +310,7 @@ public class WithAWSStep extends Step {
 				AssumeRoleResult assumeRole = sts.assumeRole(request);
 
 				this.getContext().get(TaskListener.class).getLogger().format("Assumed role %s with id %s %n ", roleARN, assumeRole.getAssumedRoleUser().getAssumedRoleId());
-				
+
 				Credentials credentials = assumeRole.getCredentials();
 				localEnv.override(AWSClientFactory.AWS_ACCESS_KEY_ID, credentials.getAccessKeyId());
 				localEnv.override(AWSClientFactory.AWS_SECRET_ACCESS_KEY, credentials.getSecretAccessKey());
@@ -318,7 +318,7 @@ public class WithAWSStep extends Step {
 				this.envVars.overrideAll(localEnv);
 			}
 		}
-		
+
 		private void withRegion(@Nonnull EnvVars localEnv) throws IOException, InterruptedException {
 			if (!StringUtils.isNullOrEmpty(this.step.getRegion())) {
 				this.getContext().get(TaskListener.class).getLogger().format("Setting AWS region %s %n ", this.step.getRegion());
@@ -327,7 +327,7 @@ public class WithAWSStep extends Step {
 				this.envVars.overrideAll(localEnv);
 			}
 		}
-		
+
 		private void withEndpointUrl(@Nonnull EnvVars localEnv) throws IOException, InterruptedException {
 			if (!StringUtils.isNullOrEmpty(this.step.getEndpointUrl())) {
 				this.getContext().get(TaskListener.class).getLogger().format("Setting AWS endpointUrl %s %n ", this.step.getEndpointUrl());
@@ -335,7 +335,7 @@ public class WithAWSStep extends Step {
 				this.envVars.overrideAll(localEnv);
 			}
 		}
-		
+
 		private void withProfile(@Nonnull EnvVars localEnv) throws IOException, InterruptedException {
 			if (!StringUtils.isNullOrEmpty(this.step.getProfile())) {
 				this.getContext().get(TaskListener.class).getLogger().format("Setting AWS profile %s %n ", this.step.getProfile());
@@ -351,14 +351,14 @@ public class WithAWSStep extends Step {
 					.withBuildNumber(this.envVars.get("BUILD_NUMBER"))
 					.build();
 		}
-		
+
 		@Override
 		public void stop(@Nonnull Throwable throwable) throws Exception {
 			//
 		}
-		
+
 		private static final long serialVersionUID = 1L;
-		
+
 	}
-	
+
 }

@@ -42,29 +42,29 @@ import hudson.Extension;
 import hudson.model.TaskListener;
 
 public class CFNExecuteChangeSetStep extends Step {
-	
+
 	private final String changeSet;
 	private final String stack;
 	private Long pollInterval = 1000L;
-	
+
 	@DataBoundConstructor
 	public CFNExecuteChangeSetStep(String changeSet, String stack) {
 		this.changeSet = changeSet;
 		this.stack = stack;
 	}
-	
+
 	public String getChangeSet() {
 		return this.changeSet;
 	}
-	
+
 	public String getStack() {
 		return this.stack;
 	}
-	
+
 	public Long getPollInterval() {
 		return this.pollInterval;
 	}
-	
+
 	@DataBoundSetter
 	public void setPollInterval(Long pollInterval) {
 		this.pollInterval = pollInterval;
@@ -87,15 +87,15 @@ public class CFNExecuteChangeSetStep extends Step {
 		public String getFunctionName() {
 			return "cfnExecuteChangeSet";
 		}
-		
+
 		@Override
 		public String getDisplayName() {
 			return "Execute CloudFormation change set";
 		}
 	}
-	
+
 	public static class Execution extends StepExecution {
-		
+
 		private final transient CFNExecuteChangeSetStep step;
 
 		public Execution(CFNExecuteChangeSetStep step, StepContext context) {
@@ -108,13 +108,13 @@ public class CFNExecuteChangeSetStep extends Step {
 			final String changeSet = this.step.getChangeSet();
 			final String stack = this.step.getStack();
 			final TaskListener listener = this.getContext().get(TaskListener.class);
-			
+
 			Preconditions.checkArgument(changeSet != null && !changeSet.isEmpty(), "Change Set must not be null or empty");
-			
+
 			Preconditions.checkArgument(stack != null && !stack.isEmpty(), "Stack must not be null or empty");
-			
+
 			listener.getLogger().format("Executing CloudFormation change set %s %n", changeSet);
-			
+
 			new Thread("cfnExecuteChangeSet-" + changeSet) {
 				@Override
 				public void run() {
@@ -131,14 +131,14 @@ public class CFNExecuteChangeSetStep extends Step {
 			}.start();
 			return false;
 		}
-		
+
 		@Override
 		public void stop(@Nonnull Throwable cause) throws Exception {
 			//
 		}
-		
+
 		private static final long serialVersionUID = 1L;
-		
+
 	}
-	
+
 }

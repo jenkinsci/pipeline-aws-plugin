@@ -27,8 +27,8 @@ import org.junit.Test;
 public class S3DeleteStepTest {
 	@Test
 	public void gettersWorkAsExpected() throws Exception {
-		S3DeleteStep step = new S3DeleteStep( "my-bucket", "my-path" , false, false);
-		Assert.assertEquals( "my-bucket", step.getBucket() );
-		Assert.assertEquals( "my-path", step.getPath() );
+		S3DeleteStep step = new S3DeleteStep("my-bucket", "my-path", false, false);
+		Assert.assertEquals("my-bucket", step.getBucket());
+		Assert.assertEquals("my-path", step.getPath());
 	}
 }

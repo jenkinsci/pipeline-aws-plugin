@@ -38,7 +38,7 @@ import com.amazonaws.regions.Regions;
 import hudson.EnvVars;
 
 public class AWSClientFactory {
-	
+
 	static final String AWS_PROFILE = "AWS_PROFILE";
 	static final String AWS_DEFAULT_PROFILE = "AWS_DEFAULT_PROFILE";
 	static final String AWS_ACCESS_KEY_ID = "AWS_ACCESS_KEY_ID";
@@ -47,11 +47,11 @@ public class AWSClientFactory {
 	static final String AWS_DEFAULT_REGION = "AWS_DEFAULT_REGION";
 	static final String AWS_REGION = "AWS_REGION";
 	static final String AWS_ENDPOINT_URL = "AWS_ENDPOINT_URL";
-	
+
 	private AWSClientFactory() {
 		//
 	}
-	
+
 	public static <B extends AwsSyncClientBuilder<?, T>, T> T create(B clientBuilder, StepContext context) {
 		try {
 			return configureBuilder(clientBuilder, context.get(EnvVars.class)).build();
@@ -77,27 +77,27 @@ public class AWSClientFactory {
 		clientBuilder.setClientConfiguration(AWSClientFactory.getClientConfiguration(vars));
 		return clientBuilder;
 	}
-	
+
 	private static ClientConfiguration getClientConfiguration(EnvVars vars) {
 		ClientConfiguration clientConfiguration = new ClientConfiguration();
 		ProxyConfiguration.configure(vars, clientConfiguration);
 		return clientConfiguration;
 	}
-	
+
 	private static AWSCredentialsProvider getCredentials(EnvVars vars) {
 		AWSCredentialsProvider provider = handleStaticCredentials(vars);
 		if (provider != null) {
 			return provider;
 		}
-		
+
 		provider = handleProfile(vars);
 		if (provider != null) {
 			return provider;
 		}
-		
+
 		return new DefaultAWSCredentialsProviderChain();
 	}
-	
+
 	private static AWSCredentialsProvider handleProfile(EnvVars vars) {
 		String profile = vars.get(AWS_PROFILE, vars.get(AWS_DEFAULT_PROFILE));
 		if (profile != null) {
@@ -105,7 +105,7 @@ public class AWSClientFactory {
 		}
 		return null;
 	}
-	
+
 	private static AWSCredentialsProvider handleStaticCredentials(EnvVars vars) {
 		String accessKey = vars.get(AWS_ACCESS_KEY_ID);
 		String secretAccessKey = vars.get(AWS_SECRET_ACCESS_KEY);
@@ -118,7 +118,7 @@ public class AWSClientFactory {
 		}
 		return null;
 	}
-	
+
 	private static Region getRegion(EnvVars vars) {
 		if (vars.get(AWS_DEFAULT_REGION) != null) {
 			return Region.getRegion(Regions.fromName(vars.get(AWS_DEFAULT_REGION)));

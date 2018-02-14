@@ -41,15 +41,15 @@ import hudson.FilePath;
 import hudson.model.TaskListener;
 
 public class CFNCreateChangeSetStep extends AbstractCFNCreateStep {
-	
+
 	private final String changeSet;
-	
+
 	@DataBoundConstructor
 	public CFNCreateChangeSetStep(String changeSet, String stack) {
 		super(stack);
 		this.changeSet = changeSet;
 	}
-	
+
 	public String getChangeSet() {
 		return this.changeSet;
 	}
@@ -66,7 +66,7 @@ public class CFNCreateChangeSetStep extends AbstractCFNCreateStep {
 		public String getFunctionName() {
 			return "cfnCreateChangeSet";
 		}
-		
+
 		@Override
 		public String getDisplayName() {
 			return "Create CloudFormation change set";
@@ -77,7 +77,7 @@ public class CFNCreateChangeSetStep extends AbstractCFNCreateStep {
 			return StepUtils.requires(EnvVars.class, TaskListener.class, FilePath.class);
 		}
 	}
-	
+
 	public static class Execution extends AbstractCFNCreateStep.Execution<CFNCreateChangeSetStep> {
 
 		public Execution(CFNCreateChangeSetStep step, StepContext context) {
@@ -89,12 +89,12 @@ public class CFNCreateChangeSetStep extends AbstractCFNCreateStep {
 			final String changeSet = this.getStep().getChangeSet();
 			Preconditions.checkArgument(changeSet != null && !changeSet.isEmpty(), "Change Set must not be null or empty");
 		}
-		
+
 		@Override
 		public String getThreadName() {
 			return "cfnCreateChangeSet-" + this.getStep().getChangeSet();
 		}
-		
+
 		@Override
 		public Object whenStackExists(Collection<Parameter> parameters, Collection<Tag> tags) throws Exception {
 			final String changeSet = this.getStep().getChangeSet();
@@ -103,7 +103,7 @@ public class CFNCreateChangeSetStep extends AbstractCFNCreateStep {
 			this.getCfnStack().createChangeSet(changeSet, this.readTemplate(file), url, parameters, tags, this.getStep().getPollInterval(), ChangeSetType.UPDATE, this.getStep().getRoleArn());
 			return null;
 		}
-		
+
 		@Override
 		public Object whenStackMissing(Collection<Parameter> parameters, Collection<Tag> tags) throws Exception {
 			final String changeSet = this.getStep().getChangeSet();
@@ -112,9 +112,9 @@ public class CFNCreateChangeSetStep extends AbstractCFNCreateStep {
 			this.getCfnStack().createChangeSet(changeSet, this.readTemplate(file), url, parameters, tags, this.getStep().getPollInterval(), ChangeSetType.CREATE, this.getStep().getRoleArn());
 			return null;
 		}
-		
+
 		private static final long serialVersionUID = 1L;
-		
+
 	}
-	
+
 }

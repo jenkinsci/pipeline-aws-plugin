@@ -44,17 +44,17 @@ import hudson.model.TaskListener;
  * @author Giovanni Gargiulo
  */
 public class WaitDeployStep extends Step {
-	
+
 	/**
 	 * The DeploymentId to monitor. Example: d-3GR0HQLDN
 	 */
 	private final String deploymentId;
-	
+
 	@DataBoundConstructor
 	public WaitDeployStep(String deploymentId) {
 		this.deploymentId = deploymentId;
 	}
-	
+
 	public String getDeploymentId() {
 		return this.deploymentId;
 	}
@@ -76,23 +76,23 @@ public class WaitDeployStep extends Step {
 		public String getFunctionName() {
 			return "awaitDeploymentCompletion";
 		}
-		
+
 		@Override
 		public String getDisplayName() {
 			return "Wait for AWS CodeDeploy deployment completion";
 		}
-		
+
 	}
-	
+
 	public static class Execution extends SynchronousNonBlockingStepExecution<Void> {
 
 		private static final Long POLLING_INTERVAL = 10000L;
-		
+
 		private static final String SUCCEEDED_STATUS = "Succeeded";
-		
+
 		private static final String FAILED_STATUS = "Failed";
 
-		@SuppressFBWarnings(value="SE_TRANSIENT_FIELD_NOT_RESTORED", justification="Only used when starting.")
+		@SuppressFBWarnings(value = "SE_TRANSIENT_FIELD_NOT_RESTORED", justification = "Only used when starting.")
 		private final transient String deploymentId;
 
 		public Execution(String deploymentId, StepContext context) {
@@ -104,16 +104,16 @@ public class WaitDeployStep extends Step {
 		protected Void run() throws Exception {
 			TaskListener listener = this.getContext().get(TaskListener.class);
 			AmazonCodeDeploy client = AWSClientFactory.create(AmazonCodeDeployClientBuilder.standard(), this.getContext());
-			
+
 			listener.getLogger().format("Checking Deployment(%s) status", this.deploymentId);
-			
+
 			while (true) {
 				GetDeploymentRequest getDeploymentRequest = new GetDeploymentRequest().withDeploymentId(this.deploymentId);
 				GetDeploymentResult deployment = client.getDeployment(getDeploymentRequest);
 				String deploymentStatus = deployment.getDeploymentInfo().getStatus();
-				
+
 				listener.getLogger().format("DeploymentStatus(%s)", deploymentStatus);
-				
+
 				if (SUCCEEDED_STATUS.equals(deploymentStatus)) {
 					listener.getLogger().println("Deployment completed successfully");
 					return null;
@@ -129,13 +129,13 @@ public class WaitDeployStep extends Step {
 						//
 					}
 				}
-				
+
 			}
-			
+
 		}
-		
+
 		private static final long serialVersionUID = 1L;
-		
+
 	}
-	
+
 }

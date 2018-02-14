@@ -40,26 +40,26 @@ import hudson.Extension;
 import hudson.model.TaskListener;
 
 public class SNSPublishStep extends Step {
-	
+
 	private final String topicArn;
 	private final String subject;
 	private final String message;
-	
+
 	@DataBoundConstructor
 	public SNSPublishStep(String topicArn, String subject, String message) {
 		this.topicArn = topicArn;
 		this.subject = subject;
 		this.message = message;
 	}
-	
+
 	public String getTopicArn() {
 		return this.topicArn;
 	}
-	
+
 	public String getSubject() {
 		return this.subject;
 	}
-	
+
 	public String getMessage() {
 		return this.message;
 	}
@@ -81,15 +81,15 @@ public class SNSPublishStep extends Step {
 		public String getFunctionName() {
 			return "snsPublish";
 		}
-		
+
 		@Override
 		public String getDisplayName() {
 			return "Publish notification to SNS";
 		}
 	}
-	
+
 	public static class Execution extends StepExecution {
-		
+
 		private final transient SNSPublishStep step;
 
 		public Execution(SNSPublishStep step, StepContext context) {
@@ -102,7 +102,7 @@ public class SNSPublishStep extends Step {
 			final String topicArn = this.step.getTopicArn();
 			final String subject = this.step.getSubject();
 			final String message = this.step.getMessage();
-			
+
 			new Thread("snsPublish") {
 				@Override
 				public void run() {
@@ -121,14 +121,14 @@ public class SNSPublishStep extends Step {
 			}.start();
 			return false;
 		}
-		
+
 		@Override
 		public void stop(@Nonnull Throwable cause) throws Exception {
 			//
 		}
-		
+
 		private static final long serialVersionUID = 1L;
-		
+
 	}
-	
+
 }

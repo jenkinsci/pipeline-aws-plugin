@@ -66,7 +66,7 @@ import hudson.FilePath;
 public class FileWrapper implements Serializable {
 	private static final long serialVersionUID = 1L;
 	private static final String PATH_SUFFIX = "/";
-	
+
 	@Nonnull
 	private final String name;
 	@Nonnull
@@ -74,7 +74,7 @@ public class FileWrapper implements Serializable {
 	private final boolean directory;
 	private final long length;
 	private final long lastModified;
-	
+
 	public FileWrapper(@Nonnull String name, @Nonnull String path, boolean directory, long length, long lastModified) {
 		this.name = name;
 		this.directory = directory;
@@ -86,7 +86,7 @@ public class FileWrapper implements Serializable {
 			this.path = path;
 		}
 	}
-	
+
 	protected FileWrapper(@Nonnull FilePath base, @Nonnull FilePath file) throws IOException, InterruptedException {
 		this(file.getName(),
 			 file.getRemote().substring(base.getRemote().length() + 1),
@@ -94,45 +94,45 @@ public class FileWrapper implements Serializable {
 			 file.length(),
 			 file.lastModified());
 	}
-	
+
 	protected FileWrapper(@Nonnull FilePath file) throws IOException, InterruptedException {
 		this(file.getName(), file.getRemote(), file.isDirectory(), file.length(), file.lastModified());
 	}
-	
+
 	@Whitelisted
 	@Nonnull
 	public String getName() {
 		return this.name;
 	}
-	
+
 	@Whitelisted
 	@Nonnull
 	public String getPath() {
 		return this.path;
 	}
-	
+
 	@Whitelisted
 	public boolean isDirectory() {
 		return this.directory;
 	}
-	
+
 	@Whitelisted
 	public long getLength() {
 		return this.length;
 	}
-	
+
 	@Whitelisted
 	public long getLastModified() {
 		return this.lastModified;
 	}
-	
+
 	@Override
 	@Whitelisted
 	@Nonnull
 	public String toString() {
 		return this.getPath();
 	}
-	
+
 	@Override
 	@Whitelisted
 	public boolean equals(Object o) {
@@ -142,13 +142,13 @@ public class FileWrapper implements Serializable {
 		if (!(o instanceof FileWrapper)) {
 			return false;
 		}
-		
+
 		FileWrapper that = (FileWrapper) o;
-		
+
 		return this.getPath().equals(that.getPath());
-		
+
 	}
-	
+
 	@Override
 	@Whitelisted
 	public int hashCode() {

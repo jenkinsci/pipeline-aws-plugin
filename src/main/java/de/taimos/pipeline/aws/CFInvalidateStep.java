@@ -42,20 +42,20 @@ import hudson.Extension;
 import hudson.model.TaskListener;
 
 public class CFInvalidateStep extends Step {
-	
+
 	private final String distribution;
 	private final String[] paths;
-	
+
 	@DataBoundConstructor
 	public CFInvalidateStep(String distribution, String[] paths) {
 		this.distribution = distribution;
 		this.paths = paths.clone();
 	}
-	
+
 	public String getDistribution() {
 		return this.distribution;
 	}
-	
+
 	public String[] getPaths() {
 		return this.paths != null ? this.paths.clone() : null;
 	}
@@ -77,15 +77,15 @@ public class CFInvalidateStep extends Step {
 		public String getFunctionName() {
 			return "cfInvalidate";
 		}
-		
+
 		@Override
 		public String getDisplayName() {
 			return "Invalidate given paths in CloudFront distribution";
 		}
 	}
-	
+
 	public static class Execution extends SynchronousStepExecution<Void> {
-		
+
 		private final transient CFInvalidateStep step;
 
 		public Execution(CFInvalidateStep step, StepContext context) {
@@ -98,22 +98,22 @@ public class CFInvalidateStep extends Step {
 			TaskListener listener = this.getContext().get(TaskListener.class);
 
 			AmazonCloudFront client = AWSClientFactory.create(AmazonCloudFrontClientBuilder.standard(), this.getContext());
-			
+
 			String distribution = this.step.getDistribution();
 			String[] paths = this.step.getPaths();
-			
+
 			listener.getLogger().format("Invalidating paths %s in distribution %s %n", Arrays.toString(paths), distribution);
-			
+
 			Paths invalidationPaths = new Paths().withItems(paths).withQuantity(paths.length);
 			InvalidationBatch batch = new InvalidationBatch(invalidationPaths, Long.toString(System.currentTimeMillis()));
 			client.createInvalidation(new CreateInvalidationRequest(distribution, batch));
-			
+
 			listener.getLogger().println("Invalidation complete");
 			return null;
 		}
-		
+
 		private static final long serialVersionUID = 1L;
-		
+
 	}
-	
+
 }

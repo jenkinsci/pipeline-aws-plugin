@@ -25,7 +25,7 @@ import org.junit.Assert;
 import org.junit.Test;
 
 public class SafeNameCreatorTest {
-	
+
 	@Test
 	public void createSafeName() throws Exception {
 		Assert.assertEquals("testaccount", ListAWSAccountsStep.SafeNameCreator.createSafeName("TestAccount"));
@@ -35,5 +35,5 @@ public class SafeNameCreatorTest {
 		Assert.assertEquals("multi-special", ListAWSAccountsStep.SafeNameCreator.createSafeName("Multi$%&Special"));
 		Assert.assertEquals("account-12", ListAWSAccountsStep.SafeNameCreator.createSafeName("Account 12"));
 	}
-	
+
 }

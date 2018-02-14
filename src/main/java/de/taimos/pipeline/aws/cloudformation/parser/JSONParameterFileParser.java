@@ -32,7 +32,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 
 public class JSONParameterFileParser implements ParameterFileParser {
-	
+
 	@Override
 	public Collection<Parameter> parseParams(InputStream fileContent) throws IOException {
 		ObjectMapper mapper = new ObjectMapper();
@@ -54,5 +54,5 @@ public class JSONParameterFileParser implements ParameterFileParser {
 		}
 		return parameters;
 	}
-	
+
 }

@@ -24,17 +24,17 @@ import groovy.json.JsonBuilder;
 import net.sf.json.JSONSerializer;
 
 public class JsonUtils {
-	
+
 	private JsonUtils() {
 		// hidden constructor
 	}
-	
+
 	public static Object fromString(String string) {
 		return JSONSerializer.toJSON(string);
 	}
-	
+
 	public static String toString(Object object) {
 		return (new JsonBuilder(object)).toString();
 	}
-	
+
 }

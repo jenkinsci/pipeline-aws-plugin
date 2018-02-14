@@ -29,33 +29,33 @@ import org.kohsuke.stapler.DataBoundSetter;
 import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 
 public abstract class AbstractS3Step extends Step {
-	
+
 	protected boolean pathStyleAccessEnabled = false;
 	protected boolean payloadSigningEnabled = false;
-	
+
 	protected AbstractS3Step(final boolean pathStyleAccessEnabled, final boolean payloadSigningEnabled) {
 		this.pathStyleAccessEnabled = pathStyleAccessEnabled;
 		this.payloadSigningEnabled = payloadSigningEnabled;
 	}
-	
+
 	public boolean isPathStyleAccessEnabled() {
 		return this.pathStyleAccessEnabled;
 	}
-	
+
 	@DataBoundSetter
 	public void setPathStyleAccessEnabled(final boolean pathStyleAccessEnabled) {
 		this.pathStyleAccessEnabled = pathStyleAccessEnabled;
 	}
-	
+
 	public boolean isPayloadSigningEnabled() {
 		return this.payloadSigningEnabled;
 	}
-	
+
 	@DataBoundSetter
 	public void setPayloadSigningEnabled(final boolean payloadSigningEnabled) {
 		this.payloadSigningEnabled = payloadSigningEnabled;
 	}
-	
+
 	protected S3ClientOptions createS3ClientOptions() {
 		S3ClientOptions options = new S3ClientOptions();
 		options.setPathStyleAccessEnabled(this.isPathStyleAccessEnabled());
@@ -66,28 +66,28 @@ public abstract class AbstractS3Step extends Step {
 	public static class S3ClientOptions implements Serializable {
 		private boolean pathStyleAccessEnabled = false;
 		private boolean payloadSigningEnabled = false;
-		
+
 		public boolean isPathStyleAccessEnabled() {
 			return this.pathStyleAccessEnabled;
 		}
-		
+
 		public void setPathStyleAccessEnabled(final boolean pathStyleAccessEnabled) {
 			this.pathStyleAccessEnabled = pathStyleAccessEnabled;
 		}
-		
+
 		public boolean isPayloadSigningEnabled() {
 			return this.payloadSigningEnabled;
 		}
-		
+
 		public void setPayloadSigningEnabled(final boolean payloadSigningEnabled) {
 			this.payloadSigningEnabled = payloadSigningEnabled;
 		}
-		
+
 		protected AmazonS3ClientBuilder createAmazonS3ClientBuilder() {
 			return AmazonS3ClientBuilder.standard()
 					.withPathStyleAccessEnabled(this.isPathStyleAccessEnabled())
 					.withPayloadSigningEnabled(this.isPayloadSigningEnabled());
 		}
 	}
-	
+
 }

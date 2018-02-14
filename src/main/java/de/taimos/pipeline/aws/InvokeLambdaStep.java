@@ -46,46 +46,46 @@ import hudson.Extension;
 import hudson.model.TaskListener;
 
 public class InvokeLambdaStep extends Step {
-	
+
 	private Object payload;
 	private String payloadAsString;
 	private boolean returnValueAsString = false;
 	private final String functionName;
-	
+
 	@DataBoundConstructor
 	public InvokeLambdaStep(String functionName) {
 		this.functionName = functionName;
 	}
-	
+
 	public String getFunctionName() {
 		return this.functionName;
 	}
-	
+
 	public Object getPayload() {
 		return this.payload;
 	}
-	
+
 	@DataBoundSetter
 	public void setPayload(Object payload) {
 		this.payload = payload;
 	}
-	
+
 	public String getPayloadAsString() {
 		if (this.payload != null) {
 			return JsonUtils.toString(this.payload);
 		}
 		return this.payloadAsString;
 	}
-	
+
 	@DataBoundSetter
 	public void setPayloadAsString(String payloadAsString) {
 		this.payloadAsString = payloadAsString;
 	}
-	
+
 	public boolean isReturnValueAsString() {
 		return this.returnValueAsString;
 	}
-	
+
 	@DataBoundSetter
 	public void setReturnValueAsString(boolean returnValueAsString) {
 		this.returnValueAsString = returnValueAsString;
@@ -98,7 +98,7 @@ public class InvokeLambdaStep extends Step {
 
 	@Extension
 	public static class DescriptorImpl extends StepDescriptor {
-		
+
 		@Override
 		public Set<? extends Class<?>> getRequiredContext() {
 			return StepUtils.requiresDefault();
@@ -108,17 +108,17 @@ public class InvokeLambdaStep extends Step {
 		public String getFunctionName() {
 			return "invokeLambda";
 		}
-		
+
 		@Override
 		public String getDisplayName() {
 			return "Invoke a given Lambda function";
 		}
 	}
-	
+
 	public static class Execution extends SynchronousStepExecution<Object> {
-		
+
 		private static final long serialVersionUID = 1L;
-		
+
 		private final transient InvokeLambdaStep step;
 
 		public Execution(InvokeLambdaStep step, StepContext context) {
@@ -130,18 +130,18 @@ public class InvokeLambdaStep extends Step {
 		protected Object run() throws Exception {
 			TaskListener listener = this.getContext().get(TaskListener.class);
 			AWSLambda client = AWSClientFactory.create(AWSLambdaClientBuilder.standard(), this.getContext());
-			
+
 			String functionName = this.step.getFunctionName();
-			
+
 			listener.getLogger().format("Invoke Lambda function %s%n", functionName);
-			
+
 			InvokeRequest request = new InvokeRequest();
 			request.withFunctionName(functionName);
 			request.withPayload(this.step.getPayloadAsString());
 			request.withLogType(LogType.Tail);
-			
+
 			InvokeResult result = client.invoke(request);
-			
+
 			listener.getLogger().append(this.getLogResult(result));
 			String functionError = result.getFunctionError();
 			if (functionError != null) {
@@ -153,15 +153,15 @@ public class InvokeLambdaStep extends Step {
 				return JsonUtils.fromString(this.getPayloadAsString(result));
 			}
 		}
-		
+
 		private String getPayloadAsString(InvokeResult result) {
 			return new String(result.getPayload().array(), StandardCharsets.UTF_8);
 		}
-		
+
 		private String getLogResult(InvokeResult result) {
 			return new String(DatatypeConverter.parseBase64Binary(result.getLogResult()), StandardCharsets.UTF_8);
 		}
-		
+
 	}
-	
+
 }

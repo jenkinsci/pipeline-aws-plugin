@@ -49,7 +49,7 @@ import hudson.FilePath;
 import hudson.model.TaskListener;
 
 abstract class AbstractCFNCreateStep extends Step {
-	
+
 	private final String stack;
 	private String file;
 	private String url;
@@ -61,115 +61,115 @@ abstract class AbstractCFNCreateStep extends Step {
 	private Boolean create = true;
 	private String roleArn;
 	private String onFailure = OnFailure.DELETE.toString();
-	
+
 	public AbstractCFNCreateStep(String stack) {
 		this.stack = stack;
 	}
-	
+
 	public String getStack() {
 		return this.stack;
 	}
-	
+
 	public String getFile() {
 		return this.file;
 	}
-	
+
 	@DataBoundSetter
 	public void setFile(String file) {
 		this.file = file;
 	}
-	
+
 	public String getUrl() {
 		return this.url;
 	}
-	
+
 	@DataBoundSetter
 	public void setUrl(String url) {
 		this.url = url;
 	}
-	
+
 	public String[] getParams() {
 		return this.params != null ? this.params.clone() : null;
 	}
-	
+
 	@DataBoundSetter
 	public void setParams(String[] params) {
 		this.params = params.clone();
 	}
-	
+
 	public String[] getKeepParams() {
 		return this.keepParams != null ? this.keepParams.clone() : null;
 	}
-	
+
 	@DataBoundSetter
 	public void setKeepParams(String[] keepParams) {
 		this.keepParams = keepParams.clone();
 	}
-	
+
 	public String[] getTags() {
 		return this.tags != null ? this.tags.clone() : null;
 	}
-	
+
 	@DataBoundSetter
 	public void setTags(String[] tags) {
 		this.tags = tags.clone();
 	}
-	
+
 	public String getParamsFile() {
 		return this.paramsFile;
 	}
-	
+
 	@DataBoundSetter
 	public void setParamsFile(String paramsFile) {
 		this.paramsFile = paramsFile;
 	}
-	
+
 	public Long getPollInterval() {
 		return this.pollInterval;
 	}
-	
+
 	@DataBoundSetter
 	public void setPollInterval(Long pollInterval) {
 		this.pollInterval = pollInterval;
 	}
-	
+
 	public Boolean getCreate() {
 		return this.create;
 	}
-	
+
 	@DataBoundSetter
 	public void setCreate(Boolean create) {
 		this.create = create;
 	}
-	
+
 	public String getRoleArn() {
 		return this.roleArn;
 	}
-	
+
 	@DataBoundSetter
 	public void setRoleArn(String roleArn) {
 		this.roleArn = roleArn;
 	}
-	
+
 	public String getOnFailure() {
 		return this.onFailure;
 	}
-	
+
 	@DataBoundSetter
 	public void setOnFailure(String onFailure) {
 		this.onFailure = onFailure;
 	}
-	
+
 	abstract static class Execution<C extends AbstractCFNCreateStep> extends StepExecution {
 
 		private final transient C step;
 
 		protected abstract void checkPreconditions();
-		
+
 		protected abstract String getThreadName();
-		
+
 		protected abstract Object whenStackExists(Collection<Parameter> parameters, Collection<Tag> tags) throws Exception;
-		
+
 		protected abstract Object whenStackMissing(Collection<Parameter> parameters, Collection<Tag> tags) throws Exception;
 
 		protected Execution(C step, @Nonnull StepContext context) {
@@ -180,49 +180,49 @@ abstract class AbstractCFNCreateStep extends Step {
 		private String getStack() {
 			return this.getStep().getStack();
 		}
-		
+
 		private String getParamsFile() {
 			return this.getStep().getParamsFile();
 		}
-		
+
 		private String[] getParams() {
 			return this.getStep().getParams();
 		}
-		
+
 		private String[] getKeepParams() {
 			return this.getStep().getKeepParams();
 		}
-		
+
 		private String[] getTags() {
 			return this.getStep().getTags();
 		}
-		
+
 		private String getRoleArn() {
 			return this.getStep().getRoleArn();
 		}
-		
+
 		private Boolean getCreate() {
 			return this.getStep().getCreate();
 		}
-		
+
 		@Override
 		public boolean start() throws Exception {
-			
+
 			final String stack = this.getStack();
 			final String roleArn = this.getRoleArn();
 			final Boolean create = this.getCreate();
-			
+
 			final Collection<Parameter> params = this.parseParamsFile(this.getParamsFile());
 			params.addAll(this.parseParams(this.getParams()));
-			
+
 			final Collection<Parameter> keepParams = this.parseKeepParams(this.getKeepParams());
 			final Collection<Tag> tags = this.parseTags(this.getTags());
-			
+
 			Preconditions.checkArgument(stack != null && !stack.isEmpty(), "Stack must not be null or empty");
 			Preconditions.checkArgument(roleArn == null || IamRoleUtils.validRoleArn(roleArn), "RoleArn must be a valid ARN.");
-			
+
 			this.checkPreconditions();
-			
+
 			new Thread(Execution.this.getThreadName()) {
 				@Override
 				public void run() {
@@ -246,12 +246,12 @@ abstract class AbstractCFNCreateStep extends Step {
 			}.start();
 			return false;
 		}
-		
+
 		@Override
 		public void stop(@Nonnull Throwable throwable) throws Exception {
-		
+
 		}
-		
+
 		private Collection<Parameter> parseParamsFile(String paramsFile) {
 			try {
 				if (paramsFile == null || paramsFile.isEmpty()) {
@@ -270,7 +270,7 @@ abstract class AbstractCFNCreateStep extends Step {
 				throw new IllegalArgumentException(e);
 			}
 		}
-		
+
 		private Collection<Tag> parseTags(String[] tags) {
 			Collection<Tag> tagList = new ArrayList<>();
 			if (tags == null) {
@@ -287,7 +287,7 @@ abstract class AbstractCFNCreateStep extends Step {
 			}
 			return tagList;
 		}
-		
+
 		private Collection<Parameter> parseParams(String[] params) {
 			Collection<Parameter> parameters = new ArrayList<>();
 			if (params == null) {
@@ -304,7 +304,7 @@ abstract class AbstractCFNCreateStep extends Step {
 			}
 			return parameters;
 		}
-		
+
 		private Collection<Parameter> parseKeepParams(String[] params) {
 			Collection<Parameter> parameters = new ArrayList<>();
 			if (params == null) {
@@ -368,5 +368,5 @@ abstract class AbstractCFNCreateStep extends Step {
 			}
 		}
 	}
-	
+
 }

@@ -35,12 +35,12 @@ import com.google.common.base.Charsets;
 import com.google.common.base.Joiner;
 
 public class YAMLParameterFileParser implements ParameterFileParser {
-	
+
 	@Override
 	public Collection<Parameter> parseParams(InputStream fileContent) throws IOException {
 		Yaml yaml = new Yaml();
 		Map<String, Object> parse = (Map<String, Object>) yaml.load(new InputStreamReader(fileContent, Charsets.UTF_8));
-		
+
 		Collection<Parameter> parameters = new ArrayList<>();
 		for (Map.Entry<String, Object> entry : parse.entrySet()) {
 			Object value = entry.getValue();
@@ -53,5 +53,5 @@ public class YAMLParameterFileParser implements ParameterFileParser {
 		}
 		return parameters;
 	}
-	
+
 }

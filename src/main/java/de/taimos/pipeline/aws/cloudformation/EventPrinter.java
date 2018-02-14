@@ -46,44 +46,44 @@ import com.amazonaws.waiters.WaiterParameters;
 import hudson.model.TaskListener;
 
 public class EventPrinter {
-	
+
 	private final AmazonCloudFormation client;
 	private final TaskListener listener;
-	
+
 	public EventPrinter(AmazonCloudFormation client, TaskListener listener) {
 		this.client = client;
 		this.listener = listener;
 	}
-	
+
 	public void waitAndPrintChangeSetEvents(String stack, String changeSet, Waiter<DescribeChangeSetRequest> waiter, long pollIntervalMillis) throws ExecutionException {
-		
+
 		final BasicFuture<AmazonWebServiceRequest> waitResult = new BasicFuture<>(null);
-		
+
 		waiter.runAsync(new WaiterParameters<>(new DescribeChangeSetRequest().withStackName(stack).withChangeSetName(changeSet)), new WaiterHandler() {
 			@Override
 			public void onWaitSuccess(AmazonWebServiceRequest request) {
 				waitResult.completed(request);
 			}
-			
+
 			@Override
 			public void onWaitFailure(Exception e) {
 				waitResult.failed(e);
 			}
 		});
-		
+
 		this.waitAndPrintEvents(stack, pollIntervalMillis, waitResult);
 	}
-	
+
 	public void waitAndPrintStackEvents(String stack, Waiter<DescribeStacksRequest> waiter, long pollIntervalMillis) throws ExecutionException {
-		
+
 		final BasicFuture<AmazonWebServiceRequest> waitResult = new BasicFuture<>(null);
-		
+
 		waiter.runAsync(new WaiterParameters<>(new DescribeStacksRequest().withStackName(stack)), new WaiterHandler() {
 			@Override
 			public void onWaitSuccess(AmazonWebServiceRequest request) {
 				waitResult.completed(request);
 			}
-			
+
 			@Override
 			public void onWaitFailure(Exception e) {
 				waitResult.failed(e);
@@ -91,16 +91,16 @@ public class EventPrinter {
 		});
 		this.waitAndPrintEvents(stack, pollIntervalMillis, waitResult);
 	}
-	
+
 	private void waitAndPrintEvents(String stack, long pollIntervalMillis, BasicFuture<AmazonWebServiceRequest> waitResult) throws ExecutionException {
 		Date startDate = new Date();
 		String lastEventId = null;
 		this.printLine();
 		this.printStackName(stack);
 		this.printLine();
-		
+
 		SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
-		
+
 		if (pollIntervalMillis > 0) {
 			while (!waitResult.isDone()) {
 				try {
@@ -130,14 +130,14 @@ public class EventPrinter {
 				}
 			}
 		}
-		
+
 		try {
 			waitResult.get();
 		} catch (InterruptedException e) {
 			this.listener.getLogger().format("Failed to wait for CFN action to complete: %s", e.getMessage());
 		}
 	}
-	
+
 	private void printEvent(SimpleDateFormat sdf, StackEvent event) {
 		String time = this.padRight(sdf.format(event.getTimestamp()), 25);
 		String logicalResourceId = this.padRight(event.getLogicalResourceId(), 20);
@@ -145,17 +145,17 @@ public class EventPrinter {
 		String resourceStatusReason = this.padRight(event.getResourceStatusReason(), 140);
 		this.listener.getLogger().format("| %s | %s | %s | %s |%n", time, logicalResourceId, resourceStatus, resourceStatusReason);
 	}
-	
+
 	private void printLine() {
 		this.listener.getLogger().println(StringUtils.repeat("-", 231));
 	}
-	
+
 	private void printStackName(String stackName) {
 		this.listener.getLogger().println("| " + this.padRight("Stack: " + stackName, 227) + " |");
 	}
-	
+
 	private String padRight(String s, int len) {
 		return String.format("%1$-" + len + "s", (s != null ? s : "")).substring(0, len);
 	}
-	
+
 }

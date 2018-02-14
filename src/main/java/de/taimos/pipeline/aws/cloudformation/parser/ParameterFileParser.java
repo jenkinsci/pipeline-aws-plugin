@@ -28,7 +28,7 @@ import java.util.Collection;
 import com.amazonaws.services.cloudformation.model.Parameter;
 
 public interface ParameterFileParser {
-	
+
 	Collection<Parameter> parseParams(InputStream fileContent) throws IOException;
-	
+
 }

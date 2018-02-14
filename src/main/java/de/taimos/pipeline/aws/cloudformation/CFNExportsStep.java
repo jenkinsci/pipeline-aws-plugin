@@ -46,7 +46,7 @@ import hudson.Extension;
 import hudson.model.TaskListener;
 
 public class CFNExportsStep extends Step {
-	
+
 	@DataBoundConstructor
 	public CFNExportsStep() {
 		//
@@ -69,15 +69,15 @@ public class CFNExportsStep extends Step {
 		public String getFunctionName() {
 			return "cfnExports";
 		}
-		
+
 		@Override
 		public String getDisplayName() {
 			return "Describe CloudFormation global exports";
 		}
 	}
-	
+
 	public static class Execution extends StepExecution {
-		
+
 		private transient CFNExportsStep step;
 
 		public Execution(StepContext context) {
@@ -87,7 +87,7 @@ public class CFNExportsStep extends Step {
 		@Override
 		public boolean start() throws Exception {
 			this.getContext().get(TaskListener.class).getLogger().format("Getting global exports of CloudFormation %n");
-			
+
 			new Thread("cfnExports") {
 				@Override
 				public void run() {
@@ -115,14 +115,14 @@ public class CFNExportsStep extends Step {
 			}
 			return map;
 		}
-		
+
 		@Override
 		public void stop(@Nonnull Throwable cause) throws Exception {
 			//
 		}
-		
+
 		private static final long serialVersionUID = 1L;
-		
+
 	}
-	
+
 }

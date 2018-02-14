@@ -44,7 +44,7 @@ import hudson.Extension;
 import hudson.model.TaskListener;
 
 public class AWSIdentityStep extends Step {
-	
+
 	@DataBoundConstructor
 	public AWSIdentityStep() {
 		//
@@ -62,7 +62,7 @@ public class AWSIdentityStep extends Step {
 		public String getFunctionName() {
 			return "awsIdentity";
 		}
-		
+
 		@Override
 		public String getDisplayName() {
 			return "Print and return the AWS identity";
@@ -73,9 +73,9 @@ public class AWSIdentityStep extends Step {
 			return StepUtils.requiresDefault();
 		}
 	}
-	
+
 	public static class Execution extends SynchronousStepExecution<Map<String, String>> {
-		
+
 		protected Execution(@Nonnull StepContext context) {
 			super(context);
 		}
@@ -84,18 +84,18 @@ public class AWSIdentityStep extends Step {
 		protected Map<String, String> run() throws Exception {
 			AWSSecurityTokenService sts = AWSClientFactory.create(AWSSecurityTokenServiceClientBuilder.standard(), this.getContext());
 			GetCallerIdentityResult identity = sts.getCallerIdentity(new GetCallerIdentityRequest());
-			
+
 			this.getContext().get(TaskListener.class).getLogger().format("Current AWS identity: %s - %s - %s %n", identity.getAccount(), identity.getUserId(), identity.getArn());
-			
+
 			Map<String, String> info = new HashMap<>();
 			info.put("account", identity.getAccount());
 			info.put("user", identity.getUserId());
 			info.put("arn", identity.getArn());
 			return info;
 		}
-		
+
 		private static final long serialVersionUID = 1L;
-		
+
 	}
-	
+
 }

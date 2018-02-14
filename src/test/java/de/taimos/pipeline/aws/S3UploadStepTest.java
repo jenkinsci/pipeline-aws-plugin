@@ -21,41 +21,42 @@
 
 package de.taimos.pipeline.aws;
 
-import com.amazonaws.services.s3.model.CannedAccessControlList;
 import org.junit.Assert;
 import org.junit.Test;
+
+import com.amazonaws.services.s3.model.CannedAccessControlList;
 
 public class S3UploadStepTest {
 	@Test
 	public void gettersWorkAsExpectedForFileCase() throws Exception {
-		S3UploadStep step = new S3UploadStep( "my-bucket" , false, false);
-		step.setFile( "my-file" );
+		S3UploadStep step = new S3UploadStep("my-bucket", false, false);
+		step.setFile("my-file");
 		step.setKmsId("alias/foo");
 		step.setAcl(CannedAccessControlList.PublicRead);
 		step.setCacheControl("my-cachecontrol");
-		Assert.assertEquals( "my-file", step.getFile() );
-		Assert.assertEquals( "my-bucket", step.getBucket() );
-		Assert.assertEquals( CannedAccessControlList.PublicRead, step.getAcl() );
-		Assert.assertEquals( "my-cachecontrol", step.getCacheControl() );
+		Assert.assertEquals("my-file", step.getFile());
+		Assert.assertEquals("my-bucket", step.getBucket());
+		Assert.assertEquals(CannedAccessControlList.PublicRead, step.getAcl());
+		Assert.assertEquals("my-cachecontrol", step.getCacheControl());
 		Assert.assertEquals("alias/foo", step.getKmsId());
 	}
 
 	@Test
 	public void gettersWorkAsExpectedForPatternCase() throws Exception {
-		S3UploadStep step = new S3UploadStep( "my-bucket", false, false);
-		step.setIncludePathPattern( "**" );
-		step.setExcludePathPattern( "**/*.svg" );
-		step.setWorkingDir( "dist" );
-		Assert.assertEquals( "dist", step.getWorkingDir() );
-		Assert.assertEquals( "**", step.getIncludePathPattern() );
-		Assert.assertEquals( "**/*.svg", step.getExcludePathPattern() );
-		Assert.assertEquals( "my-bucket", step.getBucket() );
+		S3UploadStep step = new S3UploadStep("my-bucket", false, false);
+		step.setIncludePathPattern("**");
+		step.setExcludePathPattern("**/*.svg");
+		step.setWorkingDir("dist");
+		Assert.assertEquals("dist", step.getWorkingDir());
+		Assert.assertEquals("**", step.getIncludePathPattern());
+		Assert.assertEquals("**/*.svg", step.getExcludePathPattern());
+		Assert.assertEquals("my-bucket", step.getBucket());
 	}
 
 	@Test
 	public void defaultPathIsEmpty() throws Exception {
-		S3UploadStep step = new S3UploadStep( "my-bucket", false, false );
-		step.setFile( "my-file" );
-		Assert.assertEquals( "", step.getPath() );
+		S3UploadStep step = new S3UploadStep("my-bucket", false, false);
+		step.setFile("my-file");
+		Assert.assertEquals("", step.getPath());
 	}
 }

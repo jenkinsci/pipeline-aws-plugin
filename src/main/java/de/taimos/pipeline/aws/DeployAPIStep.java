@@ -42,39 +42,39 @@ import hudson.Extension;
 import hudson.model.TaskListener;
 
 public class DeployAPIStep extends Step {
-	
+
 	private final String stage;
 	private final String api;
 	private String description;
 	private String[] variables;
-	
+
 	@DataBoundConstructor
 	public DeployAPIStep(String api, String stage) {
 		this.api = api;
 		this.stage = stage;
 	}
-	
+
 	public String getStage() {
 		return this.stage;
 	}
-	
+
 	public String getApi() {
 		return this.api;
 	}
-	
+
 	public String getDescription() {
 		return this.description;
 	}
-	
+
 	@DataBoundSetter
 	public void setDescription(String description) {
 		this.description = description;
 	}
-	
+
 	public String[] getVariables() {
 		return this.variables != null ? this.variables.clone() : null;
 	}
-	
+
 	@DataBoundSetter
 	public void setVariables(String[] variables) {
 		this.variables = variables.clone();
@@ -97,15 +97,15 @@ public class DeployAPIStep extends Step {
 		public String getFunctionName() {
 			return "deployAPI";
 		}
-		
+
 		@Override
 		public String getDisplayName() {
 			return "Deploy the given API Gateway API";
 		}
 	}
-	
+
 	public static class Execution extends SynchronousStepExecution<Void> {
-		
+
 		private final transient DeployAPIStep step;
 
 		public Execution(DeployAPIStep step, StepContext context) {
@@ -117,12 +117,12 @@ public class DeployAPIStep extends Step {
 		protected Void run() throws Exception {
 			TaskListener listener = this.getContext().get(TaskListener.class);
 			AmazonApiGateway client = AWSClientFactory.create(AmazonApiGatewayClient.builder(), this.getContext());
-			
+
 			String stage = this.step.getStage();
 			String api = this.step.getApi();
-			
+
 			listener.getLogger().format("Deploying API %s to stage %s %n", api, stage);
-			
+
 			CreateDeploymentRequest request = new CreateDeploymentRequest();
 			request.withRestApiId(api);
 			request.withStageName(stage);
@@ -132,15 +132,15 @@ public class DeployAPIStep extends Step {
 			if (this.step.getVariables() != null && this.step.getVariables().length > 0) {
 				request.withVariables(this.parseVariables(this.step.getVariables()));
 			}
-			
+
 			client.createDeployment(request);
-			
+
 			listener.getLogger().println("Deployment complete");
 			return null;
 		}
-		
+
 		private static final long serialVersionUID = 1L;
-		
+
 		private Map<String, String> parseVariables(String[] variables) {
 			Map<String, String> map = new HashMap<>();
 			for (String var : variables) {
@@ -153,5 +153,5 @@ public class DeployAPIStep extends Step {
 			return map;
 		}
 	}
-	
+
 }

@@ -39,13 +39,12 @@ import com.amazonaws.services.ecr.model.GetAuthorizationTokenRequest;
 import com.amazonaws.services.ecr.model.GetAuthorizationTokenResult;
 
 import de.taimos.pipeline.aws.utils.StepUtils;
-import hudson.EnvVars;
 import hudson.Extension;
 
 public class ECRLoginStep extends Step {
-	
+
 	private Boolean email = false;
-	
+
 	@DataBoundConstructor
 	public ECRLoginStep() {
 		//
@@ -60,19 +59,19 @@ public class ECRLoginStep extends Step {
 	public void setEmail(Boolean email) {
 		this.email = email;
 	}
-	
+
 	public Boolean getEmail() {
 		return this.email;
 	}
-	
+
 	@Extension
 	public static class DescriptorImpl extends StepDescriptor {
-		
+
 		@Override
 		public String getFunctionName() {
 			return "ecrLogin";
 		}
-		
+
 		@Override
 		public String getDisplayName() {
 			return "Create and return the ECR login string";
@@ -83,7 +82,7 @@ public class ECRLoginStep extends Step {
 			return StepUtils.requiresDefault();
 		}
 	}
-	
+
 	public static class Execution extends SynchronousStepExecution<String> {
 
 		private final transient ECRLoginStep step;
@@ -96,13 +95,13 @@ public class ECRLoginStep extends Step {
 		@Override
 		protected String run() throws Exception {
 			AmazonECR ecr = AWSClientFactory.create(AmazonECRClientBuilder.standard(), this.getContext());
-			
+
 			GetAuthorizationTokenResult token = ecr.getAuthorizationToken(new GetAuthorizationTokenRequest());
-			
+
 			if (token.getAuthorizationData().size() != 1) {
 				throw new RuntimeException("Did not get authorizationData from AWS");
 			}
-			
+
 			AuthorizationData authorizationData = token.getAuthorizationData().get(0);
 			byte[] bytes = org.apache.commons.codec.binary.Base64.decodeBase64(authorizationData.getAuthorizationToken());
 			String data = new String(bytes, Charsets.UTF_8);
@@ -110,13 +109,13 @@ public class ECRLoginStep extends Step {
 			if (parts.length != 2) {
 				throw new RuntimeException("Got invalid authorizationData from AWS");
 			}
-			
+
 			String emailString = this.step.getEmail() ? "-e none" : "";
 			return String.format("docker login -u %s -p %s %s %s", parts[0], parts[1], emailString, authorizationData.getProxyEndpoint());
 		}
-		
+
 		private static final long serialVersionUID = 1L;
-		
+
 	}
-	
+
 }

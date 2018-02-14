@@ -30,17 +30,17 @@ final class RoleSessionNameBuilder {
 	private static final int NUMBER_OF_SEPARATORS = 2;
 	private final String jobName;
 	private String buildNumber;
-	
+
 	private RoleSessionNameBuilder(String jobName) {
 		this.jobName = jobName;
 	}
-	
+
 	String build() {
 		final String sanitizedJobName = this.sanitizeString(this.jobName);
 		final String sanitizedBuildNumber = this.sanitizeString(this.buildNumber);
-		
+
 		final int maxJobNameLength = ROLE_SESSION_NAME_MAX_LENGTH - (SESSION_NAME_PREFIX.length() + sanitizedBuildNumber.length() + NUMBER_OF_SEPARATORS);
-		
+
 		final int jobNameLength = sanitizedJobName.length();
 		String finalJobName = sanitizedJobName;
 		if (jobNameLength > maxJobNameLength) {
@@ -48,16 +48,16 @@ final class RoleSessionNameBuilder {
 		}
 		return Joiner.on("-").join(SESSION_NAME_PREFIX, finalJobName, sanitizedBuildNumber);
 	}
-	
+
 	static RoleSessionNameBuilder withJobName(final String jobName) {
 		return new RoleSessionNameBuilder(jobName);
 	}
-	
+
 	RoleSessionNameBuilder withBuildNumber(final String buildNumber) {
 		this.buildNumber = buildNumber;
 		return this;
 	}
-	
+
 	private String sanitizeString(String s) {
 		String stringWithoutEncoding = "";
 		try {

@@ -65,7 +65,7 @@ import hudson.remoting.VirtualChannel;
 import jenkins.MasterToSlaveFileCallable;
 
 public class S3UploadStep extends AbstractS3Step {
-	
+
 	private final String bucket;
 	private String file;
 	private String path = "";
@@ -77,26 +77,26 @@ public class S3UploadStep extends AbstractS3Step {
 	private CannedAccessControlList acl;
 	private String cacheControl;
 	private String contentType;
-	
+
 	@DataBoundConstructor
 	public S3UploadStep(String bucket, boolean pathStyleAccessEnabled, boolean payloadSigningEnabled) {
 		super(pathStyleAccessEnabled, payloadSigningEnabled);
 		this.bucket = bucket;
 	}
-	
+
 	public String getFile() {
 		return this.file;
 	}
-	
+
 	@DataBoundSetter
 	public void setFile(String file) {
 		this.file = file;
 	}
-	
+
 	public String getBucket() {
 		return this.bucket;
 	}
-	
+
 	public String getPath() {
 		return this.path;
 	}
@@ -114,34 +114,34 @@ public class S3UploadStep extends AbstractS3Step {
 	public void setPath(String path) {
 		this.path = path;
 	}
-	
+
 	public String getIncludePathPattern() {
 		return this.includePathPattern;
 	}
-	
+
 	@DataBoundSetter
 	public void setIncludePathPattern(String includePathPattern) {
 		this.includePathPattern = includePathPattern;
 	}
-	
+
 	public String getExcludePathPattern() {
 		return this.excludePathPattern;
 	}
-	
+
 	@DataBoundSetter
 	public void setExcludePathPattern(String excludePathPattern) {
 		this.excludePathPattern = excludePathPattern;
 	}
-	
+
 	public String getWorkingDir() {
 		return this.workingDir;
 	}
-	
+
 	@DataBoundSetter
 	public void setWorkingDir(String workingDir) {
 		this.workingDir = workingDir;
 	}
-	
+
 	public String[] getMetadatas() {
 		if (this.metadatas != null) {
 			return this.metadatas.clone();
@@ -149,7 +149,7 @@ public class S3UploadStep extends AbstractS3Step {
 			return null;
 		}
 	}
-	
+
 	@DataBoundSetter
 	public void setMetadatas(String[] metadatas) {
 		if (metadatas != null) {
@@ -158,29 +158,29 @@ public class S3UploadStep extends AbstractS3Step {
 			this.metadatas = null;
 		}
 	}
-	
+
 	public CannedAccessControlList getAcl() {
 		return this.acl;
 	}
-	
+
 	@DataBoundSetter
 	public void setAcl(CannedAccessControlList acl) {
 		this.acl = acl;
 	}
-	
+
 	public String getCacheControl() {
 		return this.cacheControl;
 	}
-	
+
 	@DataBoundSetter
 	public void setCacheControl(final String cacheControl) {
 		this.cacheControl = cacheControl;
 	}
-	
+
 	public String getContentType() {
 		return this.contentType;
 	}
-	
+
 	@DataBoundSetter
 	public void setContentType(String contentType) {
 		this.contentType = contentType;
@@ -203,15 +203,15 @@ public class S3UploadStep extends AbstractS3Step {
 		public String getFunctionName() {
 			return "s3Upload";
 		}
-		
+
 		@Override
 		public String getDisplayName() {
 			return "Copy file to S3";
 		}
 	}
-	
+
 	public static class Execution extends StepExecution {
-		
+
 		protected static final long serialVersionUID = 1L;
 
 		protected final transient S3UploadStep step;
@@ -234,7 +234,7 @@ public class S3UploadStep extends AbstractS3Step {
 			final CannedAccessControlList acl = this.step.getAcl();
 			final String cacheControl = this.step.getCacheControl();
 			final String contentType = this.step.getContentType();
-			
+
 			if (this.step.getMetadatas() != null && this.step.getMetadatas().length != 0) {
 				for (String metadata : this.step.getMetadatas()) {
 					if (metadata.split(":").length == 2) {
@@ -242,11 +242,11 @@ public class S3UploadStep extends AbstractS3Step {
 					}
 				}
 			}
-			
+
 			Preconditions.checkArgument(bucket != null && !bucket.isEmpty(), "Bucket must not be null or empty");
 			Preconditions.checkArgument(file != null || includePathPattern != null, "File or IncludePathPattern must not be null");
 			Preconditions.checkArgument(includePathPattern == null || file == null, "File and IncludePathPattern cannot be use together");
-			
+
 			final List<FilePath> children = new ArrayList<>();
 			final FilePath dir;
 			if (workingDir != null && !"".equals(workingDir.trim())) {
@@ -260,9 +260,9 @@ public class S3UploadStep extends AbstractS3Step {
 				children.addAll(Arrays.asList(dir.list(includePathPattern, excludePathPattern, true)));
 			} else {
 				children.addAll(Arrays.asList(dir.list(includePathPattern, null, true)));
-				
+
 			}
-			
+
 			new Thread("s3Upload") {
 				@Override
 				@SuppressFBWarnings(value = "REC_CATCH_EXCEPTION", justification = "RuntimeExceptions need to be catched")
@@ -280,9 +280,9 @@ public class S3UploadStep extends AbstractS3Step {
 								Execution.this.getContext().onFailure(new FileNotFoundException(child.toURI().toString()));
 								return;
 							}
-							
+
 							child.act(new RemoteUploader(Execution.this.step.createS3ClientOptions(), Execution.this.getContext().get(EnvVars.class), listener, bucket, path, metadatas, acl, cacheControl, contentType, kmsId));
-							
+
 							listener.getLogger().println("Upload complete");
 							Execution.this.getContext().onSuccess(String.format("s3://%s/%s", bucket, path));
 						} else {
@@ -302,16 +302,16 @@ public class S3UploadStep extends AbstractS3Step {
 			}.start();
 			return false;
 		}
-		
+
 		@Override
 		public void stop(@Nonnull Throwable cause) throws Exception {
 			//
 		}
-		
+
 	}
-	
+
 	private static class RemoteUploader extends MasterToSlaveFileCallable<Void> {
-		
+
 		protected static final long serialVersionUID = 1L;
 		private final S3ClientOptions amazonS3ClientOptions;
 		private final EnvVars envVars;
@@ -431,11 +431,11 @@ public class S3UploadStep extends AbstractS3Step {
 			}
 			return null;
 		}
-		
+
 	}
-	
+
 	private static class RemoteListUploader extends MasterToSlaveFileCallable<Void> {
-		
+
 		protected static final long serialVersionUID = 1L;
 		private final S3ClientOptions amazonS3ClientOptions;
 		private final EnvVars envVars;
@@ -448,7 +448,7 @@ public class S3UploadStep extends AbstractS3Step {
 		private final String cacheControl;
 		private final String contentType;
 		private final String kmsId;
-		
+
 		RemoteListUploader(S3ClientOptions amazonS3ClientOptions, EnvVars envVars, TaskListener taskListener, List<File> fileList, String bucket, String path, Map<String, String> metadatas, CannedAccessControlList acl, final String cacheControl, final String contentType, String kmsId) {
 			this.amazonS3ClientOptions = amazonS3ClientOptions;
 			this.envVars = envVars;
@@ -462,7 +462,7 @@ public class S3UploadStep extends AbstractS3Step {
 			this.contentType = contentType;
 			this.kmsId = kmsId;
 		}
-		
+
 		@Override
 		public Void invoke(File localFile, VirtualChannel channel) throws IOException, InterruptedException {
 			TransferManager mgr = TransferManagerBuilder.standard()
@@ -515,19 +515,19 @@ public class S3UploadStep extends AbstractS3Step {
 	}
 
 	private static class FeedList extends MasterToSlaveFileCallable<Void> {
-		
+
 		private final List<File> fileList;
-		
+
 		FeedList(List<File> fileList) {
 			this.fileList = fileList;
 		}
-		
+
 		@Override
 		public Void invoke(File localFile, VirtualChannel channel) throws IOException, InterruptedException {
 			this.fileList.add(localFile);
 			return null;
 		}
-		
+
 	}
-	
+
 }

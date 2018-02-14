@@ -47,7 +47,7 @@ import hudson.Extension;
 import hudson.model.TaskListener;
 
 public class ListAWSAccountsStep extends Step {
-	
+
 	@DataBoundConstructor
 	public ListAWSAccountsStep() {
 		//
@@ -60,7 +60,7 @@ public class ListAWSAccountsStep extends Step {
 
 	@Extension
 	public static class DescriptorImpl extends StepDescriptor {
-		
+
 		@Override
 		public Set<? extends Class<?>> getRequiredContext() {
 			return StepUtils.requiresDefault();
@@ -70,13 +70,13 @@ public class ListAWSAccountsStep extends Step {
 		public String getFunctionName() {
 			return "listAWSAccounts";
 		}
-		
+
 		@Override
 		public String getDisplayName() {
 			return "List all AWS accounts of the organization";
 		}
 	}
-	
+
 	public static class Execution extends StepExecution {
 
 		public Execution(StepContext context) {
@@ -86,13 +86,13 @@ public class ListAWSAccountsStep extends Step {
 		@Override
 		public boolean start() throws Exception {
 			this.getContext().get(TaskListener.class).getLogger().format("Getting AWS accounts %n");
-			
+
 			new Thread("listAWSAccounts") {
 				@Override
 				public void run() {
 					AWSOrganizations client = AWSClientFactory.create(AWSOrganizationsClientBuilder.standard(), Execution.this.getContext());
 					ListAccountsResult exports = client.listAccounts(new ListAccountsRequest());
-					
+
 					List<Map<String, String>> accounts = new ArrayList<>();
 					for (Account account : exports.getAccounts()) {
 						Map<String, String> awsAccount = new HashMap<>();
@@ -103,7 +103,7 @@ public class ListAWSAccountsStep extends Step {
 						awsAccount.put("status", account.getStatus());
 						accounts.add(awsAccount);
 					}
-					
+
 					try {
 						Execution.this.getContext().onSuccess(accounts);
 					} catch (AmazonCloudFormationException e) {
@@ -113,26 +113,26 @@ public class ListAWSAccountsStep extends Step {
 			}.start();
 			return false;
 		}
-		
+
 		@Override
 		public void stop(@Nonnull Throwable cause) throws Exception {
 			//
 		}
-		
+
 		private static final long serialVersionUID = 1L;
-		
+
 	}
-	
+
 	public static class SafeNameCreator {
-		
+
 		private SafeNameCreator() {
 			// hidden constructor
 		}
-		
+
 		public static String createSafeName(String name) {
 			return name.replaceAll("[^A-Za-z0-9-]", "-").replaceAll("-+", "-").toLowerCase();
 		}
-		
+
 	}
-	
+
 }

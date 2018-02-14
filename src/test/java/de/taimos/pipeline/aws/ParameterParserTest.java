@@ -32,34 +32,34 @@ import de.taimos.pipeline.aws.cloudformation.parser.JSONParameterFileParser;
 import de.taimos.pipeline.aws.cloudformation.parser.YAMLParameterFileParser;
 
 public class ParameterParserTest {
-	
+
 	@Test
 	public void shouldParseYAML() throws Exception {
 		YAMLParameterFileParser parser = new YAMLParameterFileParser();
 		Collection<Parameter> parameters = parser.parseParams(this.getClass().getResourceAsStream("/params.yaml"));
 		Parameter[] array = parameters.toArray(new Parameter[0]);
 		Assert.assertEquals(2, array.length);
-		
+
 		Parameter param1 = array[0];
 		Assert.assertEquals("Param1", param1.getParameterKey());
 		Assert.assertEquals("Value1", param1.getParameterValue());
-		
+
 		Parameter param2 = array[1];
 		Assert.assertEquals("Param2", param2.getParameterKey());
 		Assert.assertEquals("Val2a,Val2b", param2.getParameterValue());
 	}
-	
+
 	@Test
 	public void shouldParseJSON() throws Exception {
 		JSONParameterFileParser parser = new JSONParameterFileParser();
 		Collection<Parameter> parameters = parser.parseParams(this.getClass().getResourceAsStream("/params.json"));
 		Parameter[] array = parameters.toArray(new Parameter[0]);
 		Assert.assertEquals(2, array.length);
-		
+
 		Parameter param1 = array[0];
 		Assert.assertEquals("Param1", param1.getParameterKey());
 		Assert.assertEquals("Value1", param1.getParameterValue());
-		
+
 		Parameter param2 = array[1];
 		Assert.assertEquals("Param2", param2.getParameterKey());
 		Assert.assertEquals("Value2", param2.getParameterValue());

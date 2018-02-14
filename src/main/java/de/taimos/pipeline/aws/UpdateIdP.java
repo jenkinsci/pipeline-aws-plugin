@@ -48,20 +48,20 @@ import hudson.FilePath;
 import hudson.model.TaskListener;
 
 public class UpdateIdP extends Step {
-	
+
 	private final String name;
 	private final String metadata;
-	
+
 	@DataBoundConstructor
 	public UpdateIdP(String name, String metadata) {
 		this.name = name;
 		this.metadata = metadata;
 	}
-	
+
 	public String getName() {
 		return this.name;
 	}
-	
+
 	public String getMetadata() {
 		return this.metadata;
 	}
@@ -83,15 +83,15 @@ public class UpdateIdP extends Step {
 		public String getFunctionName() {
 			return "updateIdP";
 		}
-		
+
 		@Override
 		public String getDisplayName() {
 			return "Update thirdparty Identity Provider";
 		}
 	}
-	
+
 	public static class Execution extends StepExecution {
-		
+
 		private final transient UpdateIdP step;
 
 		public Execution(UpdateIdP step, StepContext context) {
@@ -103,17 +103,17 @@ public class UpdateIdP extends Step {
 		public boolean start() throws Exception {
 			final String name = this.step.getName();
 			final String metadata = this.step.getMetadata();
-			
+
 			new Thread("updateIDP") {
 				@Override
 				public void run() {
 					try {
 						TaskListener listener = Execution.this.getContext().get(TaskListener.class);
 						AmazonIdentityManagement iamClient = AWSClientFactory.create(AmazonIdentityManagementClientBuilder.standard(), Execution.this.getContext());
-						
+
 						listener.getLogger().format("Checking for identity provider %s %n", name);
 						ListSAMLProvidersResult listResult = iamClient.listSAMLProviders();
-						
+
 						String providerARN = null;
 						for (SAMLProviderListEntry entry : listResult.getSAMLProviderList()) {
 							String entryArn = entry.getArn();
@@ -123,7 +123,7 @@ public class UpdateIdP extends Step {
 								break;
 							}
 						}
-						
+
 						if (providerARN != null) {
 							// Update IdP
 							UpdateSAMLProviderRequest request = new UpdateSAMLProviderRequest();
@@ -150,7 +150,7 @@ public class UpdateIdP extends Step {
 			}.start();
 			return false;
 		}
-		
+
 		private String readMetadata(String file) {
 			if (file == null) {
 				return null;
@@ -161,14 +161,14 @@ public class UpdateIdP extends Step {
 				throw new IllegalArgumentException(e);
 			}
 		}
-		
+
 		@Override
 		public void stop(@Nonnull Throwable cause) throws Exception {
 			//
 		}
-		
+
 		private static final long serialVersionUID = 1L;
-		
+
 	}
-	
+
 }

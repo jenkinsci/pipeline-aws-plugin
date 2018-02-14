@@ -42,18 +42,18 @@ import hudson.FilePath;
 import hudson.model.TaskListener;
 
 public class CFNUpdateStep extends AbstractCFNCreateStep {
-	
+
 	private Integer timeoutInMinutes;
-	
+
 	@DataBoundConstructor
 	public CFNUpdateStep(String stack) {
 		super(stack);
 	}
-	
+
 	public Integer getTimeoutInMinutes() {
 		return this.timeoutInMinutes;
 	}
-	
+
 	@DataBoundSetter
 	public void setTimeoutInMinutes(Integer timeoutInMinutes) {
 		this.timeoutInMinutes = timeoutInMinutes;
@@ -66,7 +66,7 @@ public class CFNUpdateStep extends AbstractCFNCreateStep {
 
 	@Extension
 	public static class DescriptorImpl extends StepDescriptor {
-		
+
 		@Override
 		public Set<? extends Class<?>> getRequiredContext() {
 			return StepUtils.requires(EnvVars.class, TaskListener.class, FilePath.class);
@@ -76,15 +76,15 @@ public class CFNUpdateStep extends AbstractCFNCreateStep {
 		public String getFunctionName() {
 			return "cfnUpdate";
 		}
-		
+
 		@Override
 		public String getDisplayName() {
 			return "Create or Update CloudFormation stack";
 		}
 	}
-	
+
 	public static class Execution extends AbstractCFNCreateStep.Execution<CFNUpdateStep> {
-		
+
 		protected Execution(CFNUpdateStep step, @Nonnull StepContext context) {
 			super(step, context);
 		}
@@ -93,12 +93,12 @@ public class CFNUpdateStep extends AbstractCFNCreateStep {
 		public void checkPreconditions() {
 			// nothing to do here
 		}
-		
+
 		@Override
 		public String getThreadName() {
 			return "cfnUpdate-" + this.getStep().getStack();
 		}
-		
+
 		@Override
 		public Object whenStackExists(Collection<Parameter> parameters, Collection<Tag> tags) throws Exception {
 			final String file = this.getStep().getFile();
@@ -107,7 +107,7 @@ public class CFNUpdateStep extends AbstractCFNCreateStep {
 			cfnStack.update(this.readTemplate(file), url, parameters, tags, this.getStep().getPollInterval(), this.getStep().getRoleArn());
 			return cfnStack.describeOutputs();
 		}
-		
+
 		@Override
 		public Object whenStackMissing(Collection<Parameter> parameters, Collection<Tag> tags) throws Exception {
 			final String file = this.getStep().getFile();
@@ -116,9 +116,9 @@ public class CFNUpdateStep extends AbstractCFNCreateStep {
 			cfnStack.create(this.readTemplate(file), url, parameters, tags, this.getStep().getTimeoutInMinutes(), this.getStep().getPollInterval(), this.getStep().getRoleArn(), this.getStep().getOnFailure());
 			return cfnStack.describeOutputs();
 		}
-		
+
 		private static final long serialVersionUID = 1L;
-		
+
 	}
-	
+
 }

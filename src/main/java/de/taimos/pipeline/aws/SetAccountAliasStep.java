@@ -41,14 +41,14 @@ import hudson.Extension;
 import hudson.model.TaskListener;
 
 public class SetAccountAliasStep extends Step {
-	
+
 	private final String name;
-	
+
 	@DataBoundConstructor
 	public SetAccountAliasStep(String name) {
 		this.name = name;
 	}
-	
+
 	public String getName() {
 		return this.name;
 	}
@@ -70,16 +70,16 @@ public class SetAccountAliasStep extends Step {
 		public String getFunctionName() {
 			return "setAccountAlias";
 		}
-		
+
 		@Override
 		public String getDisplayName() {
 			return "Set the AWS account alias";
 		}
 	}
-	
+
 	public static class Execution extends SynchronousStepExecution<Void> {
 
-		@SuppressFBWarnings(value="SE_TRANSIENT_FIELD_NOT_RESTORED", justification="Only used when starting.")
+		@SuppressFBWarnings(value = "SE_TRANSIENT_FIELD_NOT_RESTORED", justification = "Only used when starting.")
 		private final transient String name;
 
 		public Execution(String name, StepContext context) {
@@ -91,10 +91,10 @@ public class SetAccountAliasStep extends Step {
 		protected Void run() throws Exception {
 			TaskListener listener = this.getContext().get(TaskListener.class);
 			AmazonIdentityManagement iamClient = AWSClientFactory.create(AmazonIdentityManagementClientBuilder.standard(), Execution.this.getContext());
-			
+
 			listener.getLogger().format("Checking for account alias %s %n", this.name);
 			ListAccountAliasesResult listResult = iamClient.listAccountAliases();
-			
+
 			// no or different alias set
 			if (listResult.getAccountAliases() == null || listResult.getAccountAliases().isEmpty() || !listResult.getAccountAliases().contains(this.name)) {
 				// Update alias
@@ -106,9 +106,9 @@ public class SetAccountAliasStep extends Step {
 			}
 			return null;
 		}
-		
+
 		private static final long serialVersionUID = 1L;
-		
+
 	}
-	
+
 }

@@ -30,19 +30,19 @@ import com.amazonaws.Protocol;
 import hudson.EnvVars;
 
 public class ProxyTest {
-	
+
 	@Test
 	public void shouldNotChangeIfNotPresent() throws Exception {
 		ClientConfiguration config = new ClientConfiguration();
 		config.setProtocol(Protocol.HTTPS);
 		ProxyConfiguration.configure(new EnvVars(), config);
-		
+
 		Assert.assertNull(config.getProxyUsername());
 		Assert.assertNull(config.getProxyPassword());
 		Assert.assertNull(config.getProxyHost());
 		Assert.assertEquals(-1, config.getProxyPort());
 	}
-	
+
 	@Test
 	public void shouldParseProxy() throws Exception {
 		EnvVars vars = new EnvVars();
@@ -50,13 +50,13 @@ public class ProxyTest {
 		ClientConfiguration config = new ClientConfiguration();
 		config.setProtocol(Protocol.HTTPS);
 		ProxyConfiguration.configure(vars, config);
-		
+
 		Assert.assertNull(config.getProxyUsername());
 		Assert.assertNull(config.getProxyPassword());
 		Assert.assertEquals("127.0.0.1", config.getProxyHost());
 		Assert.assertEquals(8888, config.getProxyPort());
 	}
-	
+
 	@Test
 	public void shouldParseProxyWithoutPort() throws Exception {
 		EnvVars vars = new EnvVars();
@@ -64,13 +64,13 @@ public class ProxyTest {
 		ClientConfiguration config = new ClientConfiguration();
 		config.setProtocol(Protocol.HTTPS);
 		ProxyConfiguration.configure(vars, config);
-		
+
 		Assert.assertNull(config.getProxyUsername());
 		Assert.assertNull(config.getProxyPassword());
 		Assert.assertEquals("127.0.0.1", config.getProxyHost());
 		Assert.assertEquals(443, config.getProxyPort());
 	}
-	
+
 	@Test
 	public void shouldParseProxyLowerCase() throws Exception {
 		EnvVars vars = new EnvVars();
@@ -78,13 +78,13 @@ public class ProxyTest {
 		ClientConfiguration config = new ClientConfiguration();
 		config.setProtocol(Protocol.HTTPS);
 		ProxyConfiguration.configure(vars, config);
-		
+
 		Assert.assertNull(config.getProxyUsername());
 		Assert.assertNull(config.getProxyPassword());
 		Assert.assertEquals("127.0.0.1", config.getProxyHost());
 		Assert.assertEquals(8888, config.getProxyPort());
 	}
-	
+
 	@Test
 	public void shouldParseProxyWithAuth() throws Exception {
 		EnvVars vars = new EnvVars();
@@ -92,13 +92,13 @@ public class ProxyTest {
 		ClientConfiguration config = new ClientConfiguration();
 		config.setProtocol(Protocol.HTTPS);
 		ProxyConfiguration.configure(vars, config);
-		
+
 		Assert.assertEquals("foo", config.getProxyUsername());
 		Assert.assertEquals("bar", config.getProxyPassword());
 		Assert.assertEquals("127.0.0.1", config.getProxyHost());
 		Assert.assertEquals(8888, config.getProxyPort());
 	}
-	
+
 	@Test
 	public void shouldSetNonProxyHosts() throws Exception {
 		EnvVars vars = new EnvVars();
@@ -107,10 +107,10 @@ public class ProxyTest {
 		ClientConfiguration config = new ClientConfiguration();
 		config.setProtocol(Protocol.HTTPS);
 		ProxyConfiguration.configure(vars, config);
-		
+
 		Assert.assertEquals("127.0.0.1|localhost", config.getNonProxyHosts());
 	}
-	
+
 	@Test
 	public void shouldSetNonProxyHostsLowerCase() throws Exception {
 		EnvVars vars = new EnvVars();
@@ -119,8 +119,8 @@ public class ProxyTest {
 		ClientConfiguration config = new ClientConfiguration();
 		config.setProtocol(Protocol.HTTPS);
 		ProxyConfiguration.configure(vars, config);
-		
+
 		Assert.assertEquals("127.0.0.1|localhost", config.getNonProxyHosts());
 	}
-	
+
 }
