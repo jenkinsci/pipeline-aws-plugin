@@ -25,17 +25,13 @@ import com.amazonaws.services.cloudformation.model.Parameter;
 import com.amazonaws.services.cloudformation.model.StackSetStatus;
 import com.amazonaws.services.cloudformation.model.Tag;
 import com.amazonaws.services.cloudformation.model.UpdateStackSetResult;
-import hudson.EnvVars;
 import hudson.Extension;
-import hudson.FilePath;
-import hudson.model.TaskListener;
 import org.jenkinsci.plugins.workflow.steps.AbstractStepDescriptorImpl;
 import org.jenkinsci.plugins.workflow.steps.StepContext;
 import org.jenkinsci.plugins.workflow.steps.StepExecution;
 import org.kohsuke.stapler.DataBoundConstructor;
 
 import javax.annotation.Nonnull;
-import java.io.IOException;
 import java.util.Collection;
 
 public class CFNUpdateStackSetStep extends AbstractCFNCreateStackSetStep {
@@ -72,42 +68,6 @@ public class CFNUpdateStackSetStep extends AbstractCFNCreateStackSetStep {
 
 		protected Execution(CFNUpdateStackSetStep step, @Nonnull StepContext context) {
 			super(step, context);
-		}
-
-		@Override
-		public EnvVars getEnvVars() {
-			try {
-				return this.getContext().get(EnvVars.class);
-			} catch (IOException e) {
-				throw new RuntimeException(e);
-			} catch (InterruptedException e) {
-				Thread.interrupted();
-				throw new RuntimeException(e);
-			}
-		}
-
-		@Override
-		public FilePath getWorkspace() {
-			try {
-				return this.getContext().get(FilePath.class);
-			} catch (IOException e) {
-				throw new RuntimeException(e);
-			} catch (InterruptedException e) {
-				Thread.interrupted();
-				throw new RuntimeException(e);
-			}
-		}
-
-		@Override
-		public TaskListener getListener() {
-			try {
-				return this.getContext().get(TaskListener.class);
-			} catch (IOException e) {
-				throw new RuntimeException(e);
-			} catch (InterruptedException e) {
-				Thread.interrupted();
-				throw new RuntimeException(e);
-			}
 		}
 
 		@Override

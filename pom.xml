@@ -9,7 +9,7 @@
     </parent>
     <groupId>de.taimos</groupId>
     <artifactId>pipeline-aws</artifactId>
-    <version>1.22-SNAPSHOT</version>
+    <version>1.23-SNAPSHOT</version>
     <packaging>hpi</packaging>
     <name>Pipeline: AWS Steps</name>
     <scm>

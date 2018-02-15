@@ -7,6 +7,7 @@ import hudson.EnvVars;
 import hudson.model.TaskListener;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
+import org.jenkinsci.plugins.workflow.steps.StepContext;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -38,7 +39,7 @@ public class CFNDeleteStackSetStepTest {
 				.withAnyArguments()
 				.thenReturn(stackSet);
 		AmazonCloudFormation cloudFormation = Mockito.mock(AmazonCloudFormation.class);
-		PowerMockito.when(AWSClientFactory.create(Mockito.any(AwsSyncClientBuilder.class), Mockito.any(EnvVars.class)))
+		PowerMockito.when(AWSClientFactory.create(Mockito.any(AwsSyncClientBuilder.class), Mockito.any(StepContext.class)))
 				.thenReturn(cloudFormation);
 	}
 
@@ -53,7 +54,7 @@ public class CFNDeleteStackSetStepTest {
 		jenkinsRule.assertBuildStatusSuccess(job.scheduleBuild2(0));
 
 		PowerMockito.verifyNew(CloudFormationStackSet.class)
-				.withArguments(Mockito.any(AmazonCloudFormation.class), Mockito.eq("foo"), Mockito.any(TaskListener.class));
+				.withArguments(Mockito.any(AmazonCloudFormation.class), Mockito.eq("foo"), Mockito.any(StepContext.class));
 		Mockito.verify(stackSet).delete();
 	}
 }

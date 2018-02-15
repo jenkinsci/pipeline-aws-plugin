@@ -43,7 +43,7 @@ import javax.annotation.Nonnull;
 import java.io.IOException;
 import java.util.Collection;
 
-abstract class AbstractCFNCreateStackSetStep extends TemplateStepBase implements ParameterProvider {
+abstract class AbstractCFNCreateStackSetStep extends TemplateStepBase {
 
 	private final String stackSet;
 	private String onFailure = OnFailure.DELETE.toString();

@@ -483,9 +483,6 @@ String result = invokeLambda(
 * add updateTrustPolicy step (#48)
 * fix NPE in ProxyConfiguration (#51)
 
-## 1.23
-* Add support for CloudFormation Stack Sets
-
 ## 1.22
 * Add `kmsId` parameter to `s3Upload`.
 * Fix more characters in RoleSessionName
