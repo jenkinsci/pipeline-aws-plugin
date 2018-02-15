@@ -8,6 +8,7 @@ import com.amazonaws.services.cloudformation.model.UpdateStackSetResult;
 import de.taimos.pipeline.aws.AWSClientFactory;
 import hudson.EnvVars;
 import hudson.model.TaskListener;
+import org.assertj.core.api.Assertions;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
 import org.junit.Before;
@@ -15,13 +16,16 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.jvnet.hudson.test.JenkinsRule;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 import org.powermock.api.mockito.PowerMockito;
 import org.powermock.core.classloader.annotations.PowerMockIgnore;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
 
-import java.util.Collections;
+import java.io.PrintWriter;
+import java.util.Arrays;
+import java.util.List;
 import java.util.UUID;
 
 @RunWith(PowerMockRunner.class)
@@ -75,17 +79,28 @@ public class CFNUpdateStackSetStepTest {
 				);
 		job.setDefinition(new CpsFlowDefinition(""
 				+ "node {\n"
-				+ "  cfnUpdateStackSet(stackSet: 'foo', pollInterval: 27, params: ['foo=bar'])"
+				+ "  cfnUpdateStackSet(stackSet: 'foo', pollInterval: 27, params: ['foo=bar'], paramsFile: 'params.json')"
 				+ "}\n", true)
 		);
+		try (PrintWriter writer = new PrintWriter(jenkinsRule.jenkins.getWorkspaceFor(job).child("params.json").write())) {
+			writer.println("[{\"ParameterKey\": \"foo1\", \"ParameterValue\": \"25\"}]");
+		}
 		jenkinsRule.assertBuildStatusSuccess(job.scheduleBuild2(0));
 
 		PowerMockito.verifyNew(CloudFormationStackSet.class, Mockito.atLeastOnce())
 				.withArguments(Mockito.any(AmazonCloudFormation.class), Mockito.eq("foo"), Mockito.any(TaskListener.class));
-		Mockito.verify(stackSet).update(Mockito.anyString(), Mockito.anyString(), Mockito.eq(Collections.singletonList(new Parameter()
-				.withParameterKey("foo")
-				.withParameterValue("bar")
-		)), Mockito.<Tag>anyCollection());
+		@SuppressWarnings("unchecked")
+		ArgumentCaptor<List<Parameter>> parameterCapture = (ArgumentCaptor<List<Parameter>>)(Object)ArgumentCaptor.forClass(List.class);
+		Mockito.verify(stackSet).update(Mockito.anyString(), Mockito.anyString(), parameterCapture.capture(), Mockito.<Tag>anyCollection());
+		Assertions.assertThat(parameterCapture.getValue()).containsExactlyInAnyOrder(
+				new Parameter()
+						.withParameterKey("foo")
+						.withParameterValue("bar"),
+				new Parameter()
+						.withParameterKey("foo1")
+						.withParameterValue("25")
+		);
+
 		Mockito.verify(stackSet).waitForOperationToComplete(operationId, 27);
 	}
 

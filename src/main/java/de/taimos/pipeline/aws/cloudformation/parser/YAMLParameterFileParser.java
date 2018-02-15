@@ -39,6 +39,7 @@ public class YAMLParameterFileParser implements ParameterFileParser {
 	@Override
 	public Collection<Parameter> parseParams(InputStream fileContent) throws IOException {
 		Yaml yaml = new Yaml();
+		@SuppressWarnings("unchecked")
 		Map<String, Object> parse = (Map<String, Object>) yaml.load(new InputStreamReader(fileContent, Charsets.UTF_8));
 
 		Collection<Parameter> parameters = new ArrayList<>();

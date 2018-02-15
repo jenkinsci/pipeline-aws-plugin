@@ -1,6 +1,7 @@
 package de.taimos.pipeline.aws.cloudformation;
 
 import com.amazonaws.services.cloudformation.model.Tag;
+import hudson.FilePath;
 import org.jenkinsci.plugins.workflow.steps.Step;
 import org.kohsuke.stapler.DataBoundSetter;
 
@@ -14,7 +15,7 @@ public abstract class TemplateStepBase extends Step implements ParameterProvider
 	private String[] params;
 	private String[] keepParams;
 	private String[] tags;
-	private File paramsFile;
+	private String paramsFile;
 	private Long pollInterval = 1000L;
 	private Boolean create = true;
 
@@ -36,7 +37,6 @@ public abstract class TemplateStepBase extends Step implements ParameterProvider
 		this.url = url;
 	}
 
-	@Override
 	public String[] getParams() {
 		return this.params != null ? this.params.clone() : null;
 	}
@@ -46,7 +46,6 @@ public abstract class TemplateStepBase extends Step implements ParameterProvider
 		this.params = params.clone();
 	}
 
-	@Override
 	public String[] getKeepParams() {
 		return this.keepParams != null ? this.keepParams.clone() : null;
 	}
@@ -65,13 +64,12 @@ public abstract class TemplateStepBase extends Step implements ParameterProvider
 		this.tags = tags.clone();
 	}
 
-	@Override
-	public File getParamsFile() {
+	public String getParamsFile() {
 		return this.paramsFile;
 	}
 
 	@DataBoundSetter
-	public void setParamsFile(File paramsFile) {
+	public void setParamsFile(String paramsFile) {
 		this.paramsFile = paramsFile;
 	}
 

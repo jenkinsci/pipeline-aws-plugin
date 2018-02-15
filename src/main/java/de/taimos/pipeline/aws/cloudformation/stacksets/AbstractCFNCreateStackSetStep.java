@@ -107,10 +107,10 @@ abstract class AbstractCFNCreateStackSetStep extends TemplateStepBase {
 						AmazonCloudFormation client = AWSClientFactory.create(AmazonCloudFormationClientBuilder.standard(), Execution.this.getEnvVars());
 						CloudFormationStackSet cfnStackSet = new CloudFormationStackSet(client, stackSet, Execution.this.getListener());
 						if (cfnStackSet.exists()) {
-							Collection<Parameter> parameters = ParameterParser.parseWithKeepParams(getStep());
+							Collection<Parameter> parameters = ParameterParser.parseWithKeepParams(getWorkspace(), getStep());
 							Execution.this.getContext().onSuccess(Execution.this.whenStackSetExists(parameters, getStep().getAwsTags()));
 						} else if (create) {
-							Collection<Parameter> parameters = ParameterParser.parse(getStep());
+							Collection<Parameter> parameters = ParameterParser.parse(getWorkspace(), getStep());
 							Execution.this.getContext().onSuccess(Execution.this.whenStackSetMissing(parameters, getStep().getAwsTags()));
 						} else {
 							Execution.this.getListener().getLogger().println("No stack set found with the name=" + stackSet + " and skipped creation due to configuration.");

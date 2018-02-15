@@ -13,18 +13,13 @@ import java.util.Collections;
 
 public class ParameterParser {
 
-	static Collection<Parameter> getParameters(ParameterProvider parameterProvider) {
-		final Collection<Parameter> params = parseParamsFile(parameterProvider.getParamsFile());
-		params.addAll(parseParams(parameterProvider.getParams()));
-		return params;
-	}
-
-	static Collection<Parameter> parseParamsFile(File paramsFile) {
+	static Collection<Parameter> parseParamsFile(FilePath workspace, String paramsFileName) {
 		try {
-			if (paramsFile == null) {
+			if (paramsFileName == null) {
 				return Collections.emptyList();
 			}
 			final ParameterFileParser parser;
+			FilePath paramsFile = workspace.child(paramsFileName);
 			if (paramsFile.getName().endsWith(".json")) {
 				parser = new JSONParameterFileParser();
 			} else if (paramsFile.getName().endsWith(".yaml")) {
@@ -32,7 +27,7 @@ public class ParameterParser {
 			} else {
 				throw new IllegalArgumentException("Invalid file extension for parameter file (supports json/yaml)");
 			}
-			return parser.parseParams(new FilePath(paramsFile).read());
+			return parser.parseParams(paramsFile.read());
 		} catch (Exception e) {
 			throw new IllegalArgumentException(e);
 		}
@@ -66,15 +61,15 @@ public class ParameterParser {
 		return parameters;
 	}
 
-	public static Collection<Parameter> parseWithKeepParams(ParameterProvider provider) {
-		Collection<Parameter> parameters = parse(provider);
+	public static Collection<Parameter> parseWithKeepParams(FilePath workspace, ParameterProvider provider) {
+		Collection<Parameter> parameters = parse(workspace, provider);
 		return Lists.newLinkedList(Iterables.concat(parameters, parseKeepParams(provider.getKeepParams())));
 	}
 
-	public static Collection<Parameter> parse(ParameterProvider provider) {
+	public static Collection<Parameter> parse(FilePath workspace, ParameterProvider provider) {
 		return Lists.newLinkedList(
 				Iterables.concat(
-						parseParamsFile(provider.getParamsFile()),
+						parseParamsFile(workspace, provider.getParamsFile()),
 						parseParams(provider.getParams())
 				)
 		);
