@@ -89,10 +89,11 @@ public class FileWrapper implements Serializable {
 
 	protected FileWrapper(@Nonnull FilePath base, @Nonnull FilePath file) throws IOException, InterruptedException {
 		this(file.getName(),
-			 file.getRemote().substring(base.getRemote().length() + 1),
-			 file.isDirectory(),
-			 file.length(),
-			 file.lastModified());
+			file.getRemote().substring(base.getRemote().length() + 1),
+			file.isDirectory(),
+			file.length(),
+			file.lastModified()
+		);
 	}
 
 	protected FileWrapper(@Nonnull FilePath file) throws IOException, InterruptedException {
