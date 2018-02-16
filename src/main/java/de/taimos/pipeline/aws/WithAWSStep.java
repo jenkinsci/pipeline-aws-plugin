@@ -273,7 +273,7 @@ public class WithAWSStep extends Step {
 		private void withCredentials(@Nonnull Run<?, ?> run, @Nonnull EnvVars localEnv) {
 			if (!StringUtils.isNullOrEmpty(this.step.getCredentials())) {
 				StandardUsernamePasswordCredentials usernamePasswordCredentials = CredentialsProvider.findCredentialById(this.step.getCredentials(),
-																														 StandardUsernamePasswordCredentials.class, run, Collections.<DomainRequirement>emptyList());
+																														StandardUsernamePasswordCredentials.class, run, Collections.<DomainRequirement>emptyList());
 				if (usernamePasswordCredentials != null) {
 					localEnv.override(AWSClientFactory.AWS_ACCESS_KEY_ID, usernamePasswordCredentials.getUsername());
 					localEnv.override(AWSClientFactory.AWS_SECRET_ACCESS_KEY, usernamePasswordCredentials.getPassword().getPlainText());
