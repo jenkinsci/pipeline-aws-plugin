@@ -20,6 +20,8 @@ This plugins adds Jenkins pipeline steps to interact with the AWS API.
 * [cfnExports](#cfnexports)
 * [cfnCreateChangeSet](#cfncreatechangeset)
 * [cfnExecuteChangeSet](#cfnexecutechangeset)
+* [cfnCreateStackSet](#cfncreatestackset)
+* [cfnDeleteStackSet](#cfndeletestackset)
 * [snsPublish](#snspublish)
 * [deployAPI](#deployapi)
 * [awaitDeploymentCompletion](#awaitdeploymentcompletion)
@@ -360,6 +362,26 @@ To prevent running into rate limiting on the AWS API you can change the default 
 
 ```
 def outputs = cfnExecuteChangeSet(stack:'my-stack', changeSet:'my-change-set', pollInterval:1000)
+```
+
+## cfnCreateStackSet
+
+Create a stack set. Similar options to cfnCreate. Will monitor the resulting StackSet operation and will fail the build step if the operation does not complete successfully.
+
+To prevent running into rate limiting on the AWS API you can change the default polling interval of 1000 ms using the parameter `pollIntervall`. Using the value `0` disables event printing.
+
+```
+  cfnCreateChangeSet(stackSet:'myStackSet', url:'https://s3.amazonaws.com/my-templates-bucket/template.yaml')
+```
+
+## cfnDeleteStackSet
+
+Deletes a stack set.
+
+To prevent running into rate limiting on the AWS API you can change the default polling interval of 1000 ms using the parameter `pollIntervall`. Using the value `0` disables event printing.
+
+```
+  cfnDeleteChangeSet(stackSet:'myStackSet')
 ```
 
 ## snsPublish
