@@ -101,7 +101,7 @@ public class CFNCreateChangeSetStep extends AbstractCFNCreateStep {
 			final String file = this.getStep().getFile();
 			final String url = this.getStep().getUrl();
 			this.getCfnStack().createChangeSet(changeSet, this.readTemplate(file), url, parameters, tags, this.getStep().getPollInterval(), ChangeSetType.UPDATE, this.getStep().getRoleArn());
-			return null;
+			return this.getCfnStack().describeChangeSet(changeSet).getChanges();
 		}
 
 		@Override
@@ -110,7 +110,7 @@ public class CFNCreateChangeSetStep extends AbstractCFNCreateStep {
 			final String file = this.getStep().getFile();
 			final String url = this.getStep().getUrl();
 			this.getCfnStack().createChangeSet(changeSet, this.readTemplate(file), url, parameters, tags, this.getStep().getPollInterval(), ChangeSetType.CREATE, this.getStep().getRoleArn());
-			return null;
+			return this.getCfnStack().describeChangeSet(changeSet).getChanges();
 		}
 
 		private static final long serialVersionUID = 1L;

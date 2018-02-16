@@ -19,7 +19,8 @@
  * #L%
  */
 
-package de.taimos.pipeline.aws.cloudformation;
+package de.taimos.pipeline.aws.cloudformation.stacksets;
+
 
 import com.amazonaws.services.cloudformation.AmazonCloudFormation;
 import com.amazonaws.services.cloudformation.AmazonCloudFormationClientBuilder;
@@ -28,8 +29,9 @@ import com.amazonaws.services.cloudformation.model.Parameter;
 import com.amazonaws.services.cloudformation.model.Tag;
 import com.google.common.base.Preconditions;
 import de.taimos.pipeline.aws.AWSClientFactory;
+import de.taimos.pipeline.aws.cloudformation.ParameterProvider;
+import de.taimos.pipeline.aws.cloudformation.TemplateStepBase;
 import de.taimos.pipeline.aws.cloudformation.parser.ParameterParser;
-import de.taimos.pipeline.aws.utils.IamRoleUtils;
 import hudson.EnvVars;
 import hudson.FilePath;
 import hudson.model.TaskListener;
@@ -41,27 +43,17 @@ import javax.annotation.Nonnull;
 import java.io.IOException;
 import java.util.Collection;
 
-abstract class AbstractCFNCreateStep extends TemplateStepBase {
+abstract class AbstractCFNCreateStackSetStep extends TemplateStepBase {
 
-	private final String stack;
-	private String roleArn;
+	private final String stackSet;
 	private String onFailure = OnFailure.DELETE.toString();
 
-	public AbstractCFNCreateStep(String stack) {
-		this.stack = stack;
+	public AbstractCFNCreateStackSetStep(String stackSet) {
+		this.stackSet = stackSet;
 	}
 
-	public String getStack() {
-		return this.stack;
-	}
-
-	public String getRoleArn() {
-		return this.roleArn;
-	}
-
-	@DataBoundSetter
-	public void setRoleArn(String roleArn) {
-		this.roleArn = roleArn;
+	public String getStackSet() {
+		return this.stackSet;
 	}
 
 	public String getOnFailure() {
@@ -73,7 +65,7 @@ abstract class AbstractCFNCreateStep extends TemplateStepBase {
 		this.onFailure = onFailure;
 	}
 
-	abstract static class Execution<C extends AbstractCFNCreateStep> extends StepExecution {
+	abstract static class Execution<C extends AbstractCFNCreateStackSetStep> extends StepExecution {
 
 		private final transient C step;
 
@@ -81,25 +73,17 @@ abstract class AbstractCFNCreateStep extends TemplateStepBase {
 
 		protected abstract String getThreadName();
 
-		protected abstract Object whenStackExists(Collection<Parameter> parameters, Collection<Tag> tags) throws Exception;
+		protected abstract Object whenStackSetExists(Collection<Parameter> parameters, Collection<Tag> tags) throws Exception;
 
-		protected abstract Object whenStackMissing(Collection<Parameter> parameters, Collection<Tag> tags) throws Exception;
+		protected abstract Object whenStackSetMissing(Collection<Parameter> parameters, Collection<Tag> tags) throws Exception;
 
 		protected Execution(C step, @Nonnull StepContext context) {
 			super(context);
 			this.step = step;
 		}
 
-		private String getStack() {
-			return this.getStep().getStack();
-		}
-
-		private String[] getTags() {
-			return this.getStep().getTags();
-		}
-
-		private String getRoleArn() {
-			return this.getStep().getRoleArn();
+		private String getStackSet() {
+			return this.getStep().getStackSet();
 		}
 
 		private Boolean getCreate() {
@@ -109,13 +93,10 @@ abstract class AbstractCFNCreateStep extends TemplateStepBase {
 		@Override
 		public boolean start() throws Exception {
 
-			final String stack = this.getStack();
-			final String roleArn = this.getRoleArn();
+			final String stackSet = this.getStackSet();
 			final Boolean create = this.getCreate();
 
-
-			Preconditions.checkArgument(stack != null && !stack.isEmpty(), "Stack must not be null or empty");
-			Preconditions.checkArgument(roleArn == null || IamRoleUtils.validRoleArn(roleArn), "RoleArn must be a valid ARN.");
+			Preconditions.checkArgument(stackSet != null && !stackSet.isEmpty(), "Stack set must not be null or empty");
 
 			this.checkPreconditions();
 
@@ -124,15 +105,15 @@ abstract class AbstractCFNCreateStep extends TemplateStepBase {
 				public void run() {
 					try {
 						AmazonCloudFormation client = AWSClientFactory.create(AmazonCloudFormationClientBuilder.standard(), Execution.this.getEnvVars());
-						CloudFormationStack cfnStack = new CloudFormationStack(client, stack, Execution.this.getListener());
-						if (cfnStack.exists()) {
+						CloudFormationStackSet cfnStackSet = new CloudFormationStackSet(client, stackSet, Execution.this.getListener());
+						if (cfnStackSet.exists()) {
 							Collection<Parameter> parameters = ParameterParser.parseWithKeepParams(getWorkspace(), getStep());
-							Execution.this.getContext().onSuccess(Execution.this.whenStackExists(parameters, getStep().getAwsTags()));
+							Execution.this.getContext().onSuccess(Execution.this.whenStackSetExists(parameters, getStep().getAwsTags()));
 						} else if (create) {
 							Collection<Parameter> parameters = ParameterParser.parse(getWorkspace(), getStep());
-							Execution.this.getContext().onSuccess(Execution.this.whenStackMissing(parameters, getStep().getAwsTags()));
+							Execution.this.getContext().onSuccess(Execution.this.whenStackSetMissing(parameters, getStep().getAwsTags()));
 						} else {
-							Execution.this.getListener().getLogger().println("No stack found with the name and skipped creation due to configuration.");
+							Execution.this.getListener().getLogger().println("No stack set found with the name=" + stackSet + " and skipped creation due to configuration.");
 							Execution.this.getContext().onSuccess(null);
 						}
 					} catch (Exception e) {
@@ -145,12 +126,11 @@ abstract class AbstractCFNCreateStep extends TemplateStepBase {
 
 		@Override
 		public void stop(@Nonnull Throwable throwable) throws Exception {
-
 		}
 
-		protected CloudFormationStack getCfnStack() {
+		protected CloudFormationStackSet getCfnStackSet() {
 			AmazonCloudFormation client = AWSClientFactory.create(AmazonCloudFormationClientBuilder.standard(), this.getEnvVars());
-			return new CloudFormationStack(client, this.getStack(), this.getListener());
+			return new CloudFormationStackSet(client, this.getStackSet(), this.getListener());
 		}
 
 		protected String readTemplate(String file) {
