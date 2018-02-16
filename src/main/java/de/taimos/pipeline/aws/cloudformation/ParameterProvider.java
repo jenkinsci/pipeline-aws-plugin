@@ -1,10 +1,10 @@
 package de.taimos.pipeline.aws.cloudformation;
 
 public interface ParameterProvider {
-    String[] getKeepParams();
+	String[] getKeepParams();
 
-    String getParamsFile();
+	String getParamsFile();
 
-    String[] getParams();
+	String[] getParams();
 
 }
