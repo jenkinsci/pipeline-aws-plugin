@@ -223,4 +223,11 @@ public class CloudFormationStack {
 		this.client.deleteStack(new DeleteStackRequest().withStackName(this.stack));
 		new EventPrinter(this.client, this.listener).waitAndPrintStackEvents(this.stack, this.client.waiters().stackDeleteComplete(), pollIntervallMillis);
 	}
+
+	public DescribeChangeSetResult describeChangeSet(String changeSet) {
+		return this.client.describeChangeSet(new DescribeChangeSetRequest()
+				.withStackName(this.stack)
+				.withChangeSetName(changeSet)
+		);
+	}
 }
