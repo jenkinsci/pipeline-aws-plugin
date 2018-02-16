@@ -504,6 +504,8 @@ String result = invokeLambda(
 ## current master
 * add updateTrustPolicy step (#48)
 * fix NPE in ProxyConfiguration (#51)
+* add support for Stacksets
+* return change set from step
 
 ## 1.22
 * Add `kmsId` parameter to `s3Upload`.
