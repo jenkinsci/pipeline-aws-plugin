@@ -22,8 +22,12 @@
 package de.taimos.pipeline.aws.cloudformation;
 
 import java.util.Collection;
+import java.util.List;
 import java.util.Set;
 
+import com.amazonaws.services.cloudformation.model.Change;
+import com.amazonaws.services.cloudformation.model.ChangeSetStatus;
+import com.amazonaws.services.cloudformation.model.DescribeChangeSetResult;
 import org.jenkinsci.plugins.workflow.steps.StepContext;
 import org.jenkinsci.plugins.workflow.steps.StepDescriptor;
 import org.jenkinsci.plugins.workflow.steps.StepExecution;
@@ -101,7 +105,7 @@ public class CFNCreateChangeSetStep extends AbstractCFNCreateStep {
 			final String file = this.getStep().getFile();
 			final String url = this.getStep().getUrl();
 			this.getCfnStack().createChangeSet(changeSet, this.readTemplate(file), url, parameters, tags, this.getStep().getPollInterval(), ChangeSetType.UPDATE, this.getStep().getRoleArn());
-			return this.getCfnStack().describeChangeSet(changeSet).getChanges();
+			return this.validateChangeSet(changeSet);
 		}
 
 		@Override
@@ -110,7 +114,16 @@ public class CFNCreateChangeSetStep extends AbstractCFNCreateStep {
 			final String file = this.getStep().getFile();
 			final String url = this.getStep().getUrl();
 			this.getCfnStack().createChangeSet(changeSet, this.readTemplate(file), url, parameters, tags, this.getStep().getPollInterval(), ChangeSetType.CREATE, this.getStep().getRoleArn());
-			return this.getCfnStack().describeChangeSet(changeSet).getChanges();
+			return this.validateChangeSet(changeSet);
+		}
+
+		private List<Change> validateChangeSet(String changeSet) {
+			DescribeChangeSetResult result = this.getCfnStack().describeChangeSet(changeSet);
+			if (ChangeSetStatus.CREATE_COMPLETE.name().equals(result.getStatus())) {
+				return result.getChanges();
+			} else {
+				throw new IllegalStateException("Change set did not create successfully. status=" + result.getStatus() + " reason=" + result.getStatusReason());
+			}
 		}
 
 		private static final long serialVersionUID = 1L;
