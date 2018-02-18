@@ -504,6 +504,7 @@ String result = invokeLambda(
 ## current master
 * add updateTrustPolicy step (#48)
 * fix NPE in ProxyConfiguration (#51)
+* fix strange upload behavior when uploading file to path (#53)
 * add support for Stacksets
 * return change set from step
 

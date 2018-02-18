@@ -344,8 +344,11 @@ public class S3UploadStep extends AbstractS3Step {
 					.build();
 			if (localFile.isFile()) {
 				Preconditions.checkArgument(this.path != null && !this.path.isEmpty(), "Path must not be null or empty when uploading file");
-				final Upload upload;
-				PutObjectRequest request = new PutObjectRequest(this.bucket, this.path, localFile);
+				String path = this.path;
+				if (path.endsWith("/")) {
+					path += localFile.getName();
+				}
+				PutObjectRequest request = new PutObjectRequest(this.bucket, path, localFile);
 
 				// Add metadata
 				if ((this.metadatas != null && this.metadatas.size() > 0) || (this.cacheControl != null && !this.cacheControl.isEmpty()) || (this.contentType != null && !this.contentType.isEmpty())) {
@@ -373,8 +376,7 @@ public class S3UploadStep extends AbstractS3Step {
 					request.withSSEAwsKeyManagementParams(new SSEAwsKeyManagementParams(this.kmsId));
 				}
 
-				upload = mgr.upload(request);
-
+				final Upload upload = mgr.upload(request);
 				upload.addProgressListener(new ProgressListener() {
 					@Override
 					public void progressChanged(ProgressEvent progressEvent) {
