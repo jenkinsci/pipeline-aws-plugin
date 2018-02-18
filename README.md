@@ -502,6 +502,8 @@ String result = invokeLambda(
 # Changelog
 
 ## current master
+
+## 1.23
 * add updateTrustPolicy step (#48)
 * fix NPE in ProxyConfiguration (#51)
 * fix strange upload behavior when uploading file to path (#53)
