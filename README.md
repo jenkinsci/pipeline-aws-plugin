@@ -30,6 +30,7 @@ This plugins adds Jenkins pipeline steps to interact with the AWS API.
 * [setAccountAlias](#setaccountalias)
 * [ecrLogin](#ecrlogin)
 * [invokeLambda](#invokelambda)
+* [ec2ShareAmi](#ec2ShareAmi)
 
 [**see the changelog for release information**](#changelog)
 
@@ -496,6 +497,17 @@ String result = invokeLambda(
 	functionName: 'myLambdaFunction',
 	payloadAsString: '{"key": "value"}',
 	returnValueAsString: true
+)
+```
+
+## ec2ShareAmi
+
+Share an AMI image to one or more accounts
+
+```
+ec2ShareAmi(
+	amiId: 'ami-23842',
+	accountIds: [ "0123456789", "1234567890" ]
 )
 ```
 
