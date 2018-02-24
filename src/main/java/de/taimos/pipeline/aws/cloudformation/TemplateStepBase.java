@@ -12,7 +12,7 @@ import java.util.Collection;
 public abstract class TemplateStepBase extends Step implements ParameterProvider {
 	private String file;
 	private String url;
-	private String[] params;
+	private Object params;
 	private String[] keepParams;
 	private String[] tags;
 	private String paramsFile;
@@ -37,13 +37,13 @@ public abstract class TemplateStepBase extends Step implements ParameterProvider
 		this.url = url;
 	}
 
-	public String[] getParams() {
-		return this.params != null ? this.params.clone() : null;
+	public Object getParams() {
+		return this.params;
 	}
 
 	@DataBoundSetter
-	public void setParams(String[] params) {
-		this.params = params.clone();
+	public void setParams(Object params) {
+		this.params = params;
 	}
 
 	public String[] getKeepParams() {

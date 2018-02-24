@@ -245,7 +245,7 @@ cfnValidate(file:'template.yaml')
 ## cfnUpdate
 
 Create or update the given CloudFormation stack using the given template from the workspace.
-You can specify an optional list of parameters.
+You can specify an optional list of parameters, either as a key/value pair or a map.
 You can also specify a list of `keepParams` of parameters which will use the previous value on stack updates.
 
 Using `timeoutInMinutes` you can specify the amount of time that can pass before the stack status becomes CREATE_FAILED and the stack gets rolled back.
@@ -263,6 +263,11 @@ To prevent running into rate limiting on the AWS API you can change the default 
 
 ```
 def outputs = cfnUpdate(stack:'my-stack', file:'template.yaml', params:['InstanceType=t2.nano'], keepParams:['Version'], timeoutInMinutes:10, tags:['TagName=Value'], pollInterval:1000)
+```
+
+or the parameters can be specified as a map:
+```
+def outputs = cfnUpdate(stack:'my-stack', file:'template.yaml', params:['InstanceType': 't2.nano'], keepParams:['Version'], timeoutInMinutes:10, tags:['TagName=Value'], pollInterval:1000)
 ```
 
 Alternatively, you can specify a URL to a template on S3 (you'll need this if you hit the 51200 byte limit on template):
@@ -320,7 +325,7 @@ def globalExports = cfnExports()
 ## cfnCreateChangeSet
 
 Create a change set to update the given CloudFormation stack using the given template from the workspace.
-You can specify an optional list of parameters.
+You can specify an optional list of parameters, either as a key/value pair or a map.
 You can also specify a list of `keepParams` of parameters which will use the previous value on stack updates.
 
 If you have many parameters you can specify a `paramsFile` containing the parameters. The format is either a standard
@@ -333,6 +338,10 @@ To prevent running into rate limiting on the AWS API you can change the default 
 
 ```
 cfnCreateChangeSet(stack:'my-stack', changeSet:'my-change-set', file:'template.yaml', params:['InstanceType=t2.nano'], keepParams:['Version'], tags:['TagName=Value'], pollInterval:1000)
+```
+or the parameters can be specified as a map:
+```
+cfnCreateChangeSet(stack:'my-stack', changeSet:'my-change-set', file:'template.yaml', params:['InstanceType': 't2.nano'], keepParams:['Version'], tags:['TagName=Value'], pollInterval:1000)
 ```
 
 Alternatively, you can specify a URL to a template on S3 (you'll need this if you hit the 51200 byte limit on template):
@@ -514,6 +523,7 @@ ec2ShareAmi(
 # Changelog
 
 ## current master
+* Add support for maps with cloudformation parameters.
 
 ## 1.23
 * add updateTrustPolicy step (#48)

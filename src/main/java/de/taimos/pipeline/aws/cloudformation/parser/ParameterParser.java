@@ -8,12 +8,15 @@ import hudson.FilePath;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.List;
+import java.util.Map;
 
 public class ParameterParser {
 
-	static Collection<Parameter> parseParamsFile(FilePath workspace, String paramsFileName) {
+	private static Collection<Parameter> parseParamsFile(FilePath workspace, String paramsFileName) {
 		try {
 			if (paramsFileName == null) {
 				return Collections.emptyList();
@@ -33,11 +36,36 @@ public class ParameterParser {
 		}
 	}
 
-	static Collection<Parameter> parseParams(String[] params) {
-		Collection<Parameter> parameters = new ArrayList<>();
-		if (params == null) {
-			return parameters;
+	private static Collection<Parameter> parseParams(Object o) {
+		if (o == null) {
+			return Collections.emptyList();
+		} else if (o instanceof String[]) {
+			return parseParams(Arrays.asList((String[]) o));
+		} else if (o instanceof List) {
+			return parseParams((List<String>) o);
+		} else if (o instanceof Map) {
+			return parseParams((Map<Object, Object>) o);
+		} else {
+			throw new IllegalStateException("Invalid params type: " + o.getClass());
 		}
+	}
+
+	private static Collection<Parameter> parseParams(Map<Object, Object> map) {
+		Collection<Parameter> parameters = new ArrayList<>();
+		for (Map.Entry<Object, Object> entry : map.entrySet()) {
+			if (entry.getValue() == null) {
+				throw new IllegalStateException(entry.getKey() + " has a null value");
+			}
+			parameters.add(new Parameter()
+					.withParameterKey((String) entry.getKey())
+					.withParameterValue(entry.getValue().toString())
+			);
+		}
+		return parameters;
+	}
+
+	private static Collection<Parameter> parseParams(List<String> params) {
+		Collection<Parameter> parameters = new ArrayList<>();
 		for (String param : params) {
 			int i = param.indexOf('=');
 			if (i < 0) {
@@ -50,11 +78,11 @@ public class ParameterParser {
 		return parameters;
 	}
 
-	static Collection<Parameter> parseKeepParams(String[] params) {
-		Collection<Parameter> parameters = new ArrayList<>();
+	private static Collection<Parameter> parseKeepParams(String[] params) {
 		if (params == null) {
-			return parameters;
+			return Collections.emptyList();
 		}
+		Collection<Parameter> parameters = new ArrayList<>();
 		for (String param : params) {
 			parameters.add(new Parameter().withParameterKey(param).withUsePreviousValue(true));
 		}
