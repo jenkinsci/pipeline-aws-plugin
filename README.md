@@ -514,6 +514,7 @@ ec2ShareAmi(
 # Changelog
 
 ## current master
+* Do not fail job on empty change set creation
 
 ## 1.23
 * add updateTrustPolicy step (#48)
