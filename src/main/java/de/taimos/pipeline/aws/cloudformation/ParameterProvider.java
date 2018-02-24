@@ -5,6 +5,6 @@ public interface ParameterProvider {
 
 	String getParamsFile();
 
-	String[] getParams();
+	Object getParams();
 
 }
