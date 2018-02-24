@@ -523,6 +523,7 @@ ec2ShareAmi(
 # Changelog
 
 ## current master
+* Do not fail job on empty change set creation
 * Add support for maps with cloudformation parameters.
 
 ## 1.23

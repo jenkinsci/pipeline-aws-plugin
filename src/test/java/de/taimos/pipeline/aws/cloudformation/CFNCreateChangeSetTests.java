@@ -114,6 +114,26 @@ public class CFNCreateChangeSetTests {
 	}
 
 	@Test
+	public void createEmptyChangeSet() throws Exception {
+		WorkflowJob job = jenkinsRule.jenkins.createProject(WorkflowJob.class, "cfnTest");
+		Mockito.when(stack.exists()).thenReturn(true);
+		Mockito.when(stack.describeChangeSet("bar"))
+				.thenReturn(new DescribeChangeSetResult()
+						.withStatus(ChangeSetStatus.FAILED)
+						.withStatusReason("The submitted information didn't contain changes. Submit different information to create a change set.")
+				);
+		job.setDefinition(new CpsFlowDefinition(""
+				+ "node {\n"
+				+ "  def changes = cfnCreateChangeSet(stack: 'foo', changeSet: 'bar')\n"
+				+ "  echo \"changesCount=${changes.size()}\"\n"
+				+ "}\n", true)
+		);
+		Run run = jenkinsRule.assertBuildStatusSuccess(job.scheduleBuild2(0));
+		jenkinsRule.assertLogContains("changesCount=0", run);
+
+	}
+
+	@Test
 	public void createChangeSetStackDoesNotExist() throws Exception {
 		WorkflowJob job = jenkinsRule.jenkins.createProject(WorkflowJob.class, "cfnTest");
 		Mockito.when(stack.exists()).thenReturn(false);
