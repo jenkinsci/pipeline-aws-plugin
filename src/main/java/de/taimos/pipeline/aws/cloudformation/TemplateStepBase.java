@@ -3,14 +3,16 @@ package de.taimos.pipeline.aws.cloudformation;
 import com.amazonaws.services.cloudformation.model.Tag;
 import hudson.FilePath;
 import org.jenkinsci.plugins.workflow.steps.Step;
+import org.jenkinsci.plugins.workflow.steps.StepExecution;
 import org.kohsuke.stapler.DataBoundSetter;
 
-import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 
 public abstract class TemplateStepBase extends Step implements ParameterProvider {
 	private String file;
+	private String template;
 	private String url;
 	private Object params;
 	private String[] keepParams;
@@ -26,6 +28,15 @@ public abstract class TemplateStepBase extends Step implements ParameterProvider
 	@DataBoundSetter
 	public void setFile(String file) {
 		this.file = file;
+	}
+
+	public String getTemplate() {
+		return this.template;
+	}
+
+	@DataBoundSetter
+	public void setTemplate(String template) {
+		this.template = template;
 	}
 
 	public String getUrl() {
@@ -106,5 +117,35 @@ public abstract class TemplateStepBase extends Step implements ParameterProvider
 			tagList.add(new Tag().withKey(key).withValue(value));
 		}
 		return tagList;
+	}
+
+	protected String readTemplate(StepExecution stepExecution) {
+		if (this.template != null) {
+			return this.template;
+		} else {
+			return this.readTemplateFile(stepExecution);
+		}
+	}
+
+	private String readTemplateFile(StepExecution stepExecution) {
+		if (this.file == null) {
+			return null;
+		}
+
+		FilePath workspace;
+		try {
+			workspace = stepExecution.getContext().get(FilePath.class);
+		} catch (IOException e) {
+			throw new RuntimeException(e);
+		} catch (InterruptedException e) {
+			Thread.interrupted();
+			throw new RuntimeException(e);
+		}
+		FilePath child = workspace.child(this.file);
+		try {
+			return child.readToString();
+		} catch (Exception e) {
+			throw new RuntimeException(e);
+		}
 	}
 }

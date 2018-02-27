@@ -153,19 +153,6 @@ abstract class AbstractCFNCreateStep extends TemplateStepBase {
 			return new CloudFormationStack(client, this.getStack(), this.getListener());
 		}
 
-		protected String readTemplate(String file) {
-			if (file == null) {
-				return null;
-			}
-
-			FilePath child = this.getWorkspace().child(file);
-			try {
-				return child.readToString();
-			} catch (Exception e) {
-				throw new RuntimeException(e);
-			}
-		}
-
 		public C getStep() {
 			return this.step;
 		}

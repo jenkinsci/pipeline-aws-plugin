@@ -350,6 +350,11 @@ Alternatively, you can specify a URL to a template on S3 (you'll need this if yo
 cfnCreateChangeSet(stack:'my-stack', changeSet:'my-change-set', url:'https://s3.amazonaws.com/my-templates-bucket/template.yaml')
 ```
 
+or specify a raw template:
+```
+cfnCreateChangeSet(stack:'my-stack', changeSet:'my-change-set', template: 'my template body')
+```
+
 By default the `cfnCreateChangeSet` step creates a change set for creating a new stack if the specified stack does not exist, this behaviour can be overridden by passing `create: 'false'` as parameter :
 ```
 cfnCreateChangeSet(stack:'my-stack', changeSet:'my-change-set', url:'https://s3.amazonaws.com/my-templates-bucket/template.yaml', create: 'false')
@@ -525,6 +530,7 @@ ec2ShareAmi(
 ## current master
 * Do not fail job on empty change set creation
 * Add support for maps with cloudformation parameters.
+* Allow cfnCreateStackSet, cfnUpdate, cfnCreateChangeSet to take a raw (string) template
 
 ## 1.23
 * add updateTrustPolicy step (#48)

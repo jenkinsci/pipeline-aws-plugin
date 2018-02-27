@@ -101,19 +101,17 @@ public class CFNUpdateStep extends AbstractCFNCreateStep {
 
 		@Override
 		public Object whenStackExists(Collection<Parameter> parameters, Collection<Tag> tags) throws Exception {
-			final String file = this.getStep().getFile();
 			final String url = this.getStep().getUrl();
 			CloudFormationStack cfnStack = this.getCfnStack();
-			cfnStack.update(this.readTemplate(file), url, parameters, tags, this.getStep().getPollInterval(), this.getStep().getRoleArn());
+			cfnStack.update(this.getStep().readTemplate(this), url, parameters, tags, this.getStep().getPollInterval(), this.getStep().getRoleArn());
 			return cfnStack.describeOutputs();
 		}
 
 		@Override
 		public Object whenStackMissing(Collection<Parameter> parameters, Collection<Tag> tags) throws Exception {
-			final String file = this.getStep().getFile();
 			final String url = this.getStep().getUrl();
 			CloudFormationStack cfnStack = this.getCfnStack();
-			cfnStack.create(this.readTemplate(file), url, parameters, tags, this.getStep().getTimeoutInMinutes(), this.getStep().getPollInterval(), this.getStep().getRoleArn(), this.getStep().getOnFailure());
+			cfnStack.create(this.getStep().readTemplate(this), url, parameters, tags, this.getStep().getTimeoutInMinutes(), this.getStep().getPollInterval(), this.getStep().getRoleArn(), this.getStep().getOnFailure());
 			return cfnStack.describeOutputs();
 		}
 
