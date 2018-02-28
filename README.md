@@ -308,7 +308,7 @@ cfnDelete(stack:'my-stack', pollInterval:1000)
 
 ## cfnDescribe
 
-The step returns the outputs of the stack as map.
+The step returns the outputs of the stack as map. If the stack does not exist, `null` is returned.
 
 ```
 def outputs = cfnDescribe(stack:'my-stack')
@@ -525,6 +525,7 @@ ec2ShareAmi(
 ## current master
 * Do not fail job on empty change set creation
 * Add support for maps with cloudformation parameters.
+* Return null on cfnDescribe if stack does not exist
 
 ## 1.23
 * add updateTrustPolicy step (#48)

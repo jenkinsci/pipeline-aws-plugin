@@ -102,7 +102,11 @@ public class CFNDescribeStep extends Step {
 					AmazonCloudFormation client = AWSClientFactory.create(AmazonCloudFormationClientBuilder.standard(), Execution.this.getContext());
 					CloudFormationStack cfnStack = new CloudFormationStack(client, stack, listener);
 					try {
-						Execution.this.getContext().onSuccess(cfnStack.describeOutputs());
+						if (cfnStack.exists()) {
+							Execution.this.getContext().onSuccess(cfnStack.describeOutputs());
+						} else {
+							Execution.this.getContext().onSuccess(null);
+						}
 					} catch (AmazonCloudFormationException e) {
 						Execution.this.getContext().onFailure(e);
 					}
