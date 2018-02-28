@@ -34,7 +34,6 @@ public class CFNDescribeStackTests {
 	@Rule
 	private JenkinsRule jenkinsRule = new JenkinsRule();
 	private CloudFormationStack stack;
-	private AmazonCloudFormation cloudFormation;
 
 	@Before
 	public void setupSdk() throws Exception {
@@ -43,14 +42,15 @@ public class CFNDescribeStackTests {
 		PowerMockito.whenNew(CloudFormationStack.class)
 				.withAnyArguments()
 				.thenReturn(this.stack);
-		this.cloudFormation = Mockito.mock(AmazonCloudFormation.class);
+		AmazonCloudFormation cloudFormation = Mockito.mock(AmazonCloudFormation.class);
 		PowerMockito.when(AWSClientFactory.create(Mockito.any(AwsSyncClientBuilder.class), Mockito.any(EnvVars.class)))
-				.thenReturn(this.cloudFormation);
+				.thenReturn(cloudFormation);
 	}
 
 	@Test
 	public void describe() throws Exception {
 		WorkflowJob job = this.jenkinsRule.jenkins.createProject(WorkflowJob.class, "cfnTest");
+		Mockito.when(this.stack.exists()).thenReturn(true);
 		Mockito.when(this.stack.describeOutputs()).thenReturn(Collections.singletonMap("foo", "bar"));
 		job.setDefinition(new CpsFlowDefinition(""
 														+ "node {\n"
@@ -60,6 +60,22 @@ public class CFNDescribeStackTests {
 		);
 		Run run = this.jenkinsRule.assertBuildStatusSuccess(job.scheduleBuild2(0));
 		this.jenkinsRule.assertLogContains("foo=bar", run);
+
+		PowerMockito.verifyNew(CloudFormationStack.class).withArguments(Mockito.any(AmazonCloudFormation.class), Mockito.eq("foo"), Mockito.any(TaskListener.class));
+	}
+
+	@Test
+	public void describeNonExistantStack() throws Exception {
+		WorkflowJob job = this.jenkinsRule.jenkins.createProject(WorkflowJob.class, "cfnTest");
+		Mockito.when(this.stack.exists()).thenReturn(false);
+		job.setDefinition(new CpsFlowDefinition(""
+				+ "node {\n"
+				+ "  def outputs = cfnDescribe(stack: 'foo')\n"
+				+ "  echo \"outputs=${outputs}\""
+				+ "}\n", true)
+		);
+		Run run = this.jenkinsRule.assertBuildStatusSuccess(job.scheduleBuild2(0));
+		this.jenkinsRule.assertLogContains("outputs=null", run);
 
 		PowerMockito.verifyNew(CloudFormationStack.class).withArguments(Mockito.any(AmazonCloudFormation.class), Mockito.eq("foo"), Mockito.any(TaskListener.class));
 	}
