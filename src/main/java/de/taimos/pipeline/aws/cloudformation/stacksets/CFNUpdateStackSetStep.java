@@ -26,6 +26,7 @@ import com.amazonaws.services.cloudformation.model.StackSetStatus;
 import com.amazonaws.services.cloudformation.model.Tag;
 import com.amazonaws.services.cloudformation.model.UpdateStackSetResult;
 import hudson.Extension;
+import hudson.FilePath;
 import org.jenkinsci.plugins.workflow.steps.AbstractStepDescriptorImpl;
 import org.jenkinsci.plugins.workflow.steps.StepContext;
 import org.jenkinsci.plugins.workflow.steps.StepExecution;
@@ -81,10 +82,9 @@ public class CFNUpdateStackSetStep extends AbstractCFNCreateStackSetStep {
 
 		@Override
 		public Object whenStackSetExists(Collection<Parameter> parameters, Collection<Tag> tags) throws Exception {
-			final String file = this.getStep().getFile();
 			final String url = this.getStep().getUrl();
 			CloudFormationStackSet cfnStackSet = this.getCfnStackSet();
-			UpdateStackSetResult operation = cfnStackSet.update(this.readTemplate(file), url, parameters, tags);
+			UpdateStackSetResult operation = cfnStackSet.update(this.getStep().readTemplate(this), url, parameters, tags);
 			cfnStackSet.waitForOperationToComplete(operation.getOperationId(), getStep().getPollInterval());
 			return cfnStackSet.describe();
 		}
@@ -92,10 +92,9 @@ public class CFNUpdateStackSetStep extends AbstractCFNCreateStackSetStep {
 
 		@Override
 		public Object whenStackSetMissing(Collection<Parameter> parameters, Collection<Tag> tags) throws Exception {
-			final String file = getStep().getFile();
 			final String url = getStep().getUrl();
 			CloudFormationStackSet cfnStack = this.getCfnStackSet();
-			cfnStack.create(this.readTemplate(file), url, parameters, tags);
+			cfnStack.create(this.getStep().readTemplate(this), url, parameters, tags);
 			return cfnStack.waitForStackState(StackSetStatus.ACTIVE, getStep().getPollInterval());
 		}
 

@@ -102,18 +102,16 @@ public class CFNCreateChangeSetStep extends AbstractCFNCreateStep {
 		@Override
 		public Object whenStackExists(Collection<Parameter> parameters, Collection<Tag> tags) throws Exception {
 			final String changeSet = this.getStep().getChangeSet();
-			final String file = this.getStep().getFile();
 			final String url = this.getStep().getUrl();
-			this.getCfnStack().createChangeSet(changeSet, this.readTemplate(file), url, parameters, tags, this.getStep().getPollInterval(), ChangeSetType.UPDATE, this.getStep().getRoleArn());
+			this.getCfnStack().createChangeSet(changeSet, this.getStep().readTemplate(this), url, parameters, tags, this.getStep().getPollInterval(), ChangeSetType.UPDATE, this.getStep().getRoleArn());
 			return this.validateChangeSet(changeSet);
 		}
 
 		@Override
 		public Object whenStackMissing(Collection<Parameter> parameters, Collection<Tag> tags) throws Exception {
 			final String changeSet = this.getStep().getChangeSet();
-			final String file = this.getStep().getFile();
 			final String url = this.getStep().getUrl();
-			this.getCfnStack().createChangeSet(changeSet, this.readTemplate(file), url, parameters, tags, this.getStep().getPollInterval(), ChangeSetType.CREATE, this.getStep().getRoleArn());
+			this.getCfnStack().createChangeSet(changeSet, this.getStep().readTemplate(this), url, parameters, tags, this.getStep().getPollInterval(), ChangeSetType.CREATE, this.getStep().getRoleArn());
 			return this.validateChangeSet(changeSet);
 		}
 
