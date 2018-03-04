@@ -528,9 +528,12 @@ ec2ShareAmi(
 # Changelog
 
 ## current master
+
+## 1.24
 * Do not fail job on empty change set creation
 * Add support for maps with cloudformation parameters.
 * Allow cfnCreateStackSet, cfnUpdate, cfnCreateChangeSet to take a raw (string) template
+* add `ec2ShareAmi` step
 
 ## 1.23
 * add updateTrustPolicy step (#48)
