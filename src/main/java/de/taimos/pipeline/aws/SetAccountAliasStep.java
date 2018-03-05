@@ -27,7 +27,7 @@ import org.jenkinsci.plugins.workflow.steps.Step;
 import org.jenkinsci.plugins.workflow.steps.StepContext;
 import org.jenkinsci.plugins.workflow.steps.StepDescriptor;
 import org.jenkinsci.plugins.workflow.steps.StepExecution;
-import org.jenkinsci.plugins.workflow.steps.SynchronousStepExecution;
+import org.jenkinsci.plugins.workflow.steps.SynchronousNonBlockingStepExecution;
 import org.kohsuke.stapler.DataBoundConstructor;
 
 import com.amazonaws.services.identitymanagement.AmazonIdentityManagement;
@@ -77,7 +77,7 @@ public class SetAccountAliasStep extends Step {
 		}
 	}
 
-	public static class Execution extends SynchronousStepExecution<Void> {
+	public static class Execution extends SynchronousNonBlockingStepExecution<Void> {
 
 		@SuppressFBWarnings(value = "SE_TRANSIENT_FIELD_NOT_RESTORED", justification = "Only used when starting.")
 		private final transient String name;

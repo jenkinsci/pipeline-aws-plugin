@@ -21,6 +21,19 @@
 
 package de.taimos.pipeline.aws;
 
+import java.util.List;
+import java.util.Set;
+
+import javax.annotation.Nullable;
+
+import org.jenkinsci.plugins.workflow.steps.Step;
+import org.jenkinsci.plugins.workflow.steps.StepContext;
+import org.jenkinsci.plugins.workflow.steps.StepDescriptor;
+import org.jenkinsci.plugins.workflow.steps.StepExecution;
+import org.jenkinsci.plugins.workflow.steps.SynchronousNonBlockingStepExecution;
+import org.kohsuke.stapler.DataBoundConstructor;
+import org.kohsuke.stapler.DataBoundSetter;
+
 import com.amazonaws.services.ec2.AmazonEC2;
 import com.amazonaws.services.ec2.AmazonEC2ClientBuilder;
 import com.amazonaws.services.ec2.model.LaunchPermission;
@@ -28,20 +41,10 @@ import com.amazonaws.services.ec2.model.LaunchPermissionModifications;
 import com.amazonaws.services.ec2.model.ModifyImageAttributeRequest;
 import com.google.common.base.Function;
 import com.google.common.collect.Lists;
+
 import de.taimos.pipeline.aws.utils.StepUtils;
 import hudson.Extension;
 import hudson.model.TaskListener;
-import org.jenkinsci.plugins.workflow.steps.Step;
-import org.jenkinsci.plugins.workflow.steps.StepContext;
-import org.jenkinsci.plugins.workflow.steps.StepDescriptor;
-import org.jenkinsci.plugins.workflow.steps.StepExecution;
-import org.jenkinsci.plugins.workflow.steps.SynchronousStepExecution;
-import org.kohsuke.stapler.DataBoundConstructor;
-import org.kohsuke.stapler.DataBoundSetter;
-
-import javax.annotation.Nullable;
-import java.util.List;
-import java.util.Set;
 
 public class EC2ShareAmiStep extends Step {
 
@@ -95,7 +98,7 @@ public class EC2ShareAmiStep extends Step {
 		}
 	}
 
-	public static class Execution extends SynchronousStepExecution<String> {
+	public static class Execution extends SynchronousNonBlockingStepExecution<String> {
 
 		private final transient EC2ShareAmiStep step;
 

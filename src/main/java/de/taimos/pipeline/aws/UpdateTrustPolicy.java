@@ -21,20 +21,19 @@
 
 package de.taimos.pipeline.aws;
 
-import java.io.IOException;
 import java.util.Set;
-
-import javax.annotation.Nonnull;
 
 import org.jenkinsci.plugins.workflow.steps.Step;
 import org.jenkinsci.plugins.workflow.steps.StepContext;
 import org.jenkinsci.plugins.workflow.steps.StepDescriptor;
 import org.jenkinsci.plugins.workflow.steps.StepExecution;
+import org.jenkinsci.plugins.workflow.steps.SynchronousNonBlockingStepExecution;
 import org.kohsuke.stapler.DataBoundConstructor;
 
 import com.amazonaws.services.identitymanagement.AmazonIdentityManagement;
 import com.amazonaws.services.identitymanagement.AmazonIdentityManagementClientBuilder;
 import com.amazonaws.services.identitymanagement.model.UpdateAssumeRolePolicyRequest;
+import com.google.common.base.Preconditions;
 
 import de.taimos.pipeline.aws.utils.StepUtils;
 import hudson.EnvVars;
@@ -85,7 +84,7 @@ public class UpdateTrustPolicy extends Step {
 		}
 	}
 
-	public static class Execution extends StepExecution {
+	public static class Execution extends SynchronousNonBlockingStepExecution<Void> {
 
 		private final transient UpdateTrustPolicy step;
 
@@ -95,47 +94,23 @@ public class UpdateTrustPolicy extends Step {
 		}
 
 		@Override
-		public boolean start() throws Exception {
+		protected Void run() throws Exception {
 			final String roleName = this.step.getRoleName();
 			final String policyFile = this.step.getPolicyFile();
 
-			new Thread("updateTrustPolicy") {
-				@Override
-				public void run() {
-					try {
-						TaskListener listener = Execution.this.getContext().get(TaskListener.class);
-						AmazonIdentityManagement iamClient = AWSClientFactory.create(AmazonIdentityManagementClientBuilder.standard(), Execution.this.getContext());
+			Preconditions.checkArgument(roleName != null && !roleName.isEmpty(), "roleName must not be null or empty");
+			Preconditions.checkArgument(policyFile != null && !policyFile.isEmpty(), "policyFile must not be null or empty");
 
-						UpdateAssumeRolePolicyRequest request = new UpdateAssumeRolePolicyRequest();
-						request.withRoleName(roleName);
-						request.withPolicyDocument(Execution.this.readPolicy(policyFile));
-						iamClient.updateAssumeRolePolicy(request);
-						listener.getLogger().format("Updated trust policy of role %s %n", roleName);
-						Execution.this.getContext().onSuccess(null);
-					} catch (IOException e) {
-						Execution.this.getContext().onFailure(e);
-					} catch (InterruptedException e) {
-						Execution.this.getContext().onFailure(e);
-					}
-				}
-			}.start();
-			return false;
-		}
+			AmazonIdentityManagement iamClient = AWSClientFactory.create(AmazonIdentityManagementClientBuilder.standard(), Execution.this.getContext());
 
-		private String readPolicy(String file) {
-			if (file == null) {
-				return null;
-			}
-			try {
-				return this.getContext().get(FilePath.class).child(file).readToString();
-			} catch (Exception e) {
-				throw new IllegalArgumentException(e);
-			}
-		}
+			UpdateAssumeRolePolicyRequest request = new UpdateAssumeRolePolicyRequest();
+			request.withRoleName(roleName);
+			request.withPolicyDocument(Execution.this.getContext().get(FilePath.class).child(policyFile).readToString());
+			iamClient.updateAssumeRolePolicy(request);
 
-		@Override
-		public void stop(@Nonnull Throwable cause) throws Exception {
-			//
+			Execution.this.getContext().get(TaskListener.class).getLogger().format("Updated trust policy of role %s %n", roleName);
+
+			return null;
 		}
 
 		private static final long serialVersionUID = 1L;

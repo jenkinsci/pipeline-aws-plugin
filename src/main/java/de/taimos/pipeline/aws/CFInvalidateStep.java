@@ -28,7 +28,7 @@ import org.jenkinsci.plugins.workflow.steps.Step;
 import org.jenkinsci.plugins.workflow.steps.StepContext;
 import org.jenkinsci.plugins.workflow.steps.StepDescriptor;
 import org.jenkinsci.plugins.workflow.steps.StepExecution;
-import org.jenkinsci.plugins.workflow.steps.SynchronousStepExecution;
+import org.jenkinsci.plugins.workflow.steps.SynchronousNonBlockingStepExecution;
 import org.kohsuke.stapler.DataBoundConstructor;
 
 import com.amazonaws.services.cloudfront.AmazonCloudFront;
@@ -84,7 +84,7 @@ public class CFInvalidateStep extends Step {
 		}
 	}
 
-	public static class Execution extends SynchronousStepExecution<Void> {
+	public static class Execution extends SynchronousNonBlockingStepExecution<Void> {
 
 		private final transient CFInvalidateStep step;
 

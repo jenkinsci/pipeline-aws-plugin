@@ -467,6 +467,14 @@ The step returns the ARN of the created identity provider.
 def idp = updateIdP(name: 'nameToCreateOrUpdate', metadata: 'pathToMetadataFile')
 ```
 
+## updateTrustPolicy
+
+Update the assume role trust policy of the given role using the provided file.
+
+```
+updateTrustPolicy(roleName: 'SomeRole', policyFile: 'path/to/somefile.json')
+```
+
 ## setAccountAlias
 
 Create or update the AWS account alias.
@@ -528,6 +536,7 @@ ec2ShareAmi(
 # Changelog
 
 ## current master
+* use `SynchronousNonBlockingStepExecution` for some steps for better error handling
 
 ## 1.24
 * Do not fail job on empty change set creation

@@ -29,7 +29,7 @@ import org.jenkinsci.plugins.workflow.steps.Step;
 import org.jenkinsci.plugins.workflow.steps.StepContext;
 import org.jenkinsci.plugins.workflow.steps.StepDescriptor;
 import org.jenkinsci.plugins.workflow.steps.StepExecution;
-import org.jenkinsci.plugins.workflow.steps.SynchronousStepExecution;
+import org.jenkinsci.plugins.workflow.steps.SynchronousNonBlockingStepExecution;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
 
@@ -104,7 +104,7 @@ public class DeployAPIStep extends Step {
 		}
 	}
 
-	public static class Execution extends SynchronousStepExecution<Void> {
+	public static class Execution extends SynchronousNonBlockingStepExecution<Void> {
 
 		private final transient DeployAPIStep step;
 

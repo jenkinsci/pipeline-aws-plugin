@@ -21,15 +21,13 @@
 
 package de.taimos.pipeline.aws;
 
-import java.io.IOException;
 import java.util.Set;
-
-import javax.annotation.Nonnull;
 
 import org.jenkinsci.plugins.workflow.steps.Step;
 import org.jenkinsci.plugins.workflow.steps.StepContext;
 import org.jenkinsci.plugins.workflow.steps.StepDescriptor;
 import org.jenkinsci.plugins.workflow.steps.StepExecution;
+import org.jenkinsci.plugins.workflow.steps.SynchronousNonBlockingStepExecution;
 import org.kohsuke.stapler.DataBoundConstructor;
 
 import com.amazonaws.services.identitymanagement.AmazonIdentityManagement;
@@ -40,6 +38,7 @@ import com.amazonaws.services.identitymanagement.model.ListSAMLProvidersResult;
 import com.amazonaws.services.identitymanagement.model.SAMLProviderListEntry;
 import com.amazonaws.services.identitymanagement.model.UpdateSAMLProviderRequest;
 import com.amazonaws.services.identitymanagement.model.UpdateSAMLProviderResult;
+import com.google.common.base.Preconditions;
 
 import de.taimos.pipeline.aws.utils.StepUtils;
 import hudson.EnvVars;
@@ -90,7 +89,7 @@ public class UpdateIdP extends Step {
 		}
 	}
 
-	public static class Execution extends StepExecution {
+	public static class Execution extends SynchronousNonBlockingStepExecution<String> {
 
 		private final transient UpdateIdP step;
 
@@ -100,71 +99,48 @@ public class UpdateIdP extends Step {
 		}
 
 		@Override
-		public boolean start() throws Exception {
+		protected String run() throws Exception {
 			final String name = this.step.getName();
 			final String metadata = this.step.getMetadata();
 
-			new Thread("updateIDP") {
-				@Override
-				public void run() {
-					try {
-						TaskListener listener = Execution.this.getContext().get(TaskListener.class);
-						AmazonIdentityManagement iamClient = AWSClientFactory.create(AmazonIdentityManagementClientBuilder.standard(), Execution.this.getContext());
+			Preconditions.checkArgument(name != null && !name.isEmpty(), "name must not be null or empty");
+			Preconditions.checkArgument(metadata != null && !metadata.isEmpty(), "metadata must not be null or empty");
 
-						listener.getLogger().format("Checking for identity provider %s %n", name);
-						ListSAMLProvidersResult listResult = iamClient.listSAMLProviders();
+			TaskListener listener = Execution.this.getContext().get(TaskListener.class);
+			AmazonIdentityManagement iamClient = AWSClientFactory.create(AmazonIdentityManagementClientBuilder.standard(), Execution.this.getContext());
 
-						String providerARN = null;
-						for (SAMLProviderListEntry entry : listResult.getSAMLProviderList()) {
-							String entryArn = entry.getArn();
-							String entryName = entryArn.substring(entryArn.lastIndexOf('/') + 1);
-							if (entryName.equals(name)) {
-								providerARN = entryArn;
-								break;
-							}
-						}
+			listener.getLogger().format("Checking for identity provider %s %n", name);
+			ListSAMLProvidersResult listResult = iamClient.listSAMLProviders();
 
-						if (providerARN != null) {
-							// Update IdP
-							UpdateSAMLProviderRequest request = new UpdateSAMLProviderRequest();
-							request.withSAMLProviderArn(providerARN);
-							request.withSAMLMetadataDocument(Execution.this.readMetadata(metadata));
-							UpdateSAMLProviderResult result = iamClient.updateSAMLProvider(request);
-							listener.getLogger().format("Updated identity provider %s %n", result.getSAMLProviderArn());
-						} else {
-							// Create IdP
-							CreateSAMLProviderRequest request = new CreateSAMLProviderRequest();
-							request.withName(name);
-							request.withSAMLMetadataDocument(Execution.this.readMetadata(metadata));
-							CreateSAMLProviderResult result = iamClient.createSAMLProvider(request);
-							providerARN = result.getSAMLProviderArn();
-							listener.getLogger().format("Created identity provider %s %n", providerARN);
-						}
-						Execution.this.getContext().onSuccess(providerARN);
-					} catch (IOException e) {
-						Execution.this.getContext().onFailure(e);
-					} catch (InterruptedException e) {
-						Execution.this.getContext().onFailure(e);
-					}
+			String providerARN = null;
+			for (SAMLProviderListEntry entry : listResult.getSAMLProviderList()) {
+				String entryArn = entry.getArn();
+				String entryName = entryArn.substring(entryArn.lastIndexOf('/') + 1);
+				if (entryName.equals(name)) {
+					providerARN = entryArn;
+					break;
 				}
-			}.start();
-			return false;
-		}
-
-		private String readMetadata(String file) {
-			if (file == null) {
-				return null;
 			}
-			try {
-				return this.getContext().get(FilePath.class).child(file).readToString();
-			} catch (Exception e) {
-				throw new IllegalArgumentException(e);
-			}
-		}
 
-		@Override
-		public void stop(@Nonnull Throwable cause) throws Exception {
-			//
+			String metadataDocument = Execution.this.getContext().get(FilePath.class).child(metadata).readToString();
+
+			if (providerARN != null) {
+				// Update IdP
+				UpdateSAMLProviderRequest request = new UpdateSAMLProviderRequest();
+				request.withSAMLProviderArn(providerARN);
+				request.withSAMLMetadataDocument(metadataDocument);
+				UpdateSAMLProviderResult result = iamClient.updateSAMLProvider(request);
+				listener.getLogger().format("Updated identity provider %s %n", result.getSAMLProviderArn());
+			} else {
+				// Create IdP
+				CreateSAMLProviderRequest request = new CreateSAMLProviderRequest();
+				request.withName(name);
+				request.withSAMLMetadataDocument(metadataDocument);
+				CreateSAMLProviderResult result = iamClient.createSAMLProvider(request);
+				providerARN = result.getSAMLProviderArn();
+				listener.getLogger().format("Created identity provider %s %n", providerARN);
+			}
+			return providerARN;
 		}
 
 		private static final long serialVersionUID = 1L;

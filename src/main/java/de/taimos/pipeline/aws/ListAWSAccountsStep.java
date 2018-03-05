@@ -27,15 +27,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import javax.annotation.Nonnull;
-
 import org.jenkinsci.plugins.workflow.steps.Step;
 import org.jenkinsci.plugins.workflow.steps.StepContext;
 import org.jenkinsci.plugins.workflow.steps.StepDescriptor;
 import org.jenkinsci.plugins.workflow.steps.StepExecution;
+import org.jenkinsci.plugins.workflow.steps.SynchronousNonBlockingStepExecution;
 import org.kohsuke.stapler.DataBoundConstructor;
 
-import com.amazonaws.services.cloudformation.model.AmazonCloudFormationException;
 import com.amazonaws.services.organizations.AWSOrganizations;
 import com.amazonaws.services.organizations.AWSOrganizationsClientBuilder;
 import com.amazonaws.services.organizations.model.Account;
@@ -77,46 +75,30 @@ public class ListAWSAccountsStep extends Step {
 		}
 	}
 
-	public static class Execution extends StepExecution {
+	public static class Execution extends SynchronousNonBlockingStepExecution<List> {
 
 		public Execution(StepContext context) {
 			super(context);
 		}
 
 		@Override
-		public boolean start() throws Exception {
+		protected List run() throws Exception {
 			this.getContext().get(TaskListener.class).getLogger().format("Getting AWS accounts %n");
 
-			new Thread("listAWSAccounts") {
-				@Override
-				public void run() {
-					AWSOrganizations client = AWSClientFactory.create(AWSOrganizationsClientBuilder.standard(), Execution.this.getContext());
-					ListAccountsResult exports = client.listAccounts(new ListAccountsRequest());
+			AWSOrganizations client = AWSClientFactory.create(AWSOrganizationsClientBuilder.standard(), Execution.this.getContext());
+			ListAccountsResult exports = client.listAccounts(new ListAccountsRequest());
 
-					List<Map<String, String>> accounts = new ArrayList<>();
-					for (Account account : exports.getAccounts()) {
-						Map<String, String> awsAccount = new HashMap<>();
-						awsAccount.put("id", account.getId());
-						awsAccount.put("arn", account.getArn());
-						awsAccount.put("name", account.getName());
-						awsAccount.put("safeName", SafeNameCreator.createSafeName(account.getName()));
-						awsAccount.put("status", account.getStatus());
-						accounts.add(awsAccount);
-					}
-
-					try {
-						Execution.this.getContext().onSuccess(accounts);
-					} catch (AmazonCloudFormationException e) {
-						Execution.this.getContext().onFailure(e);
-					}
-				}
-			}.start();
-			return false;
-		}
-
-		@Override
-		public void stop(@Nonnull Throwable cause) throws Exception {
-			//
+			List<Map<String, String>> accounts = new ArrayList<>();
+			for (Account account : exports.getAccounts()) {
+				Map<String, String> awsAccount = new HashMap<>();
+				awsAccount.put("id", account.getId());
+				awsAccount.put("arn", account.getArn());
+				awsAccount.put("name", account.getName());
+				awsAccount.put("safeName", SafeNameCreator.createSafeName(account.getName()));
+				awsAccount.put("status", account.getStatus());
+				accounts.add(awsAccount);
+			}
+			return accounts;
 		}
 
 		private static final long serialVersionUID = 1L;

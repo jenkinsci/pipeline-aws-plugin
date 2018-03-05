@@ -23,12 +23,11 @@ package de.taimos.pipeline.aws;
 
 import java.util.Set;
 
-import javax.annotation.Nonnull;
-
 import org.jenkinsci.plugins.workflow.steps.Step;
 import org.jenkinsci.plugins.workflow.steps.StepContext;
 import org.jenkinsci.plugins.workflow.steps.StepDescriptor;
 import org.jenkinsci.plugins.workflow.steps.StepExecution;
+import org.jenkinsci.plugins.workflow.steps.SynchronousNonBlockingStepExecution;
 import org.kohsuke.stapler.DataBoundConstructor;
 
 import com.amazonaws.services.sns.AmazonSNS;
@@ -88,7 +87,7 @@ public class SNSPublishStep extends Step {
 		}
 	}
 
-	public static class Execution extends StepExecution {
+	public static class Execution extends SynchronousNonBlockingStepExecution<Void> {
 
 		private final transient SNSPublishStep step;
 
@@ -98,33 +97,18 @@ public class SNSPublishStep extends Step {
 		}
 
 		@Override
-		public boolean start() throws Exception {
+		protected Void run() throws Exception {
 			final String topicArn = this.step.getTopicArn();
 			final String subject = this.step.getSubject();
 			final String message = this.step.getMessage();
 
-			new Thread("snsPublish") {
-				@Override
-				public void run() {
-					try {
-						TaskListener listener = Execution.this.getContext().get(TaskListener.class);
-						AmazonSNS snsClient = AWSClientFactory.create(AmazonSNSClientBuilder.standard(), Execution.this.getContext());
+			TaskListener listener = this.getContext().get(TaskListener.class);
+			AmazonSNS snsClient = AWSClientFactory.create(AmazonSNSClientBuilder.standard(), this.getContext());
 
-						listener.getLogger().format("Publishing notification %s to %s %n", subject, topicArn);
-						PublishResult result = snsClient.publish(topicArn, message, subject);
-						listener.getLogger().format("Message published as %s %n", result.getMessageId());
-						Execution.this.getContext().onSuccess(null);
-					} catch (Exception e) {
-						Execution.this.getContext().onFailure(e);
-					}
-				}
-			}.start();
-			return false;
-		}
-
-		@Override
-		public void stop(@Nonnull Throwable cause) throws Exception {
-			//
+			listener.getLogger().format("Publishing notification %s to %s %n", subject, topicArn);
+			PublishResult result = snsClient.publish(topicArn, message, subject);
+			listener.getLogger().format("Message published as %s %n", result.getMessageId());
+			return null;
 		}
 
 		private static final long serialVersionUID = 1L;
