@@ -172,10 +172,14 @@ public class S3DeleteStep extends AbstractS3Step {
 						// Create the request to list the objects within it.
 						ListObjectsRequest request = new ListObjectsRequest();
 						request.setBucketName(bucket);
-						request.setPrefix(folder);
 						request.setDelimiter("/");
-						if (!folder.endsWith("/")) {
+
+						if (folder.equals("/")) {
+							request.setPrefix(null);
+						} else if (!folder.endsWith("/")) {
 							request.setPrefix(folder + "/");
+						} else {
+							request.setPrefix(folder);
 						}
 
 						// Get the list of objects within the folder.  Because AWS
