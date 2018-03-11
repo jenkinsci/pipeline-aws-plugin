@@ -1,18 +1,19 @@
 package de.taimos.pipeline.aws.cloudformation.parser;
 
-import com.amazonaws.services.cloudformation.model.Parameter;
-import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
-import de.taimos.pipeline.aws.cloudformation.ParameterProvider;
-import hudson.FilePath;
-
-import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
+
+import com.amazonaws.services.cloudformation.model.Parameter;
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
+
+import de.taimos.pipeline.aws.cloudformation.ParameterProvider;
+import hudson.FilePath;
 
 public class ParameterParser {
 
@@ -82,11 +83,7 @@ public class ParameterParser {
 		if (params == null) {
 			return Collections.emptyList();
 		}
-		Collection<Parameter> parameters = new ArrayList<>();
-		for (String param : params) {
-			parameters.add(new Parameter().withParameterKey(param).withUsePreviousValue(true));
-		}
-		return parameters;
+		return Arrays.stream(params).map(param -> new Parameter().withParameterKey(param).withUsePreviousValue(true)).collect(Collectors.toList());
 	}
 
 	public static Collection<Parameter> parseWithKeepParams(FilePath workspace, ParameterProvider provider) {

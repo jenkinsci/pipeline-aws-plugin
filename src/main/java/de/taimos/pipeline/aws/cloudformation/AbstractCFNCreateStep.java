@@ -21,25 +21,28 @@
 
 package de.taimos.pipeline.aws.cloudformation;
 
+import java.io.IOException;
+import java.util.Collection;
+
+import javax.annotation.Nonnull;
+
+import org.jenkinsci.plugins.workflow.steps.StepContext;
+import org.jenkinsci.plugins.workflow.steps.StepExecution;
+import org.kohsuke.stapler.DataBoundSetter;
+
 import com.amazonaws.services.cloudformation.AmazonCloudFormation;
 import com.amazonaws.services.cloudformation.AmazonCloudFormationClientBuilder;
 import com.amazonaws.services.cloudformation.model.OnFailure;
 import com.amazonaws.services.cloudformation.model.Parameter;
 import com.amazonaws.services.cloudformation.model.Tag;
 import com.google.common.base.Preconditions;
+
 import de.taimos.pipeline.aws.AWSClientFactory;
 import de.taimos.pipeline.aws.cloudformation.parser.ParameterParser;
 import de.taimos.pipeline.aws.utils.IamRoleUtils;
 import hudson.EnvVars;
 import hudson.FilePath;
 import hudson.model.TaskListener;
-import org.jenkinsci.plugins.workflow.steps.StepContext;
-import org.jenkinsci.plugins.workflow.steps.StepExecution;
-import org.kohsuke.stapler.DataBoundSetter;
-
-import javax.annotation.Nonnull;
-import java.io.IOException;
-import java.util.Collection;
 
 abstract class AbstractCFNCreateStep extends TemplateStepBase {
 
@@ -126,11 +129,11 @@ abstract class AbstractCFNCreateStep extends TemplateStepBase {
 						AmazonCloudFormation client = AWSClientFactory.create(AmazonCloudFormationClientBuilder.standard(), Execution.this.getEnvVars());
 						CloudFormationStack cfnStack = new CloudFormationStack(client, stack, Execution.this.getListener());
 						if (cfnStack.exists()) {
-							Collection<Parameter> parameters = ParameterParser.parseWithKeepParams(getWorkspace(), getStep());
-							Execution.this.getContext().onSuccess(Execution.this.whenStackExists(parameters, getStep().getAwsTags()));
+							Collection<Parameter> parameters = ParameterParser.parseWithKeepParams(Execution.this.getWorkspace(), Execution.this.getStep());
+							Execution.this.getContext().onSuccess(Execution.this.whenStackExists(parameters, Execution.this.getStep().getAwsTags()));
 						} else if (create) {
-							Collection<Parameter> parameters = ParameterParser.parse(getWorkspace(), getStep());
-							Execution.this.getContext().onSuccess(Execution.this.whenStackMissing(parameters, getStep().getAwsTags()));
+							Collection<Parameter> parameters = ParameterParser.parse(Execution.this.getWorkspace(), Execution.this.getStep());
+							Execution.this.getContext().onSuccess(Execution.this.whenStackMissing(parameters, Execution.this.getStep().getAwsTags()));
 						} else {
 							Execution.this.getListener().getLogger().println("No stack found with the name and skipped creation due to configuration.");
 							Execution.this.getContext().onSuccess(null);

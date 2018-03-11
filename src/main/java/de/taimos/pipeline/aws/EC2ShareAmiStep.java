@@ -23,8 +23,7 @@ package de.taimos.pipeline.aws;
 
 import java.util.List;
 import java.util.Set;
-
-import javax.annotation.Nullable;
+import java.util.stream.Collectors;
 
 import org.jenkinsci.plugins.workflow.steps.Step;
 import org.jenkinsci.plugins.workflow.steps.StepContext;
@@ -39,8 +38,6 @@ import com.amazonaws.services.ec2.AmazonEC2ClientBuilder;
 import com.amazonaws.services.ec2.model.LaunchPermission;
 import com.amazonaws.services.ec2.model.LaunchPermissionModifications;
 import com.amazonaws.services.ec2.model.ModifyImageAttributeRequest;
-import com.google.common.base.Function;
-import com.google.common.collect.Lists;
 
 import de.taimos.pipeline.aws.utils.StepUtils;
 import hudson.Extension;
@@ -62,7 +59,7 @@ public class EC2ShareAmiStep extends Step {
 	}
 
 	public List<String> getAccountIds() {
-		return accountIds;
+		return this.accountIds;
 	}
 
 	@DataBoundSetter
@@ -71,7 +68,7 @@ public class EC2ShareAmiStep extends Step {
 	}
 
 	public String getAmiId() {
-		return amiId;
+		return this.amiId;
 	}
 
 	@DataBoundSetter
@@ -118,13 +115,7 @@ public class EC2ShareAmiStep extends Step {
 			ec2.modifyImageAttribute(new ModifyImageAttributeRequest()
 					.withImageId(this.step.amiId)
 					.withLaunchPermission(new LaunchPermissionModifications()
-							.withAdd(Lists.transform(this.step.accountIds, new Function<String, LaunchPermission>() {
-								@Override
-								public LaunchPermission apply(@Nullable String accountId) {
-									return new LaunchPermission()
-											.withUserId(accountId);
-								}
-							}))
+							.withAdd(this.step.accountIds.stream().map(accountId -> new LaunchPermission().withUserId(accountId)).collect(Collectors.toList()))
 					)
 			);
 			listener.getLogger().println("Shared amiId=" + this.step.amiId + " to accounts: " + this.step.accountIds);

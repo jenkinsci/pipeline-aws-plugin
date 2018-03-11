@@ -22,26 +22,28 @@
 package de.taimos.pipeline.aws.cloudformation.stacksets;
 
 
+import java.io.IOException;
+import java.util.Collection;
+
+import javax.annotation.Nonnull;
+
+import org.jenkinsci.plugins.workflow.steps.StepContext;
+import org.jenkinsci.plugins.workflow.steps.StepExecution;
+import org.kohsuke.stapler.DataBoundSetter;
+
 import com.amazonaws.services.cloudformation.AmazonCloudFormation;
 import com.amazonaws.services.cloudformation.AmazonCloudFormationClientBuilder;
 import com.amazonaws.services.cloudformation.model.OnFailure;
 import com.amazonaws.services.cloudformation.model.Parameter;
 import com.amazonaws.services.cloudformation.model.Tag;
 import com.google.common.base.Preconditions;
+
 import de.taimos.pipeline.aws.AWSClientFactory;
-import de.taimos.pipeline.aws.cloudformation.ParameterProvider;
 import de.taimos.pipeline.aws.cloudformation.TemplateStepBase;
 import de.taimos.pipeline.aws.cloudformation.parser.ParameterParser;
 import hudson.EnvVars;
 import hudson.FilePath;
 import hudson.model.TaskListener;
-import org.jenkinsci.plugins.workflow.steps.StepContext;
-import org.jenkinsci.plugins.workflow.steps.StepExecution;
-import org.kohsuke.stapler.DataBoundSetter;
-
-import javax.annotation.Nonnull;
-import java.io.IOException;
-import java.util.Collection;
 
 abstract class AbstractCFNCreateStackSetStep extends TemplateStepBase {
 
@@ -140,9 +142,7 @@ abstract class AbstractCFNCreateStackSetStep extends TemplateStepBase {
 		public TaskListener getListener() {
 			try {
 				return this.getContext().get(TaskListener.class);
-			} catch (IOException e) {
-				throw new RuntimeException(e);
-			} catch (InterruptedException e) {
+			} catch (IOException | InterruptedException e) {
 				throw new RuntimeException(e);
 			}
 		}
@@ -150,9 +150,7 @@ abstract class AbstractCFNCreateStackSetStep extends TemplateStepBase {
 		public EnvVars getEnvVars() {
 			try {
 				return this.getContext().get(EnvVars.class);
-			} catch (IOException e) {
-				throw new RuntimeException(e);
-			} catch (InterruptedException e) {
+			} catch (IOException | InterruptedException e) {
 				throw new RuntimeException(e);
 			}
 		}
@@ -160,9 +158,7 @@ abstract class AbstractCFNCreateStackSetStep extends TemplateStepBase {
 		public FilePath getWorkspace() {
 			try {
 				return this.getContext().get(FilePath.class);
-			} catch (IOException e) {
-				throw new RuntimeException(e);
-			} catch (InterruptedException e) {
+			} catch (IOException | InterruptedException e) {
 				throw new RuntimeException(e);
 			}
 		}

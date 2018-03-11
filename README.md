@@ -538,6 +538,7 @@ ec2ShareAmi(
 ## current master
 * use `SynchronousNonBlockingStepExecution` for some steps for better error handling
 * allow s3Delete to empty bucket (#63)
+* set minimal Jenkins version to 2.60.3 and switch to Java 8
 
 ## 1.24
 * Do not fail job on empty change set creation

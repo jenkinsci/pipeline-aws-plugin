@@ -21,19 +21,18 @@
 
 package de.taimos.pipeline.aws.cloudformation;
 
+import java.util.Map;
 import java.util.Set;
-
-import javax.annotation.Nonnull;
 
 import org.jenkinsci.plugins.workflow.steps.Step;
 import org.jenkinsci.plugins.workflow.steps.StepContext;
 import org.jenkinsci.plugins.workflow.steps.StepDescriptor;
 import org.jenkinsci.plugins.workflow.steps.StepExecution;
+import org.jenkinsci.plugins.workflow.steps.SynchronousNonBlockingStepExecution;
 import org.kohsuke.stapler.DataBoundConstructor;
 
 import com.amazonaws.services.cloudformation.AmazonCloudFormation;
 import com.amazonaws.services.cloudformation.AmazonCloudFormationClientBuilder;
-import com.amazonaws.services.cloudformation.model.AmazonCloudFormationException;
 import com.google.common.base.Preconditions;
 
 import de.taimos.pipeline.aws.AWSClientFactory;
@@ -78,7 +77,7 @@ public class CFNDescribeStep extends Step {
 		}
 	}
 
-	public static class Execution extends StepExecution {
+	public static class Execution extends SynchronousNonBlockingStepExecution<Map<String, String>> {
 
 		private transient final CFNDescribeStep step;
 
@@ -88,32 +87,16 @@ public class CFNDescribeStep extends Step {
 		}
 
 		@Override
-		public boolean start() throws Exception {
+		protected Map<String, String> run() throws Exception {
 			final String stack = this.step.getStack();
 			final TaskListener listener = this.getContext().get(TaskListener.class);
 
 			Preconditions.checkArgument(stack != null && !stack.isEmpty(), "Stack must not be null or empty");
 
 			listener.getLogger().format("Getting outputs of CloudFormation stack %s %n", stack);
-
-			new Thread("cfnDescribe-" + stack) {
-				@Override
-				public void run() {
-					AmazonCloudFormation client = AWSClientFactory.create(AmazonCloudFormationClientBuilder.standard(), Execution.this.getContext());
-					CloudFormationStack cfnStack = new CloudFormationStack(client, stack, listener);
-					try {
-						Execution.this.getContext().onSuccess(cfnStack.describeOutputs());
-					} catch (AmazonCloudFormationException e) {
-						Execution.this.getContext().onFailure(e);
-					}
-				}
-			}.start();
-			return false;
-		}
-
-		@Override
-		public void stop(@Nonnull Throwable cause) throws Exception {
-			//
+			AmazonCloudFormation client = AWSClientFactory.create(AmazonCloudFormationClientBuilder.standard(), Execution.this.getContext());
+			CloudFormationStack cfnStack = new CloudFormationStack(client, stack, listener);
+			return cfnStack.describeOutputs();
 		}
 
 		private static final long serialVersionUID = 1L;

@@ -21,6 +21,8 @@
 
 package de.taimos.pipeline.aws.cloudformation.stacksets;
 
+import java.util.Collection;
+
 import com.amazonaws.services.cloudformation.AmazonCloudFormation;
 import com.amazonaws.services.cloudformation.model.AmazonCloudFormationException;
 import com.amazonaws.services.cloudformation.model.Capability;
@@ -37,9 +39,8 @@ import com.amazonaws.services.cloudformation.model.StackSetStatus;
 import com.amazonaws.services.cloudformation.model.Tag;
 import com.amazonaws.services.cloudformation.model.UpdateStackSetRequest;
 import com.amazonaws.services.cloudformation.model.UpdateStackSetResult;
-import hudson.model.TaskListener;
 
-import java.util.Collection;
+import hudson.model.TaskListener;
 
 public class CloudFormationStackSet {
 
@@ -72,7 +73,7 @@ public class CloudFormationStackSet {
 			throw new IllegalArgumentException("Either a file or url for the template must be specified");
 		}
 
-		listener.getLogger().println("Creating stack set " + stackSet);
+		this.listener.getLogger().println("Creating stack set " + this.stackSet);
 		CreateStackSetRequest req = new CreateStackSetRequest()
 				.withStackSetName(this.stackSet)
 				.withCapabilities(Capability.CAPABILITY_IAM, Capability.CAPABILITY_NAMED_IAM)
@@ -80,17 +81,17 @@ public class CloudFormationStackSet {
 				.withTemplateURL(templateUrl)
 				.withParameters(params)
 				.withTags(tags);
-		CreateStackSetResult result = client.createStackSet(req);
-		listener.getLogger().println("Created Stack set stackSetId=" + result.getStackSetId());
+		CreateStackSetResult result = this.client.createStackSet(req);
+		this.listener.getLogger().println("Created Stack set stackSetId=" + result.getStackSetId());
 		return result;
 	}
 
 	public DescribeStackSetResult waitForStackState(StackSetStatus expectedStatus, long pollInterval) throws InterruptedException {
 		DescribeStackSetResult result = describe();
-		listener.getLogger().println("stackSetId=" + result.getStackSet().getStackSetId() + " status=" + result.getStackSet().getStatus());
+		this.listener.getLogger().println("stackSetId=" + result.getStackSet().getStackSetId() + " status=" + result.getStackSet().getStatus());
 		StackSetStatus currentStatus = StackSetStatus.fromValue(result.getStackSet().getStatus());
 		if (currentStatus == expectedStatus) {
-			listener.getLogger().println("Stack set operation completed successfully");
+			this.listener.getLogger().println("Stack set operation completed successfully");
 			return result;
 		} else {
 			Thread.sleep(pollInterval);
@@ -99,18 +100,18 @@ public class CloudFormationStackSet {
 	}
 
 	DescribeStackSetOperationResult waitForOperationToComplete(String operationId, long pollInterval) throws InterruptedException {
-		listener.getLogger().println("Waiting on operationId=" + operationId);
+		this.listener.getLogger().println("Waiting on operationId=" + operationId);
 		DescribeStackSetOperationResult result = describeStackOperation(operationId);
-		listener.getLogger().println("operationId=" + operationId + " status=" + result.getStackSetOperation().getStatus());
+		this.listener.getLogger().println("operationId=" + operationId + " status=" + result.getStackSetOperation().getStatus());
 		switch (StackSetOperationStatus.fromValue(result.getStackSetOperation().getStatus())) {
 			case RUNNING:
 				Thread.sleep(pollInterval);
 				return waitForOperationToComplete(operationId, pollInterval);
 			case SUCCEEDED:
-				listener.getLogger().println("Stack set operation completed successfully");
+				this.listener.getLogger().println("Stack set operation completed successfully");
 				return result;
 			case FAILED:
-				listener.getLogger().println("Stack set operation completed failed");
+				this.listener.getLogger().println("Stack set operation completed failed");
 				throw new StackSetOperationFailedException(operationId);
 			default:
 				throw new IllegalStateException("Invalid stack set state=" + result.getStackSetOperation().getStatus());
@@ -140,7 +141,7 @@ public class CloudFormationStackSet {
 	}
 
 	public void delete() {
-		client.deleteStackSet(new DeleteStackSetRequest().withStackSetName(this.stackSet));
+		this.client.deleteStackSet(new DeleteStackSetRequest().withStackSetName(this.stackSet));
 	}
 
 	DescribeStackSetResult describe() {
@@ -149,7 +150,7 @@ public class CloudFormationStackSet {
 
 	private DescribeStackSetOperationResult describeStackOperation(String operationId) {
 		return this.client.describeStackSetOperation(new DescribeStackSetOperationRequest()
-				.withStackSetName(stackSet)
+				.withStackSetName(this.stackSet)
 				.withOperationId(operationId)
 		);
 	}

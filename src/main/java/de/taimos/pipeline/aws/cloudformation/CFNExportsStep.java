@@ -25,17 +25,15 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
-import javax.annotation.Nonnull;
-
 import org.jenkinsci.plugins.workflow.steps.Step;
 import org.jenkinsci.plugins.workflow.steps.StepContext;
 import org.jenkinsci.plugins.workflow.steps.StepDescriptor;
 import org.jenkinsci.plugins.workflow.steps.StepExecution;
+import org.jenkinsci.plugins.workflow.steps.SynchronousNonBlockingStepExecution;
 import org.kohsuke.stapler.DataBoundConstructor;
 
 import com.amazonaws.services.cloudformation.AmazonCloudFormation;
 import com.amazonaws.services.cloudformation.AmazonCloudFormationClientBuilder;
-import com.amazonaws.services.cloudformation.model.AmazonCloudFormationException;
 import com.amazonaws.services.cloudformation.model.Export;
 import com.amazonaws.services.cloudformation.model.ListExportsRequest;
 import com.amazonaws.services.cloudformation.model.ListExportsResult;
@@ -76,7 +74,7 @@ public class CFNExportsStep extends Step {
 		}
 	}
 
-	public static class Execution extends StepExecution {
+	public static class Execution extends SynchronousNonBlockingStepExecution<Map<String, String>> {
 
 		private transient CFNExportsStep step;
 
@@ -85,22 +83,10 @@ public class CFNExportsStep extends Step {
 		}
 
 		@Override
-		public boolean start() throws Exception {
+		protected Map<String, String> run() throws Exception {
 			this.getContext().get(TaskListener.class).getLogger().format("Getting global exports of CloudFormation %n");
-
-			new Thread("cfnExports") {
-				@Override
-				public void run() {
-					AmazonCloudFormation client = AWSClientFactory.create(AmazonCloudFormationClientBuilder.standard(), Execution.this.getContext());
-					Map<String, String> map = Execution.this.getExports(client, null);
-					try {
-						Execution.this.getContext().onSuccess(map);
-					} catch (AmazonCloudFormationException e) {
-						Execution.this.getContext().onFailure(e);
-					}
-				}
-			}.start();
-			return false;
+			AmazonCloudFormation client = AWSClientFactory.create(AmazonCloudFormationClientBuilder.standard(), Execution.this.getContext());
+			return Execution.this.getExports(client, null);
 		}
 
 		private Map<String, String> getExports(AmazonCloudFormation client, String nextToken) {
@@ -114,11 +100,6 @@ public class CFNExportsStep extends Step {
 				map.putAll(this.getExports(client, exports.getNextToken()));
 			}
 			return map;
-		}
-
-		@Override
-		public void stop(@Nonnull Throwable cause) throws Exception {
-			//
 		}
 
 		private static final long serialVersionUID = 1L;

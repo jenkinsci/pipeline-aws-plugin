@@ -21,11 +21,11 @@
 
 package de.taimos.pipeline.aws;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import org.jenkinsci.plugins.workflow.steps.Step;
 import org.jenkinsci.plugins.workflow.steps.StepContext;
@@ -36,7 +36,6 @@ import org.kohsuke.stapler.DataBoundConstructor;
 
 import com.amazonaws.services.organizations.AWSOrganizations;
 import com.amazonaws.services.organizations.AWSOrganizationsClientBuilder;
-import com.amazonaws.services.organizations.model.Account;
 import com.amazonaws.services.organizations.model.ListAccountsRequest;
 import com.amazonaws.services.organizations.model.ListAccountsResult;
 
@@ -88,17 +87,15 @@ public class ListAWSAccountsStep extends Step {
 			AWSOrganizations client = AWSClientFactory.create(AWSOrganizationsClientBuilder.standard(), Execution.this.getContext());
 			ListAccountsResult exports = client.listAccounts(new ListAccountsRequest());
 
-			List<Map<String, String>> accounts = new ArrayList<>();
-			for (Account account : exports.getAccounts()) {
+			return exports.getAccounts().stream().map(account -> {
 				Map<String, String> awsAccount = new HashMap<>();
 				awsAccount.put("id", account.getId());
 				awsAccount.put("arn", account.getArn());
 				awsAccount.put("name", account.getName());
 				awsAccount.put("safeName", SafeNameCreator.createSafeName(account.getName()));
 				awsAccount.put("status", account.getStatus());
-				accounts.add(awsAccount);
-			}
-			return accounts;
+				return awsAccount;
+			}).collect(Collectors.toList());
 		}
 
 		private static final long serialVersionUID = 1L;

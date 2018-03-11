@@ -1,14 +1,16 @@
 package de.taimos.pipeline.aws.cloudformation;
 
-import com.amazonaws.services.cloudformation.model.Tag;
-import hudson.FilePath;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collection;
+
 import org.jenkinsci.plugins.workflow.steps.Step;
 import org.jenkinsci.plugins.workflow.steps.StepExecution;
 import org.kohsuke.stapler.DataBoundSetter;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collection;
+import com.amazonaws.services.cloudformation.model.Tag;
+
+import hudson.FilePath;
 
 public abstract class TemplateStepBase extends Step implements ParameterProvider {
 	private String file;
@@ -104,10 +106,10 @@ public abstract class TemplateStepBase extends Step implements ParameterProvider
 
 	protected final Collection<Tag> getAwsTags() {
 		Collection<Tag> tagList = new ArrayList<>();
-		if (tags == null) {
+		if (this.tags == null) {
 			return tagList;
 		}
-		for (String tag : tags) {
+		for (String tag : this.tags) {
 			int i = tag.indexOf('=');
 			if (i < 0) {
 				throw new IllegalArgumentException("Missing = in tag " + tag);
