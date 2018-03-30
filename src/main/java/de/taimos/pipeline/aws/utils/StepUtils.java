@@ -39,4 +39,7 @@ public class StepUtils {
 		return requires(EnvVars.class, TaskListener.class);
 	}
 
+	private StepUtils() {
+		// Hide utility class constructor
+	}
 }

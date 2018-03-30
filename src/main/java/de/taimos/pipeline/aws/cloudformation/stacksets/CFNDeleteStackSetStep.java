@@ -21,13 +21,10 @@
 
 package de.taimos.pipeline.aws.cloudformation.stacksets;
 
-import com.amazonaws.services.cloudformation.AmazonCloudFormation;
-import com.amazonaws.services.cloudformation.AmazonCloudFormationClientBuilder;
-import com.google.common.base.Preconditions;
-import de.taimos.pipeline.aws.AWSClientFactory;
-import de.taimos.pipeline.aws.utils.StepUtils;
-import hudson.Extension;
-import hudson.model.TaskListener;
+import java.util.Set;
+
+import javax.annotation.Nonnull;
+
 import org.jenkinsci.plugins.workflow.steps.Step;
 import org.jenkinsci.plugins.workflow.steps.StepContext;
 import org.jenkinsci.plugins.workflow.steps.StepDescriptor;
@@ -35,8 +32,14 @@ import org.jenkinsci.plugins.workflow.steps.StepExecution;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
 
-import javax.annotation.Nonnull;
-import java.util.Set;
+import com.amazonaws.services.cloudformation.AmazonCloudFormation;
+import com.amazonaws.services.cloudformation.AmazonCloudFormationClientBuilder;
+import com.google.common.base.Preconditions;
+
+import de.taimos.pipeline.aws.AWSClientFactory;
+import de.taimos.pipeline.aws.utils.StepUtils;
+import hudson.Extension;
+import hudson.model.TaskListener;
 
 public class CFNDeleteStackSetStep extends Step {
 
@@ -68,9 +71,6 @@ public class CFNDeleteStackSetStep extends Step {
 
 	@Extension
 	public static class DescriptorImpl extends StepDescriptor {
-
-		public DescriptorImpl() {
-		}
 
 		@Override
 		public String getFunctionName() {

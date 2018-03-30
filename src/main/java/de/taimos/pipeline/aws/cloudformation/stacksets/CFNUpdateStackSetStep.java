@@ -21,19 +21,23 @@
 
 package de.taimos.pipeline.aws.cloudformation.stacksets;
 
+import java.util.Collection;
+import java.util.Set;
+
+import javax.annotation.Nonnull;
+
+import org.jenkinsci.plugins.workflow.steps.StepContext;
+import org.jenkinsci.plugins.workflow.steps.StepDescriptor;
+import org.jenkinsci.plugins.workflow.steps.StepExecution;
+import org.kohsuke.stapler.DataBoundConstructor;
+
 import com.amazonaws.services.cloudformation.model.Parameter;
 import com.amazonaws.services.cloudformation.model.StackSetStatus;
 import com.amazonaws.services.cloudformation.model.Tag;
 import com.amazonaws.services.cloudformation.model.UpdateStackSetResult;
-import hudson.Extension;
-import hudson.FilePath;
-import org.jenkinsci.plugins.workflow.steps.AbstractStepDescriptorImpl;
-import org.jenkinsci.plugins.workflow.steps.StepContext;
-import org.jenkinsci.plugins.workflow.steps.StepExecution;
-import org.kohsuke.stapler.DataBoundConstructor;
 
-import javax.annotation.Nonnull;
-import java.util.Collection;
+import de.taimos.pipeline.aws.utils.StepUtils;
+import hudson.Extension;
 
 public class CFNUpdateStackSetStep extends AbstractCFNCreateStackSetStep {
 
@@ -43,11 +47,7 @@ public class CFNUpdateStackSetStep extends AbstractCFNCreateStackSetStep {
 	}
 
 	@Extension
-	public static class DescriptorImpl extends AbstractStepDescriptorImpl {
-
-		public DescriptorImpl() {
-			super(Execution.class);
-		}
+	public static class DescriptorImpl extends StepDescriptor {
 
 		@Override
 		public String getFunctionName() {
@@ -57,6 +57,11 @@ public class CFNUpdateStackSetStep extends AbstractCFNCreateStackSetStep {
 		@Override
 		public String getDisplayName() {
 			return "Create or Update CloudFormation Stack Set";
+		}
+
+		@Override
+		public Set<? extends Class<?>> getRequiredContext() {
+			return StepUtils.requiresDefault();
 		}
 	}
 
@@ -73,6 +78,7 @@ public class CFNUpdateStackSetStep extends AbstractCFNCreateStackSetStep {
 
 		@Override
 		public void checkPreconditions() {
+			// Nothing to check here
 		}
 
 		@Override

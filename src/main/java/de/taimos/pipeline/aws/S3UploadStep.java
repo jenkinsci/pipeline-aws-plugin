@@ -39,7 +39,6 @@ import org.jenkinsci.plugins.workflow.steps.StepExecution;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
 
-import com.amazonaws.event.ProgressEvent;
 import com.amazonaws.event.ProgressEventType;
 import com.amazonaws.event.ProgressListener;
 import com.amazonaws.services.s3.Headers;
@@ -377,12 +376,9 @@ public class S3UploadStep extends AbstractS3Step {
 				}
 
 				final Upload upload = mgr.upload(request);
-				upload.addProgressListener(new ProgressListener() {
-					@Override
-					public void progressChanged(ProgressEvent progressEvent) {
-						if (progressEvent.getEventType() == ProgressEventType.TRANSFER_COMPLETED_EVENT) {
-							RemoteUploader.this.taskListener.getLogger().println("Finished: " + upload.getDescription());
-						}
+				upload.addProgressListener((ProgressListener) progressEvent -> {
+					if (progressEvent.getEventType() == ProgressEventType.TRANSFER_COMPLETED_EVENT) {
+						RemoteUploader.this.taskListener.getLogger().println("Finished: " + upload.getDescription());
 					}
 				});
 				upload.waitForCompletion();
@@ -390,41 +386,35 @@ public class S3UploadStep extends AbstractS3Step {
 			}
 			if (localFile.isDirectory()) {
 				final MultipleFileUpload fileUpload;
-				final ObjectMetadataProvider metadatasProvider = new ObjectMetadataProvider() {
-					@Override
-					public void provideObjectMetadata(File file, ObjectMetadata meta) {
-						if (meta != null) {
-							if (RemoteUploader.this.metadatas != null && RemoteUploader.this.metadatas.size() > 0) {
-								meta.setUserMetadata(RemoteUploader.this.metadatas);
-							}
-							if (RemoteUploader.this.acl != null) {
-								meta.setHeader(Headers.S3_CANNED_ACL, RemoteUploader.this.acl);
-							}
-							if (RemoteUploader.this.cacheControl != null && !RemoteUploader.this.cacheControl.isEmpty()) {
-								meta.setCacheControl(RemoteUploader.this.cacheControl);
-							}
-							if (RemoteUploader.this.contentType != null && !RemoteUploader.this.contentType.isEmpty()) {
-								meta.setContentType(RemoteUploader.this.contentType);
-							}
-							if (RemoteUploader.this.kmsId != null && !RemoteUploader.this.kmsId.isEmpty()) {
-								final SSEAwsKeyManagementParams sseAwsKeyManagementParams = new SSEAwsKeyManagementParams(RemoteUploader.this.kmsId);
-								meta.setSSEAlgorithm(SSEAlgorithm.KMS.getAlgorithm());
-								meta.setHeader(
-										Headers.SERVER_SIDE_ENCRYPTION_AWS_KMS_KEYID,
-										sseAwsKeyManagementParams.getAwsKmsKeyId()
-								);
-							}
+				final ObjectMetadataProvider metadatasProvider = (file, meta) -> {
+					if (meta != null) {
+						if (RemoteUploader.this.metadatas != null && RemoteUploader.this.metadatas.size() > 0) {
+							meta.setUserMetadata(RemoteUploader.this.metadatas);
+						}
+						if (RemoteUploader.this.acl != null) {
+							meta.setHeader(Headers.S3_CANNED_ACL, RemoteUploader.this.acl);
+						}
+						if (RemoteUploader.this.cacheControl != null && !RemoteUploader.this.cacheControl.isEmpty()) {
+							meta.setCacheControl(RemoteUploader.this.cacheControl);
+						}
+						if (RemoteUploader.this.contentType != null && !RemoteUploader.this.contentType.isEmpty()) {
+							meta.setContentType(RemoteUploader.this.contentType);
+						}
+						if (RemoteUploader.this.kmsId != null && !RemoteUploader.this.kmsId.isEmpty()) {
+							final SSEAwsKeyManagementParams sseAwsKeyManagementParams = new SSEAwsKeyManagementParams(RemoteUploader.this.kmsId);
+							meta.setSSEAlgorithm(SSEAlgorithm.KMS.getAlgorithm());
+							meta.setHeader(
+									Headers.SERVER_SIDE_ENCRYPTION_AWS_KMS_KEYID,
+									sseAwsKeyManagementParams.getAwsKmsKeyId()
+							);
 						}
 					}
 				};
 				fileUpload = mgr.uploadDirectory(this.bucket, this.path, localFile, true, metadatasProvider);
 				for (final Upload upload : fileUpload.getSubTransfers()) {
-					upload.addProgressListener(new ProgressListener() {
-						@Override
-						public void progressChanged(ProgressEvent progressEvent) {
-							if (progressEvent.getEventType() == ProgressEventType.TRANSFER_COMPLETED_EVENT) {
-								RemoteUploader.this.taskListener.getLogger().println("Finished: " + upload.getDescription());
-							}
+					upload.addProgressListener((ProgressListener) progressEvent -> {
+						if (progressEvent.getEventType() == ProgressEventType.TRANSFER_COMPLETED_EVENT) {
+							RemoteUploader.this.taskListener.getLogger().println("Finished: " + upload.getDescription());
 						}
 					});
 				}
@@ -471,42 +461,36 @@ public class S3UploadStep extends AbstractS3Step {
 					.withS3Client(AWSClientFactory.create(this.amazonS3ClientOptions.createAmazonS3ClientBuilder(), this.envVars))
 					.build();
 			final MultipleFileUpload fileUpload;
-			ObjectMetadataProvider metadatasProvider = new ObjectMetadataProvider() {
-				@Override
-				public void provideObjectMetadata(File file, ObjectMetadata meta) {
-					if (meta != null) {
-						if (RemoteListUploader.this.metadatas != null && RemoteListUploader.this.metadatas.size() > 0) {
-							meta.setUserMetadata(RemoteListUploader.this.metadatas);
-						}
-						if (RemoteListUploader.this.acl != null) {
-							meta.setHeader(Headers.S3_CANNED_ACL, RemoteListUploader.this.acl);
-						}
-						if (RemoteListUploader.this.cacheControl != null && !RemoteListUploader.this.cacheControl.isEmpty()) {
-							meta.setCacheControl(RemoteListUploader.this.cacheControl);
-						}
-						if (RemoteListUploader.this.contentType != null && !RemoteListUploader.this.contentType.isEmpty()) {
-							meta.setContentType(RemoteListUploader.this.contentType);
-						}
-						if (RemoteListUploader.this.kmsId != null && !RemoteListUploader.this.kmsId.isEmpty()) {
-							final SSEAwsKeyManagementParams sseAwsKeyManagementParams = new SSEAwsKeyManagementParams(RemoteListUploader.this.kmsId);
-							meta.setSSEAlgorithm(sseAwsKeyManagementParams.getAwsKmsKeyId());
-							meta.setHeader(
-									Headers.SERVER_SIDE_ENCRYPTION_AWS_KMS_KEYID,
-									sseAwsKeyManagementParams.getAwsKmsKeyId()
-							);
-						}
-
+			ObjectMetadataProvider metadatasProvider = (file, meta) -> {
+				if (meta != null) {
+					if (RemoteListUploader.this.metadatas != null && RemoteListUploader.this.metadatas.size() > 0) {
+						meta.setUserMetadata(RemoteListUploader.this.metadatas);
 					}
+					if (RemoteListUploader.this.acl != null) {
+						meta.setHeader(Headers.S3_CANNED_ACL, RemoteListUploader.this.acl);
+					}
+					if (RemoteListUploader.this.cacheControl != null && !RemoteListUploader.this.cacheControl.isEmpty()) {
+						meta.setCacheControl(RemoteListUploader.this.cacheControl);
+					}
+					if (RemoteListUploader.this.contentType != null && !RemoteListUploader.this.contentType.isEmpty()) {
+						meta.setContentType(RemoteListUploader.this.contentType);
+					}
+					if (RemoteListUploader.this.kmsId != null && !RemoteListUploader.this.kmsId.isEmpty()) {
+						final SSEAwsKeyManagementParams sseAwsKeyManagementParams = new SSEAwsKeyManagementParams(RemoteListUploader.this.kmsId);
+						meta.setSSEAlgorithm(sseAwsKeyManagementParams.getAwsKmsKeyId());
+						meta.setHeader(
+								Headers.SERVER_SIDE_ENCRYPTION_AWS_KMS_KEYID,
+								sseAwsKeyManagementParams.getAwsKmsKeyId()
+						);
+					}
+
 				}
 			};
 			fileUpload = mgr.uploadFileList(this.bucket, this.path, localFile, this.fileList, metadatasProvider);
 			for (final Upload upload : fileUpload.getSubTransfers()) {
-				upload.addProgressListener(new ProgressListener() {
-					@Override
-					public void progressChanged(ProgressEvent progressEvent) {
-						if (progressEvent.getEventType() == ProgressEventType.TRANSFER_COMPLETED_EVENT) {
-							RemoteListUploader.this.taskListener.getLogger().println("Finished: " + upload.getDescription());
-						}
+				upload.addProgressListener((ProgressListener) progressEvent -> {
+					if (progressEvent.getEventType() == ProgressEventType.TRANSFER_COMPLETED_EVENT) {
+						RemoteListUploader.this.taskListener.getLogger().println("Finished: " + upload.getDescription());
 					}
 				});
 			}

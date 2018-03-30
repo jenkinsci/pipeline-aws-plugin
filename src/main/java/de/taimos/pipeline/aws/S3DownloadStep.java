@@ -34,7 +34,6 @@ import org.jenkinsci.plugins.workflow.steps.StepExecution;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
 
-import com.amazonaws.event.ProgressEvent;
 import com.amazonaws.event.ProgressEventType;
 import com.amazonaws.event.ProgressListener;
 import com.amazonaws.services.s3.transfer.Download;
@@ -205,12 +204,9 @@ public class S3DownloadStep extends AbstractS3Step {
 				return null;
 			} else {
 				final Download download = mgr.download(this.bucket, this.path, localFile);
-				download.addProgressListener(new ProgressListener() {
-					@Override
-					public void progressChanged(ProgressEvent progressEvent) {
-						if (progressEvent.getEventType() == ProgressEventType.TRANSFER_COMPLETED_EVENT) {
-							RemoteDownloader.this.taskListener.getLogger().println("Finished: " + download.getDescription());
-						}
+				download.addProgressListener((ProgressListener) progressEvent -> {
+					if (progressEvent.getEventType() == ProgressEventType.TRANSFER_COMPLETED_EVENT) {
+						RemoteDownloader.this.taskListener.getLogger().println("Finished: " + download.getDescription());
 					}
 				});
 				download.waitForCompletion();

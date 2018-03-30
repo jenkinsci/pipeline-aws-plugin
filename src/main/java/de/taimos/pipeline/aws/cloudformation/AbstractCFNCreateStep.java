@@ -163,9 +163,7 @@ abstract class AbstractCFNCreateStep extends TemplateStepBase {
 		public TaskListener getListener() {
 			try {
 				return this.getContext().get(TaskListener.class);
-			} catch (IOException e) {
-				throw new RuntimeException(e);
-			} catch (InterruptedException e) {
+			} catch (IOException | InterruptedException e) {
 				throw new RuntimeException(e);
 			}
 		}
@@ -173,9 +171,7 @@ abstract class AbstractCFNCreateStep extends TemplateStepBase {
 		public EnvVars getEnvVars() {
 			try {
 				return this.getContext().get(EnvVars.class);
-			} catch (IOException e) {
-				throw new RuntimeException(e);
-			} catch (InterruptedException e) {
+			} catch (IOException | InterruptedException e) {
 				throw new RuntimeException(e);
 			}
 		}
@@ -183,9 +179,7 @@ abstract class AbstractCFNCreateStep extends TemplateStepBase {
 		public FilePath getWorkspace() {
 			try {
 				return this.getContext().get(FilePath.class);
-			} catch (IOException e) {
-				throw new RuntimeException(e);
-			} catch (InterruptedException e) {
+			} catch (IOException | InterruptedException e) {
 				throw new RuntimeException(e);
 			}
 		}

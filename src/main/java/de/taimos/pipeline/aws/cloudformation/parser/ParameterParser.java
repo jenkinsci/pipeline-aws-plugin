@@ -99,4 +99,8 @@ public class ParameterParser {
 				)
 		);
 	}
+
+	private ParameterParser() {
+		// Hide utility class constructor
+	}
 }
