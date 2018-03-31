@@ -239,7 +239,8 @@ When used in a string context, a `FileWrapper` object returns the value of its `
 Validates the given CloudFormation template.
 
 ```
-cfnValidate(file:'template.yaml')
+def response = cfnValidate(file:'template.yaml')
+echo "template description: ${response.description}"
 ```
 
 ## cfnUpdate
@@ -536,6 +537,7 @@ ec2ShareAmi(
 # Changelog
 
 ## current master
+* Return ValidateTemplate response on cfnValidate
 * use `SynchronousNonBlockingStepExecution` for some steps for better error handling
 * allow s3Delete to empty bucket (#63)
 * set minimal Jenkins version to 2.60.3 and switch to Java 8
