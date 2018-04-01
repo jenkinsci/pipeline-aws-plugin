@@ -13,6 +13,7 @@ This plugins adds Jenkins pipeline steps to interact with the AWS API.
 * [s3Download](#s3download)
 * [s3Delete](#s3delete)
 * [s3FindFiles](#s3findfiles)
+* [s3PresignURL](#s3presignurl)
 * [cfnValidate](#cfnvalidate)
 * [cfnUpdate](#cfnupdate)
 * [cfnDelete](#cfndelete)
@@ -233,6 +234,23 @@ Each `FileWrapper` object has the following properties:
 * `lastModified`: the last modification timestamp, in milliseconds since the Unix epoch (this is always "0" for directories)
 
 When used in a string context, a `FileWrapper` object returns the value of its `path` property.
+
+## s3PresignURL
+
+Will presign the bucket/key and return a url. Defaults to 1 minute duration, using GET.
+```
+def url = s3PresignURL(bucket: 'mybucket', key: 'mykey')
+```
+
+The duration can be overridden:
+```
+def url = s3PresignURL(bucket: 'mybucket', key: 'mykey', durationInSeconds: 300) //5 minutes
+```
+
+The method can also be overridden:
+```
+def url = s3PresignURL(bucket: 'mybucket', key: 'mykey', httpMethod: 'POST')
+```
 
 ## cfnValidate
 
@@ -536,6 +554,7 @@ ec2ShareAmi(
 # Changelog
 
 ## current master
+* Add s3PresignURL
 * use `SynchronousNonBlockingStepExecution` for some steps for better error handling
 * allow s3Delete to empty bucket (#63)
 * set minimal Jenkins version to 2.60.3 and switch to Java 8
