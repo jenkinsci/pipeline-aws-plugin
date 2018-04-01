@@ -197,8 +197,8 @@ public class CloudFormationStack {
 	}
 
 	public void executeChangeSet(String changeSetName, long pollIntervallMillis) throws ExecutionException {
-		if (!this.changeSetHasChanges(changeSetName)) {
-			// If the change set has no changes we should simply delete it.
+		if (!this.changeSetHasChanges(changeSetName) || !this.exists()) {
+			// If the change set has no changes or the stack was not prepared we should simply delete it.
 			this.listener.getLogger().format("Deleting empty change set %s for stack %s %n", changeSetName, this.stack);
 			DeleteChangeSetRequest req = new DeleteChangeSetRequest().withChangeSetName(changeSetName).withStackName(this.stack);
 			this.client.deleteChangeSet(req);
@@ -206,10 +206,10 @@ public class CloudFormationStack {
 			this.listener.getLogger().format("Executing change set %s for stack %s %n", changeSetName, this.stack);
 
 			final Waiter<DescribeStacksRequest> waiter;
-			if (this.exists()) {
-				waiter = this.client.waiters().stackUpdateComplete();
-			} else {
+			if (this.isInReview()) {
 				waiter = this.client.waiters().stackCreateComplete();
+			} else {
+				waiter = this.client.waiters().stackUpdateComplete();
 			}
 
 			ExecuteChangeSetRequest req = new ExecuteChangeSetRequest().withChangeSetName(changeSetName).withStackName(this.stack);
@@ -229,5 +229,13 @@ public class CloudFormationStack {
 				.withStackName(this.stack)
 				.withChangeSetName(changeSet)
 		);
+	}
+
+	private boolean isInReview() {
+		if (this.exists()) {
+			DescribeStacksResult result = this.client.describeStacks(new DescribeStacksRequest().withStackName(this.stack));
+			return !result.getStacks().isEmpty() && result.getStacks().get(0).getStackStatus().equals("REVIEW_IN_PROGRESS");
+		}
+		return false;
 	}
 }

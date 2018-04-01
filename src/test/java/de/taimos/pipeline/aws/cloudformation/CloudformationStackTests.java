@@ -1,10 +1,8 @@
 package de.taimos.pipeline.aws.cloudformation;
 
-import com.amazonaws.services.cloudformation.AmazonCloudFormation;
-import com.amazonaws.services.cloudformation.model.*;
-import com.amazonaws.services.cloudformation.waiters.AmazonCloudFormationWaiters;
-import com.amazonaws.waiters.Waiter;
-import hudson.model.TaskListener;
+import java.util.Collections;
+import java.util.concurrent.ExecutionException;
+
 import org.assertj.core.api.Assertions;
 import org.junit.After;
 import org.junit.Before;
@@ -17,8 +15,29 @@ import org.powermock.core.classloader.annotations.PowerMockIgnore;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
 
-import java.util.Collections;
-import java.util.concurrent.ExecutionException;
+import com.amazonaws.services.cloudformation.AmazonCloudFormation;
+import com.amazonaws.services.cloudformation.model.AmazonCloudFormationException;
+import com.amazonaws.services.cloudformation.model.Capability;
+import com.amazonaws.services.cloudformation.model.Change;
+import com.amazonaws.services.cloudformation.model.ChangeSetType;
+import com.amazonaws.services.cloudformation.model.CreateChangeSetRequest;
+import com.amazonaws.services.cloudformation.model.CreateStackRequest;
+import com.amazonaws.services.cloudformation.model.DeleteStackRequest;
+import com.amazonaws.services.cloudformation.model.DescribeChangeSetRequest;
+import com.amazonaws.services.cloudformation.model.DescribeChangeSetResult;
+import com.amazonaws.services.cloudformation.model.DescribeStacksRequest;
+import com.amazonaws.services.cloudformation.model.DescribeStacksResult;
+import com.amazonaws.services.cloudformation.model.ExecuteChangeSetRequest;
+import com.amazonaws.services.cloudformation.model.OnFailure;
+import com.amazonaws.services.cloudformation.model.Output;
+import com.amazonaws.services.cloudformation.model.Parameter;
+import com.amazonaws.services.cloudformation.model.Stack;
+import com.amazonaws.services.cloudformation.model.Tag;
+import com.amazonaws.services.cloudformation.model.UpdateStackRequest;
+import com.amazonaws.services.cloudformation.waiters.AmazonCloudFormationWaiters;
+import com.amazonaws.waiters.Waiter;
+
+import hudson.model.TaskListener;
 
 @RunWith(PowerMockRunner.class)
 @PrepareForTest(
@@ -102,7 +121,7 @@ public class CloudformationStackTests {
 		Mockito.when(client.describeStacks(new DescribeStacksRequest()
 				.withStackName("foo")
 		)).thenReturn(new DescribeStacksResult()
-				.withStacks(new Stack())
+				.withStacks(new Stack().withStackStatus("CREATE_COMPLETE"))
 		);
 
 		stack.executeChangeSet("bar", 25);
