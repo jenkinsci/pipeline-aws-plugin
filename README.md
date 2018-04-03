@@ -257,7 +257,8 @@ def url = s3PresignURL(bucket: 'mybucket', key: 'mykey', httpMethod: 'POST')
 Validates the given CloudFormation template.
 
 ```
-cfnValidate(file:'template.yaml')
+def response = cfnValidate(file:'template.yaml')
+echo "template description: ${response.description}"
 ```
 
 ## cfnUpdate
@@ -554,6 +555,7 @@ ec2ShareAmi(
 # Changelog
 
 ## current master
+* Return ValidateTemplate response on cfnValidate
 * Add s3PresignURL
 * use `SynchronousNonBlockingStepExecution` for some steps for better error handling
 * allow s3Delete to empty bucket (#63)
