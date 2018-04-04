@@ -555,6 +555,8 @@ ec2ShareAmi(
 # Changelog
 
 ## current master
+
+## 1.25
 * Return ValidateTemplate response on cfnValidate
 * Add s3PresignURL
 * use `SynchronousNonBlockingStepExecution` for some steps for better error handling
