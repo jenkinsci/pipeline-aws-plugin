@@ -75,6 +75,7 @@ public class WithAWSStep extends Step {
 	private String externalId = "";
 	private String federatedUserId = "";
 	private String policy = "";
+	private Integer duration = 3600;
 
 	@DataBoundConstructor
 	public WithAWSStep() {
@@ -160,6 +161,15 @@ public class WithAWSStep extends Step {
 	@DataBoundSetter
 	public void setPolicy(String policy) {
 		this.policy = policy;
+	}
+
+	public Integer getDuration() {
+		return this.duration;
+	}
+
+	@DataBoundSetter
+	public void setDuration(Integer duration) {
+		this.duration = duration;
 	}
 
 	@Override
@@ -255,7 +265,7 @@ public class WithAWSStep extends Step {
 			if (!StringUtils.isNullOrEmpty(this.step.getFederatedUserId())) {
 				AWSSecurityTokenService sts = AWSClientFactory.create(AWSSecurityTokenServiceClientBuilder.standard(), this.envVars);
 				GetFederationTokenRequest getFederationTokenRequest = new GetFederationTokenRequest();
-				getFederationTokenRequest.setDurationSeconds(3600);
+				getFederationTokenRequest.setDurationSeconds(this.step.getDuration());
 				getFederationTokenRequest.setName(this.step.getFederatedUserId());
 				getFederationTokenRequest.setPolicy(ALLOW_ALL_POLICY);
 
@@ -307,6 +317,7 @@ public class WithAWSStep extends Step {
 					this.getContext().get(TaskListener.class).getLogger().format("Requesting additional policy to be applied: %s %n ", this.step.getPolicy());
 					request.withPolicy(this.step.getPolicy());
 				}
+				request.withDurationSeconds(this.step.getDuration());
 				AssumeRoleResult assumeRole = sts.assumeRole(request);
 
 				this.getContext().get(TaskListener.class).getLogger().format("Assumed role %s with id %s %n ", roleARN, assumeRole.getAssumedRoleUser().getAssumedRoleId());
