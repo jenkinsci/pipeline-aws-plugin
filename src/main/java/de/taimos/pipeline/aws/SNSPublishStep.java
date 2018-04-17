@@ -132,9 +132,9 @@ public class SNSPublishStep extends Step {
 			if (messageAttributes != null && !messageAttributes.isEmpty()) {
 				for (Map.Entry<String, String> entry : messageAttributes.entrySet()) {
 					MessageAttributeValue value = new MessageAttributeValue();
-					value.setStringValue(entry.getValue());
+					value.setStringValue(entry.getValue().toString());
 					value.setDataType(STRING_DATATYPE);
-					publishRequest.addMessageAttributesEntry(entry.getKey(), value);
+					publishRequest.addMessageAttributesEntry(entry.getKey().toString(), value);
 				}
 			}
 
