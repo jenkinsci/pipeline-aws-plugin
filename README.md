@@ -423,8 +423,10 @@ To prevent running into rate limiting on the AWS API you can change the default 
 Publishes a message to SNS.
 
 ```
-snsPublish(topicArn:'arn:aws:sns:us-east-1:123456789012:MyNewTopic', subject:'my subject', message:'this is your message')
+snsPublish(topicArn:'arn:aws:sns:us-east-1:123456789012:MyNewTopic', subject:'my subject', message:'this is your message', messageAttributes: ['k1': 'v1', 'k2': 'v2'])
 ```
+
+The optional parameter `messageAttributes` is assuming string only values.
 
 ## deployAPI
 
