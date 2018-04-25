@@ -1,7 +1,5 @@
 package de.taimos.pipeline.aws;
 
-import com.amazonaws.services.s3.model.CannedAccessControlList;
-import org.hamcrest.collection.IsMapContaining;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -9,6 +7,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import static org.junit.Assert.*;
+import static org.hamcrest.collection.IsMapContaining.*;
 
 public class SNSPublishStepTest {
 
@@ -26,8 +25,8 @@ public class SNSPublishStepTest {
         Assert.assertEquals("subject", step.getSubject());
         Assert.assertEquals("message", step.getMessage());
         Assert.assertEquals(3, step.getMessageAttributes().size());
-        assertThat(step.getMessageAttributes(), IsMapContaining.hasEntry("k1", "v1"));
-        assertThat(step.getMessageAttributes(), IsMapContaining.hasEntry("k2", "v2"));
-        assertThat(step.getMessageAttributes(), IsMapContaining.hasEntry("k3", "v3"));
+        assertThat(step.getMessageAttributes(), hasEntry("k1", "v1"));
+        assertThat(step.getMessageAttributes(), hasEntry("k2", "v2"));
+        assertThat(step.getMessageAttributes(), hasEntry("k3", "v3"));
     }
 }

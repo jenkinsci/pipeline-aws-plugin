@@ -126,15 +126,15 @@ public class SNSPublishStep extends Step {
 
 			listener.getLogger().format("Publishing notification %s to %s %n", subject, topicArn);
 
-			PublishRequest publishRequest = (new PublishRequest())
+			PublishRequest publishRequest = new PublishRequest()
 					.withTopicArn(topicArn).withMessage(message).withSubject(subject);
 
 			if (messageAttributes != null && !messageAttributes.isEmpty()) {
 				for (Map.Entry<String, String> entry : messageAttributes.entrySet()) {
 					MessageAttributeValue value = new MessageAttributeValue();
-					value.setStringValue(entry.getValue().toString());
+					value.setStringValue(entry.getValue());
 					value.setDataType(STRING_DATATYPE);
-					publishRequest.addMessageAttributesEntry(entry.getKey().toString(), value);
+					publishRequest.addMessageAttributesEntry(entry.getKey(), value);
 				}
 			}
 
