@@ -24,6 +24,9 @@
 	<f:entry title="${%CacheControl}" field="cacheControl">
         <f:textbox />
     </f:entry>
+	<f:entry title="${%SSEAlgorithm}" field="sseAlgorithm">
+        <f:textbox />
+    </f:entry>
 	<f:entry title="${%ACL}" field="acl" name="acl">
         <select name="acl">
             <option value="Private">Private</option>

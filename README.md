@@ -168,6 +168,12 @@ s3Upload(file:'file.txt', bucket:'my-bucket', path:'path/to/target/file.txt', ac
 s3Upload(file:'someFolder', bucket:'my-bucket', path:'path/to/targetFolder/', acl:'BucketOwnerFullControl')
 ```
 
+A Server Side Encryption Algorithm can be added to upload requests.
+
+```
+s3Upload(file:'file.txt', bucket:'my-bucket', path:'path/to/target/file.txt', sseAlgorithm:'AES256')
+```
+
 A KMS alias or KMS id can be used to encrypt the uploaded file or directory at rest.
 
 ```
@@ -557,7 +563,8 @@ ec2ShareAmi(
 
 ## current master
 * add duration to withAWS
-* Add messageAttributes in snsPublish
+* add sseAlgorithm to s3Upload
+* add messageAttributes in snsPublish
 
 ## 1.25
 * Return ValidateTemplate response on cfnValidate

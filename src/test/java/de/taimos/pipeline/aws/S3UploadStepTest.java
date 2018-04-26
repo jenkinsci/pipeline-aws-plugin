@@ -34,10 +34,12 @@ public class S3UploadStepTest {
 		step.setKmsId("alias/foo");
 		step.setAcl(CannedAccessControlList.PublicRead);
 		step.setCacheControl("my-cachecontrol");
+		step.setSseAlgorithm("AES256");
 		Assert.assertEquals("my-file", step.getFile());
 		Assert.assertEquals("my-bucket", step.getBucket());
 		Assert.assertEquals(CannedAccessControlList.PublicRead, step.getAcl());
 		Assert.assertEquals("my-cachecontrol", step.getCacheControl());
+		Assert.assertEquals("AES256", step.getSseAlgorithm());
 		Assert.assertEquals("alias/foo", step.getKmsId());
 	}
 
