@@ -69,6 +69,14 @@ withAWS(credentials:'nameOfSystemCredentials') {
 }
 ```
 
+Use Jenkins AWS credentials information (AWS Access Key: AccessKeyId, AWS Secret Key: SecretAccessKey):
+
+```
+withAWS(credentials:'nameOfAwsCredentials') {
+    // do something
+}
+```
+
 Use profile information from `~/.aws/config`:
 
 ```
