@@ -570,6 +570,8 @@ ec2ShareAmi(
 # Changelog
 
 ## current master
+
+## 1.26
 * add duration to withAWS
 * add sseAlgorithm to s3Upload
 * add messageAttributes in snsPublish
