@@ -21,6 +21,8 @@
 
 package de.taimos.pipeline.aws;
 
+import com.amazonaws.auth.AWSCredentials;
+import com.cloudbees.jenkins.plugins.awscredentials.AmazonWebServicesCredentials;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.Set;
@@ -75,6 +77,7 @@ public class WithAWSStep extends Step {
 	private String externalId = "";
 	private String federatedUserId = "";
 	private String policy = "";
+	private String iamMfaToken = "";
 	private Integer duration = 3600;
 
 	@DataBoundConstructor
@@ -143,6 +146,15 @@ public class WithAWSStep extends Step {
 	@DataBoundSetter
 	public void setExternalId(String externalId) {
 		this.externalId = externalId;
+	}
+
+	public String getIamMfaToken() {
+		return this.iamMfaToken;
+	}
+
+	@DataBoundSetter
+	public void setIamMfaToken(String iamMfaToken) {
+		this.iamMfaToken = iamMfaToken;
 	}
 
 	public String getFederatedUserId() {
@@ -215,7 +227,14 @@ public class WithAWSStep extends Step {
 							context,
 							StandardUsernamePasswordCredentials.class,
 							Collections.<DomainRequirement>emptyList(),
-							CredentialsMatchers.instanceOf(StandardUsernamePasswordCredentials.class));
+							CredentialsMatchers.instanceOf(StandardUsernamePasswordCredentials.class))
+					.includeMatchingAs(context instanceof Queue.Task
+									? Tasks.getAuthenticationOf((Queue.Task) context)
+									: ACL.SYSTEM,
+							context,
+							AmazonWebServicesCredentials.class,
+							Collections.<DomainRequirement>emptyList(),
+							CredentialsMatchers.instanceOf(AmazonWebServicesCredentials.class));
 		}
 	}
 
@@ -280,13 +299,33 @@ public class WithAWSStep extends Step {
 
 		}
 
-		private void withCredentials(@Nonnull Run<?, ?> run, @Nonnull EnvVars localEnv) {
+		private void withCredentials(@Nonnull Run<?, ?> run, @Nonnull EnvVars localEnv) throws IOException, InterruptedException {
 			if (!StringUtils.isNullOrEmpty(this.step.getCredentials())) {
 				StandardUsernamePasswordCredentials usernamePasswordCredentials = CredentialsProvider.findCredentialById(this.step.getCredentials(),
-																														StandardUsernamePasswordCredentials.class, run, Collections.<DomainRequirement>emptyList());
+																														StandardUsernamePasswordCredentials.class, run, Collections.emptyList());
+
+				AmazonWebServicesCredentials amazonWebServicesCredentials = CredentialsProvider.findCredentialById(this.step.getCredentials(),
+						AmazonWebServicesCredentials.class, run, Collections.emptyList());
 				if (usernamePasswordCredentials != null) {
 					localEnv.override(AWSClientFactory.AWS_ACCESS_KEY_ID, usernamePasswordCredentials.getUsername());
 					localEnv.override(AWSClientFactory.AWS_SECRET_ACCESS_KEY, usernamePasswordCredentials.getPassword().getPlainText());
+					this.envVars.overrideAll(localEnv);
+				} else if (amazonWebServicesCredentials != null) {
+					AWSCredentials awsCredentials;
+
+					if (StringUtils.isNullOrEmpty(this.step.getIamMfaToken())) {
+						this.getContext().get(TaskListener.class).getLogger().format("Constructing AWS Credentials");
+						awsCredentials = amazonWebServicesCredentials.getCredentials();
+					} else {
+						// Since the getCredentials does its own roleAssumption, this is all it takes to get credentials
+						// with this token.
+						this.getContext().get(TaskListener.class).getLogger().format("Constructing AWS Credentials utilizing MFA Token");
+						awsCredentials = amazonWebServicesCredentials.getCredentials(this.step.getIamMfaToken());
+					}
+
+					localEnv.override(AWSClientFactory.AWS_ACCESS_KEY_ID, awsCredentials.getAWSAccessKeyId());
+					localEnv.override(AWSClientFactory.AWS_SECRET_ACCESS_KEY, awsCredentials.getAWSSecretKey());
+
 					this.envVars.overrideAll(localEnv);
 				} else {
 					throw new RuntimeException("Cannot find a Username with password credential with the ID " + this.step.getCredentials());

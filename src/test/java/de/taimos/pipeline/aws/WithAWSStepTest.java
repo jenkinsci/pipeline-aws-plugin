@@ -20,12 +20,20 @@ package de.taimos.pipeline.aws;
  * #L%
  */
 
+
+import com.cloudbees.jenkins.plugins.awscredentials.AWSCredentialsImpl;
+import com.cloudbees.jenkins.plugins.awscredentials.AmazonWebServicesCredentials;
+import com.cloudbees.plugins.credentials.Credentials;
+import hudson.model.Result;
+
 import java.util.ArrayList;
 import java.util.List;
 
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
+import org.jenkinsci.plugins.workflow.job.WorkflowRun;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.jvnet.hudson.test.JenkinsRule;
@@ -56,6 +64,13 @@ public class WithAWSStepTest {
 	@ClassRule
 	public static JenkinsRule jenkinsRule = new JenkinsRule();
 
+	@Before
+	public void before() throws Exception {
+		List<Credentials> credentials = SystemCredentialsProvider.getInstance().getCredentials();
+		SystemCredentialsProvider.getInstance().getCredentials().removeAll(credentials);
+		SystemCredentialsProvider.getInstance().save();
+	}
+
 	@Test
 	public void testStepWithGlobalCredentials() throws Exception {
 
@@ -65,19 +80,101 @@ public class WithAWSStepTest {
 		credentialIds.add(globalCredentialsId);
 
 		StandardUsernamePasswordCredentials key = new UsernamePasswordCredentialsImpl(CredentialsScope.GLOBAL,
-																					  globalCredentialsId, "test-global-creds", "global-aws-access-key-id", "global-aws-secret-access-key");
+				globalCredentialsId, "test-global-creds", "global-aws-access-key-id", "global-aws-secret-access-key");
 		SystemCredentialsProvider.getInstance().getCredentials().add(key);
 		SystemCredentialsProvider.getInstance().save();
 
 		WorkflowJob job = jenkinsRule.jenkins.createProject(WorkflowJob.class, "testStepWithGlobalCredentials");
 		job.setDefinition(new CpsFlowDefinition(""
-														+ "node {\n"
-														+ "  withAWS (credentials: '" + globalCredentialsId + "') {\n"
-														+ "    echo 'It works!'\n"
-														+ "  }\n"
-														+ "}\n", true)
+				+ "node {\n"
+				+ "  withAWS (credentials: '" + globalCredentialsId + "') {\n"
+				+ "    echo 'It works!'\n"
+				+ "  }\n"
+				+ "}\n", true)
 		);
 		jenkinsRule.assertBuildStatusSuccess(job.scheduleBuild2(0));
+	}
+
+	@Test
+	public void testStepWithBasicAndAwsGlobalCredentials() throws Exception {
+
+		String globalBaseCreds = "global-basic-creds";
+		String globalAwsCreds = "global-aws-creds";
+
+		List<String> credentialIds = new ArrayList<>();
+		credentialIds.add(globalBaseCreds);
+
+		StandardUsernamePasswordCredentials key = new UsernamePasswordCredentialsImpl(CredentialsScope.GLOBAL,
+				globalBaseCreds, "test-global-creds", "global-aws-access-key-id", "global-aws-secret-access-key");
+
+		AmazonWebServicesCredentials amazonWebServicesCredentials = new AWSCredentialsImpl(CredentialsScope.GLOBAL,
+				globalAwsCreds, "global-aws-access-key-id", "global-aws-secret-access-key", "Aws-Description",
+				"Arn::Something:or:Other", "12345678");
+
+		SystemCredentialsProvider.getInstance().getCredentials().add(amazonWebServicesCredentials);
+		SystemCredentialsProvider.getInstance().getCredentials().add(key);
+		SystemCredentialsProvider.getInstance().save();
+
+		WorkflowJob job = jenkinsRule.jenkins.createProject(WorkflowJob.class, "testStepWithBasicAndAwsGlobalCredentials");
+		job.setDefinition(new CpsFlowDefinition(""
+				+ "node {\n"
+				+ "  withAWS (credentials: '" + globalBaseCreds + "') {\n"
+				+ "    echo 'It works!'\n"
+				+ "  }\n"
+				+ "}\n", true)
+		);
+		jenkinsRule.assertBuildStatusSuccess(job.scheduleBuild2(0));
+	}
+
+	@Test
+	public void testStepWithNotFoundGlobalCredentials() throws Exception {
+
+		String globalBaseCreds = "something-random";
+
+		List<String> credentialIds = new ArrayList<>();
+		credentialIds.add(globalBaseCreds);
+
+		WorkflowJob job = jenkinsRule.jenkins.createProject(WorkflowJob.class, "testStepWithNotFoundGlobalCredentials");
+		job.setDefinition(new CpsFlowDefinition(""
+				+ "node {\n"
+				+ "  withAWS (credentials: '" + globalBaseCreds + "') {\n"
+				+ "    echo 'It works!'\n"
+				+ "  }\n"
+				+ "}\n", true)
+		);
+
+		jenkinsRule.assertBuildStatus(Result.FAILURE, job.scheduleBuild2(0));
+	}
+
+	@Test
+	public void testStepWithGlobalAWSCredentials() throws Exception {
+
+		String globalCredentialsId = "global-aws-creds";
+
+		List<String> credentialIds = new ArrayList<>();
+		credentialIds.add(globalCredentialsId);
+
+		AmazonWebServicesCredentials amazonWebServicesCredentials = new AWSCredentialsImpl(CredentialsScope.GLOBAL,
+				globalCredentialsId, "global-aws-access-key-id", "global-aws-secret-access-key", "Aws-Description",
+				"Arn::Something:or:Other", "12345678");
+
+		SystemCredentialsProvider.getInstance().getCredentials().add(amazonWebServicesCredentials);
+		SystemCredentialsProvider.getInstance().save();
+
+		WorkflowJob job = jenkinsRule.jenkins.createProject(WorkflowJob.class, "testStepWithGlobalAWSCredentials");
+		job.setDefinition(new CpsFlowDefinition(""
+				+ "node {\n"
+				+ "  withAWS (credentials: '" + globalCredentialsId + "') {\n"
+				+ "    echo 'It works!'\n"
+				+ "  }\n"
+				+ "}\n", true)
+		);
+
+
+		WorkflowRun workflowRun = job.scheduleBuild2(0).get();
+		jenkinsRule.waitForCompletion(workflowRun);
+		jenkinsRule.assertBuildStatus(Result.FAILURE, workflowRun);
+		jenkinsRule.assertLogContains("The security token included in the request is invalid.", workflowRun);
 	}
 
 	@Test
@@ -119,13 +216,80 @@ public class WithAWSStepTest {
 	}
 
 	@Test
+	public void testStepWithAWSFolderCredentials() throws Exception {
+
+		String folderCredentialsId = "folders-aws-creds";
+
+		// Create a folder with credentials in its store
+		Folder folder = jenkinsRule.jenkins.createProject(Folder.class, "folder" + jenkinsRule.jenkins.getItems().size());
+		CredentialsStore folderStore = this.getFolderStore(folder);
+		AmazonWebServicesCredentials amazonWebServicesCredentials = new AWSCredentialsImpl(CredentialsScope.GLOBAL,
+				folderCredentialsId, "global-aws-access-key-id", "global-aws-secret-access-key", "Aws-Description",
+				"Arn::Something:or:Other", "12345678");
+		folderStore.addCredentials(Domain.global(), amazonWebServicesCredentials);
+		SystemCredentialsProvider.getInstance().save();
+
+		List<String> credentialIds = new ArrayList<>();
+		credentialIds.add(folderCredentialsId);
+
+		WorkflowJob job = folder.createProject(WorkflowJob.class, "testStepWithAWSFolderCredentials");
+		job.setDefinition(new CpsFlowDefinition(""
+				+ "node {\n"
+				+ "  withAWS (credentials: '" + folderCredentialsId + "') {\n"
+				+ "    echo 'It works!'\n"
+				+ "  }\n"
+				+ "}\n", true)
+		);
+		WorkflowRun workflowRun = job.scheduleBuild2(0).get();
+		jenkinsRule.waitForCompletion(workflowRun);
+		jenkinsRule.assertBuildStatus(Result.FAILURE, workflowRun);
+		jenkinsRule.assertLogContains("The security token included in the request is invalid.", workflowRun);
+		jenkinsRule.assertLogContains("Constructing AWS Credentials", workflowRun);
+
+	}
+
+	@Test
+	public void testStepWithAWSIamMFAFolderCredentials() throws Exception {
+
+		String folderCredentialsId = "folders-aws-creds";
+
+		// Create a folder with credentials in its store
+		Folder folder = jenkinsRule.jenkins.createProject(Folder.class, "folder" + jenkinsRule.jenkins.getItems().size());
+		CredentialsStore folderStore = this.getFolderStore(folder);
+		AmazonWebServicesCredentials amazonWebServicesCredentials = new AWSCredentialsImpl(CredentialsScope.GLOBAL,
+				folderCredentialsId, "global-aws-access-key-id", "global-aws-secret-access-key", "Aws-Description",
+				"Arn::Something:or:Other", "12345678");
+		folderStore.addCredentials(Domain.global(), amazonWebServicesCredentials);
+		SystemCredentialsProvider.getInstance().save();
+
+		List<String> credentialIds = new ArrayList<>();
+		credentialIds.add(folderCredentialsId);
+
+		WorkflowJob job = folder.createProject(WorkflowJob.class, "testStepWithAWSIamMFAFolderCredentials");
+		job.setDefinition(new CpsFlowDefinition(""
+				+ "node {\n"
+				+ "  withAWS (credentials: '" + folderCredentialsId + "', iamMfaToken: '1234567') {\n"
+				+ "    echo 'It works!'\n"
+				+ "  }\n"
+				+ "}\n", true)
+		);
+		WorkflowRun workflowRun = job.scheduleBuild2(0).get();
+		jenkinsRule.waitForCompletion(workflowRun);
+		jenkinsRule.assertBuildStatus(Result.FAILURE, workflowRun);
+		jenkinsRule.assertLogContains("The security token included in the request is invalid.", workflowRun);
+		jenkinsRule.assertLogContains("Constructing AWS Credentials", workflowRun);
+		jenkinsRule.assertLogContains("utilizing MFA Token", workflowRun);
+
+	}
+
+	@Test
 	public void testListCredentials() throws Exception {
 		Folder folder = jenkinsRule.jenkins.createProject(Folder.class, "folder" + jenkinsRule.jenkins.getItems().size());
 		CredentialsStore folderStore = this.getFolderStore(folder);
 		StandardUsernamePasswordCredentials folderCredentials = new UsernamePasswordCredentialsImpl(CredentialsScope.GLOBAL,
-																									"folder-creds", "test-creds", "aws-access-key-id", "aws-secret-access-key");
+				"folder-creds", "test-creds", "aws-access-key-id", "aws-secret-access-key");
 		StandardUsernamePasswordCredentials globalCredentials = new UsernamePasswordCredentialsImpl(CredentialsScope.GLOBAL,
-																									"global-creds", "test-creds", "aws-access-key-id", "aws-secret-access-key");
+				"global-creds", "test-creds", "aws-access-key-id", "aws-secret-access-key");
 
 		folderStore.addCredentials(Domain.global(), folderCredentials);
 		SystemCredentialsProvider.getInstance().getCredentials().add(globalCredentials);
@@ -139,7 +303,39 @@ public class WithAWSStepTest {
 		Assert.assertEquals(3, list.size());
 
 		StandardUsernamePasswordCredentials systemCredentials = new UsernamePasswordCredentialsImpl(CredentialsScope.SYSTEM,
-																									"system-creds", "test-creds", "aws-access-key-id", "aws-secret-access-key");
+				"system-creds", "test-creds", "aws-access-key-id", "aws-secret-access-key");
+		SystemCredentialsProvider.getInstance().getCredentials().add(systemCredentials);
+
+		// Still 3 options: Root credentials, folder credentials and "none"
+		list = descriptor.doFillCredentialsItems(job);
+		Assert.assertEquals(3, list.size());
+	}
+
+	@Test
+	public void testListAWSCredentials() throws Exception {
+
+		Folder folder = jenkinsRule.jenkins.createProject(Folder.class, "folder" + jenkinsRule.jenkins.getItems().size());
+		CredentialsStore folderStore = this.getFolderStore(folder);
+		AmazonWebServicesCredentials amazonWebServicesCredentials = new AWSCredentialsImpl(CredentialsScope.GLOBAL,
+				"test-aws-creds", "global-aws-access-key-id", "global-aws-secret-access-key", "Aws-Description",
+				"Arn::Something:or:Other", "12345678");
+		AmazonWebServicesCredentials globalAmazonWebServicesCredentials = new AWSCredentialsImpl(CredentialsScope.GLOBAL,
+				"global-test-aws-creds", "global-aws-access-key-id", "global-aws-secret-access-key", "Aws-Description",
+				"Arn::Something:or:Other", "12345678");
+
+		folderStore.addCredentials(Domain.global(), amazonWebServicesCredentials);
+		SystemCredentialsProvider.getInstance().getCredentials().add(globalAmazonWebServicesCredentials);
+		SystemCredentialsProvider.getInstance().save();
+
+		WorkflowJob job = folder.createProject(WorkflowJob.class, "testStepWithFolderCredentials");
+		final WithAWSStep.DescriptorImpl descriptor = jenkinsRule.jenkins.getDescriptorByType(WithAWSStep.DescriptorImpl.class);
+
+		// 3 options: Root credentials, folder credentials and "none"
+		ListBoxModel list = descriptor.doFillCredentialsItems(job);
+		Assert.assertEquals(3, list.size());
+
+		StandardUsernamePasswordCredentials systemCredentials = new UsernamePasswordCredentialsImpl(CredentialsScope.SYSTEM,
+				"system-creds", "test-creds", "aws-access-key-id", "aws-secret-access-key");
 		SystemCredentialsProvider.getInstance().getCredentials().add(systemCredentials);
 
 		// Still 3 options: Root credentials, folder credentials and "none"

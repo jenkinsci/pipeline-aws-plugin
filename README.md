@@ -69,6 +69,14 @@ withAWS(credentials:'nameOfSystemCredentials') {
 }
 ```
 
+Use Jenkins AWS credentials information (AWS Access Key: AccessKeyId, AWS Secret Key: SecretAccessKey):
+
+```
+withAWS(credentials:'nameOfAwsCredentials') {
+    // do something
+}
+```
+
 Use profile information from `~/.aws/config`:
 
 ```
@@ -565,6 +573,8 @@ ec2ShareAmi(
 * add duration to withAWS
 * add sseAlgorithm to s3Upload
 * add messageAttributes in snsPublish
+* add ability to utilize AWS Credentials Plugin
+* add iamMfaToken to withAWS step
 
 ## 1.25
 * Return ValidateTemplate response on cfnValidate

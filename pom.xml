@@ -48,6 +48,9 @@
         <contributor>
             <name>Tyler Southwick</name>
         </contributor>
+        <contributor>
+            <name>Ryan Davis</name>
+        </contributor>
     </contributors>
     <repositories>
         <repository>
@@ -122,7 +125,11 @@
             <artifactId>plain-credentials</artifactId>
             <version>1.4</version>
         </dependency>
-
+        <dependency>
+            <groupId>org.jenkins-ci.plugins</groupId>
+            <artifactId>aws-credentials</artifactId>
+            <version>1.19</version>
+        </dependency>
         <dependency>
             <groupId>org.yaml</groupId>
             <artifactId>snakeyaml</artifactId>
