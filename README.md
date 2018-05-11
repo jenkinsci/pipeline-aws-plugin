@@ -327,6 +327,11 @@ Because the normal default value of ROLLBACK behaves strangely in a CI/CD enviro
 def outputs = cfnUpdate(stack:'my-stack', url:'https://s3.amazonaws.com/my-templates-bucket/template.yaml', onFailure:'DELETE')
 ```
 
+You can specify rollback triggers for the stack update:
+```
+def outputs = cfnUpdate(stack:'my-stack', url:'https://s3.amazonaws.com/my-templates-bucket/template.yaml', rollbackTimeoutInMinutes: 10, rollbackTriggers: ['AWS::CloudWatch::Alarm=arn:of:cloudwatch:alarm'])
+```
+
 Note: When creating a stack, either `file` or `url` are required. When updating it, omitting both parameters will keep the stack's current template.
 
 ## cfnDelete
@@ -398,6 +403,11 @@ In above example if `my-stack` already exists, a change set stack with change se
 In a case where CloudFormation needs to use a different IAM Role for creating or updating the stack than the one currently in effect, you can pass the complete Role ARN to be used as `roleArn` parameter. i.e:
 ```
 cfnCreateChangeSet(stack:'my-stack', changeSet:'my-change-set', url:'https://s3.amazonaws.com/my-templates-bucket/template.yaml', roleArn: 'arn:aws:iam::123456789012:role/S3Access')
+```
+
+You can specify rollback triggers for the stack update:
+```
+cfnCreateChangeSet(stack:'my-stack', changeSet:'my-change-set', url:'https://s3.amazonaws.com/my-templates-bucket/template.yaml', rollbackTimeoutInMinutes: 10, rollbackTriggers: ['AWS::CloudWatch::Alarm=arn:of:cloudwatch:alarm'])
 ```
 
 Note: When creating a change set for a non-existing stack, either `file` or `url` are required. When updating it, omitting both parameters will keep the stack's current template.
@@ -570,6 +580,7 @@ ec2ShareAmi(
 # Changelog
 
 ## current master
+* add rollback configuration to `cfnUpdate`
 
 ## 1.26
 * add duration to withAWS

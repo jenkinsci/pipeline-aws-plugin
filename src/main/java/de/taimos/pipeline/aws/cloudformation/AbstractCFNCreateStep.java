@@ -34,6 +34,7 @@ import com.amazonaws.services.cloudformation.AmazonCloudFormation;
 import com.amazonaws.services.cloudformation.AmazonCloudFormationClientBuilder;
 import com.amazonaws.services.cloudformation.model.OnFailure;
 import com.amazonaws.services.cloudformation.model.Parameter;
+import com.amazonaws.services.cloudformation.model.RollbackConfiguration;
 import com.amazonaws.services.cloudformation.model.Tag;
 import com.google.common.base.Preconditions;
 
@@ -84,7 +85,7 @@ abstract class AbstractCFNCreateStep extends TemplateStepBase {
 
 		protected abstract String getThreadName();
 
-		protected abstract Object whenStackExists(Collection<Parameter> parameters, Collection<Tag> tags) throws Exception;
+		protected abstract Object whenStackExists(Collection<Parameter> parameters, Collection<Tag> tags, RollbackConfiguration rollbackConfiguration) throws Exception;
 
 		protected abstract Object whenStackMissing(Collection<Parameter> parameters, Collection<Tag> tags) throws Exception;
 
@@ -130,7 +131,7 @@ abstract class AbstractCFNCreateStep extends TemplateStepBase {
 						CloudFormationStack cfnStack = new CloudFormationStack(client, stack, Execution.this.getListener());
 						if (cfnStack.exists()) {
 							Collection<Parameter> parameters = ParameterParser.parseWithKeepParams(Execution.this.getWorkspace(), Execution.this.getStep());
-							Execution.this.getContext().onSuccess(Execution.this.whenStackExists(parameters, Execution.this.getStep().getAwsTags()));
+							Execution.this.getContext().onSuccess(Execution.this.whenStackExists(parameters, Execution.this.getStep().getAwsTags(), Execution.this.getStep().getRollbackConfiguration()));
 						} else if (create) {
 							Collection<Parameter> parameters = ParameterParser.parse(Execution.this.getWorkspace(), Execution.this.getStep());
 							Execution.this.getContext().onSuccess(Execution.this.whenStackMissing(parameters, Execution.this.getStep().getAwsTags()));
@@ -183,6 +184,7 @@ abstract class AbstractCFNCreateStep extends TemplateStepBase {
 				throw new RuntimeException(e);
 			}
 		}
+
 	}
 
 }

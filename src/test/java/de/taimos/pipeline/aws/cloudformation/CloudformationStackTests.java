@@ -31,6 +31,7 @@ import com.amazonaws.services.cloudformation.model.ExecuteChangeSetRequest;
 import com.amazonaws.services.cloudformation.model.OnFailure;
 import com.amazonaws.services.cloudformation.model.Output;
 import com.amazonaws.services.cloudformation.model.Parameter;
+import com.amazonaws.services.cloudformation.model.RollbackConfiguration;
 import com.amazonaws.services.cloudformation.model.Stack;
 import com.amazonaws.services.cloudformation.model.Tag;
 import com.amazonaws.services.cloudformation.model.UpdateStackRequest;
@@ -67,10 +68,10 @@ public class CloudformationStackTests {
 		AmazonCloudFormation client = Mockito.mock(AmazonCloudFormation.class);
 		CloudFormationStack stack = new CloudFormationStack(client, "foo", taskListener);
 		Mockito.when(client.describeStacks(new DescribeStacksRequest()
-				.withStackName("foo")
+												   .withStackName("foo")
 		)).thenReturn(new DescribeStacksResult()
-				.withStacks(new Stack()
-				)
+							  .withStacks(new Stack()
+							  )
 		);
 		Assertions.assertThat(stack.exists()).isTrue();
 	}
@@ -84,7 +85,7 @@ public class CloudformationStackTests {
 		ex.setErrorCode("ValidationError");
 		ex.setErrorMessage("stack foo does not exist");
 		Mockito.when(client.describeStacks(new DescribeStacksRequest()
-				.withStackName("foo")
+												   .withStackName("foo")
 		)).thenThrow(ex);
 		Assertions.assertThat(stack.exists()).isFalse();
 	}
@@ -95,10 +96,10 @@ public class CloudformationStackTests {
 		AmazonCloudFormation client = Mockito.mock(AmazonCloudFormation.class);
 		CloudFormationStack stack = new CloudFormationStack(client, "foo", taskListener);
 		Mockito.when(client.describeChangeSet(new DescribeChangeSetRequest()
-				.withStackName("foo")
-				.withChangeSetName("bar")
+													  .withStackName("foo")
+													  .withChangeSetName("bar")
 		)).thenReturn(new DescribeChangeSetResult()
-				.withChanges(new Change())
+							  .withChanges(new Change())
 		);
 		Assertions.assertThat(stack.changeSetExists("bar")).isTrue();
 	}
@@ -112,16 +113,16 @@ public class CloudformationStackTests {
 
 		CloudFormationStack stack = new CloudFormationStack(client, "foo", taskListener);
 		Mockito.when(client.describeChangeSet(new DescribeChangeSetRequest()
-				.withStackName("foo")
-				.withChangeSetName("bar")
+													  .withStackName("foo")
+													  .withChangeSetName("bar")
 		)).thenReturn(new DescribeChangeSetResult()
-				.withChanges(new Change())
+							  .withChanges(new Change())
 		);
 
 		Mockito.when(client.describeStacks(new DescribeStacksRequest()
-				.withStackName("foo")
+												   .withStackName("foo")
 		)).thenReturn(new DescribeStacksResult()
-				.withStacks(new Stack().withStackStatus("CREATE_COMPLETE"))
+							  .withStacks(new Stack().withStackStatus("CREATE_COMPLETE"))
 		);
 
 		stack.executeChangeSet("bar", 25);
@@ -137,8 +138,8 @@ public class CloudformationStackTests {
 		AmazonCloudFormation client = Mockito.mock(AmazonCloudFormation.class);
 		CloudFormationStack stack = new CloudFormationStack(client, "foo", taskListener);
 		Mockito.when(client.describeChangeSet(new DescribeChangeSetRequest()
-				.withStackName("foo")
-				.withChangeSetName("bar")
+													  .withStackName("foo")
+													  .withChangeSetName("bar")
 		)).thenReturn(new DescribeChangeSetResult());
 
 		stack.executeChangeSet("bar", 1000L);
@@ -154,8 +155,8 @@ public class CloudformationStackTests {
 		ex.setErrorCode("ValidationError");
 		ex.setErrorMessage("change set bar does not exist");
 		Mockito.when(client.describeChangeSet(new DescribeChangeSetRequest()
-				.withStackName("foo")
-				.withChangeSetName("bar")
+													  .withStackName("foo")
+													  .withChangeSetName("bar")
 		)).thenThrow(ex);
 		Assertions.assertThat(stack.changeSetExists("bar")).isFalse();
 	}
@@ -166,15 +167,15 @@ public class CloudformationStackTests {
 		AmazonCloudFormation client = Mockito.mock(AmazonCloudFormation.class);
 		CloudFormationStack stack = new CloudFormationStack(client, "foo", taskListener);
 		Mockito.when(client.describeStacks(new DescribeStacksRequest()
-				.withStackName("foo")
+												   .withStackName("foo")
 		)).thenReturn(new DescribeStacksResult()
-				.withStacks(new Stack()
-						.withOutputs(
-								new Output()
-										.withOutputKey("bar")
-										.withOutputValue("baz")
-						)
-				)
+							  .withStacks(new Stack()
+												  .withOutputs(
+														  new Output()
+																  .withOutputKey("bar")
+																  .withOutputValue("baz")
+												  )
+							  )
 		);
 		Assertions.assertThat(stack.describeOutputs()).isEqualTo(Collections.singletonMap(
 				"bar", "baz"
@@ -190,18 +191,18 @@ public class CloudformationStackTests {
 
 		CloudFormationStack stack = new CloudFormationStack(client, "foo", taskListener);
 
-		stack.createChangeSet("c1", "templateBody", null, Collections.<Parameter>emptyList(), Collections.<Tag>emptyList(), 25, ChangeSetType.CREATE, "myarn");
+		stack.createChangeSet("c1", "templateBody", null, Collections.<Parameter>emptyList(), Collections.<Tag>emptyList(), 25, ChangeSetType.CREATE, "myarn", null);
 
 		ArgumentCaptor<CreateChangeSetRequest> captor = ArgumentCaptor.forClass(CreateChangeSetRequest.class);
 		Mockito.verify(client).createChangeSet(captor.capture());
 		Assertions.assertThat(captor.getValue()).isEqualTo(new CreateChangeSetRequest()
-				.withChangeSetType(ChangeSetType.CREATE)
-				.withStackName("foo")
-				.withTemplateBody("templateBody")
-				.withCapabilities(Capability.values())
-				.withParameters(Collections.<Parameter>emptyList())
-				.withChangeSetName("c1")
-				.withRoleARN("myarn")
+																   .withChangeSetType(ChangeSetType.CREATE)
+																   .withStackName("foo")
+																   .withTemplateBody("templateBody")
+																   .withCapabilities(Capability.values())
+																   .withParameters(Collections.<Parameter>emptyList())
+																   .withChangeSetName("c1")
+																   .withRoleARN("myarn")
 		);
 		Mockito.verify(this.eventPrinter).waitAndPrintChangeSetEvents(Mockito.eq("foo"), Mockito.eq("c1"), Mockito.any(Waiter.class), Mockito.eq(25L));
 	}
@@ -215,18 +216,18 @@ public class CloudformationStackTests {
 
 		CloudFormationStack stack = new CloudFormationStack(client, "foo", taskListener);
 
-		stack.createChangeSet("c1", "templateBody", null, Collections.<Parameter>emptyList(), Collections.<Tag>emptyList(), 25, ChangeSetType.UPDATE, "myarn");
+		stack.createChangeSet("c1", "templateBody", null, Collections.<Parameter>emptyList(), Collections.<Tag>emptyList(), 25, ChangeSetType.UPDATE, "myarn", null);
 
 		ArgumentCaptor<CreateChangeSetRequest> captor = ArgumentCaptor.forClass(CreateChangeSetRequest.class);
 		Mockito.verify(client).createChangeSet(captor.capture());
 		Assertions.assertThat(captor.getValue()).isEqualTo(new CreateChangeSetRequest()
-				.withChangeSetType(ChangeSetType.UPDATE)
-				.withStackName("foo")
-				.withTemplateBody("templateBody")
-				.withCapabilities(Capability.values())
-				.withParameters(Collections.<Parameter>emptyList())
-				.withChangeSetName("c1")
-				.withRoleARN("myarn")
+																   .withChangeSetType(ChangeSetType.UPDATE)
+																   .withStackName("foo")
+																   .withTemplateBody("templateBody")
+																   .withCapabilities(Capability.values())
+																   .withParameters(Collections.<Parameter>emptyList())
+																   .withChangeSetName("c1")
+																   .withRoleARN("myarn")
 		);
 		Mockito.verify(this.eventPrinter).waitAndPrintChangeSetEvents(Mockito.eq("foo"), Mockito.eq("c1"), Mockito.any(Waiter.class), Mockito.eq(25L));
 	}
@@ -240,16 +241,18 @@ public class CloudformationStackTests {
 
 		CloudFormationStack stack = new CloudFormationStack(client, "foo", taskListener);
 
-		stack.update("templateBody", null, Collections.<Parameter>emptyList(), Collections.<Tag>emptyList(), 25, "myarn");
+		RollbackConfiguration rollbackConfig = new RollbackConfiguration().withMonitoringTimeInMinutes(10);
+		stack.update("templateBody", null, Collections.<Parameter>emptyList(), Collections.<Tag>emptyList(), 25, "myarn", rollbackConfig);
 
 		ArgumentCaptor<UpdateStackRequest> captor = ArgumentCaptor.forClass(UpdateStackRequest.class);
 		Mockito.verify(client).updateStack(captor.capture());
 		Assertions.assertThat(captor.getValue()).isEqualTo(new UpdateStackRequest()
-				.withStackName("foo")
-				.withTemplateBody("templateBody")
-				.withCapabilities(Capability.values())
-				.withParameters(Collections.<Parameter>emptyList())
-				.withRoleARN("myarn")
+																   .withStackName("foo")
+																   .withTemplateBody("templateBody")
+																   .withCapabilities(Capability.values())
+																   .withParameters(Collections.emptyList())
+																   .withRoleARN("myarn")
+																   .withRollbackConfiguration(rollbackConfig)
 		);
 		Mockito.verify(this.eventPrinter).waitAndPrintStackEvents(Mockito.eq("foo"), Mockito.any(Waiter.class), Mockito.eq(25L));
 	}
@@ -263,16 +266,18 @@ public class CloudformationStackTests {
 
 		CloudFormationStack stack = new CloudFormationStack(client, "foo", taskListener);
 
-		stack.update(null, "bar", Collections.<Parameter>emptyList(), Collections.<Tag>emptyList(), 21, "myarn");
+		RollbackConfiguration rollbackConfig = new RollbackConfiguration().withMonitoringTimeInMinutes(10);
+		stack.update(null, "bar", Collections.<Parameter>emptyList(), Collections.<Tag>emptyList(), 21, "myarn", rollbackConfig);
 
 		ArgumentCaptor<UpdateStackRequest> captor = ArgumentCaptor.forClass(UpdateStackRequest.class);
 		Mockito.verify(client).updateStack(captor.capture());
 		Assertions.assertThat(captor.getValue()).isEqualTo(new UpdateStackRequest()
-				.withStackName("foo")
-				.withTemplateURL("bar")
-				.withCapabilities(Capability.values())
-				.withParameters(Collections.<Parameter>emptyList())
-				.withRoleARN("myarn")
+																   .withStackName("foo")
+																   .withTemplateURL("bar")
+																   .withCapabilities(Capability.values())
+																   .withParameters(Collections.emptyList())
+																   .withRoleARN("myarn")
+																   .withRollbackConfiguration(rollbackConfig)
 		);
 		Mockito.verify(this.eventPrinter).waitAndPrintStackEvents(Mockito.eq("foo"), Mockito.any(Waiter.class), Mockito.eq(21L));
 	}
@@ -286,16 +291,18 @@ public class CloudformationStackTests {
 
 		CloudFormationStack stack = new CloudFormationStack(client, "foo", taskListener);
 
-		stack.update(null, null, Collections.<Parameter>emptyList(), Collections.<Tag>emptyList(), 12, "myarn");
+		RollbackConfiguration rollbackConfig = new RollbackConfiguration().withMonitoringTimeInMinutes(10);
+		stack.update(null, null, Collections.<Parameter>emptyList(), Collections.<Tag>emptyList(), 12, "myarn", rollbackConfig);
 
 		ArgumentCaptor<UpdateStackRequest> captor = ArgumentCaptor.forClass(UpdateStackRequest.class);
 		Mockito.verify(client).updateStack(captor.capture());
 		Assertions.assertThat(captor.getValue()).isEqualTo(new UpdateStackRequest()
-				.withStackName("foo")
-				.withUsePreviousTemplate(true)
-				.withCapabilities(Capability.values())
-				.withParameters(Collections.<Parameter>emptyList())
-				.withRoleARN("myarn")
+																   .withStackName("foo")
+																   .withUsePreviousTemplate(true)
+																   .withCapabilities(Capability.values())
+																   .withParameters(Collections.emptyList())
+																   .withRoleARN("myarn")
+																   .withRollbackConfiguration(rollbackConfig)
 		);
 		Mockito.verify(this.eventPrinter).waitAndPrintStackEvents(Mockito.eq("foo"), Mockito.any(Waiter.class), Mockito.eq(12L));
 	}
@@ -314,13 +321,13 @@ public class CloudformationStackTests {
 		ArgumentCaptor<CreateStackRequest> captor = ArgumentCaptor.forClass(CreateStackRequest.class);
 		Mockito.verify(client).createStack(captor.capture());
 		Assertions.assertThat(captor.getValue()).isEqualTo(new CreateStackRequest()
-				.withStackName("foo")
-				.withTemplateBody("templateBody")
-				.withCapabilities(Capability.values())
-				.withParameters(Collections.<Parameter>emptyList())
-				.withTimeoutInMinutes(7)
-				.withOnFailure(OnFailure.DO_NOTHING)
-				.withRoleARN("myarn")
+																   .withStackName("foo")
+																   .withTemplateBody("templateBody")
+																   .withCapabilities(Capability.values())
+																   .withParameters(Collections.<Parameter>emptyList())
+																   .withTimeoutInMinutes(7)
+																   .withOnFailure(OnFailure.DO_NOTHING)
+																   .withRoleARN("myarn")
 		);
 		Mockito.verify(this.eventPrinter).waitAndPrintStackEvents(Mockito.eq("foo"), Mockito.any(Waiter.class), Mockito.eq(25L));
 	}
@@ -339,13 +346,13 @@ public class CloudformationStackTests {
 		ArgumentCaptor<CreateStackRequest> captor = ArgumentCaptor.forClass(CreateStackRequest.class);
 		Mockito.verify(client).createStack(captor.capture());
 		Assertions.assertThat(captor.getValue()).isEqualTo(new CreateStackRequest()
-				.withStackName("foo")
-				.withTemplateURL("bar")
-				.withCapabilities(Capability.values())
-				.withParameters(Collections.<Parameter>emptyList())
-				.withTimeoutInMinutes(3)
-				.withOnFailure(OnFailure.DO_NOTHING)
-				.withRoleARN("myarn")
+																   .withStackName("foo")
+																   .withTemplateURL("bar")
+																   .withCapabilities(Capability.values())
+																   .withParameters(Collections.<Parameter>emptyList())
+																   .withTimeoutInMinutes(3)
+																   .withOnFailure(OnFailure.DO_NOTHING)
+																   .withRoleARN("myarn")
 		);
 		Mockito.verify(this.eventPrinter).waitAndPrintStackEvents(Mockito.eq("foo"), Mockito.any(Waiter.class), Mockito.eq(21L));
 	}
@@ -379,7 +386,7 @@ public class CloudformationStackTests {
 		ArgumentCaptor<DeleteStackRequest> captor = ArgumentCaptor.forClass(DeleteStackRequest.class);
 		Mockito.verify(client).deleteStack(captor.capture());
 		Assertions.assertThat(captor.getValue()).isEqualTo(new DeleteStackRequest()
-				.withStackName("foo")
+																   .withStackName("foo")
 		);
 		Mockito.verify(this.eventPrinter).waitAndPrintStackEvents(Mockito.eq("foo"), Mockito.any(Waiter.class), Mockito.eq(7L));
 	}
@@ -402,8 +409,8 @@ public class CloudformationStackTests {
 		ArgumentCaptor<DescribeChangeSetRequest> captor = ArgumentCaptor.forClass(DescribeChangeSetRequest.class);
 		Mockito.verify(client).describeChangeSet(captor.capture());
 		Assertions.assertThat(captor.getValue()).isEqualTo(new DescribeChangeSetRequest()
-				.withStackName("foo")
-				.withChangeSetName("bar")
+																   .withStackName("foo")
+																   .withChangeSetName("bar")
 		);
 	}
 }

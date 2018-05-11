@@ -25,16 +25,17 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Set;
 
-import com.amazonaws.services.cloudformation.model.Change;
-import com.amazonaws.services.cloudformation.model.ChangeSetStatus;
-import com.amazonaws.services.cloudformation.model.DescribeChangeSetResult;
 import org.jenkinsci.plugins.workflow.steps.StepContext;
 import org.jenkinsci.plugins.workflow.steps.StepDescriptor;
 import org.jenkinsci.plugins.workflow.steps.StepExecution;
 import org.kohsuke.stapler.DataBoundConstructor;
 
+import com.amazonaws.services.cloudformation.model.Change;
+import com.amazonaws.services.cloudformation.model.ChangeSetStatus;
 import com.amazonaws.services.cloudformation.model.ChangeSetType;
+import com.amazonaws.services.cloudformation.model.DescribeChangeSetResult;
 import com.amazonaws.services.cloudformation.model.Parameter;
+import com.amazonaws.services.cloudformation.model.RollbackConfiguration;
 import com.amazonaws.services.cloudformation.model.Tag;
 import com.google.common.base.Preconditions;
 
@@ -100,10 +101,10 @@ public class CFNCreateChangeSetStep extends AbstractCFNCreateStep {
 		}
 
 		@Override
-		public Object whenStackExists(Collection<Parameter> parameters, Collection<Tag> tags) throws Exception {
+		public Object whenStackExists(Collection<Parameter> parameters, Collection<Tag> tags, RollbackConfiguration rollbackConfiguration) throws Exception {
 			final String changeSet = this.getStep().getChangeSet();
 			final String url = this.getStep().getUrl();
-			this.getCfnStack().createChangeSet(changeSet, this.getStep().readTemplate(this), url, parameters, tags, this.getStep().getPollInterval(), ChangeSetType.UPDATE, this.getStep().getRoleArn());
+			this.getCfnStack().createChangeSet(changeSet, this.getStep().readTemplate(this), url, parameters, tags, this.getStep().getPollInterval(), ChangeSetType.UPDATE, this.getStep().getRoleArn(), rollbackConfiguration);
 			return this.validateChangeSet(changeSet);
 		}
 
@@ -111,7 +112,7 @@ public class CFNCreateChangeSetStep extends AbstractCFNCreateStep {
 		public Object whenStackMissing(Collection<Parameter> parameters, Collection<Tag> tags) throws Exception {
 			final String changeSet = this.getStep().getChangeSet();
 			final String url = this.getStep().getUrl();
-			this.getCfnStack().createChangeSet(changeSet, this.getStep().readTemplate(this), url, parameters, tags, this.getStep().getPollInterval(), ChangeSetType.CREATE, this.getStep().getRoleArn());
+			this.getCfnStack().createChangeSet(changeSet, this.getStep().readTemplate(this), url, parameters, tags, this.getStep().getPollInterval(), ChangeSetType.CREATE, this.getStep().getRoleArn(), null);
 			return this.validateChangeSet(changeSet);
 		}
 

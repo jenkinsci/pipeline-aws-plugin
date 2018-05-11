@@ -42,6 +42,7 @@ import com.amazonaws.services.cloudformation.model.ExecuteChangeSetRequest;
 import com.amazonaws.services.cloudformation.model.OnFailure;
 import com.amazonaws.services.cloudformation.model.Output;
 import com.amazonaws.services.cloudformation.model.Parameter;
+import com.amazonaws.services.cloudformation.model.RollbackConfiguration;
 import com.amazonaws.services.cloudformation.model.Stack;
 import com.amazonaws.services.cloudformation.model.Tag;
 import com.amazonaws.services.cloudformation.model.UpdateStackRequest;
@@ -118,7 +119,7 @@ public class CloudFormationStack {
 		new EventPrinter(this.client, this.listener).waitAndPrintStackEvents(this.stack, this.client.waiters().stackCreateComplete(), pollIntervallMillis);
 	}
 
-	public void update(String templateBody, String templateUrl, Collection<Parameter> params, Collection<Tag> tags, long pollIntervallMillis, String roleArn) throws ExecutionException {
+	public void update(String templateBody, String templateUrl, Collection<Parameter> params, Collection<Tag> tags, long pollIntervallMillis, String roleArn, RollbackConfiguration rollbackConfig) throws ExecutionException {
 		try {
 			UpdateStackRequest req = new UpdateStackRequest();
 			req.withStackName(this.stack).withCapabilities(Capability.CAPABILITY_IAM, Capability.CAPABILITY_NAMED_IAM);
@@ -130,6 +131,8 @@ public class CloudFormationStack {
 			} else {
 				req.setUsePreviousTemplate(true);
 			}
+
+			req.withRollbackConfiguration(rollbackConfig);
 
 			req.withParameters(params).withTags(tags).withRoleARN(roleArn);
 
@@ -149,7 +152,7 @@ public class CloudFormationStack {
 		}
 	}
 
-	public void createChangeSet(String changeSetName, String templateBody, String templateUrl, Collection<Parameter> params, Collection<Tag> tags, long pollIntervallMillis, ChangeSetType changeSetType, String roleArn) throws ExecutionException {
+	public void createChangeSet(String changeSetName, String templateBody, String templateUrl, Collection<Parameter> params, Collection<Tag> tags, long pollIntervallMillis, ChangeSetType changeSetType, String roleArn, RollbackConfiguration rollbackConfig) throws ExecutionException {
 		try {
 			CreateChangeSetRequest req = new CreateChangeSetRequest();
 			req.withChangeSetName(changeSetName).withStackName(this.stack).withCapabilities(Capability.CAPABILITY_IAM, Capability.CAPABILITY_NAMED_IAM).withChangeSetType(changeSetType);
@@ -173,7 +176,7 @@ public class CloudFormationStack {
 				throw new IllegalArgumentException("Cannot create a CloudFormation change set without a valid change set type.");
 			}
 
-			req.withParameters(params).withTags(tags).withRoleARN(roleArn);
+			req.withParameters(params).withTags(tags).withRoleARN(roleArn).withRollbackConfiguration(rollbackConfig);
 
 			this.client.createChangeSet(req);
 

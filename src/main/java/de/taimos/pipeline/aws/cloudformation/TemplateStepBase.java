@@ -8,6 +8,8 @@ import org.jenkinsci.plugins.workflow.steps.Step;
 import org.jenkinsci.plugins.workflow.steps.StepExecution;
 import org.kohsuke.stapler.DataBoundSetter;
 
+import com.amazonaws.services.cloudformation.model.RollbackConfiguration;
+import com.amazonaws.services.cloudformation.model.RollbackTrigger;
 import com.amazonaws.services.cloudformation.model.Tag;
 
 import hudson.FilePath;
@@ -22,6 +24,8 @@ public abstract class TemplateStepBase extends Step implements ParameterProvider
 	private String paramsFile;
 	private Long pollInterval = 1000L;
 	private Boolean create = true;
+	private Integer rollbackTimeoutInMinutes;
+	private String[] rollbackTriggers;
 
 	public String getFile() {
 		return this.file;
@@ -104,6 +108,24 @@ public abstract class TemplateStepBase extends Step implements ParameterProvider
 		this.create = create;
 	}
 
+	public Integer getRollbackTimeoutInMinutes() {
+		return this.rollbackTimeoutInMinutes;
+	}
+
+	@DataBoundSetter
+	public void setRollbackTimeoutInMinutes(Integer rollbackTimeoutInMinutes) {
+		this.rollbackTimeoutInMinutes = rollbackTimeoutInMinutes;
+	}
+
+	public String[] getRollbackTriggers() {
+		return this.rollbackTriggers != null ? this.rollbackTriggers.clone() : null;
+	}
+
+	@DataBoundSetter
+	public void setRollbackTriggers(String[] rollbackTriggers) {
+		this.rollbackTriggers = rollbackTriggers.clone();
+	}
+
 	protected final Collection<Tag> getAwsTags() {
 		Collection<Tag> tagList = new ArrayList<>();
 		if (this.tags == null) {
@@ -149,5 +171,30 @@ public abstract class TemplateStepBase extends Step implements ParameterProvider
 		} catch (Exception e) {
 			throw new RuntimeException(e);
 		}
+	}
+
+	protected RollbackConfiguration getRollbackConfiguration() {
+		RollbackConfiguration rollbackConfig = new RollbackConfiguration().withMonitoringTimeInMinutes(0);
+		if (this.getRollbackTimeoutInMinutes() != null) {
+			rollbackConfig.withMonitoringTimeInMinutes(this.getRollbackTimeoutInMinutes());
+		}
+		if (this.getRollbackTriggers() != null) {
+			rollbackConfig.withRollbackTriggers(this.parseRollbackTriggers(this.getRollbackTriggers()));
+		}
+		return rollbackConfig;
+	}
+
+	private Collection<RollbackTrigger> parseRollbackTriggers(String[] configs) {
+		Collection<RollbackTrigger> rollbackTriggers = new ArrayList<>();
+		for (String cfg : configs) {
+			int i = cfg.indexOf('=');
+			if (i < 0) {
+				throw new IllegalArgumentException("Missing = in config " + cfg);
+			}
+			String key = cfg.substring(0, i);
+			String value = cfg.substring(i + 1);
+			rollbackTriggers.add(new RollbackTrigger().withType(key).withArn(value));
+		}
+		return rollbackTriggers;
 	}
 }

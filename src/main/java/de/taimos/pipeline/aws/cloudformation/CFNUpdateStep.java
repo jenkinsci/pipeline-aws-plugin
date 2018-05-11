@@ -33,6 +33,7 @@ import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
 
 import com.amazonaws.services.cloudformation.model.Parameter;
+import com.amazonaws.services.cloudformation.model.RollbackConfiguration;
 import com.amazonaws.services.cloudformation.model.Tag;
 
 import de.taimos.pipeline.aws.utils.StepUtils;
@@ -100,10 +101,10 @@ public class CFNUpdateStep extends AbstractCFNCreateStep {
 		}
 
 		@Override
-		public Object whenStackExists(Collection<Parameter> parameters, Collection<Tag> tags) throws Exception {
+		public Object whenStackExists(Collection<Parameter> parameters, Collection<Tag> tags, RollbackConfiguration rollbackConfiguration) throws Exception {
 			final String url = this.getStep().getUrl();
 			CloudFormationStack cfnStack = this.getCfnStack();
-			cfnStack.update(this.getStep().readTemplate(this), url, parameters, tags, this.getStep().getPollInterval(), this.getStep().getRoleArn());
+			cfnStack.update(this.getStep().readTemplate(this), url, parameters, tags, this.getStep().getPollInterval(), this.getStep().getRoleArn(), rollbackConfiguration);
 			return cfnStack.describeOutputs();
 		}
 
