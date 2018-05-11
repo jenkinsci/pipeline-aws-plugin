@@ -45,6 +45,7 @@ import hudson.model.TaskListener;
 public class CFNUpdateStep extends AbstractCFNCreateStep {
 
 	private Integer timeoutInMinutes;
+	private Boolean enableTerminationProtection;
 
 	@DataBoundConstructor
 	public CFNUpdateStep(String stack) {
@@ -58,6 +59,15 @@ public class CFNUpdateStep extends AbstractCFNCreateStep {
 	@DataBoundSetter
 	public void setTimeoutInMinutes(Integer timeoutInMinutes) {
 		this.timeoutInMinutes = timeoutInMinutes;
+	}
+
+	public Boolean getEnableTerminationProtection() {
+		return this.enableTerminationProtection;
+	}
+
+	@DataBoundSetter
+	public void setEnableTerminationProtection(Boolean enableTerminationProtection) {
+		this.enableTerminationProtection = enableTerminationProtection;
 	}
 
 	@Override
@@ -112,7 +122,7 @@ public class CFNUpdateStep extends AbstractCFNCreateStep {
 		public Object whenStackMissing(Collection<Parameter> parameters, Collection<Tag> tags) throws Exception {
 			final String url = this.getStep().getUrl();
 			CloudFormationStack cfnStack = this.getCfnStack();
-			cfnStack.create(this.getStep().readTemplate(this), url, parameters, tags, this.getStep().getTimeoutInMinutes(), this.getStep().getPollInterval(), this.getStep().getRoleArn(), this.getStep().getOnFailure());
+			cfnStack.create(this.getStep().readTemplate(this), url, parameters, tags, this.getStep().getTimeoutInMinutes(), this.getStep().getPollInterval(), this.getStep().getRoleArn(), this.getStep().getOnFailure(), this.getStep().getEnableTerminationProtection());
 			return cfnStack.describeOutputs();
 		}
 

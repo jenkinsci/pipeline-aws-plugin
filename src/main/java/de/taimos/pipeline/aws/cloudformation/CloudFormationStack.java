@@ -106,13 +106,13 @@ public class CloudFormationStack {
 		return map;
 	}
 
-	public void create(String templateBody, String templateUrl, Collection<Parameter> params, Collection<Tag> tags, Integer timeoutInMinutes, long pollIntervallMillis, String roleArn, String onFailure) throws ExecutionException {
+	public void create(String templateBody, String templateUrl, Collection<Parameter> params, Collection<Tag> tags, Integer timeoutInMinutes, long pollIntervallMillis, String roleArn, String onFailure, Boolean enableTerminationProtection) throws ExecutionException {
 		if ((templateBody == null || templateBody.isEmpty()) && (templateUrl == null || templateUrl.isEmpty())) {
 			throw new IllegalArgumentException("Either a file or url for the template must be specified");
 		}
 
 		CreateStackRequest req = new CreateStackRequest();
-		req.withStackName(this.stack).withCapabilities(Capability.CAPABILITY_IAM, Capability.CAPABILITY_NAMED_IAM);
+		req.withStackName(this.stack).withCapabilities(Capability.CAPABILITY_IAM, Capability.CAPABILITY_NAMED_IAM).withEnableTerminationProtection(enableTerminationProtection);
 		req.withTemplateBody(templateBody).withTemplateURL(templateUrl).withParameters(params).withTags(tags).withTimeoutInMinutes(timeoutInMinutes).withRoleARN(roleArn).withOnFailure(OnFailure.valueOf(onFailure));
 		this.client.createStack(req);
 

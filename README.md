@@ -332,6 +332,12 @@ You can specify rollback triggers for the stack update:
 def outputs = cfnUpdate(stack:'my-stack', url:'https://s3.amazonaws.com/my-templates-bucket/template.yaml', rollbackTimeoutInMinutes: 10, rollbackTriggers: ['AWS::CloudWatch::Alarm=arn:of:cloudwatch:alarm'])
 ```
 
+When creating a stack, you can activate termination protection by using the `enableTerminationProtection` field:
+
+```
+def outputs = cfnUpdate(stack:'my-stack', url:'https://s3.amazonaws.com/my-templates-bucket/template.yaml', enableTerminationProtection: true)
+```
+
 Note: When creating a stack, either `file` or `url` are required. When updating it, omitting both parameters will keep the stack's current template.
 
 ## cfnDelete
@@ -581,6 +587,7 @@ ec2ShareAmi(
 
 ## current master
 * add rollback configuration to `cfnUpdate`
+* add `enableTerminationProtection` to `cfnUpdate`
 
 ## 1.26
 * add duration to withAWS

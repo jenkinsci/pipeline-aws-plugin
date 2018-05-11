@@ -30,10 +30,8 @@ import com.amazonaws.services.cloudformation.model.DescribeStacksResult;
 import com.amazonaws.services.cloudformation.model.ExecuteChangeSetRequest;
 import com.amazonaws.services.cloudformation.model.OnFailure;
 import com.amazonaws.services.cloudformation.model.Output;
-import com.amazonaws.services.cloudformation.model.Parameter;
 import com.amazonaws.services.cloudformation.model.RollbackConfiguration;
 import com.amazonaws.services.cloudformation.model.Stack;
-import com.amazonaws.services.cloudformation.model.Tag;
 import com.amazonaws.services.cloudformation.model.UpdateStackRequest;
 import com.amazonaws.services.cloudformation.waiters.AmazonCloudFormationWaiters;
 import com.amazonaws.waiters.Waiter;
@@ -191,7 +189,7 @@ public class CloudformationStackTests {
 
 		CloudFormationStack stack = new CloudFormationStack(client, "foo", taskListener);
 
-		stack.createChangeSet("c1", "templateBody", null, Collections.<Parameter>emptyList(), Collections.<Tag>emptyList(), 25, ChangeSetType.CREATE, "myarn", null);
+		stack.createChangeSet("c1", "templateBody", null, Collections.emptyList(), Collections.emptyList(), 25, ChangeSetType.CREATE, "myarn", null);
 
 		ArgumentCaptor<CreateChangeSetRequest> captor = ArgumentCaptor.forClass(CreateChangeSetRequest.class);
 		Mockito.verify(client).createChangeSet(captor.capture());
@@ -200,7 +198,7 @@ public class CloudformationStackTests {
 																   .withStackName("foo")
 																   .withTemplateBody("templateBody")
 																   .withCapabilities(Capability.values())
-																   .withParameters(Collections.<Parameter>emptyList())
+																   .withParameters(Collections.emptyList())
 																   .withChangeSetName("c1")
 																   .withRoleARN("myarn")
 		);
@@ -216,7 +214,7 @@ public class CloudformationStackTests {
 
 		CloudFormationStack stack = new CloudFormationStack(client, "foo", taskListener);
 
-		stack.createChangeSet("c1", "templateBody", null, Collections.<Parameter>emptyList(), Collections.<Tag>emptyList(), 25, ChangeSetType.UPDATE, "myarn", null);
+		stack.createChangeSet("c1", "templateBody", null, Collections.emptyList(), Collections.emptyList(), 25, ChangeSetType.UPDATE, "myarn", null);
 
 		ArgumentCaptor<CreateChangeSetRequest> captor = ArgumentCaptor.forClass(CreateChangeSetRequest.class);
 		Mockito.verify(client).createChangeSet(captor.capture());
@@ -225,7 +223,7 @@ public class CloudformationStackTests {
 																   .withStackName("foo")
 																   .withTemplateBody("templateBody")
 																   .withCapabilities(Capability.values())
-																   .withParameters(Collections.<Parameter>emptyList())
+																   .withParameters(Collections.emptyList())
 																   .withChangeSetName("c1")
 																   .withRoleARN("myarn")
 		);
@@ -242,7 +240,7 @@ public class CloudformationStackTests {
 		CloudFormationStack stack = new CloudFormationStack(client, "foo", taskListener);
 
 		RollbackConfiguration rollbackConfig = new RollbackConfiguration().withMonitoringTimeInMinutes(10);
-		stack.update("templateBody", null, Collections.<Parameter>emptyList(), Collections.<Tag>emptyList(), 25, "myarn", rollbackConfig);
+		stack.update("templateBody", null, Collections.emptyList(), Collections.emptyList(), 25, "myarn", rollbackConfig);
 
 		ArgumentCaptor<UpdateStackRequest> captor = ArgumentCaptor.forClass(UpdateStackRequest.class);
 		Mockito.verify(client).updateStack(captor.capture());
@@ -267,7 +265,7 @@ public class CloudformationStackTests {
 		CloudFormationStack stack = new CloudFormationStack(client, "foo", taskListener);
 
 		RollbackConfiguration rollbackConfig = new RollbackConfiguration().withMonitoringTimeInMinutes(10);
-		stack.update(null, "bar", Collections.<Parameter>emptyList(), Collections.<Tag>emptyList(), 21, "myarn", rollbackConfig);
+		stack.update(null, "bar", Collections.emptyList(), Collections.emptyList(), 21, "myarn", rollbackConfig);
 
 		ArgumentCaptor<UpdateStackRequest> captor = ArgumentCaptor.forClass(UpdateStackRequest.class);
 		Mockito.verify(client).updateStack(captor.capture());
@@ -292,7 +290,7 @@ public class CloudformationStackTests {
 		CloudFormationStack stack = new CloudFormationStack(client, "foo", taskListener);
 
 		RollbackConfiguration rollbackConfig = new RollbackConfiguration().withMonitoringTimeInMinutes(10);
-		stack.update(null, null, Collections.<Parameter>emptyList(), Collections.<Tag>emptyList(), 12, "myarn", rollbackConfig);
+		stack.update(null, null, Collections.emptyList(), Collections.emptyList(), 12, "myarn", rollbackConfig);
 
 		ArgumentCaptor<UpdateStackRequest> captor = ArgumentCaptor.forClass(UpdateStackRequest.class);
 		Mockito.verify(client).updateStack(captor.capture());
@@ -316,7 +314,7 @@ public class CloudformationStackTests {
 
 		CloudFormationStack stack = new CloudFormationStack(client, "foo", taskListener);
 
-		stack.create("templateBody", null, Collections.<Parameter>emptyList(), Collections.<Tag>emptyList(), 7, 25, "myarn", OnFailure.DO_NOTHING.toString());
+		stack.create("templateBody", null, Collections.emptyList(), Collections.emptyList(), 7, 25, "myarn", OnFailure.DO_NOTHING.toString(), null);
 
 		ArgumentCaptor<CreateStackRequest> captor = ArgumentCaptor.forClass(CreateStackRequest.class);
 		Mockito.verify(client).createStack(captor.capture());
@@ -324,7 +322,7 @@ public class CloudformationStackTests {
 																   .withStackName("foo")
 																   .withTemplateBody("templateBody")
 																   .withCapabilities(Capability.values())
-																   .withParameters(Collections.<Parameter>emptyList())
+																   .withParameters(Collections.emptyList())
 																   .withTimeoutInMinutes(7)
 																   .withOnFailure(OnFailure.DO_NOTHING)
 																   .withRoleARN("myarn")
@@ -341,15 +339,16 @@ public class CloudformationStackTests {
 
 		CloudFormationStack stack = new CloudFormationStack(client, "foo", taskListener);
 
-		stack.create(null, "bar", Collections.<Parameter>emptyList(), Collections.<Tag>emptyList(), 3, 21, "myarn", OnFailure.DO_NOTHING.toString());
+		stack.create(null, "bar", Collections.emptyList(), Collections.emptyList(), 3, 21, "myarn", OnFailure.DO_NOTHING.toString(), true);
 
 		ArgumentCaptor<CreateStackRequest> captor = ArgumentCaptor.forClass(CreateStackRequest.class);
 		Mockito.verify(client).createStack(captor.capture());
 		Assertions.assertThat(captor.getValue()).isEqualTo(new CreateStackRequest()
 																   .withStackName("foo")
+																   .withEnableTerminationProtection(true)
 																   .withTemplateURL("bar")
 																   .withCapabilities(Capability.values())
-																   .withParameters(Collections.<Parameter>emptyList())
+																   .withParameters(Collections.emptyList())
 																   .withTimeoutInMinutes(3)
 																   .withOnFailure(OnFailure.DO_NOTHING)
 																   .withRoleARN("myarn")
@@ -366,7 +365,7 @@ public class CloudformationStackTests {
 
 			CloudFormationStack stack = new CloudFormationStack(client, "foo", taskListener);
 
-			stack.create(null, null, Collections.<Parameter>emptyList(), Collections.<Tag>emptyList(), 3, 21, "myarn", OnFailure.ROLLBACK.toString());
+			stack.create(null, null, Collections.emptyList(), Collections.emptyList(), 3, 21, "myarn", OnFailure.ROLLBACK.toString(), null);
 		} finally {
 			Mockito.verifyZeroInteractions(client);
 		}
