@@ -54,7 +54,12 @@ public class CFNDeleteStackSetStepTest {
 		jenkinsRule.assertBuildStatusSuccess(job.scheduleBuild2(0));
 
 		PowerMockito.verifyNew(CloudFormationStackSet.class)
-				.withArguments(Mockito.any(AmazonCloudFormation.class), Mockito.eq("foo"), Mockito.any(StepContext.class));
+				.withArguments(
+						Mockito.any(AmazonCloudFormation.class),
+						Mockito.eq("foo"),
+						Mockito.any(StepContext.class),
+						Mockito.eq(SleepStrategy.EXPONENTIAL_BACKOFF_STRATEGY)
+				);
 		Mockito.verify(stackSet).delete();
 	}
 }

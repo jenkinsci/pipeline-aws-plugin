@@ -33,6 +33,7 @@ import com.amazonaws.services.cloudformation.model.DescribeStackSetOperationRequ
 import com.amazonaws.services.cloudformation.model.DescribeStackSetOperationResult;
 import com.amazonaws.services.cloudformation.model.DescribeStackSetRequest;
 import com.amazonaws.services.cloudformation.model.DescribeStackSetResult;
+import com.amazonaws.services.cloudformation.model.OperationInProgressException;
 import com.amazonaws.services.cloudformation.model.Parameter;
 import com.amazonaws.services.cloudformation.model.StackSetOperationStatus;
 import com.amazonaws.services.cloudformation.model.StackSetStatus;
@@ -47,11 +48,15 @@ public class CloudFormationStackSet {
 	private final AmazonCloudFormation client;
 	private final String stackSet;
 	private final TaskListener listener;
+	private final SleepStrategy sleepStrategy;
 
-	public CloudFormationStackSet(AmazonCloudFormation client, String stackSet, TaskListener listener) {
+	private static final int MAX_STACK_SET_RETRY_ATTEMPT_COUNT = 10;
+
+	public CloudFormationStackSet(AmazonCloudFormation client, String stackSet, TaskListener listener, SleepStrategy sleepStrategy) {
 		this.client = client;
 		this.stackSet = stackSet;
 		this.listener = listener;
+		this.sleepStrategy = sleepStrategy;
 	}
 
 	public boolean exists() {
@@ -118,7 +123,7 @@ public class CloudFormationStackSet {
 		}
 	}
 
-	public UpdateStackSetResult update(String templateBody, String templateUrl, Collection<Parameter> params, Collection<Tag> tags) {
+	public UpdateStackSetResult update(String templateBody, String templateUrl, Collection<Parameter> params, Collection<Tag> tags) throws InterruptedException {
 		this.listener.getLogger().format("Updating CloudFormation stack set %s %n", this.stackSet);
 		UpdateStackSetRequest req = new UpdateStackSetRequest()
 				.withStackSetName(this.stackSet)
@@ -134,10 +139,28 @@ public class CloudFormationStackSet {
 			req.setUsePreviousTemplate(true);
 		}
 
-		UpdateStackSetResult result = this.client.updateStackSet(req);
+		return doUpdate(req, 1);
+	}
 
-		this.listener.getLogger().format("Updated CloudFormation stack set %s %n", this.stackSet);
-		return result;
+	private UpdateStackSetResult doUpdate(UpdateStackSetRequest req, int attempt) throws InterruptedException {
+		try {
+			this.listener.getLogger().format("Attempting to update CloudFormation stack set %s %n", this.stackSet);
+
+			UpdateStackSetResult result = this.client.updateStackSet(req);
+
+			this.listener.getLogger().format("Updated CloudFormation stack set %s %n", this.stackSet);
+			return result;
+		} catch (OperationInProgressException oipe) {
+			if (attempt == MAX_STACK_SET_RETRY_ATTEMPT_COUNT) {
+				this.listener.getLogger().format("Retries exhausted and cloudformation stack set %s is still busy%n", this.stackSet);
+				throw oipe;
+			} else {
+				long sleepDuration = this.sleepStrategy.calculateSleepDuration(attempt);
+				this.listener.getLogger().format("StackSet %s busy. Waiting %d ms %n", this.stackSet, sleepDuration);
+				Thread.sleep(sleepDuration);
+				return doUpdate(req, attempt + 1);
+			}
+		}
 	}
 
 	public void delete() {

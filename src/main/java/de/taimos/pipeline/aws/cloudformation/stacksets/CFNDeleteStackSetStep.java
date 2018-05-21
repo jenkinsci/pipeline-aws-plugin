@@ -112,7 +112,7 @@ public class CFNDeleteStackSetStep extends Step {
 				public void run() {
 					try {
 						AmazonCloudFormation client = AWSClientFactory.create(AmazonCloudFormationClientBuilder.standard(), Execution.this.getContext());
-						CloudFormationStackSet cfnStackSet = new CloudFormationStackSet(client, stackSet, listener);
+						CloudFormationStackSet cfnStackSet = new CloudFormationStackSet(client, stackSet, listener, SleepStrategy.EXPONENTIAL_BACKOFF_STRATEGY);
 						cfnStackSet.delete();
 						listener.getLogger().println("Stack Set deletion complete");
 						Execution.this.getContext().onSuccess(null);

@@ -588,6 +588,7 @@ ec2ShareAmi(
 ## current master
 * add rollback configuration to `cfnUpdate`
 * add `enableTerminationProtection` to `cfnUpdate`
+* add retries around cfnUpdateStackSet when stack set is currently busy
 
 ## 1.26
 * add duration to withAWS

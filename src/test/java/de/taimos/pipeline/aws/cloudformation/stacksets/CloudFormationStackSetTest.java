@@ -16,6 +16,7 @@ public class CloudFormationStackSetTest {
 
 	private TaskListener listener;
 	private AmazonCloudFormation client;
+	private SleepStrategy sleepStrategy;
 	private CloudFormationStackSet stackSet;
 
 	@Before
@@ -23,7 +24,8 @@ public class CloudFormationStackSetTest {
 		listener = Mockito.mock(TaskListener.class);
 		Mockito.when(listener.getLogger()).thenReturn(System.out);
 		client = Mockito.mock(AmazonCloudFormation.class);
-		stackSet = new CloudFormationStackSet(client, "foo", listener);
+		sleepStrategy = Mockito.mock(SleepStrategy.class);
+		stackSet = new CloudFormationStackSet(client, "foo", listener, sleepStrategy);
 	}
 
 	@Test
@@ -124,7 +126,7 @@ public class CloudFormationStackSetTest {
 	}
 
 	@Test
-	public void updateTemplateBody() {
+	public void updateTemplateBody() throws InterruptedException {
 		UpdateStackSetResult expected = new UpdateStackSetResult();
 		Mockito.when(client.updateStackSet(Mockito.any(UpdateStackSetRequest.class)))
 				.thenReturn(expected);
@@ -150,7 +152,7 @@ public class CloudFormationStackSetTest {
 	}
 
 	@Test
-	public void updateTemplateUrl() {
+	public void updateTemplateUrl() throws InterruptedException {
 		UpdateStackSetResult expected = new UpdateStackSetResult();
 		Mockito.when(client.updateStackSet(Mockito.any(UpdateStackSetRequest.class)))
 				.thenReturn(expected);
@@ -176,7 +178,7 @@ public class CloudFormationStackSetTest {
 	}
 
 	@Test
-	public void updateTemplateKeepPrevious() {
+	public void updateTemplateKeepPrevious() throws InterruptedException {
 		UpdateStackSetResult expected = new UpdateStackSetResult();
 		Mockito.when(client.updateStackSet(Mockito.any(UpdateStackSetRequest.class)))
 				.thenReturn(expected);
@@ -199,6 +201,36 @@ public class CloudFormationStackSetTest {
 				.withTags(tag1)
 				.withUsePreviousTemplate(true)
 		);
+	}
+
+	@Test
+	public void update_OperationInProgressException() throws InterruptedException {
+		UpdateStackSetResult expected = new UpdateStackSetResult();
+		Mockito.when(client.updateStackSet(Mockito.any(UpdateStackSetRequest.class)))
+				.thenThrow(OperationInProgressException.class)
+				.thenReturn(expected);
+
+		Mockito.when(this.sleepStrategy.calculateSleepDuration(Mockito.anyInt())).thenReturn(5L);
+
+		Parameter parameter1 = new Parameter()
+				.withParameterKey("foo")
+				.withParameterValue("bar");
+		Tag tag1 = new Tag()
+				.withKey("bar")
+				.withValue("baz");
+
+		UpdateStackSetResult result = stackSet.update(null, null, Collections.singletonList(parameter1), Collections.singletonList(tag1));
+		Assertions.assertThat(result).isSameAs(expected);
+		ArgumentCaptor<UpdateStackSetRequest> captor = ArgumentCaptor.forClass(UpdateStackSetRequest.class);
+		Mockito.verify(client, Mockito.times(2)).updateStackSet(captor.capture());
+		Assertions.assertThat(captor.getValue()).isEqualTo(new UpdateStackSetRequest()
+				.withStackSetName("foo")
+				.withCapabilities(Capability.values())
+				.withParameters(parameter1)
+				.withTags(tag1)
+				.withUsePreviousTemplate(true)
+		);
+		Mockito.verify(this.sleepStrategy).calculateSleepDuration(1);
 	}
 
 	@Test
