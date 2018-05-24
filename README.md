@@ -11,6 +11,7 @@ This plugins adds Jenkins pipeline steps to interact with the AWS API.
 * [cfInvalidate](#cfinvalidate)
 * [s3Upload](#s3upload)
 * [s3Download](#s3download)
+* [s3Copy](#s3copy)
 * [s3Delete](#s3delete)
 * [s3FindFiles](#s3findfiles)
 * [s3PresignURL](#s3presignurl)
@@ -129,6 +130,7 @@ All s3* steps take an optional pathStyleAccessEnabled and payloadSigningEnabled 
 
 ```
 s3Upload(pathStyleAccessEnabled: true, payloadSigningEnabled: true, file:'file.txt', bucket:'my-bucket', path:'path/to/target/file.txt')
+s3Copy(pathStyleAccessEnabled: true, sourceBucket:'my-bucket', sourcePath:'path/to/source/file.txt', destinationBucket:'other-bucket', destinationPath:'path/to/destination/file.txt')
 s3Delete(pathStyleAccessEnabled: true, bucket:'my-bucket', path:'path/to/source/file.txt')
 s3Download(pathStyleAccessEnabled: true, file:'file.txt', bucket:'my-bucket', path:'path/to/source/file.txt', force:true)
 files = s3FindFiles(pathStyleAccessEnabled: true, bucket:'my-bucket')
@@ -200,6 +202,15 @@ If the `path` ends with a `/` the complete virtual directory will be downloaded.
 s3Download(file:'file.txt', bucket:'my-bucket', path:'path/to/source/file.txt', force:true)
 s3Download(file:'targetFolder/', bucket:'my-bucket', path:'path/to/sourceFolder/', force:true)
 ```
+
+### s3Copy
+
+Copy file between S3 buckets.
+
+```
+s3Copy(sourceBucket:'my-bucket', sourcePath:'path/to/source/file.txt', destinationBucket:'other-bucket', destinationPath:'path/to/destination/file.txt')
+```
+
 
 ### s3Delete
 
@@ -588,6 +599,7 @@ ec2ShareAmi(
 ## current master
 * add rollback configuration to `cfnUpdate`
 * add `enableTerminationProtection` to `cfnUpdate`
+* add `s3Copy` step
 
 ## 1.26
 * add duration to withAWS
