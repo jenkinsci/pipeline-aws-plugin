@@ -2,6 +2,7 @@ package de.taimos.pipeline.aws.cloudformation.stacksets;
 
 import com.amazonaws.client.builder.AwsSyncClientBuilder;
 import com.amazonaws.services.cloudformation.AmazonCloudFormation;
+import com.amazonaws.services.cloudformation.model.OperationInProgressException;
 import com.amazonaws.services.cloudformation.model.Parameter;
 import com.amazonaws.services.cloudformation.model.Tag;
 import com.amazonaws.services.cloudformation.model.UpdateStackSetResult;
@@ -64,7 +65,12 @@ public class CFNUpdateStackSetStepTest {
 		jenkinsRule.assertBuildStatusSuccess(job.scheduleBuild2(0));
 
 		PowerMockito.verifyNew(CloudFormationStackSet.class, Mockito.atLeastOnce())
-				.withArguments(Mockito.any(AmazonCloudFormation.class), Mockito.eq("foo"), Mockito.any(TaskListener.class));
+				.withArguments(
+						Mockito.any(AmazonCloudFormation.class),
+						Mockito.eq("foo"),
+						Mockito.any(TaskListener.class),
+						Mockito.eq(SleepStrategy.EXPONENTIAL_BACKOFF_STRATEGY)
+				);
 		Mockito.verify(stackSet).create(Mockito.anyString(), Mockito.anyString(), Mockito.<Parameter>anyCollection(), Mockito.<Tag>anyCollection());
 	}
 
@@ -88,7 +94,12 @@ public class CFNUpdateStackSetStepTest {
 		jenkinsRule.assertBuildStatusSuccess(job.scheduleBuild2(0));
 
 		PowerMockito.verifyNew(CloudFormationStackSet.class, Mockito.atLeastOnce())
-				.withArguments(Mockito.any(AmazonCloudFormation.class), Mockito.eq("foo"), Mockito.any(TaskListener.class));
+				.withArguments(
+						Mockito.any(AmazonCloudFormation.class),
+						Mockito.eq("foo"),
+						Mockito.any(TaskListener.class),
+						Mockito.eq(SleepStrategy.EXPONENTIAL_BACKOFF_STRATEGY)
+				);
 		@SuppressWarnings("unchecked")
 		ArgumentCaptor<List<Parameter>> parameterCapture = (ArgumentCaptor<List<Parameter>>)(Object)ArgumentCaptor.forClass(List.class);
 		Mockito.verify(stackSet).update(Mockito.anyString(), Mockito.anyString(), parameterCapture.capture(), Mockito.<Tag>anyCollection());
@@ -115,8 +126,13 @@ public class CFNUpdateStackSetStepTest {
 		);
 		jenkinsRule.assertBuildStatusSuccess(job.scheduleBuild2(0));
 
-		PowerMockito.verifyNew(CloudFormationStackSet.class)
-				.withArguments(Mockito.any(AmazonCloudFormation.class), Mockito.eq("foo"), Mockito.any(TaskListener.class));
+		PowerMockito.verifyNew(CloudFormationStackSet.class, Mockito.atLeastOnce())
+				.withArguments(
+						Mockito.any(AmazonCloudFormation.class),
+						Mockito.eq("foo"),
+						Mockito.any(TaskListener.class),
+						Mockito.eq(SleepStrategy.EXPONENTIAL_BACKOFF_STRATEGY)
+				);
 		Mockito.verify(stackSet, Mockito.never()).create(Mockito.anyString(), Mockito.anyString(), Mockito.<Parameter>anyCollection(), Mockito.<Tag>anyCollection());
 	}
 }
