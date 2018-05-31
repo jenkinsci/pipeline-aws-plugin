@@ -1,0 +1,42 @@
+<?jelly escape-by-default='true'?>
+<j:jelly xmlns:j="jelly:core" xmlns:f="/lib/form">
+	<f:entry title="${%Source Bucket}" field="sourceBucket">
+		<f:textbox />
+	</f:entry>
+	<f:entry title="${%Source Path}" field="sourcePath">
+		<f:textbox />
+	</f:entry>
+	<f:entry title="${%Destination Bucket}" field="destinationBucket">
+		<f:textbox />
+	</f:entry>
+	<f:entry title="${%Destination Path}" field="destinationPath">
+		<f:textbox />
+	</f:entry>
+	<f:entry title="${%Metadatas}" field="metadatas">
+		<f:textbox />
+	</f:entry>
+	<f:entry title="${%CacheControl}" field="cacheControl">
+        <f:textbox />
+    </f:entry>
+	<f:entry title="${%SSEAlgorithm}" field="sseAlgorithm">
+        <f:textbox />
+    </f:entry>
+	<f:entry title="${%ACL}" field="acl" name="acl">
+        <select name="acl">
+            <option value="Private">Private</option>
+            <option value="PublicRead">PublicRead</option>
+            <option value="PublicReadWrite">PublicReadWrite</option>
+            <option value="AuthenticatedRead">AuthenticatedRead</option>
+            <option value="LogDeliveryWrite">LogDeliveryWrite</option>
+            <option value="BucketOwnerRead">BucketOwnerRead</option>
+            <option value="BucketOwnerFullControl">BucketOwnerFullControl</option>
+            <option value="AwsExecRead">AwsExecRead</option>
+        </select>
+    </f:entry>
+	<f:entry title="${%Enable Path-style Access}" field="pathStyleAccessEnabled">
+		<f:checkbox />
+	</f:entry>
+	<f:entry title="${%Enable Payload Signing}" field="payloadSigningEnabled">
+		<f:checkbox />
+	</f:entry>
+</j:jelly>
