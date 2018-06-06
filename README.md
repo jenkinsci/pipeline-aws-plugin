@@ -130,7 +130,7 @@ All s3* steps take an optional pathStyleAccessEnabled and payloadSigningEnabled 
 
 ```
 s3Upload(pathStyleAccessEnabled: true, payloadSigningEnabled: true, file:'file.txt', bucket:'my-bucket', path:'path/to/target/file.txt')
-s3Copy(pathStyleAccessEnabled: true, sourceBucket:'my-bucket', sourcePath:'path/to/source/file.txt', destinationBucket:'other-bucket', destinationPath:'path/to/destination/file.txt')
+s3Copy(pathStyleAccessEnabled: true, fromBucket:'my-bucket', fromPath:'path/to/source/file.txt', toBucket:'other-bucket', toPath:'path/to/destination/file.txt')
 s3Delete(pathStyleAccessEnabled: true, bucket:'my-bucket', path:'path/to/source/file.txt')
 s3Download(pathStyleAccessEnabled: true, file:'file.txt', bucket:'my-bucket', path:'path/to/source/file.txt', force:true)
 files = s3FindFiles(pathStyleAccessEnabled: true, bucket:'my-bucket')
@@ -208,7 +208,7 @@ s3Download(file:'targetFolder/', bucket:'my-bucket', path:'path/to/sourceFolder/
 Copy file between S3 buckets.
 
 ```
-s3Copy(sourceBucket:'my-bucket', sourcePath:'path/to/source/file.txt', destinationBucket:'other-bucket', destinationPath:'path/to/destination/file.txt')
+s3Copy(fromBucket:'my-bucket', fromPath:'path/to/source/file.txt', toBucket:'other-bucket', toPath:'path/to/destination/file.txt')
 ```
 
 
