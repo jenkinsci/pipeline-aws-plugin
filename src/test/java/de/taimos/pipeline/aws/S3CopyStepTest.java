@@ -39,10 +39,10 @@ public class S3CopyStepTest
 		step.setCacheControl("my-cachecontrol");
 		step.setContentType("text/plain");
 		step.setSseAlgorithm("AES256");
-		Assert.assertEquals("my-bucket", step.getSourceBucket());
-		Assert.assertEquals("my-path", step.getSourcePath());
-		Assert.assertEquals("other-bucket", step.getDestinationBucket());
-		Assert.assertEquals("other-path", step.getDestinationPath());
+		Assert.assertEquals("my-bucket", step.getFromBucket());
+		Assert.assertEquals("my-path", step.getFromPath());
+		Assert.assertEquals("other-bucket", step.getToBucket());
+		Assert.assertEquals("other-path", step.getToPath());
 		Assert.assertEquals("alias/foo", step.getKmsId());
 		Assert.assertArrayEquals(metas, step.getMetadatas());
 		Assert.assertEquals(CannedAccessControlList.PublicRead, step.getAcl());

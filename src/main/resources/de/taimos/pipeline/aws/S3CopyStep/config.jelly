@@ -1,15 +1,15 @@
 <?jelly escape-by-default='true'?>
 <j:jelly xmlns:j="jelly:core" xmlns:f="/lib/form">
-	<f:entry title="${%Source Bucket}" field="sourceBucket">
+	<f:entry title="${%From Bucket}" field="fromBucket">
 		<f:textbox />
 	</f:entry>
-	<f:entry title="${%Source Path}" field="sourcePath">
+	<f:entry title="${%From Path}" field="fromPath">
 		<f:textbox />
 	</f:entry>
-	<f:entry title="${%Destination Bucket}" field="destinationBucket">
+	<f:entry title="${%To Bucket}" field="toBucket">
 		<f:textbox />
 	</f:entry>
-	<f:entry title="${%Destination Path}" field="destinationPath">
+	<f:entry title="${%To Path}" field="toPath">
 		<f:textbox />
 	</f:entry>
 	<f:entry title="${%Metadatas}" field="metadatas">

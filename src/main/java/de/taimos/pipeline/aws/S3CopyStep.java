@@ -52,10 +52,10 @@ import hudson.model.TaskListener;
 
 public class S3CopyStep extends AbstractS3Step {
 
-	private final String sourceBucket;
-	private final String sourcePath;
-	private final String destinationBucket;
-	private final String destinationPath;
+	private final String fromBucket;
+	private final String fromPath;
+	private final String toBucket;
+	private final String toPath;
 	private String kmsId;
 	private String[] metadatas;
 	private CannedAccessControlList acl;
@@ -64,28 +64,28 @@ public class S3CopyStep extends AbstractS3Step {
 	private String sseAlgorithm;
 
 	@DataBoundConstructor
-	public S3CopyStep(String sourceBucket, String sourcePath, String destinationBucket, String destinationPath, boolean pathStyleAccessEnabled, boolean payloadSigningEnabled) {
+	public S3CopyStep(String fromBucket, String fromPath, String toBucket, String toPath, boolean pathStyleAccessEnabled, boolean payloadSigningEnabled) {
 		super(pathStyleAccessEnabled, payloadSigningEnabled);
-		this.sourceBucket = sourceBucket;
-		this.sourcePath = sourcePath;
-		this.destinationBucket = destinationBucket;
-		this.destinationPath = destinationPath;
+		this.fromBucket = fromBucket;
+		this.fromPath = fromPath;
+		this.toBucket = toBucket;
+		this.toPath = toPath;
 	}
 
-	public String getSourceBucket() {
-		return this.sourceBucket;
+	public String getFromBucket() {
+		return this.fromBucket;
 	}
 
-	public String getSourcePath() {
-		return this.sourcePath;
+	public String getFromPath() {
+		return this.fromPath;
 	}
 
-	public String getDestinationBucket() {
-		return this.destinationBucket;
+	public String getToBucket() {
+		return this.toBucket;
 	}
 
-	public String getDestinationPath() {
-		return this.destinationPath;
+	public String getToPath() {
+		return this.toPath;
 	}
 
 	public String getKmsId() {
@@ -188,10 +188,10 @@ public class S3CopyStep extends AbstractS3Step {
 
 		@Override
 		public boolean start() throws Exception {
-			final String sourceBucket = this.step.getSourceBucket();
-			final String destinationBucket = this.step.getDestinationBucket();
-			final String sourcePath = this.step.getSourcePath();
-			final String destinationPath = this.step.getDestinationPath();
+			final String fromBucket = this.step.getFromBucket();
+			final String toBucket = this.step.getToBucket();
+			final String fromPath = this.step.getFromPath();
+			final String toPath = this.step.getToPath();
 			final String kmsId = this.step.getKmsId();
 			final Map<String, String> metadatas = new HashMap<>();
 			final CannedAccessControlList acl = this.step.getAcl();
@@ -209,10 +209,10 @@ public class S3CopyStep extends AbstractS3Step {
 				}
 			}
 
-			Preconditions.checkArgument(sourceBucket != null && !sourceBucket.isEmpty(), "Source bucket must not be null or empty");
-			Preconditions.checkArgument(sourcePath != null && !sourcePath.isEmpty(), "Source path must not be null or empty");
-			Preconditions.checkArgument(destinationBucket != null && !destinationBucket.isEmpty(), "Destination bucket must not be null or empty");
-			Preconditions.checkArgument(destinationPath != null && !destinationPath.isEmpty(), "Destination path must not be null or empty");
+			Preconditions.checkArgument(fromBucket != null && !fromBucket.isEmpty(), "From bucket must not be null or empty");
+			Preconditions.checkArgument(fromPath != null && !fromPath.isEmpty(), "From path must not be null or empty");
+			Preconditions.checkArgument(toBucket != null && !toBucket.isEmpty(), "To bucket must not be null or empty");
+			Preconditions.checkArgument(toPath != null && !toPath.isEmpty(), "To path must not be null or empty");
 
 			new Thread("s3Copy") {
 				@Override
@@ -220,9 +220,9 @@ public class S3CopyStep extends AbstractS3Step {
 				public void run() {
 					try {
 						TaskListener listener = Execution.this.getContext().get(TaskListener.class);
-						listener.getLogger().format("Copying s3://%s/%s to s3://%s/%s%n", sourceBucket, sourcePath, destinationBucket, destinationPath);
+						listener.getLogger().format("Copying s3://%s/%s to s3://%s/%s%n", fromBucket, fromPath, toBucket, toPath);
 
-						CopyObjectRequest request = new CopyObjectRequest(sourceBucket, sourcePath, destinationBucket, destinationPath);
+						CopyObjectRequest request = new CopyObjectRequest(fromBucket, fromPath, toBucket, toPath);
 
 						// Add metadata
 						if (metadatas.size() > 0 || (cacheControl != null && !cacheControl.isEmpty()) || (contentType != null && !contentType.isEmpty()) || (sseAlgorithm != null && !sseAlgorithm.isEmpty())) {
@@ -265,7 +265,7 @@ public class S3CopyStep extends AbstractS3Step {
 						copy.waitForCompletion();
 
 						listener.getLogger().println("Copy complete");
-						Execution.this.getContext().onSuccess(String.format("s3://%s/%s", destinationBucket, destinationPath));
+						Execution.this.getContext().onSuccess(String.format("s3://%s/%s", toBucket, toPath));
 					} catch (Exception e) {
 						Execution.this.getContext().onFailure(e);
 					}
