@@ -601,6 +601,7 @@ ec2ShareAmi(
 * add `enableTerminationProtection` to `cfnUpdate`
 * add retries around cfnUpdateStackSet when stack set is currently busy
 * add `s3Copy` step
+* allow upload of single files to bucket root
 
 ## 1.26
 * add duration to withAWS
