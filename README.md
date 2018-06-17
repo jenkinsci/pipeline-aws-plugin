@@ -65,7 +65,7 @@ withAWS(endpointUrl:'https://minio.mycompany.com',credentials:'nameOfSystemCrede
 Use Jenkins UsernamePassword credentials information (Username: AccessKeyId, Password: SecretAccessKey):
 
 ```
-withAWS(credentials:'nameOfSystemCredentials') {
+withAWS(credentials:'IDofSystemCredentials') {
     // do something
 }
 ```
@@ -73,7 +73,7 @@ withAWS(credentials:'nameOfSystemCredentials') {
 Use Jenkins AWS credentials information (AWS Access Key: AccessKeyId, AWS Secret Key: SecretAccessKey):
 
 ```
-withAWS(credentials:'nameOfAwsCredentials') {
+withAWS(credentials:'IDofAwsCredentials') {
     // do something
 }
 ```
