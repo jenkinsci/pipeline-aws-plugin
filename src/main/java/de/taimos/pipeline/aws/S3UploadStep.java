@@ -355,9 +355,8 @@ public class S3UploadStep extends AbstractS3Step {
 					.withS3Client(AWSClientFactory.create(this.amazonS3ClientOptions.createAmazonS3ClientBuilder(), this.envVars))
 					.build();
 			if (localFile.isFile()) {
-				Preconditions.checkArgument(this.path != null && !this.path.isEmpty(), "Path must not be null or empty when uploading file");
 				String path = this.path;
-				if (path.endsWith("/")) {
+				if (path.endsWith("/") || path.isEmpty()) {
 					path += localFile.getName();
 				}
 				PutObjectRequest request = new PutObjectRequest(this.bucket, path, localFile);

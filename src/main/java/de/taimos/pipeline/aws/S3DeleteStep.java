@@ -123,7 +123,7 @@ public class S3DeleteStep extends AbstractS3Step {
 						listener.getLogger().format("Deleting s3://%s/%s%n", bucket, path);
 						AmazonS3 s3Client = AWSClientFactory.create(Execution.this.step.createS3ClientOptions().createAmazonS3ClientBuilder(), Execution.this.getContext());
 
-						if (!path.endsWith("/")) {
+						if (path != null && !path.endsWith("/") && !path.isEmpty()) {
 							this.deleteFile(s3Client);
 						} else {
 							this.deleteFolder(s3Client);
@@ -141,7 +141,7 @@ public class S3DeleteStep extends AbstractS3Step {
 					List<String> objectsToDelete = new ArrayList<>();
 
 					// See if the thing that we were given is a file.
-					if (s3Client.doesObjectExist(bucket, path)) {
+					if (!path.isEmpty() && s3Client.doesObjectExist(bucket, path)) {
 						objectsToDelete.add(path);
 					}
 
@@ -174,7 +174,7 @@ public class S3DeleteStep extends AbstractS3Step {
 						request.setBucketName(bucket);
 						request.setDelimiter("/");
 
-						if (folder.equals("/")) {
+						if (folder.equals("/") || folder.isEmpty()) {
 							request.setPrefix(null);
 						} else if (!folder.endsWith("/")) {
 							request.setPrefix(folder + "/");
