@@ -48,6 +48,7 @@ import hudson.model.TaskListener;
 abstract class AbstractCFNCreateStackSetStep extends TemplateStepBase {
 
 	private final String stackSet;
+	private String administratorRoleArn;
 	private String onFailure = OnFailure.DELETE.toString();
 
 	public AbstractCFNCreateStackSetStep(String stackSet) {
@@ -65,6 +66,15 @@ abstract class AbstractCFNCreateStackSetStep extends TemplateStepBase {
 	@DataBoundSetter
 	public void setOnFailure(String onFailure) {
 		this.onFailure = onFailure;
+	}
+
+	@DataBoundSetter
+	public void setAdministratorRoleArn(String administratorRoleArn) {
+		this.administratorRoleArn = administratorRoleArn;
+	}
+
+	public String getAdministratorRoleArn() {
+		return administratorRoleArn;
 	}
 
 	abstract static class Execution<C extends AbstractCFNCreateStackSetStep> extends StepExecution {

@@ -90,7 +90,7 @@ public class CFNUpdateStackSetStep extends AbstractCFNCreateStackSetStep {
 		public Object whenStackSetExists(Collection<Parameter> parameters, Collection<Tag> tags) throws Exception {
 			final String url = this.getStep().getUrl();
 			CloudFormationStackSet cfnStackSet = this.getCfnStackSet();
-			UpdateStackSetResult operation = cfnStackSet.update(this.getStep().readTemplate(this), url, parameters, tags);
+			UpdateStackSetResult operation = cfnStackSet.update(this.getStep().readTemplate(this), url, parameters, tags, this.getStep().getAdministratorRoleArn());
 			cfnStackSet.waitForOperationToComplete(operation.getOperationId(), getStep().getPollInterval());
 			return cfnStackSet.describe();
 		}
@@ -100,7 +100,7 @@ public class CFNUpdateStackSetStep extends AbstractCFNCreateStackSetStep {
 		public Object whenStackSetMissing(Collection<Parameter> parameters, Collection<Tag> tags) throws Exception {
 			final String url = getStep().getUrl();
 			CloudFormationStackSet cfnStack = this.getCfnStackSet();
-			cfnStack.create(this.getStep().readTemplate(this), url, parameters, tags);
+			cfnStack.create(this.getStep().readTemplate(this), url, parameters, tags, this.getStep().getAdministratorRoleArn());
 			return cfnStack.waitForStackState(StackSetStatus.ACTIVE, getStep().getPollInterval());
 		}
 

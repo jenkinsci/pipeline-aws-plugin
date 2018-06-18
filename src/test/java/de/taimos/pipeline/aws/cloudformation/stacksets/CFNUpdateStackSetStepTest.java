@@ -71,7 +71,28 @@ public class CFNUpdateStackSetStepTest {
 						Mockito.any(TaskListener.class),
 						Mockito.eq(SleepStrategy.EXPONENTIAL_BACKOFF_STRATEGY)
 				);
-		Mockito.verify(stackSet).create(Mockito.anyString(), Mockito.anyString(), Mockito.<Parameter>anyCollection(), Mockito.<Tag>anyCollection());
+		Mockito.verify(stackSet).create(Mockito.anyString(), Mockito.anyString(), Mockito.anyCollectionOf(Parameter.class), Mockito.anyCollectionOf(Tag.class), Mockito.isNull(String.class));
+	}
+
+	@Test
+	public void createNonExistantStackWithCustomAdminArn() throws Exception {
+		WorkflowJob job = jenkinsRule.jenkins.createProject(WorkflowJob.class, "testStepWithGlobalCredentials");
+		Mockito.when(stackSet.exists()).thenReturn(false);
+		job.setDefinition(new CpsFlowDefinition(""
+				+ "node {\n"
+				+ "  cfnUpdateStackSet(stackSet: 'foo', administratorRoleArn: 'bar')"
+				+ "}\n", true)
+		);
+		jenkinsRule.assertBuildStatusSuccess(job.scheduleBuild2(0));
+
+		PowerMockito.verifyNew(CloudFormationStackSet.class, Mockito.atLeastOnce())
+				.withArguments(
+						Mockito.any(AmazonCloudFormation.class),
+						Mockito.eq("foo"),
+						Mockito.any(TaskListener.class),
+						Mockito.eq(SleepStrategy.EXPONENTIAL_BACKOFF_STRATEGY)
+				);
+		Mockito.verify(stackSet).create(Mockito.anyString(), Mockito.anyString(), Mockito.anyCollectionOf(Parameter.class), Mockito.anyCollectionOf(Tag.class), Mockito.eq("bar"));
 	}
 
 	@Test
@@ -79,7 +100,7 @@ public class CFNUpdateStackSetStepTest {
 		WorkflowJob job = jenkinsRule.jenkins.createProject(WorkflowJob.class, "cfnTest");
 		Mockito.when(stackSet.exists()).thenReturn(true);
 		String operationId = UUID.randomUUID().toString();
-		Mockito.when(stackSet.update(Mockito.anyString(), Mockito.anyString(), Mockito.<Parameter>anyCollection(), Mockito.<Tag>anyCollection()))
+		Mockito.when(stackSet.update(Mockito.anyString(), Mockito.anyString(), Mockito.anyCollectionOf(Parameter.class), Mockito.anyCollectionOf(Tag.class), Mockito.isNull(String.class)))
 				.thenReturn(new UpdateStackSetResult()
 						.withOperationId(operationId)
 				);
@@ -102,7 +123,7 @@ public class CFNUpdateStackSetStepTest {
 				);
 		@SuppressWarnings("unchecked")
 		ArgumentCaptor<List<Parameter>> parameterCapture = (ArgumentCaptor<List<Parameter>>)(Object)ArgumentCaptor.forClass(List.class);
-		Mockito.verify(stackSet).update(Mockito.anyString(), Mockito.anyString(), parameterCapture.capture(), Mockito.<Tag>anyCollection());
+		Mockito.verify(stackSet).update(Mockito.anyString(), Mockito.anyString(), parameterCapture.capture(), Mockito.anyCollectionOf(Tag.class), Mockito.isNull(String.class));
 		Assertions.assertThat(parameterCapture.getValue()).containsExactlyInAnyOrder(
 				new Parameter()
 						.withParameterKey("foo")
@@ -113,6 +134,32 @@ public class CFNUpdateStackSetStepTest {
 		);
 
 		Mockito.verify(stackSet).waitForOperationToComplete(operationId, 27);
+	}
+
+	@Test
+	public void updateExistingStackWithCustomAdminRole() throws Exception {
+		WorkflowJob job = jenkinsRule.jenkins.createProject(WorkflowJob.class, "cfnTest");
+		Mockito.when(stackSet.exists()).thenReturn(true);
+		String operationId = UUID.randomUUID().toString();
+		Mockito.when(stackSet.update(Mockito.anyString(), Mockito.anyString(), Mockito.anyCollectionOf(Parameter.class), Mockito.anyCollectionOf(Tag.class), Mockito.anyString()))
+				.thenReturn(new UpdateStackSetResult()
+						.withOperationId(operationId)
+				);
+		job.setDefinition(new CpsFlowDefinition(""
+				+ "node {\n"
+				+ "  cfnUpdateStackSet(stackSet: 'foo', administratorRoleArn: 'bar')"
+				+ "}\n", true)
+		);
+		jenkinsRule.assertBuildStatusSuccess(job.scheduleBuild2(0));
+
+		PowerMockito.verifyNew(CloudFormationStackSet.class, Mockito.atLeastOnce())
+				.withArguments(
+						Mockito.any(AmazonCloudFormation.class),
+						Mockito.eq("foo"),
+						Mockito.any(TaskListener.class),
+						Mockito.eq(SleepStrategy.EXPONENTIAL_BACKOFF_STRATEGY)
+				);
+		Mockito.verify(stackSet).update(Mockito.anyString(), Mockito.anyString(), Mockito.anyCollectionOf(Parameter.class), Mockito.anyCollectionOf(Tag.class), Mockito.eq("bar"));
 	}
 
 	@Test
@@ -133,6 +180,6 @@ public class CFNUpdateStackSetStepTest {
 						Mockito.any(TaskListener.class),
 						Mockito.eq(SleepStrategy.EXPONENTIAL_BACKOFF_STRATEGY)
 				);
-		Mockito.verify(stackSet, Mockito.never()).create(Mockito.anyString(), Mockito.anyString(), Mockito.<Parameter>anyCollection(), Mockito.<Tag>anyCollection());
+		Mockito.verify(stackSet, Mockito.never()).create(Mockito.anyString(), Mockito.anyString(), Mockito.anyCollectionOf(Parameter.class), Mockito.anyCollectionOf(Tag.class), Mockito.isNull(String.class));
 	}
 }
