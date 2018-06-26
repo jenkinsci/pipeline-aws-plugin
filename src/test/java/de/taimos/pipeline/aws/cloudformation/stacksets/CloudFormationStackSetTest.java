@@ -70,7 +70,7 @@ public class CloudFormationStackSetTest {
 				.withKey("bar")
 				.withValue("baz");
 
-		CreateStackSetResult result = stackSet.create("body", null, Collections.singletonList(parameter1), Collections.singletonList(tag1), null);
+		CreateStackSetResult result = stackSet.create("body", null, Collections.singletonList(parameter1), Collections.singletonList(tag1), null, null);
 		Assertions.assertThat(result).isSameAs(expected);
 		ArgumentCaptor<CreateStackSetRequest> captor = ArgumentCaptor.forClass(CreateStackSetRequest.class);
 		Mockito.verify(client).createStackSet(captor.capture());
@@ -96,7 +96,7 @@ public class CloudFormationStackSetTest {
 				.withKey("bar")
 				.withValue("baz");
 
-		CreateStackSetResult result = stackSet.create(null, "url", Collections.singletonList(parameter1), Collections.singletonList(tag1), null);
+		CreateStackSetResult result = stackSet.create(null, "url", Collections.singletonList(parameter1), Collections.singletonList(tag1), null, null);
 		Assertions.assertThat(result).isSameAs(expected);
 		ArgumentCaptor<CreateStackSetRequest> captor = ArgumentCaptor.forClass(CreateStackSetRequest.class);
 		Mockito.verify(client).createStackSet(captor.capture());
@@ -122,7 +122,7 @@ public class CloudFormationStackSetTest {
 				.withKey("bar")
 				.withValue("baz");
 
-		stackSet.create(null, null, Collections.singletonList(parameter1), Collections.singletonList(tag1), null);
+		stackSet.create(null, null, Collections.singletonList(parameter1), Collections.singletonList(tag1), null, null);
 	}
 
 	@Test
@@ -138,7 +138,7 @@ public class CloudFormationStackSetTest {
 				.withKey("bar")
 				.withValue("baz");
 
-		CreateStackSetResult result = stackSet.create("body", null, Collections.singletonList(parameter1), Collections.singletonList(tag1), "foo");
+		CreateStackSetResult result = stackSet.create("body", null, Collections.singletonList(parameter1), Collections.singletonList(tag1), "foo", "baz");
 		Assertions.assertThat(result).isSameAs(expected);
 		ArgumentCaptor<CreateStackSetRequest> captor = ArgumentCaptor.forClass(CreateStackSetRequest.class);
 		Mockito.verify(client).createStackSet(captor.capture());
@@ -147,6 +147,7 @@ public class CloudFormationStackSetTest {
 				.withCapabilities(Capability.values())
 				.withParameters(parameter1)
 				.withAdministrationRoleARN("foo")
+				.withExecutionRoleName("baz")
 				.withTags(tag1)
 				.withTemplateBody("body")
 		);
@@ -165,7 +166,7 @@ public class CloudFormationStackSetTest {
 				.withKey("bar")
 				.withValue("baz");
 
-		UpdateStackSetResult result = stackSet.update("body", null, Collections.singletonList(parameter1), Collections.singletonList(tag1), null);
+		UpdateStackSetResult result = stackSet.update("body", null, Collections.singletonList(parameter1), Collections.singletonList(tag1), null, null);
 		Assertions.assertThat(result).isSameAs(expected);
 		ArgumentCaptor<UpdateStackSetRequest> captor = ArgumentCaptor.forClass(UpdateStackSetRequest.class);
 		Mockito.verify(client).updateStackSet(captor.capture());
@@ -191,7 +192,7 @@ public class CloudFormationStackSetTest {
 				.withKey("bar")
 				.withValue("baz");
 
-		UpdateStackSetResult result = stackSet.update(null, "url", Collections.singletonList(parameter1), Collections.singletonList(tag1), null);
+		UpdateStackSetResult result = stackSet.update(null, "url", Collections.singletonList(parameter1), Collections.singletonList(tag1), null, null);
 		Assertions.assertThat(result).isSameAs(expected);
 		ArgumentCaptor<UpdateStackSetRequest> captor = ArgumentCaptor.forClass(UpdateStackSetRequest.class);
 		Mockito.verify(client).updateStackSet(captor.capture());
@@ -217,7 +218,7 @@ public class CloudFormationStackSetTest {
 				.withKey("bar")
 				.withValue("baz");
 
-		UpdateStackSetResult result = stackSet.update("body", null, Collections.singletonList(parameter1), Collections.singletonList(tag1), "bar");
+		UpdateStackSetResult result = stackSet.update("body", null, Collections.singletonList(parameter1), Collections.singletonList(tag1), "bar", "baz");
 		Assertions.assertThat(result).isSameAs(expected);
 		ArgumentCaptor<UpdateStackSetRequest> captor = ArgumentCaptor.forClass(UpdateStackSetRequest.class);
 		Mockito.verify(client).updateStackSet(captor.capture());
@@ -226,6 +227,7 @@ public class CloudFormationStackSetTest {
 				.withCapabilities(Capability.values())
 				.withParameters(parameter1)
 				.withAdministrationRoleARN("bar")
+				.withExecutionRoleName("baz")
 				.withTags(tag1)
 				.withTemplateBody("body")
 		);
@@ -244,7 +246,7 @@ public class CloudFormationStackSetTest {
 				.withKey("bar")
 				.withValue("baz");
 
-		UpdateStackSetResult result = stackSet.update(null, null, Collections.singletonList(parameter1), Collections.singletonList(tag1), null);
+		UpdateStackSetResult result = stackSet.update(null, null, Collections.singletonList(parameter1), Collections.singletonList(tag1), null, null);
 		Assertions.assertThat(result).isSameAs(expected);
 		ArgumentCaptor<UpdateStackSetRequest> captor = ArgumentCaptor.forClass(UpdateStackSetRequest.class);
 		Mockito.verify(client).updateStackSet(captor.capture());
@@ -273,7 +275,7 @@ public class CloudFormationStackSetTest {
 				.withKey("bar")
 				.withValue("baz");
 
-		UpdateStackSetResult result = stackSet.update(null, null, Collections.singletonList(parameter1), Collections.singletonList(tag1), null);
+		UpdateStackSetResult result = stackSet.update(null, null, Collections.singletonList(parameter1), Collections.singletonList(tag1), null, null);
 		Assertions.assertThat(result).isSameAs(expected);
 		ArgumentCaptor<UpdateStackSetRequest> captor = ArgumentCaptor.forClass(UpdateStackSetRequest.class);
 		Mockito.verify(client, Mockito.times(2)).updateStackSet(captor.capture());

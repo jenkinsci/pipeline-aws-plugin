@@ -49,6 +49,7 @@ abstract class AbstractCFNCreateStackSetStep extends TemplateStepBase {
 
 	private final String stackSet;
 	private String administratorRoleArn;
+	private String executionRoleName;
 	private String onFailure = OnFailure.DELETE.toString();
 
 	public AbstractCFNCreateStackSetStep(String stackSet) {
@@ -75,6 +76,15 @@ abstract class AbstractCFNCreateStackSetStep extends TemplateStepBase {
 
 	public String getAdministratorRoleArn() {
 		return administratorRoleArn;
+	}
+
+	public String getExecutionRoleName() {
+		return executionRoleName;
+	}
+
+	@DataBoundSetter
+	public void setExecutionRoleName(String executionRoleName) {
+		this.executionRoleName = executionRoleName;
 	}
 
 	abstract static class Execution<C extends AbstractCFNCreateStackSetStep> extends StepExecution {

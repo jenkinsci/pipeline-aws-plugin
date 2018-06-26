@@ -73,7 +73,7 @@ public class CloudFormationStackSet {
 		}
 	}
 
-	public CreateStackSetResult create(String templateBody, String templateUrl, Collection<Parameter> params, Collection<Tag> tags, String administratorRoleArn) {
+	public CreateStackSetResult create(String templateBody, String templateUrl, Collection<Parameter> params, Collection<Tag> tags, String administratorRoleArn, String executionRoleName) {
 		if ((templateBody == null || templateBody.isEmpty()) && (templateUrl == null || templateUrl.isEmpty())) {
 			throw new IllegalArgumentException("Either a file or url for the template must be specified");
 		}
@@ -86,6 +86,7 @@ public class CloudFormationStackSet {
 				.withTemplateURL(templateUrl)
 				.withParameters(params)
 				.withAdministrationRoleARN(administratorRoleArn)
+				.withExecutionRoleName(executionRoleName)
 				.withTags(tags);
 		CreateStackSetResult result = this.client.createStackSet(req);
 		this.listener.getLogger().println("Created Stack set stackSetId=" + result.getStackSetId());
@@ -124,13 +125,14 @@ public class CloudFormationStackSet {
 		}
 	}
 
-	public UpdateStackSetResult update(String templateBody, String templateUrl, Collection<Parameter> params, Collection<Tag> tags, String administratorRoleArn) throws InterruptedException {
+	public UpdateStackSetResult update(String templateBody, String templateUrl, Collection<Parameter> params, Collection<Tag> tags, String administratorRoleArn, String executionRoleName) throws InterruptedException {
 		this.listener.getLogger().format("Updating CloudFormation stack set %s %n", this.stackSet);
 		UpdateStackSetRequest req = new UpdateStackSetRequest()
 				.withStackSetName(this.stackSet)
 				.withCapabilities(Capability.CAPABILITY_IAM, Capability.CAPABILITY_NAMED_IAM)
 				.withParameters(params)
 				.withAdministrationRoleARN(administratorRoleArn)
+				.withExecutionRoleName(executionRoleName)
 				.withTags(tags);
 
 		if (templateBody != null && !templateBody.isEmpty()) {
