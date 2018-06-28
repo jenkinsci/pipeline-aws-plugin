@@ -102,6 +102,17 @@ withAWS(region:'eu-central-1',credentials:'nameOfSystemCredentials',federatedUse
 }
 ```
 
+When you use Jenkins Declarative Pipelines you can also use `withAWS` in an options block:
+
+```
+options {
+	withAWS(profile:'myProfile')
+}
+stages {
+	...
+}
+```
+
 ## awsIdentity
 
 Print current AWS identity information to the log.
