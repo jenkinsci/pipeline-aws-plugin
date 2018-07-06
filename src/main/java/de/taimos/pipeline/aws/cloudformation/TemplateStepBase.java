@@ -1,9 +1,11 @@
 package de.taimos.pipeline.aws.cloudformation;
 
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.util.ArrayList;
 import java.util.Collection;
 
+import de.taimos.pipeline.aws.cloudformation.parser.TagsFileParser;
 import org.jenkinsci.plugins.workflow.steps.Step;
 import org.jenkinsci.plugins.workflow.steps.StepExecution;
 import org.kohsuke.stapler.DataBoundSetter;
@@ -21,6 +23,7 @@ public abstract class TemplateStepBase extends Step implements ParameterProvider
 	private Object params;
 	private String[] keepParams;
 	private String[] tags;
+	private String tagsFile;
 	private String paramsFile;
 	private Long pollInterval = 1000L;
 	private Boolean create = true;
@@ -81,6 +84,15 @@ public abstract class TemplateStepBase extends Step implements ParameterProvider
 		this.tags = tags.clone();
 	}
 
+	public String getTagsFile() {
+		return tagsFile;
+	}
+
+	@DataBoundSetter
+	public void setTagsFile(String tagsFile) {
+		this.tagsFile = tagsFile;
+	}
+
 	public String getParamsFile() {
 		return this.paramsFile;
 	}
@@ -126,7 +138,7 @@ public abstract class TemplateStepBase extends Step implements ParameterProvider
 		this.rollbackTriggers = rollbackTriggers.clone();
 	}
 
-	protected final Collection<Tag> getAwsTags() {
+	protected final Collection<Tag> getAwsTags(StepExecution stepExecution) {
 		Collection<Tag> tagList = new ArrayList<>();
 		if (this.tags == null) {
 			return tagList;
@@ -139,6 +151,17 @@ public abstract class TemplateStepBase extends Step implements ParameterProvider
 			String key = tag.substring(0, i);
 			String value = tag.substring(i + 1);
 			tagList.add(new Tag().withKey(key).withValue(value));
+		}
+		if (this.tagsFile != null) {
+			FilePath tagsFile = loadFileFromWorkspace(stepExecution, this.tagsFile);
+			try {
+				tagList.addAll(TagsFileParser.parseTags(tagsFile.read()));
+			} catch (IOException e) {
+				throw new UncheckedIOException(e);
+			} catch (InterruptedException e) {
+				Thread.interrupted();
+				throw new RuntimeException(e);
+			}
 		}
 		return tagList;
 	}
@@ -155,7 +178,15 @@ public abstract class TemplateStepBase extends Step implements ParameterProvider
 		if (this.file == null) {
 			return null;
 		}
+		try {
+			FilePath child = loadFileFromWorkspace(stepExecution, this.file);
+			return child.readToString();
+		} catch (Exception e) {
+			throw new RuntimeException(e);
+		}
+	}
 
+	private FilePath loadFileFromWorkspace(StepExecution stepExecution, String file) {
 		FilePath workspace;
 		try {
 			workspace = stepExecution.getContext().get(FilePath.class);
@@ -165,12 +196,7 @@ public abstract class TemplateStepBase extends Step implements ParameterProvider
 			Thread.interrupted();
 			throw new RuntimeException(e);
 		}
-		FilePath child = workspace.child(this.file);
-		try {
-			return child.readToString();
-		} catch (Exception e) {
-			throw new RuntimeException(e);
-		}
+		return workspace.child(file);
 	}
 
 	protected RollbackConfiguration getRollbackConfiguration() {

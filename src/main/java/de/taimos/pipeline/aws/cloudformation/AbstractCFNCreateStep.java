@@ -131,10 +131,10 @@ abstract class AbstractCFNCreateStep extends TemplateStepBase {
 						CloudFormationStack cfnStack = new CloudFormationStack(client, stack, Execution.this.getListener());
 						if (cfnStack.exists()) {
 							Collection<Parameter> parameters = ParameterParser.parseWithKeepParams(Execution.this.getWorkspace(), Execution.this.getStep());
-							Execution.this.getContext().onSuccess(Execution.this.whenStackExists(parameters, Execution.this.getStep().getAwsTags(), Execution.this.getStep().getRollbackConfiguration()));
+							Execution.this.getContext().onSuccess(Execution.this.whenStackExists(parameters, Execution.this.getStep().getAwsTags(Execution.this), Execution.this.getStep().getRollbackConfiguration()));
 						} else if (create) {
 							Collection<Parameter> parameters = ParameterParser.parse(Execution.this.getWorkspace(), Execution.this.getStep());
-							Execution.this.getContext().onSuccess(Execution.this.whenStackMissing(parameters, Execution.this.getStep().getAwsTags()));
+							Execution.this.getContext().onSuccess(Execution.this.whenStackMissing(parameters, Execution.this.getStep().getAwsTags(Execution.this)));
 						} else {
 							Execution.this.getListener().getLogger().println("No stack found with the name and skipped creation due to configuration.");
 							Execution.this.getContext().onSuccess(null);

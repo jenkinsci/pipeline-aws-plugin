@@ -130,10 +130,10 @@ abstract class AbstractCFNCreateStackSetStep extends TemplateStepBase {
 						CloudFormationStackSet cfnStackSet = new CloudFormationStackSet(client, stackSet, Execution.this.getListener(), SleepStrategy.EXPONENTIAL_BACKOFF_STRATEGY);
 						if (cfnStackSet.exists()) {
 							Collection<Parameter> parameters = ParameterParser.parseWithKeepParams(getWorkspace(), getStep());
-							Execution.this.getContext().onSuccess(Execution.this.whenStackSetExists(parameters, getStep().getAwsTags()));
+							Execution.this.getContext().onSuccess(Execution.this.whenStackSetExists(parameters, getStep().getAwsTags(Execution.this)));
 						} else if (create) {
 							Collection<Parameter> parameters = ParameterParser.parse(getWorkspace(), getStep());
-							Execution.this.getContext().onSuccess(Execution.this.whenStackSetMissing(parameters, getStep().getAwsTags()));
+							Execution.this.getContext().onSuccess(Execution.this.whenStackSetMissing(parameters, getStep().getAwsTags(Execution.this)));
 						} else {
 							Execution.this.getListener().getLogger().println("No stack set found with the name=" + stackSet + " and skipped creation due to configuration.");
 							Execution.this.getContext().onSuccess(null);
