@@ -613,6 +613,7 @@ ec2ShareAmi(
 # Changelog
 
 ## current master
+* add support for tagsFile in cfnUpdate, cfnCreateChangeSet, cfnUpdateStackSet
 * add `administratorRoleArn` to cfnUpdateStackSet
 
 ## 1.27
