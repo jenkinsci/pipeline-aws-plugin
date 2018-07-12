@@ -86,7 +86,7 @@ public class EC2ShareAmiStep extends Step {
 
 		@Override
 		public String getDisplayName() {
-			return "Create and return the ECR login string";
+			return "Share an AMI with other accounts";
 		}
 
 		@Override
