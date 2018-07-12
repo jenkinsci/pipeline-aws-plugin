@@ -9,7 +9,7 @@
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ *	  http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -20,16 +20,6 @@
  */
 
 package de.taimos.pipeline.aws.cloudformation;
-
-import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Date;
-import java.util.List;
-import java.util.concurrent.ExecutionException;
-
-import org.apache.commons.lang.StringUtils;
-import org.apache.http.concurrent.BasicFuture;
 
 import com.amazonaws.AmazonWebServiceRequest;
 import com.amazonaws.services.cloudformation.AmazonCloudFormation;
@@ -42,20 +32,28 @@ import com.amazonaws.services.cloudformation.model.StackEvent;
 import com.amazonaws.waiters.Waiter;
 import com.amazonaws.waiters.WaiterHandler;
 import com.amazonaws.waiters.WaiterParameters;
-
 import hudson.model.TaskListener;
+import org.apache.commons.lang.StringUtils;
+import org.apache.http.concurrent.BasicFuture;
 
-public class EventPrinter {
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Date;
+import java.util.List;
+import java.util.concurrent.ExecutionException;
+
+class EventPrinter {
 
 	private final AmazonCloudFormation client;
 	private final TaskListener listener;
 
-	public EventPrinter(AmazonCloudFormation client, TaskListener listener) {
+	EventPrinter(AmazonCloudFormation client, TaskListener listener) {
 		this.client = client;
 		this.listener = listener;
 	}
 
-	public void waitAndPrintChangeSetEvents(String stack, String changeSet, Waiter<DescribeChangeSetRequest> waiter, long pollIntervalMillis) throws ExecutionException {
+	void waitAndPrintChangeSetEvents(String stack, String changeSet, Waiter<DescribeChangeSetRequest> waiter, long pollIntervalMillis) throws ExecutionException {
 
 		final BasicFuture<AmazonWebServiceRequest> waitResult = new BasicFuture<>(null);
 
@@ -74,7 +72,7 @@ public class EventPrinter {
 		this.waitAndPrintEvents(stack, pollIntervalMillis, waitResult);
 	}
 
-	public void waitAndPrintStackEvents(String stack, Waiter<DescribeStacksRequest> waiter, long pollIntervalMillis) throws ExecutionException {
+	void waitAndPrintStackEvents(String stack, Waiter<DescribeStacksRequest> waiter, long pollIntervalMillis) throws ExecutionException {
 
 		final BasicFuture<AmazonWebServiceRequest> waitResult = new BasicFuture<>(null);
 
@@ -101,8 +99,9 @@ public class EventPrinter {
 
 		SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
 
+		boolean run = true;
 		if (pollIntervalMillis > 0) {
-			while (!waitResult.isDone()) {
+			while (run && !waitResult.isDone()) {
 				try {
 					DescribeStackEventsResult result = this.client.describeStackEvents(new DescribeStackEventsRequest().withStackName(stack));
 					List<StackEvent> stackEvents = new ArrayList<>();
@@ -127,6 +126,8 @@ public class EventPrinter {
 					Thread.sleep(pollIntervalMillis);
 				} catch (InterruptedException e) {
 					// suppress and continue
+					this.listener.getLogger().print("Task interrupted. Stopping event printer.");
+					run = false;
 				}
 			}
 		}

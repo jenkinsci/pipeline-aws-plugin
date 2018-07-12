@@ -613,6 +613,7 @@ ec2ShareAmi(
 # Changelog
 
 ## current master
+* use SynchronousNonBlockingStepExecution for long running AWS steps to allow the pipeline step to be aborted
 * add support for tagsFile in cfnUpdate, cfnCreateChangeSet, cfnUpdateStackSet
 * add `administratorRoleArn` to cfnUpdateStackSet
 

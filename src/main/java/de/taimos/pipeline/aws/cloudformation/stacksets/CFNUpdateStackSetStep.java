@@ -26,6 +26,7 @@ import java.util.Set;
 
 import javax.annotation.Nonnull;
 
+import com.amazonaws.services.cloudformation.model.DescribeStackSetResult;
 import org.jenkinsci.plugins.workflow.steps.StepContext;
 import org.jenkinsci.plugins.workflow.steps.StepDescriptor;
 import org.jenkinsci.plugins.workflow.steps.StepExecution;
@@ -87,7 +88,7 @@ public class CFNUpdateStackSetStep extends AbstractCFNCreateStackSetStep {
 		}
 
 		@Override
-		public Object whenStackSetExists(Collection<Parameter> parameters, Collection<Tag> tags) throws Exception {
+		public DescribeStackSetResult whenStackSetExists(Collection<Parameter> parameters, Collection<Tag> tags) throws Exception {
 			final String url = this.getStep().getUrl();
 			CloudFormationStackSet cfnStackSet = this.getCfnStackSet();
 			UpdateStackSetResult operation = cfnStackSet.update(this.getStep().readTemplate(this), url, parameters, tags,
@@ -98,7 +99,7 @@ public class CFNUpdateStackSetStep extends AbstractCFNCreateStackSetStep {
 
 
 		@Override
-		public Object whenStackSetMissing(Collection<Parameter> parameters, Collection<Tag> tags) throws Exception {
+		public DescribeStackSetResult whenStackSetMissing(Collection<Parameter> parameters, Collection<Tag> tags) throws Exception {
 			final String url = getStep().getUrl();
 			CloudFormationStackSet cfnStack = this.getCfnStackSet();
 			cfnStack.create(this.getStep().readTemplate(this), url, parameters, tags,

@@ -22,6 +22,7 @@
 package de.taimos.pipeline.aws.cloudformation;
 
 import java.util.Collection;
+import java.util.Map;
 import java.util.Set;
 
 import javax.annotation.Nonnull;
@@ -94,7 +95,7 @@ public class CFNUpdateStep extends AbstractCFNCreateStep {
 		}
 	}
 
-	public static class Execution extends AbstractCFNCreateStep.Execution<CFNUpdateStep> {
+	public static class Execution extends AbstractCFNCreateStep.Execution<CFNUpdateStep, Map<String, String>> {
 
 		protected Execution(CFNUpdateStep step, @Nonnull StepContext context) {
 			super(step, context);
@@ -106,12 +107,7 @@ public class CFNUpdateStep extends AbstractCFNCreateStep {
 		}
 
 		@Override
-		public String getThreadName() {
-			return "cfnUpdate-" + this.getStep().getStack();
-		}
-
-		@Override
-		public Object whenStackExists(Collection<Parameter> parameters, Collection<Tag> tags, RollbackConfiguration rollbackConfiguration) throws Exception {
+		public Map<String, String> whenStackExists(Collection<Parameter> parameters, Collection<Tag> tags, RollbackConfiguration rollbackConfiguration) throws Exception {
 			final String url = this.getStep().getUrl();
 			CloudFormationStack cfnStack = this.getCfnStack();
 			cfnStack.update(this.getStep().readTemplate(this), url, parameters, tags, this.getStep().getPollInterval(), this.getStep().getRoleArn(), rollbackConfiguration);
@@ -119,7 +115,7 @@ public class CFNUpdateStep extends AbstractCFNCreateStep {
 		}
 
 		@Override
-		public Object whenStackMissing(Collection<Parameter> parameters, Collection<Tag> tags) throws Exception {
+		public Map<String, String> whenStackMissing(Collection<Parameter> parameters, Collection<Tag> tags) throws Exception {
 			final String url = this.getStep().getUrl();
 			CloudFormationStack cfnStack = this.getCfnStack();
 			cfnStack.create(this.getStep().readTemplate(this), url, parameters, tags, this.getStep().getTimeoutInMinutes(), this.getStep().getPollInterval(), this.getStep().getRoleArn(), this.getStep().getOnFailure(), this.getStep().getEnableTerminationProtection());

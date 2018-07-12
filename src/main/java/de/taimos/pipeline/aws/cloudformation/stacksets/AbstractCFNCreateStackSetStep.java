@@ -22,28 +22,26 @@
 package de.taimos.pipeline.aws.cloudformation.stacksets;
 
 
-import java.io.IOException;
-import java.util.Collection;
-
-import javax.annotation.Nonnull;
-
-import org.jenkinsci.plugins.workflow.steps.StepContext;
-import org.jenkinsci.plugins.workflow.steps.StepExecution;
-import org.kohsuke.stapler.DataBoundSetter;
-
 import com.amazonaws.services.cloudformation.AmazonCloudFormation;
 import com.amazonaws.services.cloudformation.AmazonCloudFormationClientBuilder;
+import com.amazonaws.services.cloudformation.model.DescribeStackSetResult;
 import com.amazonaws.services.cloudformation.model.OnFailure;
 import com.amazonaws.services.cloudformation.model.Parameter;
 import com.amazonaws.services.cloudformation.model.Tag;
 import com.google.common.base.Preconditions;
-
 import de.taimos.pipeline.aws.AWSClientFactory;
 import de.taimos.pipeline.aws.cloudformation.TemplateStepBase;
 import de.taimos.pipeline.aws.cloudformation.parser.ParameterParser;
 import hudson.EnvVars;
 import hudson.FilePath;
 import hudson.model.TaskListener;
+import org.jenkinsci.plugins.workflow.steps.StepContext;
+import org.jenkinsci.plugins.workflow.steps.SynchronousNonBlockingStepExecution;
+import org.kohsuke.stapler.DataBoundSetter;
+
+import javax.annotation.Nonnull;
+import java.io.IOException;
+import java.util.Collection;
 
 abstract class AbstractCFNCreateStackSetStep extends TemplateStepBase {
 
@@ -87,7 +85,7 @@ abstract class AbstractCFNCreateStackSetStep extends TemplateStepBase {
 		this.executionRoleName = executionRoleName;
 	}
 
-	abstract static class Execution<C extends AbstractCFNCreateStackSetStep> extends StepExecution {
+	abstract static class Execution<C extends AbstractCFNCreateStackSetStep> extends SynchronousNonBlockingStepExecution<DescribeStackSetResult> {
 
 		private final transient C step;
 
@@ -95,9 +93,9 @@ abstract class AbstractCFNCreateStackSetStep extends TemplateStepBase {
 
 		protected abstract String getThreadName();
 
-		protected abstract Object whenStackSetExists(Collection<Parameter> parameters, Collection<Tag> tags) throws Exception;
+		protected abstract DescribeStackSetResult whenStackSetExists(Collection<Parameter> parameters, Collection<Tag> tags) throws Exception;
 
-		protected abstract Object whenStackSetMissing(Collection<Parameter> parameters, Collection<Tag> tags) throws Exception;
+		protected abstract DescribeStackSetResult whenStackSetMissing(Collection<Parameter> parameters, Collection<Tag> tags) throws Exception;
 
 		protected Execution(C step, @Nonnull StepContext context) {
 			super(context);
@@ -113,7 +111,7 @@ abstract class AbstractCFNCreateStackSetStep extends TemplateStepBase {
 		}
 
 		@Override
-		public boolean start() throws Exception {
+		public DescribeStackSetResult run() throws Exception {
 
 			final String stackSet = this.getStackSet();
 			final Boolean create = this.getCreate();
@@ -122,32 +120,18 @@ abstract class AbstractCFNCreateStackSetStep extends TemplateStepBase {
 
 			this.checkPreconditions();
 
-			new Thread(Execution.this.getThreadName()) {
-				@Override
-				public void run() {
-					try {
-						AmazonCloudFormation client = AWSClientFactory.create(AmazonCloudFormationClientBuilder.standard(), Execution.this.getEnvVars());
-						CloudFormationStackSet cfnStackSet = new CloudFormationStackSet(client, stackSet, Execution.this.getListener(), SleepStrategy.EXPONENTIAL_BACKOFF_STRATEGY);
-						if (cfnStackSet.exists()) {
-							Collection<Parameter> parameters = ParameterParser.parseWithKeepParams(getWorkspace(), getStep());
-							Execution.this.getContext().onSuccess(Execution.this.whenStackSetExists(parameters, getStep().getAwsTags(Execution.this)));
-						} else if (create) {
-							Collection<Parameter> parameters = ParameterParser.parse(getWorkspace(), getStep());
-							Execution.this.getContext().onSuccess(Execution.this.whenStackSetMissing(parameters, getStep().getAwsTags(Execution.this)));
-						} else {
-							Execution.this.getListener().getLogger().println("No stack set found with the name=" + stackSet + " and skipped creation due to configuration.");
-							Execution.this.getContext().onSuccess(null);
-						}
-					} catch (Exception e) {
-						Execution.this.getContext().onFailure(e);
-					}
-				}
-			}.start();
-			return false;
-		}
-
-		@Override
-		public void stop(@Nonnull Throwable throwable) throws Exception {
+			AmazonCloudFormation client = AWSClientFactory.create(AmazonCloudFormationClientBuilder.standard(), Execution.this.getEnvVars());
+			CloudFormationStackSet cfnStackSet = new CloudFormationStackSet(client, stackSet, Execution.this.getListener(), SleepStrategy.EXPONENTIAL_BACKOFF_STRATEGY);
+			if (cfnStackSet.exists()) {
+				Collection<Parameter> parameters = ParameterParser.parseWithKeepParams(getWorkspace(), getStep());
+				return Execution.this.whenStackSetExists(parameters, getStep().getAwsTags(Execution.this));
+			} else if (create) {
+				Collection<Parameter> parameters = ParameterParser.parse(getWorkspace(), getStep());
+				return Execution.this.whenStackSetMissing(parameters, getStep().getAwsTags(Execution.this));
+			} else {
+				Execution.this.getListener().getLogger().println("No stack set found with the name=" + stackSet + " and skipped creation due to configuration.");
+				return null;
+			}
 		}
 
 		protected CloudFormationStackSet getCfnStackSet() {

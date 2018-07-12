@@ -22,23 +22,6 @@
 package de.taimos.pipeline.aws;
 
 import com.amazonaws.auth.AWSCredentials;
-import com.cloudbees.jenkins.plugins.awscredentials.AmazonWebServicesCredentials;
-import java.io.IOException;
-import java.util.Collections;
-import java.util.Set;
-
-import javax.annotation.Nonnull;
-
-import org.jenkinsci.plugins.workflow.steps.BodyExecutionCallback;
-import org.jenkinsci.plugins.workflow.steps.EnvironmentExpander;
-import org.jenkinsci.plugins.workflow.steps.Step;
-import org.jenkinsci.plugins.workflow.steps.StepContext;
-import org.jenkinsci.plugins.workflow.steps.StepDescriptor;
-import org.jenkinsci.plugins.workflow.steps.StepExecution;
-import org.kohsuke.stapler.AncestorInPath;
-import org.kohsuke.stapler.DataBoundConstructor;
-import org.kohsuke.stapler.DataBoundSetter;
-
 import com.amazonaws.services.securitytoken.AWSSecurityTokenService;
 import com.amazonaws.services.securitytoken.AWSSecurityTokenServiceClientBuilder;
 import com.amazonaws.services.securitytoken.model.AssumeRoleRequest;
@@ -48,12 +31,12 @@ import com.amazonaws.services.securitytoken.model.GetCallerIdentityRequest;
 import com.amazonaws.services.securitytoken.model.GetFederationTokenRequest;
 import com.amazonaws.services.securitytoken.model.GetFederationTokenResult;
 import com.amazonaws.util.StringUtils;
+import com.cloudbees.jenkins.plugins.awscredentials.AmazonWebServicesCredentials;
 import com.cloudbees.plugins.credentials.CredentialsMatchers;
 import com.cloudbees.plugins.credentials.CredentialsProvider;
 import com.cloudbees.plugins.credentials.common.StandardListBoxModel;
 import com.cloudbees.plugins.credentials.common.StandardUsernamePasswordCredentials;
 import com.cloudbees.plugins.credentials.domains.DomainRequirement;
-
 import de.taimos.pipeline.aws.utils.IamRoleUtils;
 import de.taimos.pipeline.aws.utils.StepUtils;
 import hudson.EnvVars;
@@ -65,6 +48,20 @@ import hudson.model.TaskListener;
 import hudson.model.queue.Tasks;
 import hudson.security.ACL;
 import hudson.util.ListBoxModel;
+import org.jenkinsci.plugins.workflow.steps.BodyExecutionCallback;
+import org.jenkinsci.plugins.workflow.steps.EnvironmentExpander;
+import org.jenkinsci.plugins.workflow.steps.Step;
+import org.jenkinsci.plugins.workflow.steps.StepContext;
+import org.jenkinsci.plugins.workflow.steps.StepDescriptor;
+import org.jenkinsci.plugins.workflow.steps.StepExecution;
+import org.kohsuke.stapler.AncestorInPath;
+import org.kohsuke.stapler.DataBoundConstructor;
+import org.kohsuke.stapler.DataBoundSetter;
+
+import javax.annotation.Nonnull;
+import java.io.IOException;
+import java.util.Collections;
+import java.util.Set;
 
 public class WithAWSStep extends Step {
 
@@ -302,7 +299,7 @@ public class WithAWSStep extends Step {
 		private void withCredentials(@Nonnull Run<?, ?> run, @Nonnull EnvVars localEnv) throws IOException, InterruptedException {
 			if (!StringUtils.isNullOrEmpty(this.step.getCredentials())) {
 				StandardUsernamePasswordCredentials usernamePasswordCredentials = CredentialsProvider.findCredentialById(this.step.getCredentials(),
-																														StandardUsernamePasswordCredentials.class, run, Collections.emptyList());
+						StandardUsernamePasswordCredentials.class, run, Collections.emptyList());
 
 				AmazonWebServicesCredentials amazonWebServicesCredentials = CredentialsProvider.findCredentialById(this.step.getCredentials(),
 						AmazonWebServicesCredentials.class, run, Collections.emptyList());
@@ -400,11 +397,6 @@ public class WithAWSStep extends Step {
 					.withJobName(this.envVars.get("JOB_NAME"))
 					.withBuildNumber(this.envVars.get("BUILD_NUMBER"))
 					.build();
-		}
-
-		@Override
-		public void stop(@Nonnull Throwable throwable) throws Exception {
-			//
 		}
 
 		private static final long serialVersionUID = 1L;
