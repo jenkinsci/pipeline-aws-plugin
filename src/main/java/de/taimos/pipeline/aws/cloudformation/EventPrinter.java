@@ -29,14 +29,20 @@ import com.amazonaws.services.cloudformation.model.DescribeStackEventsRequest;
 import com.amazonaws.services.cloudformation.model.DescribeStackEventsResult;
 import com.amazonaws.services.cloudformation.model.DescribeStacksRequest;
 import com.amazonaws.services.cloudformation.model.StackEvent;
+import com.amazonaws.waiters.FixedDelayStrategy;
+import com.amazonaws.waiters.PollingStrategy;
 import com.amazonaws.waiters.Waiter;
 import com.amazonaws.waiters.WaiterHandler;
 import com.amazonaws.waiters.WaiterParameters;
+import de.taimos.pipeline.aws.cloudformation.utils.TimeOutRetryStrategy;
 import hudson.model.TaskListener;
+
 import org.apache.commons.lang.StringUtils;
 import org.apache.http.concurrent.BasicFuture;
 
 import java.text.SimpleDateFormat;
+import java.time.Duration;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
@@ -57,7 +63,7 @@ class EventPrinter {
 
 		final BasicFuture<AmazonWebServiceRequest> waitResult = new BasicFuture<>(null);
 
-		waiter.runAsync(new WaiterParameters<>(new DescribeChangeSetRequest().withStackName(stack).withChangeSetName(changeSet)), new WaiterHandler() {
+		waiter.runAsync(new WaiterParameters<>(new DescribeChangeSetRequest().withStackName(stack).withChangeSetName(changeSet)).withPollingStrategy(pollingStrategy(pollIntervalMillis)), new WaiterHandler() {
 			@Override
 			public void onWaitSuccess(AmazonWebServiceRequest request) {
 				waitResult.completed(request);
@@ -76,7 +82,7 @@ class EventPrinter {
 
 		final BasicFuture<AmazonWebServiceRequest> waitResult = new BasicFuture<>(null);
 
-		waiter.runAsync(new WaiterParameters<>(new DescribeStacksRequest().withStackName(stack)), new WaiterHandler() {
+		waiter.runAsync(new WaiterParameters<>(new DescribeStacksRequest().withStackName(stack)).withPollingStrategy(pollingStrategy(pollIntervalMillis)), new WaiterHandler() {
 			@Override
 			public void onWaitSuccess(AmazonWebServiceRequest request) {
 				waitResult.completed(request);
@@ -88,6 +94,12 @@ class EventPrinter {
 			}
 		});
 		this.waitAndPrintEvents(stack, pollIntervalMillis, waitResult);
+	}
+
+	private PollingStrategy pollingStrategy(long pollIntervalMillis) {
+		int pollIntervalSeconds = (int) (pollIntervalMillis / 1000);
+		this.listener.getLogger().format("Setting up a polling strategy to poll every %d seconds for a maximum of 10 minutes%n", pollIntervalSeconds);
+		return new PollingStrategy(new TimeOutRetryStrategy(Duration.of(10, ChronoUnit.MINUTES)), new FixedDelayStrategy(pollIntervalSeconds));
 	}
 
 	private void waitAndPrintEvents(String stack, long pollIntervalMillis, BasicFuture<AmazonWebServiceRequest> waitResult) throws ExecutionException {
