@@ -21,24 +21,6 @@
 
 package de.taimos.pipeline.aws;
 
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-
-import javax.annotation.Nonnull;
-
-import org.jenkinsci.plugins.workflow.steps.StepContext;
-import org.jenkinsci.plugins.workflow.steps.StepDescriptor;
-import org.jenkinsci.plugins.workflow.steps.StepExecution;
-import org.kohsuke.stapler.DataBoundConstructor;
-import org.kohsuke.stapler.DataBoundSetter;
-
 import com.amazonaws.event.ProgressEventType;
 import com.amazonaws.event.ProgressListener;
 import com.amazonaws.services.s3.Headers;
@@ -53,15 +35,29 @@ import com.amazonaws.services.s3.transfer.TransferManager;
 import com.amazonaws.services.s3.transfer.TransferManagerBuilder;
 import com.amazonaws.services.s3.transfer.Upload;
 import com.google.common.base.Preconditions;
-
 import de.taimos.pipeline.aws.utils.StepUtils;
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import hudson.EnvVars;
 import hudson.Extension;
 import hudson.FilePath;
 import hudson.model.TaskListener;
 import hudson.remoting.VirtualChannel;
 import jenkins.MasterToSlaveFileCallable;
+import org.jenkinsci.plugins.workflow.steps.StepContext;
+import org.jenkinsci.plugins.workflow.steps.StepDescriptor;
+import org.jenkinsci.plugins.workflow.steps.StepExecution;
+import org.jenkinsci.plugins.workflow.steps.SynchronousNonBlockingStepExecution;
+import org.kohsuke.stapler.DataBoundConstructor;
+import org.kohsuke.stapler.DataBoundSetter;
+
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 public class S3UploadStep extends AbstractS3Step {
 
@@ -219,7 +215,7 @@ public class S3UploadStep extends AbstractS3Step {
 		}
 	}
 
-	public static class Execution extends StepExecution {
+	public static class Execution extends SynchronousNonBlockingStepExecution<String> {
 
 		protected static final long serialVersionUID = 1L;
 
@@ -231,7 +227,7 @@ public class S3UploadStep extends AbstractS3Step {
 		}
 
 		@Override
-		public boolean start() throws Exception {
+		public String run() throws Exception {
 			final String file = this.step.getFile();
 			final String bucket = this.step.getBucket();
 			final String path = this.step.getPath();
@@ -273,49 +269,33 @@ public class S3UploadStep extends AbstractS3Step {
 
 			}
 
-			new Thread("s3Upload") {
-				@Override
-				@SuppressFBWarnings(value = "REC_CATCH_EXCEPTION", justification = "RuntimeExceptions need to be catched")
-				public void run() {
-					try {
-						TaskListener listener = Execution.this.getContext().get(TaskListener.class);
-						if (children.isEmpty()) {
-							listener.getLogger().println("Nothing to upload");
-							Execution.this.getContext().onSuccess(null);
-						} else if (children.size() == 1) {
-							FilePath child = children.get(0);
-							listener.getLogger().format("Uploading %s to s3://%s/%s %n", child.toURI(), bucket, path);
-							if (!child.exists()) {
-								listener.getLogger().println("Upload failed due to missing source file");
-								Execution.this.getContext().onFailure(new FileNotFoundException(child.toURI().toString()));
-								return;
-							}
+			TaskListener listener = Execution.this.getContext().get(TaskListener.class);
 
-							child.act(new RemoteUploader(Execution.this.step.createS3ClientOptions(), Execution.this.getContext().get(EnvVars.class), listener, bucket, path, metadatas, acl, cacheControl, contentType, kmsId, sseAlgorithm));
-
-							listener.getLogger().println("Upload complete");
-							Execution.this.getContext().onSuccess(String.format("s3://%s/%s", bucket, path));
-						} else {
-							List<File> fileList = new ArrayList<>();
-							listener.getLogger().format("Uploading %s to s3://%s/%s %n", includePathPattern, bucket, path);
-							for (FilePath child : children) {
-								child.act(new FeedList(fileList));
-							}
-							dir.act(new RemoteListUploader(Execution.this.step.createS3ClientOptions(), Execution.this.getContext().get(EnvVars.class), listener, fileList, bucket, path, metadatas, acl, cacheControl, contentType, kmsId, sseAlgorithm));
-							listener.getLogger().println("Upload complete");
-							Execution.this.getContext().onSuccess(String.format("s3://%s/%s", bucket, path));
-						}
-					} catch (Exception e) {
-						Execution.this.getContext().onFailure(e);
-					}
+			if (children.isEmpty()) {
+				listener.getLogger().println("Nothing to upload");
+				return null;
+			} else if (children.size() == 1) {
+				FilePath child = children.get(0);
+				listener.getLogger().format("Uploading %s to s3://%s/%s %n", child.toURI(), bucket, path);
+				if (!child.exists()) {
+					listener.getLogger().println("Upload failed due to missing source file");
+					throw new FileNotFoundException(child.toURI().toString());
 				}
-			}.start();
-			return false;
-		}
 
-		@Override
-		public void stop(@Nonnull Throwable cause) throws Exception {
-			//
+				child.act(new RemoteUploader(Execution.this.step.createS3ClientOptions(), Execution.this.getContext().get(EnvVars.class), listener, bucket, path, metadatas, acl, cacheControl, contentType, kmsId, sseAlgorithm));
+
+				listener.getLogger().println("Upload complete");
+				return String.format("s3://%s/%s", bucket, path);
+			} else {
+				List<File> fileList = new ArrayList<>();
+				listener.getLogger().format("Uploading %s to s3://%s/%s %n", includePathPattern, bucket, path);
+				for (FilePath child : children) {
+					child.act(new FeedList(fileList));
+				}
+				dir.act(new RemoteListUploader(Execution.this.step.createS3ClientOptions(), Execution.this.getContext().get(EnvVars.class), listener, fileList, bucket, path, metadatas, acl, cacheControl, contentType, kmsId, sseAlgorithm));
+				listener.getLogger().println("Upload complete");
+				return String.format("s3://%s/%s", bucket, path);
+			}
 		}
 
 	}

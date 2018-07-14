@@ -21,19 +21,6 @@
 
 package de.taimos.pipeline.aws;
 
-import java.io.File;
-import java.io.IOException;
-import java.util.Set;
-
-import javax.annotation.Nonnull;
-
-import org.jenkinsci.plugins.workflow.steps.AbstractStepExecutionImpl;
-import org.jenkinsci.plugins.workflow.steps.StepContext;
-import org.jenkinsci.plugins.workflow.steps.StepDescriptor;
-import org.jenkinsci.plugins.workflow.steps.StepExecution;
-import org.kohsuke.stapler.DataBoundConstructor;
-import org.kohsuke.stapler.DataBoundSetter;
-
 import com.amazonaws.event.ProgressEventType;
 import com.amazonaws.event.ProgressListener;
 import com.amazonaws.services.s3.transfer.Download;
@@ -41,7 +28,6 @@ import com.amazonaws.services.s3.transfer.MultipleFileDownload;
 import com.amazonaws.services.s3.transfer.TransferManager;
 import com.amazonaws.services.s3.transfer.TransferManagerBuilder;
 import com.google.common.base.Preconditions;
-
 import de.taimos.pipeline.aws.utils.StepUtils;
 import hudson.EnvVars;
 import hudson.Extension;
@@ -49,6 +35,16 @@ import hudson.FilePath;
 import hudson.model.TaskListener;
 import hudson.remoting.VirtualChannel;
 import jenkins.MasterToSlaveFileCallable;
+import org.jenkinsci.plugins.workflow.steps.StepContext;
+import org.jenkinsci.plugins.workflow.steps.StepDescriptor;
+import org.jenkinsci.plugins.workflow.steps.StepExecution;
+import org.jenkinsci.plugins.workflow.steps.SynchronousNonBlockingStepExecution;
+import org.kohsuke.stapler.DataBoundConstructor;
+import org.kohsuke.stapler.DataBoundSetter;
+
+import java.io.File;
+import java.io.IOException;
+import java.util.Set;
 
 public class S3DownloadStep extends AbstractS3Step {
 
@@ -114,7 +110,7 @@ public class S3DownloadStep extends AbstractS3Step {
 		}
 	}
 
-	public static class Execution extends AbstractStepExecutionImpl {
+	public static class Execution extends SynchronousNonBlockingStepExecution<Void> {
 
 		protected static final long serialVersionUID = 1L;
 
@@ -126,7 +122,7 @@ public class S3DownloadStep extends AbstractS3Step {
 		}
 
 		@Override
-		public boolean start() throws Exception {
+		public Void run() throws Exception {
 			final FilePath target = this.getContext().get(FilePath.class).child(this.step.getFile());
 			final TaskListener listener = this.getContext().get(TaskListener.class);
 			final EnvVars envVars = this.getContext().get(EnvVars.class);
@@ -137,38 +133,22 @@ public class S3DownloadStep extends AbstractS3Step {
 
 			Preconditions.checkArgument(bucket != null && !bucket.isEmpty(), "Bucket must not be null or empty");
 
-			new Thread("s3Download") {
-				@Override
-				public void run() {
-					try {
-						listener.getLogger().format("Downloading s3://%s/%s to %s %n ", bucket, path, target.toURI());
-						if (target.exists()) {
-							if (force) {
-								if (target.isDirectory()) {
-									target.deleteRecursive();
-								} else {
-									target.delete();
-								}
-							} else {
-								listener.getLogger().println("Download failed due to existing target file; set force=true to overwrite target file");
-								Execution.this.getContext().onFailure(new RuntimeException("Target exists: " + target.toURI().toString()));
-								return;
-							}
-						}
-						target.act(new RemoteDownloader(Execution.this.step.createS3ClientOptions(), envVars, listener, bucket, path));
-						listener.getLogger().println("Download complete");
-						Execution.this.getContext().onSuccess(null);
-					} catch (Exception e) {
-						Execution.this.getContext().onFailure(e);
+			listener.getLogger().format("Downloading s3://%s/%s to %s %n ", bucket, path, target.toURI());
+			if (target.exists()) {
+				if (force) {
+					if (target.isDirectory()) {
+						target.deleteRecursive();
+					} else {
+						target.delete();
 					}
+				} else {
+					listener.getLogger().println("Download failed due to existing target file; set force=true to overwrite target file");
+					throw new RuntimeException("Target exists: " + target.toURI().toString());
 				}
-			}.start();
-			return false;
-		}
-
-		@Override
-		public void stop(@Nonnull Throwable cause) throws Exception {
-			//
+			}
+			target.act(new RemoteDownloader(Execution.this.step.createS3ClientOptions(), envVars, listener, bucket, path));
+			listener.getLogger().println("Download complete");
+			return null;
 		}
 
 	}

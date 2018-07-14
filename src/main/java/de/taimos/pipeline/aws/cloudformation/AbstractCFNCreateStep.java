@@ -21,29 +21,28 @@
 
 package de.taimos.pipeline.aws.cloudformation;
 
-import java.io.IOException;
-import java.util.Collection;
-
-import javax.annotation.Nonnull;
-
-import org.jenkinsci.plugins.workflow.steps.StepContext;
-import org.jenkinsci.plugins.workflow.steps.StepExecution;
-import org.kohsuke.stapler.DataBoundSetter;
-
 import com.amazonaws.services.cloudformation.AmazonCloudFormation;
 import com.amazonaws.services.cloudformation.AmazonCloudFormationClientBuilder;
+import com.amazonaws.services.cloudformation.model.Change;
 import com.amazonaws.services.cloudformation.model.OnFailure;
 import com.amazonaws.services.cloudformation.model.Parameter;
 import com.amazonaws.services.cloudformation.model.RollbackConfiguration;
 import com.amazonaws.services.cloudformation.model.Tag;
 import com.google.common.base.Preconditions;
-
 import de.taimos.pipeline.aws.AWSClientFactory;
 import de.taimos.pipeline.aws.cloudformation.parser.ParameterParser;
 import de.taimos.pipeline.aws.utils.IamRoleUtils;
 import hudson.EnvVars;
 import hudson.FilePath;
 import hudson.model.TaskListener;
+import org.jenkinsci.plugins.workflow.steps.StepContext;
+import org.jenkinsci.plugins.workflow.steps.SynchronousNonBlockingStepExecution;
+import org.kohsuke.stapler.DataBoundSetter;
+
+import javax.annotation.Nonnull;
+import java.io.IOException;
+import java.util.Collection;
+import java.util.List;
 
 abstract class AbstractCFNCreateStep extends TemplateStepBase {
 
@@ -77,22 +76,20 @@ abstract class AbstractCFNCreateStep extends TemplateStepBase {
 		this.onFailure = onFailure;
 	}
 
-	abstract static class Execution<C extends AbstractCFNCreateStep> extends StepExecution {
+	abstract static class Execution<C extends AbstractCFNCreateStep, T> extends SynchronousNonBlockingStepExecution<T> {
 
 		private final transient C step;
-
-		protected abstract void checkPreconditions();
-
-		protected abstract String getThreadName();
-
-		protected abstract Object whenStackExists(Collection<Parameter> parameters, Collection<Tag> tags, RollbackConfiguration rollbackConfiguration) throws Exception;
-
-		protected abstract Object whenStackMissing(Collection<Parameter> parameters, Collection<Tag> tags) throws Exception;
 
 		protected Execution(C step, @Nonnull StepContext context) {
 			super(context);
 			this.step = step;
 		}
+
+		protected abstract void checkPreconditions();
+
+		protected abstract T whenStackExists(Collection<Parameter> parameters, Collection<Tag> tags, RollbackConfiguration rollbackConfiguration) throws Exception;
+
+		protected abstract T whenStackMissing(Collection<Parameter> parameters, Collection<Tag> tags) throws Exception;
 
 		private String getStack() {
 			return this.getStep().getStack();
@@ -111,7 +108,7 @@ abstract class AbstractCFNCreateStep extends TemplateStepBase {
 		}
 
 		@Override
-		public boolean start() throws Exception {
+		public T run() throws Exception {
 
 			final String stack = this.getStack();
 			final String roleArn = this.getRoleArn();
@@ -123,33 +120,18 @@ abstract class AbstractCFNCreateStep extends TemplateStepBase {
 
 			this.checkPreconditions();
 
-			new Thread(Execution.this.getThreadName()) {
-				@Override
-				public void run() {
-					try {
-						AmazonCloudFormation client = AWSClientFactory.create(AmazonCloudFormationClientBuilder.standard(), Execution.this.getEnvVars());
-						CloudFormationStack cfnStack = new CloudFormationStack(client, stack, Execution.this.getListener());
-						if (cfnStack.exists()) {
-							Collection<Parameter> parameters = ParameterParser.parseWithKeepParams(Execution.this.getWorkspace(), Execution.this.getStep());
-							Execution.this.getContext().onSuccess(Execution.this.whenStackExists(parameters, Execution.this.getStep().getAwsTags(Execution.this), Execution.this.getStep().getRollbackConfiguration()));
-						} else if (create) {
-							Collection<Parameter> parameters = ParameterParser.parse(Execution.this.getWorkspace(), Execution.this.getStep());
-							Execution.this.getContext().onSuccess(Execution.this.whenStackMissing(parameters, Execution.this.getStep().getAwsTags(Execution.this)));
-						} else {
-							Execution.this.getListener().getLogger().println("No stack found with the name and skipped creation due to configuration.");
-							Execution.this.getContext().onSuccess(null);
-						}
-					} catch (Exception e) {
-						Execution.this.getContext().onFailure(e);
-					}
-				}
-			}.start();
-			return false;
-		}
-
-		@Override
-		public void stop(@Nonnull Throwable throwable) throws Exception {
-
+			AmazonCloudFormation client = AWSClientFactory.create(AmazonCloudFormationClientBuilder.standard(), Execution.this.getEnvVars());
+			CloudFormationStack cfnStack = new CloudFormationStack(client, stack, Execution.this.getListener());
+			if (cfnStack.exists()) {
+				Collection<Parameter> parameters = ParameterParser.parseWithKeepParams(Execution.this.getWorkspace(), Execution.this.getStep());
+				return Execution.this.whenStackExists(parameters, Execution.this.getStep().getAwsTags(Execution.this), Execution.this.getStep().getRollbackConfiguration());
+			} else if (create) {
+				Collection<Parameter> parameters = ParameterParser.parse(Execution.this.getWorkspace(), Execution.this.getStep());
+				return Execution.this.whenStackMissing(parameters, Execution.this.getStep().getAwsTags(Execution.this));
+			} else {
+				Execution.this.getListener().getLogger().println("No stack found with the name and skipped creation due to configuration.");
+				return null;
+			}
 		}
 
 		protected CloudFormationStack getCfnStack() {

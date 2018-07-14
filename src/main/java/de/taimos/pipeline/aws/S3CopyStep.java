@@ -21,18 +21,6 @@
 
 package de.taimos.pipeline.aws;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Set;
-
-import javax.annotation.Nonnull;
-
-import org.jenkinsci.plugins.workflow.steps.StepContext;
-import org.jenkinsci.plugins.workflow.steps.StepDescriptor;
-import org.jenkinsci.plugins.workflow.steps.StepExecution;
-import org.kohsuke.stapler.DataBoundConstructor;
-import org.kohsuke.stapler.DataBoundSetter;
-
 import com.amazonaws.event.ProgressEventType;
 import com.amazonaws.event.ProgressListener;
 import com.amazonaws.services.s3.model.CannedAccessControlList;
@@ -43,12 +31,21 @@ import com.amazonaws.services.s3.transfer.Copy;
 import com.amazonaws.services.s3.transfer.TransferManager;
 import com.amazonaws.services.s3.transfer.TransferManagerBuilder;
 import com.google.common.base.Preconditions;
-
 import de.taimos.pipeline.aws.utils.StepUtils;
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import hudson.EnvVars;
 import hudson.Extension;
 import hudson.model.TaskListener;
+import org.jenkinsci.plugins.workflow.steps.StepContext;
+import org.jenkinsci.plugins.workflow.steps.StepDescriptor;
+import org.jenkinsci.plugins.workflow.steps.StepExecution;
+import org.jenkinsci.plugins.workflow.steps.SynchronousNonBlockingStepExecution;
+import org.kohsuke.stapler.DataBoundConstructor;
+import org.kohsuke.stapler.DataBoundSetter;
+
+import javax.annotation.Nonnull;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Set;
 
 public class S3CopyStep extends AbstractS3Step {
 
@@ -175,7 +172,7 @@ public class S3CopyStep extends AbstractS3Step {
 		}
 	}
 
-	public static class Execution extends StepExecution {
+	public static class Execution extends SynchronousNonBlockingStepExecution<String> {
 
 		protected static final long serialVersionUID = 1L;
 
@@ -187,7 +184,7 @@ public class S3CopyStep extends AbstractS3Step {
 		}
 
 		@Override
-		public boolean start() throws Exception {
+		public String run() throws Exception {
 			final String fromBucket = this.step.getFromBucket();
 			final String toBucket = this.step.getToBucket();
 			final String fromPath = this.step.getFromPath();
@@ -214,69 +211,53 @@ public class S3CopyStep extends AbstractS3Step {
 			Preconditions.checkArgument(toBucket != null && !toBucket.isEmpty(), "To bucket must not be null or empty");
 			Preconditions.checkArgument(toPath != null && !toPath.isEmpty(), "To path must not be null or empty");
 
-			new Thread("s3Copy") {
-				@Override
-				@SuppressFBWarnings(value = "REC_CATCH_EXCEPTION", justification = "RuntimeExceptions need to be catched")
-				public void run() {
-					try {
-						TaskListener listener = Execution.this.getContext().get(TaskListener.class);
-						listener.getLogger().format("Copying s3://%s/%s to s3://%s/%s%n", fromBucket, fromPath, toBucket, toPath);
+			TaskListener listener = Execution.this.getContext().get(TaskListener.class);
+			listener.getLogger().format("Copying s3://%s/%s to s3://%s/%s%n", fromBucket, fromPath, toBucket, toPath);
 
-						CopyObjectRequest request = new CopyObjectRequest(fromBucket, fromPath, toBucket, toPath);
+			CopyObjectRequest request = new CopyObjectRequest(fromBucket, fromPath, toBucket, toPath);
 
-						// Add metadata
-						if (metadatas.size() > 0 || (cacheControl != null && !cacheControl.isEmpty()) || (contentType != null && !contentType.isEmpty()) || (sseAlgorithm != null && !sseAlgorithm.isEmpty())) {
-							ObjectMetadata metas = new ObjectMetadata();
-							if (metadatas.size() > 0) {
-								metas.setUserMetadata(metadatas);
-							}
-							if (cacheControl != null && !cacheControl.isEmpty()) {
-								metas.setCacheControl(cacheControl);
-							}
-							if (contentType != null && !contentType.isEmpty()) {
-								metas.setContentType(contentType);
-							}
-							if (sseAlgorithm != null && !sseAlgorithm.isEmpty()) {
-								metas.setSSEAlgorithm(sseAlgorithm);
-							}
-							request.withNewObjectMetadata(metas);
-						}
-
-						// Add acl
-						if (acl != null) {
-							request.withCannedAccessControlList(acl);
-						}
-
-						// Add kms
-						if (kmsId != null && !kmsId.isEmpty()) {
-							listener.getLogger().format("Using KMS: %s%n", kmsId);
-							request.withSSEAwsKeyManagementParams(new SSEAwsKeyManagementParams(kmsId));
-						}
-
-						TransferManager mgr = TransferManagerBuilder.standard()
-							.withS3Client(AWSClientFactory.create(s3ClientOptions.createAmazonS3ClientBuilder(), envVars))
-							.build();
-						final Copy copy = mgr.copy(request);
-						copy.addProgressListener((ProgressListener) progressEvent -> {
-							if (progressEvent.getEventType() == ProgressEventType.TRANSFER_COMPLETED_EVENT) {
-								listener.getLogger().println("Finished: " + copy.getDescription());
-							}
-						});
-						copy.waitForCompletion();
-
-						listener.getLogger().println("Copy complete");
-						Execution.this.getContext().onSuccess(String.format("s3://%s/%s", toBucket, toPath));
-					} catch (Exception e) {
-						Execution.this.getContext().onFailure(e);
-					}
+			// Add metadata
+			if (metadatas.size() > 0 || (cacheControl != null && !cacheControl.isEmpty()) || (contentType != null && !contentType.isEmpty()) || (sseAlgorithm != null && !sseAlgorithm.isEmpty())) {
+				ObjectMetadata metas = new ObjectMetadata();
+				if (metadatas.size() > 0) {
+					metas.setUserMetadata(metadatas);
 				}
-			}.start();
-			return false;
-		}
+				if (cacheControl != null && !cacheControl.isEmpty()) {
+					metas.setCacheControl(cacheControl);
+				}
+				if (contentType != null && !contentType.isEmpty()) {
+					metas.setContentType(contentType);
+				}
+				if (sseAlgorithm != null && !sseAlgorithm.isEmpty()) {
+					metas.setSSEAlgorithm(sseAlgorithm);
+				}
+				request.withNewObjectMetadata(metas);
+			}
 
-		@Override
-		public void stop(@Nonnull Throwable cause) throws Exception {
-			//
+			// Add acl
+			if (acl != null) {
+				request.withCannedAccessControlList(acl);
+			}
+
+			// Add kms
+			if (kmsId != null && !kmsId.isEmpty()) {
+				listener.getLogger().format("Using KMS: %s%n", kmsId);
+				request.withSSEAwsKeyManagementParams(new SSEAwsKeyManagementParams(kmsId));
+			}
+
+			TransferManager mgr = TransferManagerBuilder.standard()
+					.withS3Client(AWSClientFactory.create(s3ClientOptions.createAmazonS3ClientBuilder(), envVars))
+					.build();
+			final Copy copy = mgr.copy(request);
+			copy.addProgressListener((ProgressListener) progressEvent -> {
+				if (progressEvent.getEventType() == ProgressEventType.TRANSFER_COMPLETED_EVENT) {
+					listener.getLogger().println("Finished: " + copy.getDescription());
+				}
+			});
+			copy.waitForCompletion();
+
+			listener.getLogger().println("Copy complete");
+			return String.format("s3://%s/%s", toBucket, toPath);
 		}
 
 	}

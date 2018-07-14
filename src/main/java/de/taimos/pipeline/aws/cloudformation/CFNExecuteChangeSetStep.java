@@ -21,25 +21,23 @@
 
 package de.taimos.pipeline.aws.cloudformation;
 
-import java.util.Set;
-
-import javax.annotation.Nonnull;
-
-import org.jenkinsci.plugins.workflow.steps.Step;
-import org.jenkinsci.plugins.workflow.steps.StepContext;
-import org.jenkinsci.plugins.workflow.steps.StepDescriptor;
-import org.jenkinsci.plugins.workflow.steps.StepExecution;
-import org.kohsuke.stapler.DataBoundConstructor;
-import org.kohsuke.stapler.DataBoundSetter;
-
 import com.amazonaws.services.cloudformation.AmazonCloudFormation;
 import com.amazonaws.services.cloudformation.AmazonCloudFormationClientBuilder;
 import com.google.common.base.Preconditions;
-
 import de.taimos.pipeline.aws.AWSClientFactory;
 import de.taimos.pipeline.aws.utils.StepUtils;
 import hudson.Extension;
 import hudson.model.TaskListener;
+import org.jenkinsci.plugins.workflow.steps.Step;
+import org.jenkinsci.plugins.workflow.steps.StepContext;
+import org.jenkinsci.plugins.workflow.steps.StepDescriptor;
+import org.jenkinsci.plugins.workflow.steps.StepExecution;
+import org.jenkinsci.plugins.workflow.steps.SynchronousNonBlockingStepExecution;
+import org.kohsuke.stapler.DataBoundConstructor;
+import org.kohsuke.stapler.DataBoundSetter;
+
+import java.util.Map;
+import java.util.Set;
 
 public class CFNExecuteChangeSetStep extends Step {
 
@@ -94,7 +92,7 @@ public class CFNExecuteChangeSetStep extends Step {
 		}
 	}
 
-	public static class Execution extends StepExecution {
+	public static class Execution extends SynchronousNonBlockingStepExecution<Map<String, String>> {
 
 		private final transient CFNExecuteChangeSetStep step;
 
@@ -104,7 +102,7 @@ public class CFNExecuteChangeSetStep extends Step {
 		}
 
 		@Override
-		public boolean start() throws Exception {
+		public Map<String, String> run() throws Exception {
 			final String changeSet = this.step.getChangeSet();
 			final String stack = this.step.getStack();
 			final TaskListener listener = this.getContext().get(TaskListener.class);
@@ -115,26 +113,11 @@ public class CFNExecuteChangeSetStep extends Step {
 
 			listener.getLogger().format("Executing CloudFormation change set %s %n", changeSet);
 
-			new Thread("cfnExecuteChangeSet-" + changeSet) {
-				@Override
-				public void run() {
-					try {
-						AmazonCloudFormation client = AWSClientFactory.create(AmazonCloudFormationClientBuilder.standard(), Execution.this.getContext());
-						CloudFormationStack cfnStack = new CloudFormationStack(client, stack, listener);
-						cfnStack.executeChangeSet(changeSet, Execution.this.step.getPollInterval());
-						listener.getLogger().println("Execute change set complete");
-						Execution.this.getContext().onSuccess(cfnStack.describeOutputs());
-					} catch (Exception e) {
-						Execution.this.getContext().onFailure(e);
-					}
-				}
-			}.start();
-			return false;
-		}
-
-		@Override
-		public void stop(@Nonnull Throwable cause) throws Exception {
-			//
+			AmazonCloudFormation client = AWSClientFactory.create(AmazonCloudFormationClientBuilder.standard(), Execution.this.getContext());
+			CloudFormationStack cfnStack = new CloudFormationStack(client, stack, listener);
+			cfnStack.executeChangeSet(changeSet, Execution.this.step.getPollInterval());
+			listener.getLogger().println("Execute change set complete");
+			return cfnStack.describeOutputs();
 		}
 
 		private static final long serialVersionUID = 1L;
