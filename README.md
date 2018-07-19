@@ -86,10 +86,10 @@ withAWS(profile:'myProfile') {
 }
 ```
 
-Assume role information (account is optional - uses current account as default. externalId and policy are optional. duration is optional - if specified it represents the maximum amount of time in seconds the session may persist for, defaults to 3600.):
+Assume role information (account is optional - uses current account as default. externalId, roleSessionName and policy are optional. duration is optional - if specified it represents the maximum amount of time in seconds the session may persist for, defaults to 3600.):
 
 ```
-withAWS(role:'admin', roleAccount:'123456789012', externalId: 'my-external-id', policy: '{"Version":"2012-10-17","Statement":[{"Sid":"Stmt1","Effect":"Deny","Action":"s3:DeleteObject","Resource":"*"}]}', duration: '3600') {
+withAWS(role:'admin', roleAccount:'123456789012', externalId: 'my-external-id', policy: '{"Version":"2012-10-17","Statement":[{"Sid":"Stmt1","Effect":"Deny","Action":"s3:DeleteObject","Resource":"*"}]}', duration: '3600', roleSessionName: 'my-custom-session-name') {
     // do something
 }
 ```
@@ -614,6 +614,7 @@ ec2ShareAmi(
 # Changelog
 
 ## current master
+* allow the customization of setting a roleSessionName
 
 ## 1.29
 * fix issues with stack timeouts
