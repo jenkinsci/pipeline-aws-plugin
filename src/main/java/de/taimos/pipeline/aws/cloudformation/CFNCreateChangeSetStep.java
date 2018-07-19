@@ -97,7 +97,7 @@ public class CFNCreateChangeSetStep extends AbstractCFNCreateStep {
 		public List<Change> whenStackExists(Collection<Parameter> parameters, Collection<Tag> tags, RollbackConfiguration rollbackConfiguration) throws Exception {
 			final String changeSet = this.getStep().getChangeSet();
 			final String url = this.getStep().getUrl();
-			this.getCfnStack().createChangeSet(changeSet, this.getStep().readTemplate(this), url, parameters, tags, this.getStep().getPollInterval(), ChangeSetType.UPDATE, this.getStep().getRoleArn(), rollbackConfiguration);
+			this.getCfnStack().createChangeSet(changeSet, this.getStep().readTemplate(this), url, parameters, tags, this.getStep().getPollConfiguration(), ChangeSetType.UPDATE, this.getStep().getRoleArn(), rollbackConfiguration);
 			return this.validateChangeSet(changeSet);
 		}
 
@@ -105,7 +105,7 @@ public class CFNCreateChangeSetStep extends AbstractCFNCreateStep {
 		public List<Change> whenStackMissing(Collection<Parameter> parameters, Collection<Tag> tags) throws Exception {
 			final String changeSet = this.getStep().getChangeSet();
 			final String url = this.getStep().getUrl();
-			this.getCfnStack().createChangeSet(changeSet, this.getStep().readTemplate(this), url, parameters, tags, this.getStep().getPollInterval(), ChangeSetType.CREATE, this.getStep().getRoleArn(), null);
+			this.getCfnStack().createChangeSet(changeSet, this.getStep().readTemplate(this), url, parameters, tags, this.getStep().getPollConfiguration(), ChangeSetType.CREATE, this.getStep().getRoleArn(), null);
 			return this.validateChangeSet(changeSet);
 		}
 

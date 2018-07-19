@@ -21,6 +21,7 @@
 
 package de.taimos.pipeline.aws.cloudformation;
 
+import java.time.Duration;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
@@ -106,20 +107,24 @@ public class CloudFormationStack {
 		return map;
 	}
 
-	public void create(String templateBody, String templateUrl, Collection<Parameter> params, Collection<Tag> tags, Integer timeoutInMinutes, long pollIntervallMillis, String roleArn, String onFailure, Boolean enableTerminationProtection) throws ExecutionException {
+	public void create(String templateBody, String templateUrl, Collection<Parameter> params, Collection<Tag> tags, PollConfiguration pollConfiguration, String roleArn, String onFailure, Boolean enableTerminationProtection) throws ExecutionException {
 		if ((templateBody == null || templateBody.isEmpty()) && (templateUrl == null || templateUrl.isEmpty())) {
 			throw new IllegalArgumentException("Either a file or url for the template must be specified");
 		}
 
 		CreateStackRequest req = new CreateStackRequest();
 		req.withStackName(this.stack).withCapabilities(Capability.CAPABILITY_IAM, Capability.CAPABILITY_NAMED_IAM).withEnableTerminationProtection(enableTerminationProtection);
-		req.withTemplateBody(templateBody).withTemplateURL(templateUrl).withParameters(params).withTags(tags).withTimeoutInMinutes(timeoutInMinutes).withRoleARN(roleArn).withOnFailure(OnFailure.valueOf(onFailure));
+		req.withTemplateBody(templateBody).withTemplateURL(templateUrl).withParameters(params).withTags(tags)
+				.withTimeoutInMinutes(pollConfiguration.getTimeout() == null ? null : (int) pollConfiguration.getTimeout().toMinutes())
+				.withRoleARN(roleArn)
+				.withOnFailure(OnFailure.valueOf(onFailure));
 		this.client.createStack(req);
 
-		new EventPrinter(this.client, this.listener).waitAndPrintStackEvents(this.stack, this.client.waiters().stackCreateComplete(), timeoutInMinutes, pollIntervallMillis);
+		new EventPrinter(this.client, this.listener).waitAndPrintStackEvents(this.stack, this.client.waiters().stackCreateComplete(), pollConfiguration);
 	}
 
-	public void update(String templateBody, String templateUrl, Collection<Parameter> params, Collection<Tag> tags, Integer timeoutInMinutes, long pollIntervallMillis, String roleArn, RollbackConfiguration rollbackConfig) throws ExecutionException {
+
+	public void update(String templateBody, String templateUrl, Collection<Parameter> params, Collection<Tag> tags, PollConfiguration pollConfiguration, String roleArn, RollbackConfiguration rollbackConfig) throws ExecutionException {
 		try {
 			UpdateStackRequest req = new UpdateStackRequest();
 			req.withStackName(this.stack).withCapabilities(Capability.CAPABILITY_IAM, Capability.CAPABILITY_NAMED_IAM);
@@ -138,7 +143,7 @@ public class CloudFormationStack {
 
 			this.client.updateStack(req);
 
-			new EventPrinter(this.client, this.listener).waitAndPrintStackEvents(this.stack, this.client.waiters().stackUpdateComplete(), timeoutInMinutes, pollIntervallMillis);
+			new EventPrinter(this.client, this.listener).waitAndPrintStackEvents(this.stack, this.client.waiters().stackCreateComplete(), pollConfiguration);
 
 			this.listener.getLogger().format("Updated CloudFormation stack %s %n", this.stack);
 
@@ -152,7 +157,7 @@ public class CloudFormationStack {
 		}
 	}
 
-	public void createChangeSet(String changeSetName, String templateBody, String templateUrl, Collection<Parameter> params, Collection<Tag> tags, long pollIntervallMillis, ChangeSetType changeSetType, String roleArn, RollbackConfiguration rollbackConfig) throws ExecutionException {
+	public void createChangeSet(String changeSetName, String templateBody, String templateUrl, Collection<Parameter> params, Collection<Tag> tags, PollConfiguration pollConfiguration, ChangeSetType changeSetType, String roleArn, RollbackConfiguration rollbackConfig) throws ExecutionException {
 		try {
 			CreateChangeSetRequest req = new CreateChangeSetRequest();
 			req.withChangeSetName(changeSetName).withStackName(this.stack).withCapabilities(Capability.CAPABILITY_IAM, Capability.CAPABILITY_NAMED_IAM).withChangeSetType(changeSetType);
@@ -180,7 +185,7 @@ public class CloudFormationStack {
 
 			this.client.createChangeSet(req);
 
-			new EventPrinter(this.client, this.listener).waitAndPrintChangeSetEvents(this.stack, changeSetName, this.client.waiters().changeSetCreateComplete(), pollIntervallMillis);
+			new EventPrinter(this.client, this.listener).waitAndPrintChangeSetEvents(this.stack, changeSetName, this.client.waiters().changeSetCreateComplete(), pollConfiguration);
 
 			this.listener.getLogger().format("Created CloudFormation change set %s for stack %s %n", changeSetName, this.stack);
 
@@ -199,7 +204,7 @@ public class CloudFormationStack {
 		}
 	}
 
-	public void executeChangeSet(String changeSetName, long pollIntervallMillis) throws ExecutionException {
+	public void executeChangeSet(String changeSetName, PollConfiguration pollConfiguration) throws ExecutionException {
 		if (!this.changeSetHasChanges(changeSetName) || !this.exists()) {
 			// If the change set has no changes or the stack was not prepared we should simply delete it.
 			this.listener.getLogger().format("Deleting empty change set %s for stack %s %n", changeSetName, this.stack);
@@ -217,14 +222,14 @@ public class CloudFormationStack {
 
 			ExecuteChangeSetRequest req = new ExecuteChangeSetRequest().withChangeSetName(changeSetName).withStackName(this.stack);
 			this.client.executeChangeSet(req);
-			new EventPrinter(this.client, this.listener).waitAndPrintStackEvents(this.stack, waiter, pollIntervallMillis);
+			new EventPrinter(this.client, this.listener).waitAndPrintStackEvents(this.stack, waiter, pollConfiguration);
 			this.listener.getLogger().format("Executed change set %s for stack %s %n", changeSetName, this.stack);
 		}
 	}
 
-	public void delete(long pollIntervallMillis) throws ExecutionException {
+	public void delete(PollConfiguration pollConfiguration) throws ExecutionException {
 		this.client.deleteStack(new DeleteStackRequest().withStackName(this.stack));
-		new EventPrinter(this.client, this.listener).waitAndPrintStackEvents(this.stack, this.client.waiters().stackDeleteComplete(), pollIntervallMillis);
+		new EventPrinter(this.client, this.listener).waitAndPrintStackEvents(this.stack, this.client.waiters().stackDeleteComplete(), pollConfiguration);
 	}
 
 	public DescribeChangeSetResult describeChangeSet(String changeSet) {

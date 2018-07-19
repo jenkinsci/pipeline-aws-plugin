@@ -37,12 +37,13 @@ import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
 
 import javax.inject.Inject;
+import java.time.Duration;
 import java.util.Set;
 
 public class CFNDeleteStep extends Step {
 
 	private final String stack;
-	private long pollInterval = 1000L;
+	private PollConfiguration pollConfiguration = PollConfiguration.DEFAULT;
 
 	@DataBoundConstructor
 	public CFNDeleteStep(String stack) {
@@ -53,13 +54,22 @@ public class CFNDeleteStep extends Step {
 		return this.stack;
 	}
 
-	public long getPollInterval() {
-		return this.pollInterval;
+	public PollConfiguration getPollConfiguration() {
+		return this.pollConfiguration;
 	}
 
 	@DataBoundSetter
 	public void setPollInterval(long pollInterval) {
-		this.pollInterval = pollInterval;
+		this.pollConfiguration = this.pollConfiguration.toBuilder()
+				.pollInterval(Duration.ofMillis(pollInterval))
+				.build();
+	}
+
+	@DataBoundSetter
+	public void setTimeoutInMinutes(long timeout) {
+		this.pollConfiguration = this.pollConfiguration.toBuilder()
+				.timeout(Duration.ofMinutes(timeout))
+				.build();
 	}
 
 	@Override
@@ -107,7 +117,7 @@ public class CFNDeleteStep extends Step {
 
 			AmazonCloudFormation client = AWSClientFactory.create(AmazonCloudFormationClientBuilder.standard(), Execution.this.getContext());
 			CloudFormationStack cfnStack = new CloudFormationStack(client, stack, listener);
-			cfnStack.delete(Execution.this.step.getPollInterval());
+			cfnStack.delete(Execution.this.step.getPollConfiguration());
 			listener.getLogger().println("Stack deletion complete");
 			return null;
 		}

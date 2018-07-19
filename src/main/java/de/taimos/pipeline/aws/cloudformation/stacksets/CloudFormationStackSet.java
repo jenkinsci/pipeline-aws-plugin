@@ -21,6 +21,7 @@
 
 package de.taimos.pipeline.aws.cloudformation.stacksets;
 
+import java.time.Duration;
 import java.util.Collection;
 
 import com.amazonaws.services.cloudformation.AmazonCloudFormation;
@@ -41,6 +42,7 @@ import com.amazonaws.services.cloudformation.model.Tag;
 import com.amazonaws.services.cloudformation.model.UpdateStackSetRequest;
 import com.amazonaws.services.cloudformation.model.UpdateStackSetResult;
 
+import de.taimos.pipeline.aws.cloudformation.PollConfiguration;
 import hudson.model.TaskListener;
 
 public class CloudFormationStackSet {
@@ -93,7 +95,7 @@ public class CloudFormationStackSet {
 		return result;
 	}
 
-	public DescribeStackSetResult waitForStackState(StackSetStatus expectedStatus, long pollInterval) throws InterruptedException {
+	public DescribeStackSetResult waitForStackState(StackSetStatus expectedStatus, Duration pollInterval) throws InterruptedException {
 		DescribeStackSetResult result = describe();
 		this.listener.getLogger().println("stackSetId=" + result.getStackSet().getStackSetId() + " status=" + result.getStackSet().getStatus());
 		StackSetStatus currentStatus = StackSetStatus.fromValue(result.getStackSet().getStatus());
@@ -101,18 +103,18 @@ public class CloudFormationStackSet {
 			this.listener.getLogger().println("Stack set operation completed successfully");
 			return result;
 		} else {
-			Thread.sleep(pollInterval);
+			Thread.sleep(pollInterval.toMillis());
 			return waitForStackState(expectedStatus, pollInterval);
 		}
 	}
 
-	DescribeStackSetOperationResult waitForOperationToComplete(String operationId, long pollInterval) throws InterruptedException {
+	DescribeStackSetOperationResult waitForOperationToComplete(String operationId, Duration pollInterval) throws InterruptedException {
 		this.listener.getLogger().println("Waiting on operationId=" + operationId);
 		DescribeStackSetOperationResult result = describeStackOperation(operationId);
 		this.listener.getLogger().println("operationId=" + operationId + " status=" + result.getStackSetOperation().getStatus());
 		switch (StackSetOperationStatus.fromValue(result.getStackSetOperation().getStatus())) {
 			case RUNNING:
-				Thread.sleep(pollInterval);
+				Thread.sleep(pollInterval.toMillis());
 				return waitForOperationToComplete(operationId, pollInterval);
 			case SUCCEEDED:
 				this.listener.getLogger().println("Stack set operation completed successfully");
