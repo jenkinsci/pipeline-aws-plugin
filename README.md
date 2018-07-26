@@ -613,6 +613,8 @@ ec2ShareAmi(
 # Changelog
 
 ## current master
+
+## 1.28
 * use SynchronousNonBlockingStepExecution for long running AWS steps to allow the pipeline step to be aborted
 * use custom polling strategy for cloudformation waiters to speed up pipeline feedback from cloudformation changes
 * add support for tagsFile in cfnUpdate, cfnCreateChangeSet, cfnUpdateStackSet
