@@ -21,6 +21,18 @@
 
 package de.taimos.pipeline.aws.cloudformation;
 
+import java.text.SimpleDateFormat;
+import java.time.Duration;
+import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Date;
+import java.util.List;
+import java.util.concurrent.ExecutionException;
+
+import org.apache.commons.lang.StringUtils;
+import org.apache.http.concurrent.BasicFuture;
+
 import com.amazonaws.AmazonWebServiceRequest;
 import com.amazonaws.services.cloudformation.AmazonCloudFormation;
 import com.amazonaws.services.cloudformation.model.AmazonCloudFormationException;
@@ -34,22 +46,13 @@ import com.amazonaws.waiters.PollingStrategy;
 import com.amazonaws.waiters.Waiter;
 import com.amazonaws.waiters.WaiterHandler;
 import com.amazonaws.waiters.WaiterParameters;
+
 import de.taimos.pipeline.aws.cloudformation.utils.TimeOutRetryStrategy;
 import hudson.model.TaskListener;
 
-import org.apache.commons.lang.StringUtils;
-import org.apache.http.concurrent.BasicFuture;
-
-import java.text.SimpleDateFormat;
-import java.time.Duration;
-import java.time.temporal.ChronoUnit;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Date;
-import java.util.List;
-import java.util.concurrent.ExecutionException;
-
 class EventPrinter {
+
+	private static final int DEFAULT_TIMEOUT_IN_MINUTES = 60;
 
 	private final AmazonCloudFormation client;
 	private final TaskListener listener;
@@ -63,7 +66,7 @@ class EventPrinter {
 
 		final BasicFuture<AmazonWebServiceRequest> waitResult = new BasicFuture<>(null);
 
-		waiter.runAsync(new WaiterParameters<>(new DescribeChangeSetRequest().withStackName(stack).withChangeSetName(changeSet)).withPollingStrategy(pollingStrategy(pollIntervalMillis)), new WaiterHandler() {
+		waiter.runAsync(new WaiterParameters<>(new DescribeChangeSetRequest().withStackName(stack).withChangeSetName(changeSet)).withPollingStrategy(this.pollingStrategy(pollIntervalMillis, DEFAULT_TIMEOUT_IN_MINUTES)), new WaiterHandler() {
 			@Override
 			public void onWaitSuccess(AmazonWebServiceRequest request) {
 				waitResult.completed(request);
@@ -79,10 +82,14 @@ class EventPrinter {
 	}
 
 	void waitAndPrintStackEvents(String stack, Waiter<DescribeStacksRequest> waiter, long pollIntervalMillis) throws ExecutionException {
+		this.waitAndPrintStackEvents(stack, waiter, null, pollIntervalMillis);
+	}
+
+	void waitAndPrintStackEvents(String stack, Waiter<DescribeStacksRequest> waiter, Integer timeoutInMinutes, long pollIntervalMillis) throws ExecutionException {
 
 		final BasicFuture<AmazonWebServiceRequest> waitResult = new BasicFuture<>(null);
 
-		waiter.runAsync(new WaiterParameters<>(new DescribeStacksRequest().withStackName(stack)).withPollingStrategy(pollingStrategy(pollIntervalMillis)), new WaiterHandler() {
+		waiter.runAsync(new WaiterParameters<>(new DescribeStacksRequest().withStackName(stack)).withPollingStrategy(this.pollingStrategy(pollIntervalMillis, timeoutInMinutes)), new WaiterHandler() {
 			@Override
 			public void onWaitSuccess(AmazonWebServiceRequest request) {
 				waitResult.completed(request);
@@ -96,10 +103,11 @@ class EventPrinter {
 		this.waitAndPrintEvents(stack, pollIntervalMillis, waitResult);
 	}
 
-	private PollingStrategy pollingStrategy(long pollIntervalMillis) {
+	private PollingStrategy pollingStrategy(long pollIntervalMillis, Integer timeoutInMinutes) {
 		int pollIntervalSeconds = (int) (pollIntervalMillis / 1000);
-		this.listener.getLogger().format("Setting up a polling strategy to poll every %d seconds for a maximum of 10 minutes%n", pollIntervalSeconds);
-		return new PollingStrategy(new TimeOutRetryStrategy(Duration.of(10, ChronoUnit.MINUTES)), new FixedDelayStrategy(pollIntervalSeconds));
+		int timeout = timeoutInMinutes == null ? DEFAULT_TIMEOUT_IN_MINUTES : timeoutInMinutes;
+		this.listener.getLogger().format("Setting up a polling strategy to poll every %d seconds for a maximum of %d minutes%n", pollIntervalSeconds, timeout);
+		return new PollingStrategy(new TimeOutRetryStrategy(Duration.of(timeout, ChronoUnit.MINUTES)), new FixedDelayStrategy(pollIntervalSeconds));
 	}
 
 	private void waitAndPrintEvents(String stack, long pollIntervalMillis, BasicFuture<AmazonWebServiceRequest> waitResult) throws ExecutionException {

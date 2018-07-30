@@ -116,10 +116,10 @@ public class CloudFormationStack {
 		req.withTemplateBody(templateBody).withTemplateURL(templateUrl).withParameters(params).withTags(tags).withTimeoutInMinutes(timeoutInMinutes).withRoleARN(roleArn).withOnFailure(OnFailure.valueOf(onFailure));
 		this.client.createStack(req);
 
-		new EventPrinter(this.client, this.listener).waitAndPrintStackEvents(this.stack, this.client.waiters().stackCreateComplete(), pollIntervallMillis);
+		new EventPrinter(this.client, this.listener).waitAndPrintStackEvents(this.stack, this.client.waiters().stackCreateComplete(), timeoutInMinutes, pollIntervallMillis);
 	}
 
-	public void update(String templateBody, String templateUrl, Collection<Parameter> params, Collection<Tag> tags, long pollIntervallMillis, String roleArn, RollbackConfiguration rollbackConfig) throws ExecutionException {
+	public void update(String templateBody, String templateUrl, Collection<Parameter> params, Collection<Tag> tags, Integer timeoutInMinutes, long pollIntervallMillis, String roleArn, RollbackConfiguration rollbackConfig) throws ExecutionException {
 		try {
 			UpdateStackRequest req = new UpdateStackRequest();
 			req.withStackName(this.stack).withCapabilities(Capability.CAPABILITY_IAM, Capability.CAPABILITY_NAMED_IAM);
@@ -138,7 +138,7 @@ public class CloudFormationStack {
 
 			this.client.updateStack(req);
 
-			new EventPrinter(this.client, this.listener).waitAndPrintStackEvents(this.stack, this.client.waiters().stackUpdateComplete(), pollIntervallMillis);
+			new EventPrinter(this.client, this.listener).waitAndPrintStackEvents(this.stack, this.client.waiters().stackUpdateComplete(), timeoutInMinutes, pollIntervallMillis);
 
 			this.listener.getLogger().format("Updated CloudFormation stack %s %n", this.stack);
 

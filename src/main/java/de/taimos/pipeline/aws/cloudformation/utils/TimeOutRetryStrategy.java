@@ -1,10 +1,10 @@
 package de.taimos.pipeline.aws.cloudformation.utils;
 
-import com.amazonaws.waiters.PollingStrategy;
-import com.amazonaws.waiters.PollingStrategyContext;
-
 import java.time.Duration;
 import java.time.OffsetDateTime;
+
+import com.amazonaws.waiters.PollingStrategy;
+import com.amazonaws.waiters.PollingStrategyContext;
 
 public class TimeOutRetryStrategy implements PollingStrategy.RetryStrategy {
 
@@ -18,7 +18,7 @@ public class TimeOutRetryStrategy implements PollingStrategy.RetryStrategy {
 
 	@Override
 	public boolean shouldRetry(PollingStrategyContext pollingStrategyContext) {
-		Duration difference = Duration.between(start, OffsetDateTime.now());
-		return difference.compareTo(maxTime) < 0;
+		Duration difference = Duration.between(this.start, OffsetDateTime.now());
+		return difference.compareTo(this.maxTime) < 0;
 	}
 }

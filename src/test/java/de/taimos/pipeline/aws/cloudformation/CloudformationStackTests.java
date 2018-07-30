@@ -240,7 +240,7 @@ public class CloudformationStackTests {
 		CloudFormationStack stack = new CloudFormationStack(client, "foo", taskListener);
 
 		RollbackConfiguration rollbackConfig = new RollbackConfiguration().withMonitoringTimeInMinutes(10);
-		stack.update("templateBody", null, Collections.emptyList(), Collections.emptyList(), 25, "myarn", rollbackConfig);
+		stack.update("templateBody", null, Collections.emptyList(), Collections.emptyList(), null, 25, "myarn", rollbackConfig);
 
 		ArgumentCaptor<UpdateStackRequest> captor = ArgumentCaptor.forClass(UpdateStackRequest.class);
 		Mockito.verify(client).updateStack(captor.capture());
@@ -252,7 +252,7 @@ public class CloudformationStackTests {
 																   .withRoleARN("myarn")
 																   .withRollbackConfiguration(rollbackConfig)
 		);
-		Mockito.verify(this.eventPrinter).waitAndPrintStackEvents(Mockito.eq("foo"), Mockito.any(Waiter.class), Mockito.eq(25L));
+		Mockito.verify(this.eventPrinter).waitAndPrintStackEvents(Mockito.eq("foo"), Mockito.any(Waiter.class), Mockito.eq(null), Mockito.eq(25L));
 	}
 
 	@Test
@@ -265,7 +265,7 @@ public class CloudformationStackTests {
 		CloudFormationStack stack = new CloudFormationStack(client, "foo", taskListener);
 
 		RollbackConfiguration rollbackConfig = new RollbackConfiguration().withMonitoringTimeInMinutes(10);
-		stack.update(null, "bar", Collections.emptyList(), Collections.emptyList(), 21, "myarn", rollbackConfig);
+		stack.update(null, "bar", Collections.emptyList(), Collections.emptyList(), null, 21, "myarn", rollbackConfig);
 
 		ArgumentCaptor<UpdateStackRequest> captor = ArgumentCaptor.forClass(UpdateStackRequest.class);
 		Mockito.verify(client).updateStack(captor.capture());
@@ -277,7 +277,7 @@ public class CloudformationStackTests {
 																   .withRoleARN("myarn")
 																   .withRollbackConfiguration(rollbackConfig)
 		);
-		Mockito.verify(this.eventPrinter).waitAndPrintStackEvents(Mockito.eq("foo"), Mockito.any(Waiter.class), Mockito.eq(21L));
+		Mockito.verify(this.eventPrinter).waitAndPrintStackEvents(Mockito.eq("foo"), Mockito.any(Waiter.class), Mockito.eq(null), Mockito.eq(21L));
 	}
 
 	@Test
@@ -290,7 +290,7 @@ public class CloudformationStackTests {
 		CloudFormationStack stack = new CloudFormationStack(client, "foo", taskListener);
 
 		RollbackConfiguration rollbackConfig = new RollbackConfiguration().withMonitoringTimeInMinutes(10);
-		stack.update(null, null, Collections.emptyList(), Collections.emptyList(), 12, "myarn", rollbackConfig);
+		stack.update(null, null, Collections.emptyList(), Collections.emptyList(), null, 12, "myarn", rollbackConfig);
 
 		ArgumentCaptor<UpdateStackRequest> captor = ArgumentCaptor.forClass(UpdateStackRequest.class);
 		Mockito.verify(client).updateStack(captor.capture());
@@ -302,7 +302,7 @@ public class CloudformationStackTests {
 																   .withRoleARN("myarn")
 																   .withRollbackConfiguration(rollbackConfig)
 		);
-		Mockito.verify(this.eventPrinter).waitAndPrintStackEvents(Mockito.eq("foo"), Mockito.any(Waiter.class), Mockito.eq(12L));
+		Mockito.verify(this.eventPrinter).waitAndPrintStackEvents(Mockito.eq("foo"), Mockito.any(Waiter.class), Mockito.eq(null), Mockito.eq(12L));
 	}
 
 	@Test
@@ -327,7 +327,7 @@ public class CloudformationStackTests {
 																   .withOnFailure(OnFailure.DO_NOTHING)
 																   .withRoleARN("myarn")
 		);
-		Mockito.verify(this.eventPrinter).waitAndPrintStackEvents(Mockito.eq("foo"), Mockito.any(Waiter.class), Mockito.eq(25L));
+		Mockito.verify(this.eventPrinter).waitAndPrintStackEvents(Mockito.eq("foo"), Mockito.any(Waiter.class), Mockito.eq(7), Mockito.eq(25L));
 	}
 
 	@Test
@@ -353,7 +353,7 @@ public class CloudformationStackTests {
 																   .withOnFailure(OnFailure.DO_NOTHING)
 																   .withRoleARN("myarn")
 		);
-		Mockito.verify(this.eventPrinter).waitAndPrintStackEvents(Mockito.eq("foo"), Mockito.any(Waiter.class), Mockito.eq(21L));
+		Mockito.verify(this.eventPrinter).waitAndPrintStackEvents(Mockito.eq("foo"), Mockito.any(Waiter.class), Mockito.eq(3), Mockito.eq(21L));
 	}
 
 	@Test(expected = IllegalArgumentException.class)

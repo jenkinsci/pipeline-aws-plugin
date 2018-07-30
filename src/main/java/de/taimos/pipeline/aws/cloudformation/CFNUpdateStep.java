@@ -110,7 +110,7 @@ public class CFNUpdateStep extends AbstractCFNCreateStep {
 		public Map<String, String> whenStackExists(Collection<Parameter> parameters, Collection<Tag> tags, RollbackConfiguration rollbackConfiguration) throws Exception {
 			final String url = this.getStep().getUrl();
 			CloudFormationStack cfnStack = this.getCfnStack();
-			cfnStack.update(this.getStep().readTemplate(this), url, parameters, tags, this.getStep().getPollInterval(), this.getStep().getRoleArn(), rollbackConfiguration);
+			cfnStack.update(this.getStep().readTemplate(this), url, parameters, tags, this.getStep().getTimeoutInMinutes(), this.getStep().getPollInterval(), this.getStep().getRoleArn(), rollbackConfiguration);
 			return cfnStack.describeOutputs();
 		}
 

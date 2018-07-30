@@ -75,7 +75,7 @@ public class CFNUpdateStackTests {
 		);
 		this.jenkinsRule.assertBuildStatusSuccess(job.scheduleBuild2(0));
 
-		Mockito.verify(this.stack).update(Mockito.anyString(), Mockito.anyString(), Mockito.<Parameter>anyCollection(), Mockito.<Tag>anyCollection(), Mockito.anyLong(), Mockito.anyString(), Mockito.any());
+		Mockito.verify(this.stack).update(Mockito.anyString(), Mockito.anyString(), Mockito.<Parameter>anyCollection(), Mockito.<Tag>anyCollection(), Mockito.anyInt(), Mockito.anyLong(), Mockito.anyString(), Mockito.any());
 	}
 
 	@Test
