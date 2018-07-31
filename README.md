@@ -614,6 +614,9 @@ ec2ShareAmi(
 
 ## current master
 
+## 1.29
+* fix issues with stack timeouts
+
 ## 1.28
 * use SynchronousNonBlockingStepExecution for long running AWS steps to allow the pipeline step to be aborted
 * use custom polling strategy for cloudformation waiters to speed up pipeline feedback from cloudformation changes
