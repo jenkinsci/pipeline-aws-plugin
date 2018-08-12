@@ -133,6 +133,7 @@ Invalidate given paths in CloudFront distribution.
 
 ```
 cfInvalidate(distribution:'someDistributionId', paths:['/*'])
+cfInvalidate(distribution:'someDistributionId', paths:['/*'], waitForCompletion: true)
 ```
 
 ## S3 Steps
