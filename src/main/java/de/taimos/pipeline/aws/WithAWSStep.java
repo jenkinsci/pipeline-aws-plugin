@@ -76,6 +76,7 @@ public class WithAWSStep extends Step {
 	private String policy = "";
 	private String iamMfaToken = "";
 	private Integer duration = 3600;
+	private String roleSessionName;
 
 	@DataBoundConstructor
 	public WithAWSStep() {
@@ -179,6 +180,15 @@ public class WithAWSStep extends Step {
 	@DataBoundSetter
 	public void setDuration(Integer duration) {
 		this.duration = duration;
+	}
+
+	public String getRoleSessionName() {
+		return this.roleSessionName;
+	}
+
+	@DataBoundSetter
+	public void setRoleSessionName(String roleSessionName) {
+		this.roleSessionName = roleSessionName;
 	}
 
 	@Override
@@ -393,10 +403,14 @@ public class WithAWSStep extends Step {
 		}
 
 		private String createRoleSessionName() {
-			return RoleSessionNameBuilder
-					.withJobName(this.envVars.get("JOB_NAME"))
-					.withBuildNumber(this.envVars.get("BUILD_NUMBER"))
-					.build();
+			if (StringUtils.isNullOrEmpty(this.step.roleSessionName)) {
+				return RoleSessionNameBuilder
+						.withJobName(this.envVars.get("JOB_NAME"))
+						.withBuildNumber(this.envVars.get("BUILD_NUMBER"))
+						.build();
+			} else {
+				return this.step.roleSessionName;
+			}
 		}
 
 		private static final long serialVersionUID = 1L;
