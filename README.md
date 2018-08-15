@@ -177,6 +177,11 @@ Specific cachecontrol can be added to uploaded files
 s3Upload(bucket:"my-bucket", path:'path/to/targetFolder/', includePathPattern:'**/*.svg', workingDir:'dist', cacheControl:'public,max-age=31536000')
 ```
 
+Specific content encoding can be added to uploaded files
+```
+s3Upload(file:'file.txt', bucket:'my-bucket', contentEncoding: 'gzip')
+```
+
 Specific content type can be added to uploaded files
 
 ```
@@ -615,6 +620,7 @@ ec2ShareAmi(
 
 ## current master
 * allow the customization of setting a roleSessionName
+* content encoding can be specified in `s3Upload` step
 
 ## 1.29
 * fix issues with stack timeouts
