@@ -621,6 +621,7 @@ ec2ShareAmi(
 ## current master
 * allow the customization of setting a roleSessionName
 * content encoding can be specified in `s3Upload` step
+* allow configuration of cloudformation stack timeout
 
 ## 1.29
 * fix issues with stack timeouts
