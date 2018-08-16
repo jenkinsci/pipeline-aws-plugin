@@ -71,6 +71,7 @@ public class S3UploadStep extends AbstractS3Step {
 	private String[] metadatas;
 	private CannedAccessControlList acl;
 	private String cacheControl;
+	private String contentEncoding;
 	private String contentType;
 	private String sseAlgorithm;
 
@@ -173,6 +174,15 @@ public class S3UploadStep extends AbstractS3Step {
 		this.cacheControl = cacheControl;
 	}
 
+	public String getContentEncoding() {
+		return this.contentEncoding;
+	}
+
+	@DataBoundSetter
+	public String setContentEncoding(final String contentEncoding) {
+		return this.contentEncoding = contentEncoding;
+	}
+
 	public String getContentType() {
 		return this.contentType;
 	}
@@ -238,6 +248,7 @@ public class S3UploadStep extends AbstractS3Step {
 			final Map<String, String> metadatas = new HashMap<>();
 			final CannedAccessControlList acl = this.step.getAcl();
 			final String cacheControl = this.step.getCacheControl();
+			final String contentEncoding = this.step.getContentEncoding();
 			final String contentType = this.step.getContentType();
 			final String sseAlgorithm = this.step.getSseAlgorithm();
 
@@ -282,7 +293,7 @@ public class S3UploadStep extends AbstractS3Step {
 					throw new FileNotFoundException(child.toURI().toString());
 				}
 
-				child.act(new RemoteUploader(Execution.this.step.createS3ClientOptions(), Execution.this.getContext().get(EnvVars.class), listener, bucket, path, metadatas, acl, cacheControl, contentType, kmsId, sseAlgorithm));
+				child.act(new RemoteUploader(Execution.this.step.createS3ClientOptions(), Execution.this.getContext().get(EnvVars.class), listener, bucket, path, metadatas, acl, cacheControl, contentEncoding, contentType, kmsId, sseAlgorithm));
 
 				listener.getLogger().println("Upload complete");
 				return String.format("s3://%s/%s", bucket, path);
@@ -292,7 +303,7 @@ public class S3UploadStep extends AbstractS3Step {
 				for (FilePath child : children) {
 					child.act(new FeedList(fileList));
 				}
-				dir.act(new RemoteListUploader(Execution.this.step.createS3ClientOptions(), Execution.this.getContext().get(EnvVars.class), listener, fileList, bucket, path, metadatas, acl, cacheControl, contentType, kmsId, sseAlgorithm));
+				dir.act(new RemoteListUploader(Execution.this.step.createS3ClientOptions(), Execution.this.getContext().get(EnvVars.class), listener, fileList, bucket, path, metadatas, acl, cacheControl, contentEncoding, contentType, kmsId, sseAlgorithm));
 				listener.getLogger().println("Upload complete");
 				return String.format("s3://%s/%s", bucket, path);
 			}
@@ -311,11 +322,12 @@ public class S3UploadStep extends AbstractS3Step {
 		private final Map<String, String> metadatas;
 		private final CannedAccessControlList acl;
 		private final String cacheControl;
+		private final String contentEncoding;
 		private final String contentType;
 		private final String kmsId;
 		private final String sseAlgorithm;
 
-		RemoteUploader(S3ClientOptions amazonS3ClientOptions, EnvVars envVars, TaskListener taskListener, String bucket, String path, Map<String, String> metadatas, CannedAccessControlList acl, String cacheControl, String contentType, String kmsId, String sseAlgorithm) {
+		RemoteUploader(S3ClientOptions amazonS3ClientOptions, EnvVars envVars, TaskListener taskListener, String bucket, String path, Map<String, String> metadatas, CannedAccessControlList acl, String cacheControl, String contentEncoding, String contentType, String kmsId, String sseAlgorithm) {
 			this.amazonS3ClientOptions = amazonS3ClientOptions;
 			this.envVars = envVars;
 			this.taskListener = taskListener;
@@ -324,6 +336,7 @@ public class S3UploadStep extends AbstractS3Step {
 			this.metadatas = metadatas;
 			this.acl = acl;
 			this.cacheControl = cacheControl;
+			this.contentEncoding = contentEncoding;
 			this.contentType = contentType;
 			this.kmsId = kmsId;
 			this.sseAlgorithm = sseAlgorithm;
@@ -342,13 +355,16 @@ public class S3UploadStep extends AbstractS3Step {
 				PutObjectRequest request = new PutObjectRequest(this.bucket, path, localFile);
 
 				// Add metadata
-				if ((this.metadatas != null && this.metadatas.size() > 0) || (this.cacheControl != null && !this.cacheControl.isEmpty()) || (this.contentType != null && !this.contentType.isEmpty()) || (this.sseAlgorithm != null && !this.sseAlgorithm.isEmpty())) {
+				if ((this.metadatas != null && this.metadatas.size() > 0) || (this.cacheControl != null && !this.cacheControl.isEmpty()) || (this.contentEncoding != null && !this.contentEncoding.isEmpty()) || (this.contentType != null && !this.contentType.isEmpty()) || (this.sseAlgorithm != null && !this.sseAlgorithm.isEmpty())) {
 					ObjectMetadata metas = new ObjectMetadata();
 					if (this.metadatas != null && this.metadatas.size() > 0) {
 						metas.setUserMetadata(this.metadatas);
 					}
 					if (this.cacheControl != null && !this.cacheControl.isEmpty()) {
 						metas.setCacheControl(this.cacheControl);
+					}
+					if (this.contentEncoding != null && !this.contentEncoding.isEmpty()) {
+						metas.setContentEncoding(this.contentEncoding);
 					}
 					if (this.contentType != null && !this.contentType.isEmpty()) {
 						metas.setContentType(this.contentType);
@@ -392,6 +408,9 @@ public class S3UploadStep extends AbstractS3Step {
 						if (RemoteUploader.this.cacheControl != null && !RemoteUploader.this.cacheControl.isEmpty()) {
 							meta.setCacheControl(RemoteUploader.this.cacheControl);
 						}
+						if (RemoteUploader.this.contentEncoding != null && !RemoteUploader.this.contentEncoding.isEmpty()) {
+							meta.setContentEncoding(RemoteUploader.this.contentEncoding);
+						}
 						if (RemoteUploader.this.contentType != null && !RemoteUploader.this.contentType.isEmpty()) {
 							meta.setContentType(RemoteUploader.this.contentType);
 						}
@@ -433,11 +452,12 @@ public class S3UploadStep extends AbstractS3Step {
 		private final Map<String, String> metadatas;
 		private final CannedAccessControlList acl;
 		private final String cacheControl;
+		private final String contentEncoding;
 		private final String contentType;
 		private final String kmsId;
 		private final String sseAlgorithm;
 
-		RemoteListUploader(S3ClientOptions amazonS3ClientOptions, EnvVars envVars, TaskListener taskListener, List<File> fileList, String bucket, String path, Map<String, String> metadatas, CannedAccessControlList acl, final String cacheControl, final String contentType, String kmsId, String sseAlgorithm) {
+		RemoteListUploader(S3ClientOptions amazonS3ClientOptions, EnvVars envVars, TaskListener taskListener, List<File> fileList, String bucket, String path, Map<String, String> metadatas, CannedAccessControlList acl, final String cacheControl, final String contentEncoding, final String contentType, String kmsId, String sseAlgorithm) {
 			this.amazonS3ClientOptions = amazonS3ClientOptions;
 			this.envVars = envVars;
 			this.taskListener = taskListener;
@@ -447,6 +467,7 @@ public class S3UploadStep extends AbstractS3Step {
 			this.metadatas = metadatas;
 			this.acl = acl;
 			this.cacheControl = cacheControl;
+			this.contentEncoding = contentEncoding;
 			this.contentType = contentType;
 			this.kmsId = kmsId;
 			this.sseAlgorithm = sseAlgorithm;
@@ -468,6 +489,9 @@ public class S3UploadStep extends AbstractS3Step {
 					}
 					if (RemoteListUploader.this.cacheControl != null && !RemoteListUploader.this.cacheControl.isEmpty()) {
 						meta.setCacheControl(RemoteListUploader.this.cacheControl);
+					}
+					if (RemoteListUploader.this.contentEncoding != null && !RemoteListUploader.this.contentEncoding.isEmpty()) {
+						meta.setContentEncoding(RemoteListUploader.this.contentEncoding);
 					}
 					if (RemoteListUploader.this.contentType != null && !RemoteListUploader.this.contentType.isEmpty()) {
 						meta.setContentType(RemoteListUploader.this.contentType);
