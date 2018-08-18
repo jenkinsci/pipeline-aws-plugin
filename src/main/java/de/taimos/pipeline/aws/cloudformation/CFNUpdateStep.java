@@ -45,21 +45,11 @@ import hudson.model.TaskListener;
 
 public class CFNUpdateStep extends AbstractCFNCreateStep {
 
-	private Integer timeoutInMinutes;
 	private Boolean enableTerminationProtection;
 
 	@DataBoundConstructor
 	public CFNUpdateStep(String stack) {
 		super(stack);
-	}
-
-	public Integer getTimeoutInMinutes() {
-		return this.timeoutInMinutes;
-	}
-
-	@DataBoundSetter
-	public void setTimeoutInMinutes(Integer timeoutInMinutes) {
-		this.timeoutInMinutes = timeoutInMinutes;
 	}
 
 	public Boolean getEnableTerminationProtection() {
@@ -110,7 +100,7 @@ public class CFNUpdateStep extends AbstractCFNCreateStep {
 		public Map<String, String> whenStackExists(Collection<Parameter> parameters, Collection<Tag> tags, RollbackConfiguration rollbackConfiguration) throws Exception {
 			final String url = this.getStep().getUrl();
 			CloudFormationStack cfnStack = this.getCfnStack();
-			cfnStack.update(this.getStep().readTemplate(this), url, parameters, tags, this.getStep().getTimeoutInMinutes(), this.getStep().getPollInterval(), this.getStep().getRoleArn(), rollbackConfiguration);
+			cfnStack.update(this.getStep().readTemplate(this), url, parameters, tags, this.getStep().getPollConfiguration(), this.getStep().getRoleArn(), rollbackConfiguration);
 			return cfnStack.describeOutputs();
 		}
 
@@ -118,7 +108,7 @@ public class CFNUpdateStep extends AbstractCFNCreateStep {
 		public Map<String, String> whenStackMissing(Collection<Parameter> parameters, Collection<Tag> tags) throws Exception {
 			final String url = this.getStep().getUrl();
 			CloudFormationStack cfnStack = this.getCfnStack();
-			cfnStack.create(this.getStep().readTemplate(this), url, parameters, tags, this.getStep().getTimeoutInMinutes(), this.getStep().getPollInterval(), this.getStep().getRoleArn(), this.getStep().getOnFailure(), this.getStep().getEnableTerminationProtection());
+			cfnStack.create(this.getStep().readTemplate(this), url, parameters, tags, this.getStep().getPollConfiguration(), this.getStep().getRoleArn(), this.getStep().getOnFailure(), this.getStep().getEnableTerminationProtection());
 			return cfnStack.describeOutputs();
 		}
 

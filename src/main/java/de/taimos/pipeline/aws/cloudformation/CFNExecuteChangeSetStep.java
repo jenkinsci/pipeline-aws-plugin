@@ -36,6 +36,7 @@ import org.jenkinsci.plugins.workflow.steps.SynchronousNonBlockingStepExecution;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
 
+import java.time.Duration;
 import java.util.Map;
 import java.util.Set;
 
@@ -43,7 +44,7 @@ public class CFNExecuteChangeSetStep extends Step {
 
 	private final String changeSet;
 	private final String stack;
-	private Long pollInterval = 1000L;
+	private PollConfiguration pollConfiguration = PollConfiguration.DEFAULT;
 
 	@DataBoundConstructor
 	public CFNExecuteChangeSetStep(String changeSet, String stack) {
@@ -59,13 +60,15 @@ public class CFNExecuteChangeSetStep extends Step {
 		return this.stack;
 	}
 
-	public Long getPollInterval() {
-		return this.pollInterval;
+	public PollConfiguration getPollConfiguration() {
+		return this.pollConfiguration;
 	}
 
 	@DataBoundSetter
 	public void setPollInterval(Long pollInterval) {
-		this.pollInterval = pollInterval;
+		this.pollConfiguration = this.pollConfiguration.toBuilder()
+				.pollInterval(Duration.ofMillis(pollInterval))
+				.build();
 	}
 
 	@Override
@@ -115,7 +118,7 @@ public class CFNExecuteChangeSetStep extends Step {
 
 			AmazonCloudFormation client = AWSClientFactory.create(AmazonCloudFormationClientBuilder.standard(), Execution.this.getContext());
 			CloudFormationStack cfnStack = new CloudFormationStack(client, stack, listener);
-			cfnStack.executeChangeSet(changeSet, Execution.this.step.getPollInterval());
+			cfnStack.executeChangeSet(changeSet, Execution.this.step.getPollConfiguration());
 			listener.getLogger().println("Execute change set complete");
 			return cfnStack.describeOutputs();
 		}

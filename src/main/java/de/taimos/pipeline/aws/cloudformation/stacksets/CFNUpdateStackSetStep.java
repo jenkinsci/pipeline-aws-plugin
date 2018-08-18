@@ -93,7 +93,7 @@ public class CFNUpdateStackSetStep extends AbstractCFNCreateStackSetStep {
 			CloudFormationStackSet cfnStackSet = this.getCfnStackSet();
 			UpdateStackSetResult operation = cfnStackSet.update(this.getStep().readTemplate(this), url, parameters, tags,
 					this.getStep().getAdministratorRoleArn(), this.getStep().getExecutionRoleName());
-			cfnStackSet.waitForOperationToComplete(operation.getOperationId(), getStep().getPollInterval());
+			cfnStackSet.waitForOperationToComplete(operation.getOperationId(), getStep().getPollConfiguration().getPollInterval());
 			return cfnStackSet.describe();
 		}
 
@@ -104,7 +104,7 @@ public class CFNUpdateStackSetStep extends AbstractCFNCreateStackSetStep {
 			CloudFormationStackSet cfnStack = this.getCfnStackSet();
 			cfnStack.create(this.getStep().readTemplate(this), url, parameters, tags,
 					this.getStep().getAdministratorRoleArn(), this.getStep().getExecutionRoleName());
-			return cfnStack.waitForStackState(StackSetStatus.ACTIVE, getStep().getPollInterval());
+			return cfnStack.waitForStackState(StackSetStatus.ACTIVE, getStep().getPollConfiguration().getPollInterval());
 		}
 
 		private static final long serialVersionUID = 1L;

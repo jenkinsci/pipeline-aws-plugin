@@ -25,6 +25,7 @@ import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
 
 import java.io.PrintWriter;
+import java.time.Duration;
 import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
@@ -133,7 +134,7 @@ public class CFNUpdateStackSetStepTest {
 						.withParameterValue("25")
 		);
 
-		Mockito.verify(stackSet).waitForOperationToComplete(operationId, 27);
+		Mockito.verify(stackSet).waitForOperationToComplete(operationId, Duration.ofMillis(27));
 	}
 
 	@Test

@@ -9,6 +9,7 @@ import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 
+import java.time.Duration;
 import java.util.Collections;
 import java.util.UUID;
 
@@ -302,7 +303,7 @@ public class CloudFormationStackSetTest {
 						.withStatus(StackSetStatus.DELETED)
 				)
 		);
-		stackSet.waitForStackState(StackSetStatus.DELETED, 5);
+		stackSet.waitForStackState(StackSetStatus.DELETED, Duration.ofMillis(5));
 
 		Mockito.verify(client, Mockito.atLeast(2))
 				.describeStackSet(Mockito.any(DescribeStackSetRequest.class));
@@ -323,7 +324,7 @@ public class CloudFormationStackSetTest {
 						.withStatus(StackSetOperationStatus.SUCCEEDED)
 				)
 		);
-		stackSet.waitForOperationToComplete(operationId, 5);
+		stackSet.waitForOperationToComplete(operationId, Duration.ofMillis(5));
 	}
 
 	@Test(expected = StackSetOperationFailedException.class)
@@ -341,7 +342,7 @@ public class CloudFormationStackSetTest {
 						.withStatus(StackSetOperationStatus.FAILED)
 				)
 		);
-		stackSet.waitForOperationToComplete(operationId, 5);
+		stackSet.waitForOperationToComplete(operationId, Duration.ofMillis(5));
 	}
 
 	@Test

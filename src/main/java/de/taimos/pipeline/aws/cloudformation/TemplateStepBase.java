@@ -2,6 +2,7 @@ package de.taimos.pipeline.aws.cloudformation;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collection;
 
@@ -25,7 +26,7 @@ public abstract class TemplateStepBase extends Step implements ParameterProvider
 	private String[] tags;
 	private String tagsFile;
 	private String paramsFile;
-	private Long pollInterval = 1000L;
+	private PollConfiguration pollConfiguration = PollConfiguration.DEFAULT;
 	private Boolean create = true;
 	private Integer rollbackTimeoutInMinutes;
 	private String[] rollbackTriggers;
@@ -102,13 +103,29 @@ public abstract class TemplateStepBase extends Step implements ParameterProvider
 		this.paramsFile = paramsFile;
 	}
 
-	public Long getPollInterval() {
-		return this.pollInterval;
+	public PollConfiguration getPollConfiguration() {
+		return this.pollConfiguration;
 	}
 
 	@DataBoundSetter
 	public void setPollInterval(Long pollInterval) {
-		this.pollInterval = pollInterval;
+		this.pollConfiguration = this.pollConfiguration.toBuilder()
+				.pollInterval(Duration.ofMillis(pollInterval))
+				.build();
+	}
+
+	@DataBoundSetter
+	public void setTimeoutInSeconds(long timeout) {
+		this.pollConfiguration = this.pollConfiguration.toBuilder()
+				.timeout(Duration.ofSeconds(timeout))
+				.build();
+	}
+
+	@DataBoundSetter
+	public void setTimeoutInMinutes(long timeout) {
+		this.pollConfiguration = this.pollConfiguration.toBuilder()
+				.timeout(Duration.ofMinutes(timeout))
+				.build();
 	}
 
 	public Boolean getCreate() {

@@ -60,7 +60,7 @@ public class CFNUpdateStackTests {
 		);
 		this.jenkinsRule.assertBuildStatusSuccess(job.scheduleBuild2(0));
 
-		Mockito.verify(this.stack).create(Mockito.anyString(), Mockito.anyString(), Mockito.<Parameter>anyCollection(), Mockito.<Tag>anyCollection(), Mockito.anyInt(), Mockito.anyLong(), Mockito.anyString(), Mockito.anyString(), Mockito.anyBoolean());
+		Mockito.verify(this.stack).create(Mockito.anyString(), Mockito.anyString(), Mockito.<Parameter>anyCollection(), Mockito.<Tag>anyCollection(), Mockito.any(), Mockito.anyString(), Mockito.anyString(), Mockito.anyBoolean());
 	}
 
 	@Test
@@ -75,7 +75,7 @@ public class CFNUpdateStackTests {
 		);
 		this.jenkinsRule.assertBuildStatusSuccess(job.scheduleBuild2(0));
 
-		Mockito.verify(this.stack).update(Mockito.anyString(), Mockito.anyString(), Mockito.<Parameter>anyCollection(), Mockito.<Tag>anyCollection(), Mockito.anyInt(), Mockito.anyLong(), Mockito.anyString(), Mockito.any());
+		Mockito.verify(this.stack).update(Mockito.anyString(), Mockito.anyString(), Mockito.anyCollectionOf(Parameter.class), Mockito.anyCollectionOf(Tag.class), Mockito.any(), Mockito.anyString(), Mockito.any());
 	}
 
 	@Test
@@ -90,6 +90,6 @@ public class CFNUpdateStackTests {
 		);
 		this.jenkinsRule.assertBuildStatusSuccess(job.scheduleBuild2(0));
 
-		Mockito.verify(this.stack, Mockito.never()).create(Mockito.anyString(), Mockito.anyString(), Mockito.<Parameter>anyCollection(), Mockito.<Tag>anyCollection(), Mockito.anyInt(), Mockito.anyLong(), Mockito.anyString(), Mockito.anyString(), Mockito.anyBoolean());
+		Mockito.verify(this.stack, Mockito.never()).create(Mockito.anyString(), Mockito.anyString(), Mockito.anyCollectionOf(Parameter.class), Mockito.anyCollectionOf(Tag.class), Mockito.any(), Mockito.anyString(), Mockito.anyString(), Mockito.anyBoolean());
 	}
 }

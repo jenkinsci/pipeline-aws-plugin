@@ -50,13 +50,13 @@ public class CFNDeleteStackTests {
 		WorkflowJob job = this.jenkinsRule.jenkins.createProject(WorkflowJob.class, "cfnTest");
 		job.setDefinition(new CpsFlowDefinition(""
 														+ "node {\n"
-														+ "  cfnDelete(stack: 'foo')"
+														+ "  cfnDelete(stack: 'foo', pollInterval: 25, timeoutInMinutes: 17)"
 														+ "}\n", true)
 		);
 		this.jenkinsRule.assertBuildStatusSuccess(job.scheduleBuild2(0));
 
 		PowerMockito.verifyNew(CloudFormationStack.class).withArguments(Mockito.any(AmazonCloudFormation.class), Mockito.eq("foo"), Mockito.any(TaskListener.class));
-		Mockito.verify(this.stack).delete(Mockito.anyLong());
+		Mockito.verify(this.stack).delete(Mockito.any(PollConfiguration.class));
 	}
 
 }

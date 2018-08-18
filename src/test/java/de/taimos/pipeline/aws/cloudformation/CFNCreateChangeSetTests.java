@@ -75,7 +75,7 @@ public class CFNCreateChangeSetTests {
 		Mockito.verify(this.stack).createChangeSet(Mockito.eq("bar"), Mockito.anyString(), Mockito.anyString(), Mockito.eq(Arrays.asList(
 				new Parameter().withParameterKey("foo").withParameterValue("bar"),
 				new Parameter().withParameterKey("baz").withParameterValue("true")
-		)), Mockito.anyCollectionOf(Tag.class), Mockito.anyInt(), Mockito.eq(ChangeSetType.UPDATE), Mockito.anyString(), Mockito.any());
+		)), Mockito.anyCollectionOf(Tag.class), Mockito.any(PollConfiguration.class), Mockito.eq(ChangeSetType.UPDATE), Mockito.anyString(), Mockito.any());
 	}
 
 	@Test
@@ -97,7 +97,7 @@ public class CFNCreateChangeSetTests {
 
 		PowerMockito.verifyNew(CloudFormationStack.class, Mockito.atLeastOnce()).withArguments(Mockito.any(AmazonCloudFormation.class), Mockito.eq("foo"), Mockito.any(TaskListener.class));
 		Mockito.verify(this.stack).createChangeSet(Mockito.eq("bar"), Mockito.anyString(), Mockito.anyString(), Mockito.anyCollectionOf(Parameter.class), Mockito.anyCollectionOf(Tag.class),
-												   Mockito.anyInt(), Mockito.eq(ChangeSetType.UPDATE), Mockito.anyString(), Mockito.any());
+												   Mockito.any(PollConfiguration.class), Mockito.eq(ChangeSetType.UPDATE), Mockito.anyString(), Mockito.any());
 	}
 
 	@Test
@@ -119,7 +119,7 @@ public class CFNCreateChangeSetTests {
 
 		PowerMockito.verifyNew(CloudFormationStack.class, Mockito.atLeastOnce()).withArguments(Mockito.any(AmazonCloudFormation.class), Mockito.eq("foo"), Mockito.any(TaskListener.class));
 		Mockito.verify(this.stack).createChangeSet(Mockito.eq("bar"), Mockito.eq("foobaz"), Mockito.anyString(), Mockito.anyCollectionOf(Parameter.class), Mockito.anyCollectionOf(Tag.class),
-												   Mockito.anyInt(), Mockito.eq(ChangeSetType.UPDATE), Mockito.anyString(), Mockito.any());
+												   Mockito.any(PollConfiguration.class), Mockito.eq(ChangeSetType.UPDATE), Mockito.anyString(), Mockito.any());
 	}
 
 	@Test
@@ -141,7 +141,7 @@ public class CFNCreateChangeSetTests {
 
 		PowerMockito.verifyNew(CloudFormationStack.class, Mockito.atLeastOnce()).withArguments(Mockito.any(AmazonCloudFormation.class), Mockito.eq("foo"), Mockito.any(TaskListener.class));
 		Mockito.verify(this.stack).createChangeSet(Mockito.eq("bar"), Mockito.eq("foobaz"), Mockito.anyString(), Mockito.anyCollectionOf(Parameter.class), Mockito.anyCollectionOf(Tag.class),
-												   Mockito.anyInt(), Mockito.eq(ChangeSetType.CREATE), Mockito.anyString(), Mockito.any());
+												   Mockito.any(PollConfiguration.class), Mockito.eq(ChangeSetType.CREATE), Mockito.anyString(), Mockito.any());
 	}
 
 	@Test
@@ -199,7 +199,7 @@ public class CFNCreateChangeSetTests {
 
 		PowerMockito.verifyNew(CloudFormationStack.class, Mockito.atLeastOnce()).withArguments(Mockito.any(AmazonCloudFormation.class), Mockito.eq("foo"), Mockito.any(TaskListener.class));
 		Mockito.verify(this.stack).createChangeSet(Mockito.eq("bar"), Mockito.anyString(), Mockito.anyString(), Mockito.anyCollectionOf(Parameter.class), Mockito.anyCollectionOf(Tag.class),
-												   Mockito.anyInt(), Mockito.eq(ChangeSetType.CREATE), Mockito.anyString(), Mockito.any());
+												   Mockito.any(PollConfiguration.class), Mockito.eq(ChangeSetType.CREATE), Mockito.anyString(), Mockito.any());
 	}
 
 }

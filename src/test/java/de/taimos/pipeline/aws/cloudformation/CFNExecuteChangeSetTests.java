@@ -55,7 +55,7 @@ public class CFNExecuteChangeSetTests {
 		this.jenkinsRule.assertBuildStatusSuccess(job.scheduleBuild2(0));
 
 		PowerMockito.verifyNew(CloudFormationStack.class, Mockito.atLeastOnce()).withArguments(Mockito.any(AmazonCloudFormation.class), Mockito.eq("foo"), Mockito.any(TaskListener.class));
-		Mockito.verify(this.stack).executeChangeSet(Mockito.eq("bar"), Mockito.anyLong());
+		Mockito.verify(this.stack).executeChangeSet(Mockito.eq("bar"), Mockito.any(PollConfiguration.class));
 	}
 
 }
