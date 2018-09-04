@@ -9,7 +9,7 @@
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ *			http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -110,7 +110,7 @@ public class CloudFormationStackSet {
 
 	DescribeStackSetOperationResult waitForOperationToComplete(String operationId, Duration pollInterval) throws InterruptedException {
 		this.listener.getLogger().println("Waiting on operationId=" + operationId);
-		DescribeStackSetOperationResult result = describeStackOperation(operationId);
+		DescribeStackSetOperationResult result = describeStackOperation(operationId, 0);
 		this.listener.getLogger().println("operationId=" + operationId + " status=" + result.getStackSetOperation().getStatus());
 		switch (StackSetOperationStatus.fromValue(result.getStackSetOperation().getStatus())) {
 			case RUNNING:
@@ -177,10 +177,25 @@ public class CloudFormationStackSet {
 		return this.client.describeStackSet(new DescribeStackSetRequest().withStackSetName(this.stackSet));
 	}
 
-	private DescribeStackSetOperationResult describeStackOperation(String operationId) {
-		return this.client.describeStackSetOperation(new DescribeStackSetOperationRequest()
-				.withStackSetName(this.stackSet)
-				.withOperationId(operationId)
-		);
+	private DescribeStackSetOperationResult describeStackOperation(String operationId, int attempt) {
+			try {
+			return this.client.describeStackSetOperation(new DescribeStackSetOperationRequest()
+					.withStackSetName(this.stackSet)
+					.withOperationId(operationId)
+			);
+		} catch (AmazonCloudFormationException acfe) {
+				if ("Throttling".equals(acfe.getErrorCode())) {
+					this.listener.getLogger().format("Cloudformation throttling exception. RequestId=%s OperationId=%s apiMethod=describeStackOperation", acfe.getRequestId(), operationId);
+				try {
+					Thread.sleep(this.sleepStrategy.calculateSleepDuration(attempt));
+				} catch (InterruptedException e) {
+						Thread.currentThread().interrupt();
+						throw new IllegalStateException("describeStackOperation(" + operationId + ") was cancelled");
+				}
+				return describeStackOperation(operationId, attempt + 1);
+			} else {
+					throw acfe;
+			}
+		}
 	}
 }
