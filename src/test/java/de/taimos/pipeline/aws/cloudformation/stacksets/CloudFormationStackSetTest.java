@@ -327,6 +327,27 @@ public class CloudFormationStackSetTest {
 		stackSet.waitForOperationToComplete(operationId, Duration.ofMillis(5));
 	}
 
+	@Test
+	public void waitForOperationToCompleteWithThrottle() throws InterruptedException {
+		String operationId = UUID.randomUUID().toString();
+		AmazonCloudFormationException ex = new AmazonCloudFormationException("error");
+		ex.setErrorCode("Throttling");
+		Mockito.when(client.describeStackSetOperation(new DescribeStackSetOperationRequest()
+				.withStackSetName("foo")
+				.withOperationId(operationId)
+		)).thenThrow(ex)
+		.thenReturn(new DescribeStackSetOperationResult()
+				.withStackSetOperation(new StackSetOperation()
+						.withStatus(StackSetOperationStatus.RUNNING)
+				)
+		).thenReturn(new DescribeStackSetOperationResult()
+				.withStackSetOperation(new StackSetOperation()
+						.withStatus(StackSetOperationStatus.SUCCEEDED)
+				)
+		);
+		stackSet.waitForOperationToComplete(operationId, Duration.ofMillis(5));
+	}
+
 	@Test(expected = StackSetOperationFailedException.class)
 	public void waitForOperationToCompleteFailure() throws InterruptedException {
 		String operationId = UUID.randomUUID().toString();
