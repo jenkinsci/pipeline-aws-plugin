@@ -619,10 +619,12 @@ ec2ShareAmi(
 # Changelog
 
 ## current master
+* handle throttles from cloudformation stackset operations
+
+## 1.30
 * allow the customization of setting a roleSessionName
 * content encoding can be specified in `s3Upload` step
 * allow configuration of cloudformation stack timeout
-* handle throttles from cloudformation stackset operations
 
 ## 1.29
 * fix issues with stack timeouts
