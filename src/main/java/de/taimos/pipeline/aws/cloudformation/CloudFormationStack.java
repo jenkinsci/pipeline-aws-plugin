@@ -143,7 +143,7 @@ public class CloudFormationStack {
 
 			this.client.updateStack(req);
 
-			new EventPrinter(this.client, this.listener).waitAndPrintStackEvents(this.stack, this.client.waiters().stackCreateComplete(), pollConfiguration);
+			new EventPrinter(this.client, this.listener).waitAndPrintStackEvents(this.stack, this.client.waiters().stackUpdateComplete(), pollConfiguration);
 
 			this.listener.getLogger().format("Updated CloudFormation stack %s %n", this.stack);
 
