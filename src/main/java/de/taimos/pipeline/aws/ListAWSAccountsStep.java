@@ -36,6 +36,7 @@ import org.kohsuke.stapler.DataBoundConstructor;
 
 import com.amazonaws.services.organizations.AWSOrganizations;
 import com.amazonaws.services.organizations.AWSOrganizationsClientBuilder;
+import com.amazonaws.services.organizations.model.Account;
 import com.amazonaws.services.organizations.model.ListAccountsRequest;
 import com.amazonaws.services.organizations.model.ListAccountsResult;
 
@@ -85,9 +86,9 @@ public class ListAWSAccountsStep extends Step {
 			this.getContext().get(TaskListener.class).getLogger().format("Getting AWS accounts %n");
 
 			AWSOrganizations client = AWSClientFactory.create(AWSOrganizationsClientBuilder.standard(), Execution.this.getContext());
-			ListAccountsResult exports = client.listAccounts(new ListAccountsRequest());
+			List<Account> accounts = this.getAccounts(client, null);
 
-			return exports.getAccounts().stream().map(account -> {
+			return accounts.stream().map(account -> {
 				Map<String, String> awsAccount = new HashMap<>();
 				awsAccount.put("id", account.getId());
 				awsAccount.put("arn", account.getArn());
@@ -96,6 +97,15 @@ public class ListAWSAccountsStep extends Step {
 				awsAccount.put("status", account.getStatus());
 				return awsAccount;
 			}).collect(Collectors.toList());
+		}
+
+		private List<Account> getAccounts(AWSOrganizations client, String startToken) {
+			ListAccountsResult result = client.listAccounts(new ListAccountsRequest().withNextToken(startToken));
+			List<Account> accounts = result.getAccounts();
+			if (result.getNextToken() != null) {
+				accounts.addAll(this.getAccounts(client, result.getNextToken()));
+			}
+			return accounts;
 		}
 
 		private static final long serialVersionUID = 1L;

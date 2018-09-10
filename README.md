@@ -619,6 +619,7 @@ ec2ShareAmi(
 # Changelog
 
 ## current master
+* add paging for listAWSAccounts (#128)
 
 ## 1.31
 * handle throttles from cloudformation stackset operations
