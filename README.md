@@ -620,6 +620,7 @@ ec2ShareAmi(
 
 ## current master
 * add paging for listAWSAccounts (#128)
+* retry stackset update on StaleRequestException
 
 ## 1.31
 * handle throttles from cloudformation stackset operations
