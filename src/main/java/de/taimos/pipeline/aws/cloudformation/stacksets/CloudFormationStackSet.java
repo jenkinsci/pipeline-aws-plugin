@@ -38,11 +38,11 @@ import com.amazonaws.services.cloudformation.model.OperationInProgressException;
 import com.amazonaws.services.cloudformation.model.Parameter;
 import com.amazonaws.services.cloudformation.model.StackSetOperationStatus;
 import com.amazonaws.services.cloudformation.model.StackSetStatus;
+import com.amazonaws.services.cloudformation.model.StaleRequestException;
 import com.amazonaws.services.cloudformation.model.Tag;
 import com.amazonaws.services.cloudformation.model.UpdateStackSetRequest;
 import com.amazonaws.services.cloudformation.model.UpdateStackSetResult;
 
-import de.taimos.pipeline.aws.cloudformation.PollConfiguration;
 import hudson.model.TaskListener;
 
 public class CloudFormationStackSet {
@@ -156,10 +156,10 @@ public class CloudFormationStackSet {
 
 			this.listener.getLogger().format("Updated CloudFormation stack set %s %n", this.stackSet);
 			return result;
-		} catch (OperationInProgressException oipe) {
+		} catch (OperationInProgressException | StaleRequestException e) {
 			if (attempt == MAX_STACK_SET_RETRY_ATTEMPT_COUNT) {
 				this.listener.getLogger().format("Retries exhausted and cloudformation stack set %s is still busy%n", this.stackSet);
-				throw oipe;
+				throw e;
 			} else {
 				long sleepDuration = this.sleepStrategy.calculateSleepDuration(attempt);
 				this.listener.getLogger().format("StackSet %s busy. Waiting %d ms %n", this.stackSet, sleepDuration);

@@ -2,7 +2,6 @@ package de.taimos.pipeline.aws.cloudformation.stacksets;
 
 import com.amazonaws.client.builder.AwsSyncClientBuilder;
 import com.amazonaws.services.cloudformation.AmazonCloudFormation;
-import com.amazonaws.services.cloudformation.model.OperationInProgressException;
 import com.amazonaws.services.cloudformation.model.Parameter;
 import com.amazonaws.services.cloudformation.model.Tag;
 import com.amazonaws.services.cloudformation.model.UpdateStackSetResult;
@@ -26,7 +25,6 @@ import org.powermock.modules.junit4.PowerMockRunner;
 
 import java.io.PrintWriter;
 import java.time.Duration;
-import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 

@@ -291,6 +291,36 @@ public class CloudFormationStackSetTest {
 	}
 
 	@Test
+	public void update_StaleRequestException() throws InterruptedException {
+		UpdateStackSetResult expected = new UpdateStackSetResult();
+		Mockito.when(client.updateStackSet(Mockito.any(UpdateStackSetRequest.class)))
+				.thenThrow(StaleRequestException.class)
+				.thenReturn(expected);
+
+		Mockito.when(this.sleepStrategy.calculateSleepDuration(Mockito.anyInt())).thenReturn(5L);
+
+		Parameter parameter1 = new Parameter()
+				.withParameterKey("foo")
+				.withParameterValue("bar");
+		Tag tag1 = new Tag()
+				.withKey("bar")
+				.withValue("baz");
+
+		UpdateStackSetResult result = stackSet.update(null, null, Collections.singletonList(parameter1), Collections.singletonList(tag1), null, null);
+		Assertions.assertThat(result).isSameAs(expected);
+		ArgumentCaptor<UpdateStackSetRequest> captor = ArgumentCaptor.forClass(UpdateStackSetRequest.class);
+		Mockito.verify(client, Mockito.times(2)).updateStackSet(captor.capture());
+		Assertions.assertThat(captor.getValue()).isEqualTo(new UpdateStackSetRequest()
+				.withStackSetName("foo")
+				.withCapabilities(Capability.values())
+				.withParameters(parameter1)
+				.withTags(tag1)
+				.withUsePreviousTemplate(true)
+		);
+		Mockito.verify(this.sleepStrategy).calculateSleepDuration(1);
+	}
+
+	@Test
 	public void waitForStackStateStatus() throws InterruptedException {
 		Mockito.when(client.describeStackSet(new DescribeStackSetRequest()
 				.withStackSetName("foo")
