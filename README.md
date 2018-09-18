@@ -471,6 +471,11 @@ To set a custom administrator role ARN:
   cfnUpdateStackSet(stackSet:'myStackSet', url:'https://s3.amazonaws.com/my-templates-bucket/template.yaml', administratorRoleArn: 'mycustomarn')
 ```
 
+To set a operation preferences:
+```
+  cfnUpdateStackSet(stackSet:'myStackSet', url:'https://s3.amazonaws.com/my-templates-bucket/template.yaml', operationPreferences: [failureToleranceCount: 5])
+```
+
 ## cfnDeleteStackSet
 
 Deletes a stack set.
@@ -621,6 +626,7 @@ ec2ShareAmi(
 ## current master
 * add paging for listAWSAccounts (#128)
 * retry stackset update on StaleRequestException
+* add support for OperationPreferences in cfnUpdateStackSet
 
 ## 1.31
 * handle throttles from cloudformation stackset operations

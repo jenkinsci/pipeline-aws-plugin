@@ -21,9 +21,6 @@
 
 package de.taimos.pipeline.aws.cloudformation.stacksets;
 
-import java.time.Duration;
-import java.util.Collection;
-
 import com.amazonaws.services.cloudformation.AmazonCloudFormation;
 import com.amazonaws.services.cloudformation.model.AmazonCloudFormationException;
 import com.amazonaws.services.cloudformation.model.Capability;
@@ -36,14 +33,17 @@ import com.amazonaws.services.cloudformation.model.DescribeStackSetRequest;
 import com.amazonaws.services.cloudformation.model.DescribeStackSetResult;
 import com.amazonaws.services.cloudformation.model.OperationInProgressException;
 import com.amazonaws.services.cloudformation.model.Parameter;
+import com.amazonaws.services.cloudformation.model.StackSetOperationPreferences;
 import com.amazonaws.services.cloudformation.model.StackSetOperationStatus;
 import com.amazonaws.services.cloudformation.model.StackSetStatus;
 import com.amazonaws.services.cloudformation.model.StaleRequestException;
 import com.amazonaws.services.cloudformation.model.Tag;
 import com.amazonaws.services.cloudformation.model.UpdateStackSetRequest;
 import com.amazonaws.services.cloudformation.model.UpdateStackSetResult;
-
 import hudson.model.TaskListener;
+
+import java.time.Duration;
+import java.util.Collection;
 
 public class CloudFormationStackSet {
 
@@ -95,7 +95,7 @@ public class CloudFormationStackSet {
 		return result;
 	}
 
-	public DescribeStackSetResult waitForStackState(StackSetStatus expectedStatus, Duration pollInterval) throws InterruptedException {
+	DescribeStackSetResult waitForStackState(StackSetStatus expectedStatus, Duration pollInterval) throws InterruptedException {
 		DescribeStackSetResult result = describe();
 		this.listener.getLogger().println("stackSetId=" + result.getStackSet().getStackSetId() + " status=" + result.getStackSet().getStatus());
 		StackSetStatus currentStatus = StackSetStatus.fromValue(result.getStackSet().getStatus());
@@ -127,7 +127,8 @@ public class CloudFormationStackSet {
 		}
 	}
 
-	public UpdateStackSetResult update(String templateBody, String templateUrl, Collection<Parameter> params, Collection<Tag> tags, String administratorRoleArn, String executionRoleName) throws InterruptedException {
+	public UpdateStackSetResult update(String templateBody, String templateUrl, Collection<Parameter> params, Collection<Tag> tags,
+									String administratorRoleArn, String executionRoleName, StackSetOperationPreferences operationPreferences) throws InterruptedException {
 		this.listener.getLogger().format("Updating CloudFormation stack set %s %n", this.stackSet);
 		UpdateStackSetRequest req = new UpdateStackSetRequest()
 				.withStackSetName(this.stackSet)
@@ -135,6 +136,7 @@ public class CloudFormationStackSet {
 				.withParameters(params)
 				.withAdministrationRoleARN(administratorRoleArn)
 				.withExecutionRoleName(executionRoleName)
+				.withOperationPreferences(operationPreferences)
 				.withTags(tags);
 
 		if (templateBody != null && !templateBody.isEmpty()) {

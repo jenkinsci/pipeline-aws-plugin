@@ -21,30 +21,40 @@
 
 package de.taimos.pipeline.aws.cloudformation.stacksets;
 
-import java.util.Collection;
-import java.util.Set;
-
-import javax.annotation.Nonnull;
-
 import com.amazonaws.services.cloudformation.model.DescribeStackSetResult;
+import com.amazonaws.services.cloudformation.model.Parameter;
+import com.amazonaws.services.cloudformation.model.StackSetOperationPreferences;
+import com.amazonaws.services.cloudformation.model.StackSetStatus;
+import com.amazonaws.services.cloudformation.model.Tag;
+import com.amazonaws.services.cloudformation.model.UpdateStackSetResult;
+import de.taimos.pipeline.aws.utils.StepUtils;
+import hudson.Extension;
 import org.jenkinsci.plugins.workflow.steps.StepContext;
 import org.jenkinsci.plugins.workflow.steps.StepDescriptor;
 import org.jenkinsci.plugins.workflow.steps.StepExecution;
 import org.kohsuke.stapler.DataBoundConstructor;
+import org.kohsuke.stapler.DataBoundSetter;
 
-import com.amazonaws.services.cloudformation.model.Parameter;
-import com.amazonaws.services.cloudformation.model.StackSetStatus;
-import com.amazonaws.services.cloudformation.model.Tag;
-import com.amazonaws.services.cloudformation.model.UpdateStackSetResult;
-
-import de.taimos.pipeline.aws.utils.StepUtils;
-import hudson.Extension;
+import javax.annotation.Nonnull;
+import java.util.Collection;
+import java.util.Set;
 
 public class CFNUpdateStackSetStep extends AbstractCFNCreateStackSetStep {
 
 	@DataBoundConstructor
 	public CFNUpdateStackSetStep(String stackSet) {
 		super(stackSet);
+	}
+
+	private StackSetOperationPreferences operationPreferences;
+
+	public StackSetOperationPreferences getOperationPreferences() {
+		return operationPreferences;
+	}
+
+	@DataBoundSetter
+	public void setOperationPreferences(JenkinsStackSetOperationPreferences operationPreferences) {
+		this.operationPreferences = operationPreferences;
 	}
 
 	@Extension
@@ -92,7 +102,7 @@ public class CFNUpdateStackSetStep extends AbstractCFNCreateStackSetStep {
 			final String url = this.getStep().getUrl();
 			CloudFormationStackSet cfnStackSet = this.getCfnStackSet();
 			UpdateStackSetResult operation = cfnStackSet.update(this.getStep().readTemplate(this), url, parameters, tags,
-					this.getStep().getAdministratorRoleArn(), this.getStep().getExecutionRoleName());
+					this.getStep().getAdministratorRoleArn(), this.getStep().getExecutionRoleName(), this.getStep().getOperationPreferences());
 			cfnStackSet.waitForOperationToComplete(operation.getOperationId(), getStep().getPollConfiguration().getPollInterval());
 			return cfnStackSet.describe();
 		}

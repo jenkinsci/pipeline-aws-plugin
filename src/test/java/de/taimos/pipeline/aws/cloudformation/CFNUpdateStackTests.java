@@ -1,7 +1,11 @@
 package de.taimos.pipeline.aws.cloudformation;
 
-import java.util.Collections;
-
+import com.amazonaws.client.builder.AwsSyncClientBuilder;
+import com.amazonaws.services.cloudformation.AmazonCloudFormation;
+import com.amazonaws.services.cloudformation.model.Parameter;
+import com.amazonaws.services.cloudformation.model.Tag;
+import de.taimos.pipeline.aws.AWSClientFactory;
+import hudson.EnvVars;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
 import org.junit.Before;
@@ -15,13 +19,7 @@ import org.powermock.core.classloader.annotations.PowerMockIgnore;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
 
-import com.amazonaws.client.builder.AwsSyncClientBuilder;
-import com.amazonaws.services.cloudformation.AmazonCloudFormation;
-import com.amazonaws.services.cloudformation.model.Parameter;
-import com.amazonaws.services.cloudformation.model.Tag;
-
-import de.taimos.pipeline.aws.AWSClientFactory;
-import hudson.EnvVars;
+import java.util.Collections;
 
 @RunWith(PowerMockRunner.class)
 @PrepareForTest(
