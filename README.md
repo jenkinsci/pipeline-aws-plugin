@@ -624,6 +624,8 @@ ec2ShareAmi(
 # Changelog
 
 ## current master
+
+## 1.32
 * add paging for listAWSAccounts (#128)
 * retry stackset update on StaleRequestException
 * add support for OperationPreferences in cfnUpdateStackSet
