@@ -21,13 +21,10 @@
 
 package de.taimos.pipeline.aws.cloudformation;
 
-import com.amazonaws.services.cloudformation.AmazonCloudFormation;
-import com.amazonaws.services.cloudformation.AmazonCloudFormationClientBuilder;
-import com.google.common.base.Preconditions;
-import de.taimos.pipeline.aws.AWSClientFactory;
-import de.taimos.pipeline.aws.utils.StepUtils;
-import hudson.Extension;
-import hudson.model.TaskListener;
+import java.time.Duration;
+import java.util.Map;
+import java.util.Set;
+
 import org.jenkinsci.plugins.workflow.steps.Step;
 import org.jenkinsci.plugins.workflow.steps.StepContext;
 import org.jenkinsci.plugins.workflow.steps.StepDescriptor;
@@ -36,9 +33,14 @@ import org.jenkinsci.plugins.workflow.steps.SynchronousNonBlockingStepExecution;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
 
-import java.time.Duration;
-import java.util.Map;
-import java.util.Set;
+import com.amazonaws.services.cloudformation.AmazonCloudFormation;
+import com.amazonaws.services.cloudformation.AmazonCloudFormationClientBuilder;
+import com.google.common.base.Preconditions;
+
+import de.taimos.pipeline.aws.AWSClientFactory;
+import de.taimos.pipeline.aws.utils.StepUtils;
+import hudson.Extension;
+import hudson.model.TaskListener;
 
 public class CFNExecuteChangeSetStep extends Step {
 
@@ -68,6 +70,20 @@ public class CFNExecuteChangeSetStep extends Step {
 	public void setPollInterval(Long pollInterval) {
 		this.pollConfiguration = this.pollConfiguration.toBuilder()
 				.pollInterval(Duration.ofMillis(pollInterval))
+				.build();
+	}
+
+	@DataBoundSetter
+	public void setTimeoutInSeconds(long timeout) {
+		this.pollConfiguration = this.pollConfiguration.toBuilder()
+				.timeout(Duration.ofSeconds(timeout))
+				.build();
+	}
+
+	@DataBoundSetter
+	public void setTimeoutInMinutes(long timeout) {
+		this.pollConfiguration = this.pollConfiguration.toBuilder()
+				.timeout(Duration.ofMinutes(timeout))
 				.build();
 	}
 
