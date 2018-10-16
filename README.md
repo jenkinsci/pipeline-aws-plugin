@@ -625,6 +625,8 @@ ec2ShareAmi(
 
 ## current master
 
+* fixed tagsFile parameter being ignored when the tags parameter equals null.
+
 ## 1.32
 * add paging for listAWSAccounts (#128)
 * retry stackset update on StaleRequestException

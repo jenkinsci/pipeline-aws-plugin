@@ -157,17 +157,16 @@ public abstract class TemplateStepBase extends Step implements ParameterProvider
 
 	protected final Collection<Tag> getAwsTags(StepExecution stepExecution) {
 		Collection<Tag> tagList = new ArrayList<>();
-		if (this.tags == null) {
-			return tagList;
-		}
-		for (String tag : this.tags) {
-			int i = tag.indexOf('=');
-			if (i < 0) {
-				throw new IllegalArgumentException("Missing = in tag " + tag);
+		if (this.tags != null) {
+			for (String tag : this.tags) {
+				int i = tag.indexOf('=');
+				if (i < 0) {
+					throw new IllegalArgumentException("Missing = in tag " + tag);
+				}
+				String key = tag.substring(0, i);
+				String value = tag.substring(i + 1);
+				tagList.add(new Tag().withKey(key).withValue(value));
 			}
-			String key = tag.substring(0, i);
-			String value = tag.substring(i + 1);
-			tagList.add(new Tag().withKey(key).withValue(value));
 		}
 		if (this.tagsFile != null) {
 			FilePath tagsFile = loadFileFromWorkspace(stepExecution, this.tagsFile);
