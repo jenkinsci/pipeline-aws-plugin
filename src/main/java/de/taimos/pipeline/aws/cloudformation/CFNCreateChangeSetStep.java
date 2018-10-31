@@ -115,6 +115,8 @@ public class CFNCreateChangeSetStep extends AbstractCFNCreateStep {
 				return result.getChanges();
 			} else if (ChangeSetStatus.FAILED.name().equals(result.getStatus()) && result.getStatusReason().toLowerCase().contains("the submitted information didn't contain changes")) {
 				return result.getChanges();
+			} else if (ChangeSetStatus.FAILED.name().equals(result.getStatus()) && result.getStatusReason().toLowerCase().contains("no updates are to be performed")) {
+				return result.getChanges();
 			} else {
 				throw new IllegalStateException("Change set did not create successfully. status=" + result.getStatus() + " reason=" + result.getStatusReason());
 			}

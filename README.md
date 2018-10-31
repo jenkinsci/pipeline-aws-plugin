@@ -626,6 +626,7 @@ ec2ShareAmi(
 ## current master
 
 * fixed tagsFile parameter being ignored when the tags parameter equals null.
+* fixed error string matching for empty change set in cloudformation
 
 ## 1.32
 * add paging for listAWSAccounts (#128)
