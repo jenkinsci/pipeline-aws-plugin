@@ -1,4 +1,4 @@
-package de.taimos.pipeline.aws.utils;
+package utils;
 
 /*-
  * #%L
@@ -20,25 +20,23 @@ package de.taimos.pipeline.aws.utils;
  * #L%
  */
 
-import java.util.regex.Pattern;
+import org.junit.Test;
 
-import com.amazonaws.regions.RegionUtils;
+import de.taimos.pipeline.aws.utils.IamRoleUtils;
 
-public final class IamRoleUtils {
+public class IamRoleUtilsTest {
 
-	private static final Pattern IAM_ROLE_PATTERN = Pattern.compile("arn:(aws|aws-cn|aws-us-gov):iam::[0-9]{12}:role/([\\w+=,.@/-]{1,512}/)?[\\w+=,.@-]{1,64}");
-	// source: http://docs.aws.amazon.com/IAM/latest/UserGuide/reference_iam-limits.html
+	@Test
+	public void findPartitionWithRegionName() throws Exception {
+		// example of type 'aws'
+		IamRoleUtils.selectPartitionName("us-east-1");
 
-	private IamRoleUtils() {
-		// hidden constructor
-	}
+		// example of type 'aws-cn'
+		IamRoleUtils.selectPartitionName("cn-north-1");
 
-	public static String selectPartitionName(String region) {
-		return (RegionUtils.getRegion(region).getPartition());
-	}
-
-	public static boolean validRoleArn(String role) {
-		return (IAM_ROLE_PATTERN.matcher(role).matches());
+		// example of type 'aws-us-gov'
+		IamRoleUtils.selectPartitionName("us-gov-west-1");
+		// no exception -> ok
 	}
 
 }
