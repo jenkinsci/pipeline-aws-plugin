@@ -21,6 +21,7 @@ package utils;
  */
 
 import org.junit.Test;
+import org.junit.Assert;
 
 import de.taimos.pipeline.aws.utils.IamRoleUtils;
 
@@ -29,13 +30,13 @@ public class IamRoleUtilsTest {
 	@Test
 	public void findPartitionWithRegionName() throws Exception {
 		// example of type 'aws'
-		IamRoleUtils.selectPartitionName("us-east-1");
+		Assert.assertEquals("aws", IamRoleUtils.selectPartitionName("us-east-1"));
 
 		// example of type 'aws-cn'
-		IamRoleUtils.selectPartitionName("cn-north-1");
+		Assert.assertEquals("aws-cn", IamRoleUtils.selectPartitionName("cn-north-1"));
 
 		// example of type 'aws-us-gov'
-		IamRoleUtils.selectPartitionName("us-gov-west-1");
+		Assert.assertEquals("aws-us-gov", IamRoleUtils.selectPartitionName("us-gov-west-1"));
 		// no exception -> ok
 	}
 
