@@ -627,6 +627,7 @@ ec2ShareAmi(
 
 * fixed tagsFile parameter being ignored when the tags parameter equals null.
 * fixed error string matching for empty change set in cloudformation
+* automatically derive partition from region (#137)
 
 ## 1.32
 * add paging for listAWSAccounts (#128)
