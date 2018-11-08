@@ -624,8 +624,9 @@ ec2ShareAmi(
 # Changelog
 
 ## current master
-* fix timeout settings for `cfnExecuteChangeSet` (#132)
 
+## 1.33
+* fix timeout settings for `cfnExecuteChangeSet` (#132)
 * fixed tagsFile parameter being ignored when the tags parameter equals null.
 * fixed error string matching for empty change set in cloudformation
 * automatically derive partition from region (#137)
