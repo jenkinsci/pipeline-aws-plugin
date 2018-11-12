@@ -1,0 +1,9 @@
+<?jelly escape-by-default='true'?>
+<j:jelly xmlns:j="jelly:core" xmlns:f="/lib/form">
+    <f:entry title="${%Stack}" field="stack">
+        <f:textbox />
+    </f:entry>
+    <f:entry title="${%Poll Interval in milliseconds}" field="pollInterval">
+        <f:textbox />
+    </f:entry>
+</j:jelly>
