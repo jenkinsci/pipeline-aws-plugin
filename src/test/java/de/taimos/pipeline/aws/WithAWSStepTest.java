@@ -283,6 +283,27 @@ public class WithAWSStepTest {
 	}
 
 	@Test
+	public void testStepWithAssumeRoleSAMLAssertion() throws Exception {
+
+		// Create a folder with credentials in its store
+		Folder folder = jenkinsRule.jenkins.createProject(Folder.class, "folder" + jenkinsRule.jenkins.getItems().size());
+
+		WorkflowJob job = folder.createProject(WorkflowJob.class, "testStepWithAWSIamMFAFolderCredentials");
+		job.setDefinition(new CpsFlowDefinition(""
+				+ "node {\n"
+				+ "  withAWS (role: 'myRole', roleAccount: '123456789', principalArn: 'arn:aws:iam::123456789:saml-provider/test', samlAssertion: 'base64SAML', region: 'eu-west-1') {\n"
+				+ "    echo 'It works!'\n"
+				+ "  }\n"
+				+ "}\n", true)
+		);
+		WorkflowRun workflowRun = job.scheduleBuild2(0).get();
+		jenkinsRule.waitForCompletion(workflowRun);
+		jenkinsRule.assertBuildStatus(Result.FAILURE, workflowRun);
+		jenkinsRule.assertLogContains("Requesting assume role", workflowRun);
+		jenkinsRule.assertLogContains("Invalid base64 SAMLResponse", workflowRun);
+	}
+
+	@Test
 	public void testListCredentials() throws Exception {
 		Folder folder = jenkinsRule.jenkins.createProject(Folder.class, "folder" + jenkinsRule.jenkins.getItems().size());
 		CredentialsStore folderStore = this.getFolderStore(folder);
