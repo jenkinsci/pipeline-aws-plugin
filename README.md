@@ -643,6 +643,10 @@ ec2ShareAmi(
 
 ## current master
 
+## 1.34
+* add support for assume role with SAML assertion authentication (#140)
+* add withRole step to assume different role with a same AWS session
+
 ## 1.33
 * fix timeout settings for `cfnExecuteChangeSet` (#132)
 * fixed tagsFile parameter being ignored when the tags parameter equals null.
