@@ -7,6 +7,7 @@
 This plugins adds Jenkins pipeline steps to interact with the AWS API.
 
 * [withAWS](#withaws)
+* [withRole](#withrole)
 * [awsIdentity](#awsidentity)
 * [cfInvalidate](#cfinvalidate)
 * [s3Upload](#s3upload)
