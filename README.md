@@ -47,7 +47,7 @@ You can mix all parameters in one `withAWS` block.
 
 Set region information (note that region and endpointUrl are mutually exclusive):
 
-```
+```groovy
 withAWS(region:'eu-west-1') {
     // do something
 }
@@ -55,7 +55,7 @@ withAWS(region:'eu-west-1') {
 
 Use provided endpointUrl (endpointUrl is optional, however, region and endpointUrl are mutually exclusive):
 
-```
+```groovy
 withAWS(endpointUrl:'https://minio.mycompany.com',credentials:'nameOfSystemCredentials',federatedUserId:"${submitter}@${releaseVersion}") {
     // do something
 }
@@ -64,7 +64,7 @@ withAWS(endpointUrl:'https://minio.mycompany.com',credentials:'nameOfSystemCrede
 
 Use Jenkins UsernamePassword credentials information (Username: AccessKeyId, Password: SecretAccessKey):
 
-```
+```groovy
 withAWS(credentials:'IDofSystemCredentials') {
     // do something
 }
@@ -72,7 +72,7 @@ withAWS(credentials:'IDofSystemCredentials') {
 
 Use Jenkins AWS credentials information (AWS Access Key: AccessKeyId, AWS Secret Key: SecretAccessKey):
 
-```
+```groovy
 withAWS(credentials:'IDofAwsCredentials') {
     // do something
 }
@@ -80,7 +80,7 @@ withAWS(credentials:'IDofAwsCredentials') {
 
 Use profile information from `~/.aws/config`:
 
-```
+```groovy
 withAWS(profile:'myProfile') {
     // do something
 }
@@ -88,7 +88,7 @@ withAWS(profile:'myProfile') {
 
 Assume role information (account is optional - uses current account as default. externalId, roleSessionName and policy are optional. duration is optional - if specified it represents the maximum amount of time in seconds the session may persist for, defaults to 3600.):
 
-```
+```groovy
 withAWS(role:'admin', roleAccount:'123456789012', externalId: 'my-external-id', policy: '{"Version":"2012-10-17","Statement":[{"Sid":"Stmt1","Effect":"Deny","Action":"s3:DeleteObject","Resource":"*"}]}', duration: '3600', roleSessionName: 'my-custom-session-name') {
     // do something
 }
@@ -96,7 +96,7 @@ withAWS(role:'admin', roleAccount:'123456789012', externalId: 'my-external-id', 
 
 Assume federated user id information (federatedUserId is optional - if specified it generates a set of temporary credentials and allows you to push a federated user id into cloud trail for auditing. duration is optional - if specified it represents the maximum amount of time in seconds the session may persist for, defaults to 3600.):
 
-```
+```groovy
 withAWS(region:'eu-central-1',credentials:'nameOfSystemCredentials',federatedUserId:"${submitter}@${releaseVersion}", duration: '3600') {
     // do something
 }
@@ -112,7 +112,7 @@ withAWS(role: 'myRole', roleAccount: '123456789', principalArn: 'arn:aws:iam::12
 
 When you use Jenkins Declarative Pipelines you can also use `withAWS` in an options block:
 
-```
+```groovy
 options {
 	withAWS(profile:'myProfile')
 }
@@ -125,7 +125,7 @@ stages {
 
 Make a assume role against AWS services. Every statement in this block will be done with the specified role.
 
-```
+```groovy
 withRole(role: 'role_name_or_role_arn', roleAccount:'123456789', region: 'eu-west-1') {
     // do something
 }
@@ -141,7 +141,7 @@ The step returns an objects with the following fields:
 * user - The unique identifier of the calling entity
 * arn - The AWS ARN associated with the calling entity
 
-```
+```groovy
 def identity = awsIdentity()
 ```
 
@@ -149,7 +149,7 @@ def identity = awsIdentity()
 
 Invalidate given paths in CloudFront distribution.
 
-```
+```groovy
 cfInvalidate(distribution:'someDistributionId', paths:['/*'])
 cfInvalidate(distribution:'someDistributionId', paths:['/*'], waitForCompletion: true)
 ```
@@ -158,7 +158,7 @@ cfInvalidate(distribution:'someDistributionId', paths:['/*'], waitForCompletion:
 
 All s3* steps take an optional pathStyleAccessEnabled and payloadSigningEnabled boolean parameter.
 
-```
+```groovy
 s3Upload(pathStyleAccessEnabled: true, payloadSigningEnabled: true, file:'file.txt', bucket:'my-bucket', path:'path/to/target/file.txt')
 s3Copy(pathStyleAccessEnabled: true, fromBucket:'my-bucket', fromPath:'path/to/source/file.txt', toBucket:'other-bucket', toPath:'path/to/destination/file.txt')
 s3Delete(pathStyleAccessEnabled: true, bucket:'my-bucket', path:'path/to/source/file.txt')
@@ -172,56 +172,56 @@ files = s3FindFiles(pathStyleAccessEnabled: true, bucket:'my-bucket')
 Upload a file/folder from the workspace to an S3 bucket.
 If the `file` parameter denotes a directory, the complete directory including all subfolders will be uploaded.
 
-```
+```groovy
 s3Upload(file:'file.txt', bucket:'my-bucket', path:'path/to/target/file.txt')
 s3Upload(file:'someFolder', bucket:'my-bucket', path:'path/to/targetFolder/')
 ```
 
 Another way to use it with include/exclude pattern in a subdirectory (workingDir).
 
-```
+```groovy
 s3Upload(bucket:"my-bucket", path:'path/to/targetFolder/', includePathPattern:'**/*', workingDir:'dist', excludePathPattern:'**/*.svg')
 ```
 
 Specific user metadatas can be added to uploaded files
 
-```
+```groovy
 s3Upload(bucket:"my-bucket", path:'path/to/targetFolder/', includePathPattern:'**/*.svg', workingDir:'dist', metadatas:['Key:SomeValue','Another:Value'])
 ```
 
 Specific cachecontrol can be added to uploaded files
 
-```
+```groovy
 s3Upload(bucket:"my-bucket", path:'path/to/targetFolder/', includePathPattern:'**/*.svg', workingDir:'dist', cacheControl:'public,max-age=31536000')
 ```
 
 Specific content encoding can be added to uploaded files
-```
+```groovy
 s3Upload(file:'file.txt', bucket:'my-bucket', contentEncoding: 'gzip')
 ```
 
 Specific content type can be added to uploaded files
 
-```
+```groovy
 s3Upload(bucket:"my-bucket", path:'path/to/targetFolder/', includePathPattern:'**/*.ttf', workingDir:'dist', contentType:'application/x-font-ttf')
 ```
 
 Canned ACLs can be added to upload requests.
 
-```
+```groovy
 s3Upload(file:'file.txt', bucket:'my-bucket', path:'path/to/target/file.txt', acl:'PublicRead')
 s3Upload(file:'someFolder', bucket:'my-bucket', path:'path/to/targetFolder/', acl:'BucketOwnerFullControl')
 ```
 
 A Server Side Encryption Algorithm can be added to upload requests.
 
-```
+```groovy
 s3Upload(file:'file.txt', bucket:'my-bucket', path:'path/to/target/file.txt', sseAlgorithm:'AES256')
 ```
 
 A KMS alias or KMS id can be used to encrypt the uploaded file or directory at rest.
 
-```
+```groovy
 s3Upload(file: 'foo.txt', bucket: 'my-bucket', path: 'path/to/target/file.txt', kmsId: 'alias/foo')
 s3Upload(file: 'foo.txt', bucket: 'my-bucket', path: 'path/to/target/file.txt', kmsId: '8e1d420d-bf94-4a15-a07a-8ad965abb30f')
 s3upload(file: 'bar-dir', bucket: 'my-bucket', path: 'path/to/target', kmsId: 'alias/bar')
@@ -233,7 +233,7 @@ Download a file/folder from S3 to the local workspace.
 Set optional parameter `force` to `true` to overwrite existing file in workspace.
 If the `path` ends with a `/` the complete virtual directory will be downloaded.
 
-```
+```groovy
 s3Download(file:'file.txt', bucket:'my-bucket', path:'path/to/source/file.txt', force:true)
 s3Download(file:'targetFolder/', bucket:'my-bucket', path:'path/to/sourceFolder/', force:true)
 ```
@@ -242,7 +242,7 @@ s3Download(file:'targetFolder/', bucket:'my-bucket', path:'path/to/sourceFolder/
 
 Copy file between S3 buckets.
 
-```
+```groovy
 s3Copy(fromBucket:'my-bucket', fromPath:'path/to/source/file.txt', toBucket:'other-bucket', toPath:'path/to/destination/file.txt')
 ```
 
@@ -252,7 +252,7 @@ s3Copy(fromBucket:'my-bucket', fromPath:'path/to/source/file.txt', toBucket:'oth
 Delete a file/folder from S3.
 If the path ends in a "/", then the path will be interpreted to be a folder, and all of its contents will be removed.
 
-```
+```groovy
 s3Delete(bucket:'my-bucket', path:'path/to/source/file.txt')
 s3Delete(bucket:'my-bucket', path:'path/to/sourceFolder/')
 ```
@@ -275,7 +275,7 @@ If you do not specify `glob`, then it will default to "\*".
 By default, this will return both files and folders.
 To only return files, set the `onlyFiles` parameter to `true`.
 
-```
+```groovy
 files = s3FindFiles(bucket:'my-bucket')
 files = s3FindFiles(bucket:'my-bucket', glob:'path/to/targetFolder/file.ext')
 files = s3FindFiles(bucket:'my-bucket', path:'path/to/targetFolder/', glob:'file.ext')
@@ -298,17 +298,17 @@ When used in a string context, a `FileWrapper` object returns the value of its `
 ## s3PresignURL
 
 Will presign the bucket/key and return a url. Defaults to 1 minute duration, using GET.
-```
+```groovy
 def url = s3PresignURL(bucket: 'mybucket', key: 'mykey')
 ```
 
 The duration can be overridden:
-```
+```groovy
 def url = s3PresignURL(bucket: 'mybucket', key: 'mykey', durationInSeconds: 300) //5 minutes
 ```
 
 The method can also be overridden:
-```
+```groovy
 def url = s3PresignURL(bucket: 'mybucket', key: 'mykey', httpMethod: 'POST')
 ```
 
@@ -316,7 +316,7 @@ def url = s3PresignURL(bucket: 'mybucket', key: 'mykey', httpMethod: 'POST')
 
 Validates the given CloudFormation template.
 
-```
+```groovy
 def response = cfnValidate(file:'template.yaml')
 echo "template description: ${response.description}"
 ```
@@ -340,47 +340,47 @@ When cfnUpdate creates a stack and the creation fails, the stack is deleted inst
 
 To prevent running into rate limiting on the AWS API you can change the default polling interval of 1000 ms using the parameter `pollIntervall`. Using the value `0` disables event printing.
 
-```
+```groovy
 def outputs = cfnUpdate(stack:'my-stack', file:'template.yaml', params:['InstanceType=t2.nano'], keepParams:['Version'], timeoutInMinutes:10, tags:['TagName=Value'], pollInterval:1000)
 ```
 
 or the parameters can be specified as a map:
-```
+```groovy
 def outputs = cfnUpdate(stack:'my-stack', file:'template.yaml', params:['InstanceType': 't2.nano'], keepParams:['Version'], timeoutInMinutes:10, tags:['TagName=Value'], pollInterval:1000)
 ```
 
 Alternatively, you can specify a URL to a template on S3 (you'll need this if you hit the 51200 byte limit on template):
 
-```
+```groovy
 def outputs = cfnUpdate(stack:'my-stack', url:'https://s3.amazonaws.com/my-templates-bucket/template.yaml')
 ```
 
 By default the `cfnUpdate` step creates a new stack if the specified stack does not exist, this behaviour can be overridden by passing `create: 'false'` as parameter :
-```
+```groovy
 def outputs = cfnUpdate(stack:'my-stack', url:'https://s3.amazonaws.com/my-templates-bucket/template.yaml', create: 'false')
 ```
 In above example if `my-stack` already exists it would be updated and if it doesnt exist no actions would be performed.
 
 
 In a case where CloudFormation needs to use a different IAM Role for creating the stack than the one currently in effect, you can pass the complete Role ARN to be used as `roleArn` parameter. i.e:
-```
+```groovy
 def outputs = cfnUpdate(stack:'my-stack', url:'https://s3.amazonaws.com/my-templates-bucket/template.yaml', roleArn: 'arn:aws:iam::123456789012:role/S3Access')
 ```
 
 It's possible to override the behaviour of a stack when the creation fails by using "onFailure". Allowed values are DO_NOTHING, ROLLBACK, or DELETE
 Because the normal default value of ROLLBACK behaves strangely in a CI/CD environment. cfnUpdate uses DELETE as default.
-```
+```groovy
 def outputs = cfnUpdate(stack:'my-stack', url:'https://s3.amazonaws.com/my-templates-bucket/template.yaml', onFailure:'DELETE')
 ```
 
 You can specify rollback triggers for the stack update:
-```
+```groovy
 def outputs = cfnUpdate(stack:'my-stack', url:'https://s3.amazonaws.com/my-templates-bucket/template.yaml', rollbackTimeoutInMinutes: 10, rollbackTriggers: ['AWS::CloudWatch::Alarm=arn:of:cloudwatch:alarm'])
 ```
 
 When creating a stack, you can activate termination protection by using the `enableTerminationProtection` field:
 
-```
+```groovy
 def outputs = cfnUpdate(stack:'my-stack', url:'https://s3.amazonaws.com/my-templates-bucket/template.yaml', enableTerminationProtection: true)
 ```
 
@@ -392,7 +392,7 @@ Remove the given stack from CloudFormation.
 
 To prevent running into rate limiting on the AWS API you can change the default polling interval of 1000 ms using the parameter `pollIntervall`. Using the value `0` disables event printing.
 
-```
+```groovy
 cfnDelete(stack:'my-stack', pollInterval:1000)
 ```
 
@@ -400,7 +400,7 @@ cfnDelete(stack:'my-stack', pollInterval:1000)
 
 The step returns the outputs of the stack as map.
 
-```
+```groovy
 def outputs = cfnDescribe(stack:'my-stack')
 ```
 
@@ -408,7 +408,7 @@ def outputs = cfnDescribe(stack:'my-stack')
 
 The step returns the global CloudFormation exports as map.
 
-```
+```groovy
 def globalExports = cfnExports()
 ```
 
@@ -426,39 +426,39 @@ The step returns the outputs of the stack as a map.
 
 To prevent running into rate limiting on the AWS API you can change the default polling interval of 1000 ms using the parameter `pollIntervall`. Using the value `0` disables event printing.
 
-```
+```groovy
 cfnCreateChangeSet(stack:'my-stack', changeSet:'my-change-set', file:'template.yaml', params:['InstanceType=t2.nano'], keepParams:['Version'], tags:['TagName=Value'], pollInterval:1000)
 ```
 or the parameters can be specified as a map:
-```
+```groovy
 cfnCreateChangeSet(stack:'my-stack', changeSet:'my-change-set', file:'template.yaml', params:['InstanceType': 't2.nano'], keepParams:['Version'], tags:['TagName=Value'], pollInterval:1000)
 ```
 
 Alternatively, you can specify a URL to a template on S3 (you'll need this if you hit the 51200 byte limit on template):
 
-```
+```groovy
 cfnCreateChangeSet(stack:'my-stack', changeSet:'my-change-set', url:'https://s3.amazonaws.com/my-templates-bucket/template.yaml')
 ```
 
 or specify a raw template:
-```
+```groovy
 cfnCreateChangeSet(stack:'my-stack', changeSet:'my-change-set', template: 'my template body')
 ```
 
 By default the `cfnCreateChangeSet` step creates a change set for creating a new stack if the specified stack does not exist, this behaviour can be overridden by passing `create: 'false'` as parameter :
-```
+```groovy
 cfnCreateChangeSet(stack:'my-stack', changeSet:'my-change-set', url:'https://s3.amazonaws.com/my-templates-bucket/template.yaml', create: 'false')
 ```
 In above example if `my-stack` already exists, a change set stack with change set will be created, and if it doesnt exist no actions would be performed.
 
 
 In a case where CloudFormation needs to use a different IAM Role for creating or updating the stack than the one currently in effect, you can pass the complete Role ARN to be used as `roleArn` parameter. i.e:
-```
+```groovy
 cfnCreateChangeSet(stack:'my-stack', changeSet:'my-change-set', url:'https://s3.amazonaws.com/my-templates-bucket/template.yaml', roleArn: 'arn:aws:iam::123456789012:role/S3Access')
 ```
 
 You can specify rollback triggers for the stack update:
-```
+```groovy
 cfnCreateChangeSet(stack:'my-stack', changeSet:'my-change-set', url:'https://s3.amazonaws.com/my-templates-bucket/template.yaml', rollbackTimeoutInMinutes: 10, rollbackTriggers: ['AWS::CloudWatch::Alarm=arn:of:cloudwatch:alarm'])
 ```
 
@@ -470,7 +470,7 @@ Execute a previously created change set to create or update a CloudFormation sta
 
 To prevent running into rate limiting on the AWS API you can change the default polling interval of 1000 ms using the parameter `pollIntervall`. Using the value `0` disables event printing.
 
-```
+```groovy
 def outputs = cfnExecuteChangeSet(stack:'my-stack', changeSet:'my-change-set', pollInterval:1000)
 ```
 
@@ -480,17 +480,17 @@ Create a stack set. Similar options to cfnUpdate. Will monitor the resulting Sta
 
 To prevent running into rate limiting on the AWS API you can change the default polling interval of 1000 ms using the parameter `pollIntervall`. Using the value `0` disables event printing.
 
-```
+```groovy
   cfnUpdateStackSet(stackSet:'myStackSet', url:'https://s3.amazonaws.com/my-templates-bucket/template.yaml')
 ```
 
 To set a custom administrator role ARN:
-```
+```groovy
   cfnUpdateStackSet(stackSet:'myStackSet', url:'https://s3.amazonaws.com/my-templates-bucket/template.yaml', administratorRoleArn: 'mycustomarn')
 ```
 
 To set a operation preferences:
-```
+```groovy
   cfnUpdateStackSet(stackSet:'myStackSet', url:'https://s3.amazonaws.com/my-templates-bucket/template.yaml', operationPreferences: [failureToleranceCount: 5])
 ```
 
@@ -500,7 +500,7 @@ Deletes a stack set.
 
 To prevent running into rate limiting on the AWS API you can change the default polling interval of 1000 ms using the parameter `pollIntervall`. Using the value `0` disables event printing.
 
-```
+```groovy
   cfnDeleteStackSet(stackSet:'myStackSet')
 ```
 
@@ -509,7 +509,7 @@ To prevent running into rate limiting on the AWS API you can change the default 
 Publishes a message to SNS.
 Note that the optional parameter `messageAttributes` is assuming string only values.
 
-```
+```groovy
 snsPublish(topicArn:'arn:aws:sns:us-east-1:123456789012:MyNewTopic', subject:'my subject', message:'this is your message', messageAttributes: ['k1': 'v1', 'k2': 'v2'])
 ```
 
@@ -517,13 +517,13 @@ snsPublish(topicArn:'arn:aws:sns:us-east-1:123456789012:MyNewTopic', subject:'my
 
 Deploys an API Gateway definition to a stage.
 
-```
+```groovy
 deployAPI(api:'myApiId', stage:'Prod')
 ```
 
 Additionally you can specify a description and stage variables.
 
-```
+```groovy
 deployAPI(api:'myApiId', stage:'Prod', description:"Build: ${env.BUILD_ID}", variables:['key=value'])
 ```
 
@@ -536,12 +536,12 @@ The step runs within the `withAWS` block and requires only one parameter:
 * deploymentId (the AWS CodeDeploy deployment id: e.g. 'd-3GR0HQLDN')
 
 Simple await:
-```
+```groovy
 awaitDeploymentCompletion('d-3GR0HQLDN')
 ```
 
 Timed await:
-```
+```groovy
 timeout(time: 15, unit: 'MINUTES'){
     awaitDeploymentCompletion('d-3GR0HQLDN')
 }
@@ -559,7 +559,7 @@ The step returns an array of Account objects with the following fields:
 * safeName - the name converted to only contain lower-case, numbers and hyphens
 * status - the account status
 
-```
+```groovy
 def accounts = listAWSAccounts()
 ```
 
@@ -569,7 +569,7 @@ Create or update a SAML identity provider with the given metadata document.
 
 The step returns the ARN of the created identity provider.
 
-```
+```groovy
 def idp = updateIdP(name: 'nameToCreateOrUpdate', metadata: 'pathToMetadataFile')
 ```
 
@@ -577,7 +577,7 @@ def idp = updateIdP(name: 'nameToCreateOrUpdate', metadata: 'pathToMetadataFile'
 
 Update the assume role trust policy of the given role using the provided file.
 
-```
+```groovy
 updateTrustPolicy(roleName: 'SomeRole', policyFile: 'path/to/somefile.json')
 ```
 
@@ -585,7 +585,7 @@ updateTrustPolicy(roleName: 'SomeRole', policyFile: 'path/to/somefile.json')
 
 Create or update the AWS account alias.
 
-```
+```groovy
 setAccountAlias(name: 'awsAlias')
 ```
 
@@ -595,13 +595,13 @@ Create login string to authenticate docker with the ECR.
 
 The step returns the shell command to perform the login.
 
-```
+```groovy
 def login = ecrLogin()
 ```
 
 For older versions of docker that need the email parameter use:
 
-```
+```groovy
 def login = ecrLogin(email:true)
 ```
 
@@ -611,7 +611,7 @@ Invoke a Lambda function.
 
 The step returns the object returned by the Lambda.
 
-```
+```groovy
 def result = invokeLambda(
 	functionName: 'myLambdaFunction',
 	payload: [ "key": "value", "anotherkey" : [ "another", "value"] ]
@@ -620,7 +620,7 @@ def result = invokeLambda(
 
 Alternatively payload and return value can be Strings instead of Objects:
 
-```
+```groovy
 String result = invokeLambda(
 	functionName: 'myLambdaFunction',
 	payloadAsString: '{"key": "value"}',
@@ -632,7 +632,7 @@ String result = invokeLambda(
 
 Share an AMI image to one or more accounts
 
-```
+```groovy
 ec2ShareAmi(
 	amiId: 'ami-23842',
 	accountIds: [ "0123456789", "1234567890" ]
