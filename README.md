@@ -102,6 +102,14 @@ withAWS(region:'eu-central-1',credentials:'nameOfSystemCredentials',federatedUse
 }
 ```
 
+Authentication with a SAML assertion (fetched from your company IdP) by assuming a role
+
+```groovy
+withAWS(role: 'myRole', roleAccount: '123456789', principalArn: 'arn:aws:iam::123456789:saml-provider/test', samlAssertion: 'base64SAML', region:'eu-west-1') {
+  // do something
+}
+```
+
 When you use Jenkins Declarative Pipelines you can also use `withAWS` in an options block:
 
 ```
@@ -110,6 +118,16 @@ options {
 }
 stages {
 	...
+}
+```
+
+## withRole
+
+Make a assume role against AWS services. Every statement in this block will be done with the specified role.
+
+```
+withRole(role: 'role_name_or_role_arn', roleAccount:'123456789', region: 'eu-west-1') {
+    // do something
 }
 ```
 

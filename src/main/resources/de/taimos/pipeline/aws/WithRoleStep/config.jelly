@@ -1,17 +1,5 @@
 <?jelly escape-by-default='true'?>
 <j:jelly xmlns:j="jelly:core" xmlns:c="/lib/credentials" xmlns:f="/lib/form">
-	<f:entry title="${%Region}" field="region">
-		<f:textbox />
-	</f:entry>
-	<f:entry title="${%Endpoint URL}" field="endpointUrl">
-		<f:textbox />
-	</f:entry>
-	<f:entry title="${%Credentials}" field="credentials">
-		<c:select />
-	</f:entry>
-	<f:entry title="${%Profile}" field="profile">
-		<f:textbox />
-	</f:entry>
 	<f:entry title="${%Role}" field="role">
 		<f:textbox />
 	</f:entry>
@@ -28,9 +16,6 @@
 		<f:textbox />
 	</f:entry>
 	<f:entry title="${%Policy}" field="policy">
-		<f:textbox />
-	</f:entry>
-	<f:entry title="${%Federated User ID}" field="federatedUserId">
 		<f:textbox />
 	</f:entry>
 </j:jelly>
