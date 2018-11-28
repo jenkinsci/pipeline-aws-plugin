@@ -7,7 +7,6 @@
 This plugins adds Jenkins pipeline steps to interact with the AWS API.
 
 * [withAWS](#withaws)
-* [withRole](#withrole)
 * [awsIdentity](#awsidentity)
 * [cfInvalidate](#cfinvalidate)
 * [s3Upload](#s3upload)
@@ -119,16 +118,6 @@ options {
 }
 stages {
 	...
-}
-```
-
-## withRole
-
-Make a assume role against AWS services. Every statement in this block will be done with the specified role.
-
-```groovy
-withRole(role: 'role_name_or_role_arn', roleAccount:'123456789', region: 'eu-west-1') {
-    // do something
 }
 ```
 
