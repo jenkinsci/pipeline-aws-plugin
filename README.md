@@ -635,7 +635,6 @@ ec2ShareAmi(
 
 ## 1.34
 * add support for assume role with SAML assertion authentication (#140)
-* add withRole step to assume different role with a same AWS session
 
 ## 1.33
 * fix timeout settings for `cfnExecuteChangeSet` (#132)
