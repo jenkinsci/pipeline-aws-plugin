@@ -24,8 +24,6 @@ package de.taimos.pipeline.aws;
 import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.services.securitytoken.AWSSecurityTokenService;
 import com.amazonaws.services.securitytoken.AWSSecurityTokenServiceClientBuilder;
-import com.amazonaws.services.securitytoken.model.AssumeRoleRequest;
-import com.amazonaws.services.securitytoken.model.AssumeRoleResult;
 import com.amazonaws.services.securitytoken.model.Credentials;
 import com.amazonaws.services.securitytoken.model.GetCallerIdentityRequest;
 import com.amazonaws.services.securitytoken.model.GetFederationTokenRequest;
@@ -37,6 +35,9 @@ import com.cloudbees.plugins.credentials.CredentialsProvider;
 import com.cloudbees.plugins.credentials.common.StandardListBoxModel;
 import com.cloudbees.plugins.credentials.common.StandardUsernamePasswordCredentials;
 import com.cloudbees.plugins.credentials.domains.DomainRequirement;
+
+import de.taimos.pipeline.aws.utils.AssumedRole;
+import de.taimos.pipeline.aws.utils.AssumedRole.AssumeRole;
 import de.taimos.pipeline.aws.utils.IamRoleUtils;
 import de.taimos.pipeline.aws.utils.StepUtils;
 import hudson.EnvVars;
@@ -77,6 +78,8 @@ public class WithAWSStep extends Step {
 	private String iamMfaToken = "";
 	private Integer duration = 3600;
 	private String roleSessionName;
+	private String principalArn = "";
+	private String samlAssertion = "";
 
 	@DataBoundConstructor
 	public WithAWSStep() {
@@ -189,6 +192,24 @@ public class WithAWSStep extends Step {
 	@DataBoundSetter
 	public void setRoleSessionName(String roleSessionName) {
 		this.roleSessionName = roleSessionName;
+	}
+
+	public String getPrincipalArn() {
+		return principalArn;
+	}
+
+	@DataBoundSetter
+	public void setPrincipalArn(final String principalArn) {
+		this.principalArn = principalArn;
+	}
+
+	public String getSamlAssertion() {
+		return samlAssertion;
+	}
+
+	@DataBoundSetter
+	public void setSamlAssertion(final String samlAssertion) {
+		this.samlAssertion = samlAssertion;
 	}
 
 	@Override
@@ -316,7 +337,6 @@ public class WithAWSStep extends Step {
 				if (usernamePasswordCredentials != null) {
 					localEnv.override(AWSClientFactory.AWS_ACCESS_KEY_ID, usernamePasswordCredentials.getUsername());
 					localEnv.override(AWSClientFactory.AWS_SECRET_ACCESS_KEY, usernamePasswordCredentials.getPassword().getPlainText());
-					this.envVars.overrideAll(localEnv);
 				} else if (amazonWebServicesCredentials != null) {
 					AWSCredentials awsCredentials;
 
@@ -332,46 +352,36 @@ public class WithAWSStep extends Step {
 
 					localEnv.override(AWSClientFactory.AWS_ACCESS_KEY_ID, awsCredentials.getAWSAccessKeyId());
 					localEnv.override(AWSClientFactory.AWS_SECRET_ACCESS_KEY, awsCredentials.getAWSSecretKey());
-
-					this.envVars.overrideAll(localEnv);
 				} else {
 					throw new RuntimeException("Cannot find a Username with password credential with the ID " + this.step.getCredentials());
 				}
+			} else if (!StringUtils.isNullOrEmpty(this.step.getSamlAssertion())) {
+				localEnv.override(AWSClientFactory.AWS_ACCESS_KEY_ID, "access_key_not_used_will_pass_through_SAML_assertion");
+				localEnv.override(AWSClientFactory.AWS_SECRET_ACCESS_KEY, "secret_access_key_not_used_will_pass_through_SAML_assertion");
 			}
+			this.envVars.overrideAll(localEnv);
 		}
 
 		private void withRole(@Nonnull EnvVars localEnv) throws IOException, InterruptedException {
 			if (!StringUtils.isNullOrEmpty(this.step.getRole())) {
+				
 				AWSSecurityTokenService sts = AWSClientFactory.create(AWSSecurityTokenServiceClientBuilder.standard(), this.envVars);
 
-				final String accountId;
-				if (!StringUtils.isNullOrEmpty(this.step.getRoleAccount())) {
-					accountId = this.step.getRoleAccount();
-				} else {
-					accountId = sts.getCallerIdentity(new GetCallerIdentityRequest()).getAccount();
-				}
+				AssumeRole assumeRole = IamRoleUtils.validRoleArn(this.step.getRole()) ? new AssumeRole(this.step.getRole()) :
+						new AssumeRole(this.step.getRole(), createAccountId(sts), IamRoleUtils.selectPartitionName(this.envVars.get(AWSClientFactory.AWS_REGION, this.envVars.get(AWSClientFactory.AWS_DEFAULT_REGION))));
+				assumeRole.withDurationSeconds(this.step.getDuration());
+				assumeRole.withExternalId(this.step.getExternalId());
+				assumeRole.withPolicy(this.step.getPolicy());
+				assumeRole.withSamlAssertion(this.step.getSamlAssertion(), this.step.getPrincipalArn());
+				assumeRole.withSessionName(this.createRoleSessionName());
 
-				String roleARN = IamRoleUtils.validRoleArn(this.step.getRole()) ? this.step.getRole() : String.format("arn:%s:iam::%s:role/%s", IamRoleUtils.selectPartitionName(this.step.getRegion()), accountId, this.step.getRole());
+				this.getContext().get(TaskListener.class).getLogger().format("Requesting assume role");
+				AssumedRole assumedRole = assumeRole.assumedRole(sts);
+				this.getContext().get(TaskListener.class).getLogger().format("Assumed role %s with id %s %n ", assumedRole.getAssumedRoleUser().getArn(), assumedRole.getAssumedRoleUser().getAssumedRoleId());
 
-				AssumeRoleRequest request = new AssumeRoleRequest()
-						.withRoleArn(roleARN)
-						.withRoleSessionName(this.createRoleSessionName());
-				if (!StringUtils.isNullOrEmpty(this.step.getExternalId())) {
-					request.withExternalId(this.step.getExternalId());
-				}
-				if (!StringUtils.isNullOrEmpty(this.step.getPolicy())) {
-					this.getContext().get(TaskListener.class).getLogger().format("Requesting additional policy to be applied: %s %n ", this.step.getPolicy());
-					request.withPolicy(this.step.getPolicy());
-				}
-				request.withDurationSeconds(this.step.getDuration());
-				AssumeRoleResult assumeRole = sts.assumeRole(request);
-
-				this.getContext().get(TaskListener.class).getLogger().format("Assumed role %s with id %s %n ", roleARN, assumeRole.getAssumedRoleUser().getAssumedRoleId());
-
-				Credentials credentials = assumeRole.getCredentials();
-				localEnv.override(AWSClientFactory.AWS_ACCESS_KEY_ID, credentials.getAccessKeyId());
-				localEnv.override(AWSClientFactory.AWS_SECRET_ACCESS_KEY, credentials.getSecretAccessKey());
-				localEnv.override(AWSClientFactory.AWS_SESSION_TOKEN, credentials.getSessionToken());
+				localEnv.override(AWSClientFactory.AWS_ACCESS_KEY_ID, assumedRole.getCredentials().getAccessKeyId());
+				localEnv.override(AWSClientFactory.AWS_SECRET_ACCESS_KEY, assumedRole.getCredentials().getSecretAccessKey());
+				localEnv.override(AWSClientFactory.AWS_SESSION_TOKEN, assumedRole.getCredentials().getSessionToken());
 				this.envVars.overrideAll(localEnv);
 			}
 		}
@@ -410,6 +420,14 @@ public class WithAWSStep extends Step {
 						.build();
 			} else {
 				return this.step.roleSessionName;
+			}
+		}
+
+		private String createAccountId(final AWSSecurityTokenService sts) {
+			if (!StringUtils.isNullOrEmpty(this.step.getRoleAccount())) {
+				return this.step.getRoleAccount();
+			} else {
+				return sts.getCallerIdentity(new GetCallerIdentityRequest()).getAccount();
 			}
 		}
 

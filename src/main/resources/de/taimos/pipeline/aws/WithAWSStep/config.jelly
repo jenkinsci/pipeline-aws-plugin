@@ -18,6 +18,12 @@
 	<f:entry title="${%Role Account}" field="roleAccount">
 		<f:textbox />
 	</f:entry>
+	<f:entry title="${%SAML Assertion}" field="samlAssertion">
+        <f:textbox />
+    </f:entry>
+    <f:entry title="${%Principal ARN}" field="principalArn">
+        <f:textbox />
+    </f:entry>
 	<f:entry title="${%External ID}" field="externalId">
 		<f:textbox />
 	</f:entry>
