@@ -632,10 +632,12 @@ ec2ShareAmi(
 # Changelog
 
 ## current master
+
+## 1.35
 * fixing regression that `region` was now mandatory on `withAWS`
 * fix s3Upload step doesn't allow to set object metadata with values containing colon character (#141)
 
-## 1.34
+## 1.34 (*use >= 1.35!!*)
 * add support for assume role with SAML assertion authentication (#140)
 
 ## 1.33
