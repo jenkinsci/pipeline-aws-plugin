@@ -632,6 +632,7 @@ ec2ShareAmi(
 # Changelog
 
 ## current master
+* fixing regression that `region` was now mandatory on `withAWS`
 
 ## 1.34
 * add support for assume role with SAML assertion authentication (#140)

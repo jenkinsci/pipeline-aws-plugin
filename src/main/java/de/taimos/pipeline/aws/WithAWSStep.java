@@ -21,6 +21,22 @@
 
 package de.taimos.pipeline.aws;
 
+import java.io.IOException;
+import java.util.Collections;
+import java.util.Set;
+
+import javax.annotation.Nonnull;
+
+import org.jenkinsci.plugins.workflow.steps.BodyExecutionCallback;
+import org.jenkinsci.plugins.workflow.steps.EnvironmentExpander;
+import org.jenkinsci.plugins.workflow.steps.Step;
+import org.jenkinsci.plugins.workflow.steps.StepContext;
+import org.jenkinsci.plugins.workflow.steps.StepDescriptor;
+import org.jenkinsci.plugins.workflow.steps.StepExecution;
+import org.kohsuke.stapler.AncestorInPath;
+import org.kohsuke.stapler.DataBoundConstructor;
+import org.kohsuke.stapler.DataBoundSetter;
+
 import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.services.securitytoken.AWSSecurityTokenService;
 import com.amazonaws.services.securitytoken.AWSSecurityTokenServiceClientBuilder;
@@ -34,7 +50,6 @@ import com.cloudbees.plugins.credentials.CredentialsMatchers;
 import com.cloudbees.plugins.credentials.CredentialsProvider;
 import com.cloudbees.plugins.credentials.common.StandardListBoxModel;
 import com.cloudbees.plugins.credentials.common.StandardUsernamePasswordCredentials;
-import com.cloudbees.plugins.credentials.domains.DomainRequirement;
 
 import de.taimos.pipeline.aws.utils.AssumedRole;
 import de.taimos.pipeline.aws.utils.AssumedRole.AssumeRole;
@@ -49,20 +64,6 @@ import hudson.model.TaskListener;
 import hudson.model.queue.Tasks;
 import hudson.security.ACL;
 import hudson.util.ListBoxModel;
-import org.jenkinsci.plugins.workflow.steps.BodyExecutionCallback;
-import org.jenkinsci.plugins.workflow.steps.EnvironmentExpander;
-import org.jenkinsci.plugins.workflow.steps.Step;
-import org.jenkinsci.plugins.workflow.steps.StepContext;
-import org.jenkinsci.plugins.workflow.steps.StepDescriptor;
-import org.jenkinsci.plugins.workflow.steps.StepExecution;
-import org.kohsuke.stapler.AncestorInPath;
-import org.kohsuke.stapler.DataBoundConstructor;
-import org.kohsuke.stapler.DataBoundSetter;
-
-import javax.annotation.Nonnull;
-import java.io.IOException;
-import java.util.Collections;
-import java.util.Set;
 
 public class WithAWSStep extends Step {
 
@@ -195,7 +196,7 @@ public class WithAWSStep extends Step {
 	}
 
 	public String getPrincipalArn() {
-		return principalArn;
+		return this.principalArn;
 	}
 
 	@DataBoundSetter
@@ -204,7 +205,7 @@ public class WithAWSStep extends Step {
 	}
 
 	public String getSamlAssertion() {
-		return samlAssertion;
+		return this.samlAssertion;
 	}
 
 	@DataBoundSetter
@@ -254,14 +255,14 @@ public class WithAWSStep extends Step {
 									: ACL.SYSTEM,
 							context,
 							StandardUsernamePasswordCredentials.class,
-							Collections.<DomainRequirement>emptyList(),
+							Collections.emptyList(),
 							CredentialsMatchers.instanceOf(StandardUsernamePasswordCredentials.class))
 					.includeMatchingAs(context instanceof Queue.Task
 									? Tasks.getAuthenticationOf((Queue.Task) context)
 									: ACL.SYSTEM,
 							context,
 							AmazonWebServicesCredentials.class,
-							Collections.<DomainRequirement>emptyList(),
+							Collections.emptyList(),
 							CredentialsMatchers.instanceOf(AmazonWebServicesCredentials.class));
 		}
 	}
@@ -294,7 +295,7 @@ public class WithAWSStep extends Step {
 
 			EnvironmentExpander expander = new EnvironmentExpander() {
 				@Override
-				public void expand(@Nonnull EnvVars envVars) throws IOException, InterruptedException {
+				public void expand(@Nonnull EnvVars envVars) {
 					envVars.overrideAll(awsEnv);
 				}
 			};
@@ -368,7 +369,7 @@ public class WithAWSStep extends Step {
 				AWSSecurityTokenService sts = AWSClientFactory.create(AWSSecurityTokenServiceClientBuilder.standard(), this.envVars);
 
 				AssumeRole assumeRole = IamRoleUtils.validRoleArn(this.step.getRole()) ? new AssumeRole(this.step.getRole()) :
-						new AssumeRole(this.step.getRole(), createAccountId(sts), IamRoleUtils.selectPartitionName(this.envVars.get(AWSClientFactory.AWS_REGION, this.envVars.get(AWSClientFactory.AWS_DEFAULT_REGION))));
+						new AssumeRole(this.step.getRole(), this.createAccountId(sts), IamRoleUtils.selectPartitionName(this.step.getRegion()));
 				assumeRole.withDurationSeconds(this.step.getDuration());
 				assumeRole.withExternalId(this.step.getExternalId());
 				assumeRole.withPolicy(this.step.getPolicy());

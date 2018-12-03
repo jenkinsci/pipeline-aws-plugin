@@ -41,15 +41,15 @@ public class AssumedRole {
 	}
 
 	public Credentials getCredentials() {
-		return credentials;
+		return this.credentials;
 	}
 
 	public AssumedRoleUser getAssumedRoleUser() {
-		return assumedRoleUser;
+		return this.assumedRoleUser;
 	}
 
 	public static class AssumeRole {
-		private String roleArn;
+		private final String roleArn;
 		private String sessionName;
 		private String externalId;
 		private String policy;
@@ -92,25 +92,25 @@ public class AssumedRole {
 		}
 		
 		public AssumedRole assumedRole(final AWSSecurityTokenService sts) {
-			return samlAssertion == null ? assumeRole(sts) : assumeRoleWithSAML(sts);       
+			return this.samlAssertion == null ? this.assumeRole(sts) : this.assumeRoleWithSAML(sts);
 		}
 		
 		private AssumedRole assumeRole(final AWSSecurityTokenService sts) {
-			final AssumeRoleRequest assumeRoleRequest = new AssumeRoleRequest().withRoleArn(roleArn)
-							.withRoleSessionName(sessionName)
-							.withDurationSeconds(durationInSeconds);
-			Optional.ofNullable(externalId).ifPresent(assumeRoleRequest::setExternalId);
-			Optional.ofNullable(policy).ifPresent(assumeRoleRequest::withPolicy);
+			final AssumeRoleRequest assumeRoleRequest = new AssumeRoleRequest().withRoleArn(this.roleArn)
+							.withRoleSessionName(this.sessionName)
+							.withDurationSeconds(this.durationInSeconds);
+			Optional.ofNullable(this.externalId).ifPresent(assumeRoleRequest::setExternalId);
+			Optional.ofNullable(this.policy).ifPresent(assumeRoleRequest::withPolicy);
 			AssumeRoleResult assumeRoleResult = sts.assumeRole(assumeRoleRequest);
 			return new AssumedRole(assumeRoleResult.getCredentials(), assumeRoleResult.getAssumedRoleUser());
 		}
 
 		private AssumedRole assumeRoleWithSAML(final AWSSecurityTokenService sts) {
-			final AssumeRoleWithSAMLRequest assumeRoleRequest = new AssumeRoleWithSAMLRequest().withRoleArn(roleArn)
-					.withDurationSeconds(durationInSeconds)
-					.withPrincipalArn(principalArn)
-					.withSAMLAssertion(samlAssertion);
-			Optional.ofNullable(policy).ifPresent(assumeRoleRequest::withPolicy);
+			final AssumeRoleWithSAMLRequest assumeRoleRequest = new AssumeRoleWithSAMLRequest().withRoleArn(this.roleArn)
+					.withDurationSeconds(this.durationInSeconds)
+					.withPrincipalArn(this.principalArn)
+					.withSAMLAssertion(this.samlAssertion);
+			Optional.ofNullable(this.policy).ifPresent(assumeRoleRequest::withPolicy);
 			AssumeRoleWithSAMLResult assumeRoleWithSAMLResult = sts.assumeRoleWithSAML(assumeRoleRequest);
 			return new AssumedRole(assumeRoleWithSAMLResult.getCredentials(), assumeRoleWithSAMLResult.getAssumedRoleUser());
 		}

@@ -21,11 +21,6 @@ package de.taimos.pipeline.aws;
  */
 
 
-import com.cloudbees.jenkins.plugins.awscredentials.AWSCredentialsImpl;
-import com.cloudbees.jenkins.plugins.awscredentials.AmazonWebServicesCredentials;
-import com.cloudbees.plugins.credentials.Credentials;
-import hudson.model.Result;
-
 import java.util.ArrayList;
 import java.util.List;
 
@@ -43,6 +38,9 @@ import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import com.cloudbees.hudson.plugins.folder.AbstractFolder;
 import com.cloudbees.hudson.plugins.folder.Folder;
 import com.cloudbees.hudson.plugins.folder.properties.FolderCredentialsProvider;
+import com.cloudbees.jenkins.plugins.awscredentials.AWSCredentialsImpl;
+import com.cloudbees.jenkins.plugins.awscredentials.AmazonWebServicesCredentials;
+import com.cloudbees.plugins.credentials.Credentials;
 import com.cloudbees.plugins.credentials.CredentialsProvider;
 import com.cloudbees.plugins.credentials.CredentialsScope;
 import com.cloudbees.plugins.credentials.CredentialsStore;
@@ -52,6 +50,7 @@ import com.cloudbees.plugins.credentials.domains.Domain;
 import com.cloudbees.plugins.credentials.impl.UsernamePasswordCredentialsImpl;
 
 import hudson.EnvVars;
+import hudson.model.Result;
 import hudson.util.ListBoxModel;
 
 /**
@@ -284,14 +283,10 @@ public class WithAWSStepTest {
 
 	@Test
 	public void testStepWithAssumeRoleSAMLAssertion() throws Exception {
-
-		// Create a folder with credentials in its store
-		Folder folder = jenkinsRule.jenkins.createProject(Folder.class, "folder" + jenkinsRule.jenkins.getItems().size());
-
-		WorkflowJob job = folder.createProject(WorkflowJob.class, "testStepWithAWSIamMFAFolderCredentials");
+		WorkflowJob job = jenkinsRule.jenkins.createProject(WorkflowJob.class, "testStepWithAssumeRoleSAMLAssertion");
 		job.setDefinition(new CpsFlowDefinition(""
 				+ "node {\n"
-				+ "  withAWS (role: 'myRole', roleAccount: '123456789', principalArn: 'arn:aws:iam::123456789:saml-provider/test', samlAssertion: 'base64SAML', region: 'eu-west-1') {\n"
+				+ "  withAWS (role: 'myRole', roleAccount: '123456789012', principalArn: 'arn:aws:iam::123456789012:saml-provider/test', samlAssertion: 'base64SAML', region: 'eu-west-1') {\n"
 				+ "    echo 'It works!'\n"
 				+ "  }\n"
 				+ "}\n", true)
@@ -301,6 +296,22 @@ public class WithAWSStepTest {
 		jenkinsRule.assertBuildStatus(Result.FAILURE, workflowRun);
 		jenkinsRule.assertLogContains("Requesting assume role", workflowRun);
 		jenkinsRule.assertLogContains("Invalid base64 SAMLResponse", workflowRun);
+	}
+
+	@Test
+	public void testStepWithAssumeRole() throws Exception {
+		WorkflowJob job = jenkinsRule.jenkins.createProject(WorkflowJob.class, "testStepWithAssumeRole");
+		job.setDefinition(new CpsFlowDefinition(""
+				+ "node {\n"
+				+ "  withAWS (role: 'myRole', roleAccount: '123456789012') {\n"
+				+ "    echo 'It works!'\n"
+				+ "  }\n"
+				+ "}\n", true)
+		);
+		WorkflowRun workflowRun = job.scheduleBuild2(0).get();
+		jenkinsRule.waitForCompletion(workflowRun);
+		jenkinsRule.assertBuildStatus(Result.FAILURE, workflowRun);
+		jenkinsRule.assertLogContains("Requesting assume role", workflowRun);
 	}
 
 	@Test
