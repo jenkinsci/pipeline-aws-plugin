@@ -20,6 +20,7 @@
  */
 package de.taimos.pipeline.aws;
 
+import com.amazonaws.retry.RetryPolicy;
 import org.apache.commons.lang.StringUtils;
 import org.jenkinsci.plugins.workflow.steps.StepContext;
 
@@ -80,6 +81,8 @@ public class AWSClientFactory {
 
 	private static ClientConfiguration getClientConfiguration(EnvVars vars) {
 		ClientConfiguration clientConfiguration = new ClientConfiguration();
+		//the default max retry is 3. Increasing this to be more resilient to upstream errors
+		clientConfiguration.setRetryPolicy(new RetryPolicy(null, null, 10, false));
 		ProxyConfiguration.configure(vars, clientConfiguration);
 		return clientConfiguration;
 	}
