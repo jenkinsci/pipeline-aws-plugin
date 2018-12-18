@@ -632,6 +632,7 @@ ec2ShareAmi(
 # Changelog
 
 ## current master
+* Increase AWS SDK retry count from default (3 retries) to 10 retries
 
 ## 1.35
 * fixing regression that `region` was now mandatory on `withAWS`
