@@ -633,7 +633,7 @@ ec2ShareAmi(
 
 ## current master
 * Increase AWS SDK retry count from default (3 retries) to 10 retries
-* Add CAPABILITY_NAMED_IAM to Cloudformation Stacks and Stacksets
+* Add CAPABILITY_AUTO_EXPAND to Cloudformation Stacks and Stacksets
 
 ## 1.35
 * fixing regression that `region` was now mandatory on `withAWS`
