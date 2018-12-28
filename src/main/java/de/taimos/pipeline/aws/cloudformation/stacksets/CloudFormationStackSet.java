@@ -83,7 +83,7 @@ public class CloudFormationStackSet {
 		this.listener.getLogger().println("Creating stack set " + this.stackSet);
 		CreateStackSetRequest req = new CreateStackSetRequest()
 				.withStackSetName(this.stackSet)
-				.withCapabilities(Capability.CAPABILITY_IAM, Capability.CAPABILITY_NAMED_IAM)
+				.withCapabilities(Capability.CAPABILITY_IAM, Capability.CAPABILITY_NAMED_IAM, Capability.CAPABILITY_AUTO_EXPAND)
 				.withTemplateBody(templateBody)
 				.withTemplateURL(templateUrl)
 				.withParameters(params)
@@ -132,7 +132,7 @@ public class CloudFormationStackSet {
 		this.listener.getLogger().format("Updating CloudFormation stack set %s %n", this.stackSet);
 		UpdateStackSetRequest req = new UpdateStackSetRequest()
 				.withStackSetName(this.stackSet)
-				.withCapabilities(Capability.CAPABILITY_IAM, Capability.CAPABILITY_NAMED_IAM)
+				.withCapabilities(Capability.CAPABILITY_IAM, Capability.CAPABILITY_NAMED_IAM, Capability.CAPABILITY_AUTO_EXPAND)
 				.withParameters(params)
 				.withAdministrationRoleARN(administratorRoleArn)
 				.withExecutionRoleName(executionRoleName)
