@@ -134,9 +134,9 @@ public class CFNExecuteChangeSetStep extends Step {
 
 			AmazonCloudFormation client = AWSClientFactory.create(AmazonCloudFormationClientBuilder.standard(), Execution.this.getContext());
 			CloudFormationStack cfnStack = new CloudFormationStack(client, stack, listener);
-			cfnStack.executeChangeSet(changeSet, Execution.this.step.getPollConfiguration());
+			Map<String, String> outputs = cfnStack.executeChangeSet(changeSet, Execution.this.step.getPollConfiguration());
 			listener.getLogger().println("Execute change set complete");
-			return cfnStack.describeOutputs();
+			return outputs;
 		}
 
 		private static final long serialVersionUID = 1L;

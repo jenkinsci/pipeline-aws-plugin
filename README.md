@@ -324,7 +324,10 @@ If you have many parameters you can specify a `paramsFile` containing the parame
 JSON file like with the cli or a YAML file for the [cfn-params](https://www.npmjs.com/package/cfn-params) command line utility.
 
 Additionally you can specify a list of tags that are set on the stack and all resources created by CloudFormation.
-The step returns the outputs of the stack as a map.
+
+The step returns the outputs of the stack as a map. It also contains special values prefixed with `jenkins`:
+
+* `jenkinsStackUpdateStatus` - "true"/"false" whether the stack was modified or not 
 
 When cfnUpdate creates a stack and the creation fails, the stack is deleted instead of being left in a broken state.
 
@@ -412,7 +415,11 @@ If you have many parameters you can specify a `paramsFile` containing the parame
 JSON file like with the cli or a YAML file for the [cfn-params](https://www.npmjs.com/package/cfn-params) command line utility.
 
 Additionally you can specify a list of tags that are set on the stack and all resources created by CloudFormation.
-The step returns the outputs of the stack as a map.
+
+The step returns the outputs of the stack as a map. It also contains special values prefixed with `jenkins`:
+
+* `jenkinsStackUpdateStatus` - "true"/"false" whether the stack was modified or not 
+
 
 To prevent running into rate limiting on the AWS API you can change the default polling interval of 1000 ms using the parameter `pollIntervall`. Using the value `0` disables event printing.
 
@@ -632,6 +639,7 @@ ec2ShareAmi(
 # Changelog
 
 ## current master
+* add `jenkinsStackUpdateStatus` to stack outputs. Specifies if stack was modified
 * Increase AWS SDK retry count from default (3 retries) to 10 retries
 * Add CAPABILITY_AUTO_EXPAND to Cloudformation Stacks and Stacksets
 

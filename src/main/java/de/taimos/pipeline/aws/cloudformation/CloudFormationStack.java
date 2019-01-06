@@ -21,7 +21,6 @@
 
 package de.taimos.pipeline.aws.cloudformation;
 
-import java.time.Duration;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
@@ -52,6 +51,8 @@ import com.amazonaws.waiters.Waiter;
 import hudson.model.TaskListener;
 
 public class CloudFormationStack {
+
+	private static final String UPDATE_STATUS_OUTPUT = "jenkinsStackUpdateStatus";
 
 	private final AmazonCloudFormation client;
 	private final String stack;
@@ -107,7 +108,7 @@ public class CloudFormationStack {
 		return map;
 	}
 
-	public void create(String templateBody, String templateUrl, Collection<Parameter> params, Collection<Tag> tags, PollConfiguration pollConfiguration, String roleArn, String onFailure, Boolean enableTerminationProtection) throws ExecutionException {
+	public Map<String, String> create(String templateBody, String templateUrl, Collection<Parameter> params, Collection<Tag> tags, PollConfiguration pollConfiguration, String roleArn, String onFailure, Boolean enableTerminationProtection) throws ExecutionException {
 		if ((templateBody == null || templateBody.isEmpty()) && (templateUrl == null || templateUrl.isEmpty())) {
 			throw new IllegalArgumentException("Either a file or url for the template must be specified");
 		}
@@ -121,10 +122,14 @@ public class CloudFormationStack {
 		this.client.createStack(req);
 
 		new EventPrinter(this.client, this.listener).waitAndPrintStackEvents(this.stack, this.client.waiters().stackCreateComplete(), pollConfiguration);
+
+		Map<String, String> outputs = this.describeOutputs();
+		outputs.put(UPDATE_STATUS_OUTPUT, "true");
+		return outputs;
 	}
 
 
-	public void update(String templateBody, String templateUrl, Collection<Parameter> params, Collection<Tag> tags, PollConfiguration pollConfiguration, String roleArn, RollbackConfiguration rollbackConfig) throws ExecutionException {
+	public Map<String, String> update(String templateBody, String templateUrl, Collection<Parameter> params, Collection<Tag> tags, PollConfiguration pollConfiguration, String roleArn, RollbackConfiguration rollbackConfig) throws ExecutionException {
 		try {
 			UpdateStackRequest req = new UpdateStackRequest();
 			req.withStackName(this.stack).withCapabilities(Capability.CAPABILITY_IAM, Capability.CAPABILITY_NAMED_IAM, Capability.CAPABILITY_AUTO_EXPAND);
@@ -147,10 +152,15 @@ public class CloudFormationStack {
 
 			this.listener.getLogger().format("Updated CloudFormation stack %s %n", this.stack);
 
+			Map<String, String> outputs = this.describeOutputs();
+			outputs.put(UPDATE_STATUS_OUTPUT, "true");
+			return outputs;
 		} catch (AmazonCloudFormationException e) {
 			if (e.getMessage().contains("No updates are to be performed")) {
 				this.listener.getLogger().format("No updates were needed for CloudFormation stack %s %n", this.stack);
-				return;
+				Map<String, String> outputs = this.describeOutputs();
+				outputs.put(UPDATE_STATUS_OUTPUT, "false");
+				return outputs;
 			}
 			this.listener.getLogger().format("Failed to update CloudFormation stack %s %n", this.stack);
 			throw e;
@@ -204,12 +214,16 @@ public class CloudFormationStack {
 		}
 	}
 
-	public void executeChangeSet(String changeSetName, PollConfiguration pollConfiguration) throws ExecutionException {
+	public Map<String, String> executeChangeSet(String changeSetName, PollConfiguration pollConfiguration) throws ExecutionException {
 		if (!this.changeSetHasChanges(changeSetName) || !this.exists()) {
 			// If the change set has no changes or the stack was not prepared we should simply delete it.
 			this.listener.getLogger().format("Deleting empty change set %s for stack %s %n", changeSetName, this.stack);
 			DeleteChangeSetRequest req = new DeleteChangeSetRequest().withChangeSetName(changeSetName).withStackName(this.stack);
 			this.client.deleteChangeSet(req);
+
+			Map<String, String> outputs = this.describeOutputs();
+			outputs.put(UPDATE_STATUS_OUTPUT, "false");
+			return outputs;
 		} else {
 			this.listener.getLogger().format("Executing change set %s for stack %s %n", changeSetName, this.stack);
 
@@ -224,6 +238,10 @@ public class CloudFormationStack {
 			this.client.executeChangeSet(req);
 			new EventPrinter(this.client, this.listener).waitAndPrintStackEvents(this.stack, waiter, pollConfiguration);
 			this.listener.getLogger().format("Executed change set %s for stack %s %n", changeSetName, this.stack);
+
+			Map<String, String> outputs = this.describeOutputs();
+			outputs.put(UPDATE_STATUS_OUTPUT, "true");
+			return outputs;
 		}
 	}
 

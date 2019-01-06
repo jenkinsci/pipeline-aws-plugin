@@ -100,16 +100,14 @@ public class CFNUpdateStep extends AbstractCFNCreateStep {
 		public Map<String, String> whenStackExists(Collection<Parameter> parameters, Collection<Tag> tags, RollbackConfiguration rollbackConfiguration) throws Exception {
 			final String url = this.getStep().getUrl();
 			CloudFormationStack cfnStack = this.getCfnStack();
-			cfnStack.update(this.getStep().readTemplate(this), url, parameters, tags, this.getStep().getPollConfiguration(), this.getStep().getRoleArn(), rollbackConfiguration);
-			return cfnStack.describeOutputs();
+			return cfnStack.update(this.getStep().readTemplate(this), url, parameters, tags, this.getStep().getPollConfiguration(), this.getStep().getRoleArn(), rollbackConfiguration);
 		}
 
 		@Override
 		public Map<String, String> whenStackMissing(Collection<Parameter> parameters, Collection<Tag> tags) throws Exception {
 			final String url = this.getStep().getUrl();
 			CloudFormationStack cfnStack = this.getCfnStack();
-			cfnStack.create(this.getStep().readTemplate(this), url, parameters, tags, this.getStep().getPollConfiguration(), this.getStep().getRoleArn(), this.getStep().getOnFailure(), this.getStep().getEnableTerminationProtection());
-			return cfnStack.describeOutputs();
+			return cfnStack.create(this.getStep().readTemplate(this), url, parameters, tags, this.getStep().getPollConfiguration(), this.getStep().getRoleArn(), this.getStep().getOnFailure(), this.getStep().getEnableTerminationProtection());
 		}
 
 		private static final long serialVersionUID = 1L;
