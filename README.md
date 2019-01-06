@@ -639,6 +639,8 @@ ec2ShareAmi(
 # Changelog
 
 ## current master
+
+## 1.36
 * add `jenkinsStackUpdateStatus` to stack outputs. Specifies if stack was modified
 * Increase AWS SDK retry count from default (3 retries) to 10 retries
 * Add CAPABILITY_AUTO_EXPAND to Cloudformation Stacks and Stacksets
