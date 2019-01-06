@@ -2,6 +2,7 @@ package de.taimos.pipeline.aws.cloudformation;
 
 import java.time.Duration;
 import java.util.Collections;
+import java.util.Map;
 import java.util.concurrent.ExecutionException;
 
 import org.assertj.core.api.Assertions;
@@ -118,16 +119,14 @@ public class CloudformationStackTests {
 							  .withChanges(new Change())
 		);
 
-		Mockito.when(client.describeStacks(new DescribeStacksRequest()
-												   .withStackName("foo")
-		)).thenReturn(new DescribeStacksResult()
-							  .withStacks(new Stack().withStackStatus("CREATE_COMPLETE"))
-		);
+		Mockito.when(client.describeStacks(new DescribeStacksRequest().withStackName("foo")))
+				.thenReturn(new DescribeStacksResult().withStacks(new Stack().withStackStatus("CREATE_COMPLETE").withOutputs(new Output().withOutputKey("bar").withOutputValue("baz"))));
 
-		stack.executeChangeSet("bar", PollConfiguration.DEFAULT);
+		Map<String, String> outputs = stack.executeChangeSet("bar", PollConfiguration.DEFAULT);
 
 		Mockito.verify(client).executeChangeSet(Mockito.any(ExecuteChangeSetRequest.class));
 		Mockito.verify(this.eventPrinter).waitAndPrintStackEvents(Mockito.eq("foo"), Mockito.any(Waiter.class), Mockito.eq(PollConfiguration.DEFAULT));
+		Assertions.assertThat(outputs).containsEntry("bar", "baz").containsEntry("jenkinsStackUpdateStatus", "true");
 	}
 
 	@Test
@@ -140,9 +139,12 @@ public class CloudformationStackTests {
 													  .withStackName("foo")
 													  .withChangeSetName("bar")
 		)).thenReturn(new DescribeChangeSetResult());
+		Mockito.when(client.describeStacks(new DescribeStacksRequest().withStackName("foo")))
+				.thenReturn(new DescribeStacksResult().withStacks(new Stack().withOutputs(new Output().withOutputKey("bar").withOutputValue("baz"))));
 
-		stack.executeChangeSet("bar", PollConfiguration.DEFAULT);
+		Map<String, String> outputs = stack.executeChangeSet("bar", PollConfiguration.DEFAULT);
 		Mockito.verify(client, Mockito.never()).executeChangeSet(Mockito.any(ExecuteChangeSetRequest.class));
+		Assertions.assertThat(outputs).containsEntry("bar", "baz").containsEntry("jenkinsStackUpdateStatus", "false");
 	}
 
 	@Test
@@ -165,17 +167,8 @@ public class CloudformationStackTests {
 		TaskListener taskListener = Mockito.mock(TaskListener.class);
 		AmazonCloudFormation client = Mockito.mock(AmazonCloudFormation.class);
 		CloudFormationStack stack = new CloudFormationStack(client, "foo", taskListener);
-		Mockito.when(client.describeStacks(new DescribeStacksRequest()
-												   .withStackName("foo")
-		)).thenReturn(new DescribeStacksResult()
-							  .withStacks(new Stack()
-												  .withOutputs(
-														  new Output()
-																  .withOutputKey("bar")
-																  .withOutputValue("baz")
-												  )
-							  )
-		);
+		Mockito.when(client.describeStacks(new DescribeStacksRequest().withStackName("foo")))
+				.thenReturn(new DescribeStacksResult().withStacks(new Stack().withOutputs(new Output().withOutputKey("bar").withOutputValue("baz"))));
 		Assertions.assertThat(stack.describeOutputs()).isEqualTo(Collections.singletonMap(
 				"bar", "baz"
 		));
@@ -237,11 +230,13 @@ public class CloudformationStackTests {
 		Mockito.when(taskListener.getLogger()).thenReturn(System.out);
 		AmazonCloudFormation client = Mockito.mock(AmazonCloudFormation.class);
 		Mockito.when(client.waiters()).thenReturn(new AmazonCloudFormationWaiters(client));
+		Mockito.when(client.describeStacks(new DescribeStacksRequest().withStackName("foo")))
+				.thenReturn(new DescribeStacksResult().withStacks(new Stack().withOutputs(new Output().withOutputKey("bar").withOutputValue("baz"))));
 
 		CloudFormationStack stack = new CloudFormationStack(client, "foo", taskListener);
 
 		RollbackConfiguration rollbackConfig = new RollbackConfiguration().withMonitoringTimeInMinutes(10);
-		stack.update("templateBody", null, Collections.emptyList(), Collections.emptyList(), PollConfiguration.DEFAULT, "myarn", rollbackConfig);
+		Map<String, String> outputs = stack.update("templateBody", null, Collections.emptyList(), Collections.emptyList(), PollConfiguration.DEFAULT, "myarn", rollbackConfig);
 
 		ArgumentCaptor<UpdateStackRequest> captor = ArgumentCaptor.forClass(UpdateStackRequest.class);
 		Mockito.verify(client).updateStack(captor.capture());
@@ -254,6 +249,7 @@ public class CloudformationStackTests {
 																   .withRollbackConfiguration(rollbackConfig)
 		);
 		Mockito.verify(this.eventPrinter).waitAndPrintStackEvents(Mockito.eq("foo"), Mockito.any(Waiter.class), Mockito.eq(PollConfiguration.DEFAULT));
+		Assertions.assertThat(outputs).containsEntry("bar", "baz").containsEntry("jenkinsStackUpdateStatus", "true");
 	}
 
 	@Test
@@ -262,11 +258,13 @@ public class CloudformationStackTests {
 		Mockito.when(taskListener.getLogger()).thenReturn(System.out);
 		AmazonCloudFormation client = Mockito.mock(AmazonCloudFormation.class);
 		Mockito.when(client.waiters()).thenReturn(new AmazonCloudFormationWaiters(client));
+		Mockito.when(client.describeStacks(new DescribeStacksRequest().withStackName("foo")))
+				.thenReturn(new DescribeStacksResult().withStacks(new Stack().withOutputs(new Output().withOutputKey("bar").withOutputValue("baz"))));
 
 		CloudFormationStack stack = new CloudFormationStack(client, "foo", taskListener);
 
 		RollbackConfiguration rollbackConfig = new RollbackConfiguration().withMonitoringTimeInMinutes(10);
-		stack.update(null, "bar", Collections.emptyList(), Collections.emptyList(), PollConfiguration.DEFAULT, "myarn", rollbackConfig);
+		Map<String, String> outputs = stack.update(null, "bar", Collections.emptyList(), Collections.emptyList(), PollConfiguration.DEFAULT, "myarn", rollbackConfig);
 
 		ArgumentCaptor<UpdateStackRequest> captor = ArgumentCaptor.forClass(UpdateStackRequest.class);
 		Mockito.verify(client).updateStack(captor.capture());
@@ -279,6 +277,7 @@ public class CloudformationStackTests {
 																   .withRollbackConfiguration(rollbackConfig)
 		);
 		Mockito.verify(this.eventPrinter).waitAndPrintStackEvents(Mockito.eq("foo"), Mockito.any(Waiter.class), Mockito.eq(PollConfiguration.DEFAULT));
+		Assertions.assertThat(outputs).containsEntry("bar", "baz").containsEntry("jenkinsStackUpdateStatus", "true");
 	}
 
 	@Test
@@ -287,11 +286,13 @@ public class CloudformationStackTests {
 		Mockito.when(taskListener.getLogger()).thenReturn(System.out);
 		AmazonCloudFormation client = Mockito.mock(AmazonCloudFormation.class);
 		Mockito.when(client.waiters()).thenReturn(new AmazonCloudFormationWaiters(client));
+		Mockito.when(client.describeStacks(new DescribeStacksRequest().withStackName("foo")))
+				.thenReturn(new DescribeStacksResult().withStacks(new Stack().withOutputs(new Output().withOutputKey("bar").withOutputValue("baz"))));
 
 		CloudFormationStack stack = new CloudFormationStack(client, "foo", taskListener);
 
 		RollbackConfiguration rollbackConfig = new RollbackConfiguration().withMonitoringTimeInMinutes(10);
-		stack.update(null, null, Collections.emptyList(), Collections.emptyList(), PollConfiguration.DEFAULT, "myarn", rollbackConfig);
+		Map<String, String> outputs = stack.update(null, null, Collections.emptyList(), Collections.emptyList(), PollConfiguration.DEFAULT, "myarn", rollbackConfig);
 
 		ArgumentCaptor<UpdateStackRequest> captor = ArgumentCaptor.forClass(UpdateStackRequest.class);
 		Mockito.verify(client).updateStack(captor.capture());
@@ -304,6 +305,7 @@ public class CloudformationStackTests {
 																   .withRollbackConfiguration(rollbackConfig)
 		);
 		Mockito.verify(this.eventPrinter).waitAndPrintStackEvents(Mockito.eq("foo"), Mockito.any(Waiter.class), Mockito.eq(PollConfiguration.DEFAULT));
+		Assertions.assertThat(outputs).containsEntry("bar", "baz").containsEntry("jenkinsStackUpdateStatus", "true");
 	}
 
 	@Test
@@ -312,10 +314,12 @@ public class CloudformationStackTests {
 		Mockito.when(taskListener.getLogger()).thenReturn(System.out);
 		AmazonCloudFormation client = Mockito.mock(AmazonCloudFormation.class);
 		Mockito.when(client.waiters()).thenReturn(new AmazonCloudFormationWaiters(client));
+		Mockito.when(client.describeStacks(new DescribeStacksRequest().withStackName("foo")))
+				.thenReturn(new DescribeStacksResult().withStacks(new Stack().withOutputs(new Output().withOutputKey("bar").withOutputValue("baz"))));
 
 		CloudFormationStack stack = new CloudFormationStack(client, "foo", taskListener);
 
-		stack.create("templateBody", null, Collections.emptyList(), Collections.emptyList(), PollConfiguration.DEFAULT, "myarn", OnFailure.DO_NOTHING.toString(), null);
+		Map<String, String> outputs = stack.create("templateBody", null, Collections.emptyList(), Collections.emptyList(), PollConfiguration.DEFAULT, "myarn", OnFailure.DO_NOTHING.toString(), null);
 
 		ArgumentCaptor<CreateStackRequest> captor = ArgumentCaptor.forClass(CreateStackRequest.class);
 		Mockito.verify(client).createStack(captor.capture());
@@ -329,6 +333,7 @@ public class CloudformationStackTests {
 																   .withRoleARN("myarn")
 		);
 		Mockito.verify(this.eventPrinter).waitAndPrintStackEvents(Mockito.eq("foo"), Mockito.any(Waiter.class), Mockito.eq(PollConfiguration.DEFAULT));
+		Assertions.assertThat(outputs).containsEntry("bar", "baz").containsEntry("jenkinsStackUpdateStatus", "true");
 	}
 
 	@Test
@@ -337,14 +342,16 @@ public class CloudformationStackTests {
 		Mockito.when(taskListener.getLogger()).thenReturn(System.out);
 		AmazonCloudFormation client = Mockito.mock(AmazonCloudFormation.class);
 		Mockito.when(client.waiters()).thenReturn(new AmazonCloudFormationWaiters(client));
+		Mockito.when(client.describeStacks(new DescribeStacksRequest().withStackName("foo")))
+				.thenReturn(new DescribeStacksResult().withStacks(new Stack().withOutputs(new Output().withOutputKey("bar").withOutputValue("baz"))));
 
 		CloudFormationStack stack = new CloudFormationStack(client, "foo", taskListener);
 
 		PollConfiguration pollConfiguration = PollConfiguration.builder()
 				.timeout(Duration.ofMinutes(3))
 				.pollInterval(Duration.ofSeconds(17))
-                .build();
-		stack.create(null, "bar", Collections.emptyList(), Collections.emptyList(), pollConfiguration, "myarn", OnFailure.DO_NOTHING.toString(), true);
+				.build();
+		Map<String, String> outputs = stack.create(null, "bar", Collections.emptyList(), Collections.emptyList(), pollConfiguration, "myarn", OnFailure.DO_NOTHING.toString(), true);
 
 		ArgumentCaptor<CreateStackRequest> captor = ArgumentCaptor.forClass(CreateStackRequest.class);
 		Mockito.verify(client).createStack(captor.capture());
@@ -359,6 +366,7 @@ public class CloudformationStackTests {
 																   .withRoleARN("myarn")
 		);
 		Mockito.verify(this.eventPrinter).waitAndPrintStackEvents(Mockito.eq("foo"), Mockito.any(Waiter.class), Mockito.eq(pollConfiguration));
+		Assertions.assertThat(outputs).containsEntry("bar", "baz").containsEntry("jenkinsStackUpdateStatus", "true");
 	}
 
 	@Test(expected = IllegalArgumentException.class)
