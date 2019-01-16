@@ -23,6 +23,7 @@ import com.amazonaws.services.s3.transfer.ObjectMetadataProvider;
 import com.amazonaws.services.s3.transfer.TransferManager;
 import com.amazonaws.services.s3.transfer.TransferManagerBuilder;
 import hudson.model.Run;
+import org.assertj.core.api.Assertions;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
 import org.jenkinsci.plugins.workflow.steps.StepContext;
@@ -103,9 +104,9 @@ public class S3UploadStepTransferManagerIntegrationTest {
 
 		Assert.assertEquals(1, captor.getValue().size());
 		Assert.assertEquals("test.txt", ((File)captor.getValue().get(0)).getName());
-		Assert.assertTrue(((File)captor.getValue().get(0)).getPath().endsWith("/subdir/test.txt"));
-		Assert.assertTrue(captorDirectory.getValue().getPath().endsWith("/work"));
-		Assert.assertFalse(captorDirectory.getValue().getPath().contains("subdir"));
+		Assertions.assertThat(((File)captor.getValue().get(0)).getPath()).matches("^.*subdir.test.txt$");
+		Assertions.assertThat(captorDirectory.getValue().getPath()).endsWith("work");
+		Assertions.assertThat(captorDirectory.getValue().getPath()).doesNotContain("subdir");
 	}
 
 	@Test
