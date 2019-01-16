@@ -21,8 +21,11 @@
 
 package de.taimos.pipeline.aws;
 
+import org.assertj.core.api.Assertions;
+import org.jenkinsci.plugins.workflow.steps.StepContext;
 import org.junit.Assert;
 import org.junit.Test;
+import org.mockito.Mockito;
 
 import com.amazonaws.services.s3.model.CannedAccessControlList;
 
@@ -61,4 +64,34 @@ public class S3UploadStepTest {
 		step.setFile("my-file");
 		Assert.assertEquals("", step.getPath());
 	}
+
+	@Test
+	public void bucketMustBeDefined() throws Exception {
+		S3UploadStep step = new S3UploadStep(null, false, false);
+		S3UploadStep.Execution execution = new S3UploadStep.Execution(step, Mockito.mock(StepContext.class));
+		Throwable t = Assertions.catchThrowable(execution::run);
+		Assert.assertTrue(t instanceof IllegalArgumentException);
+		Assert.assertEquals("Bucket must not be null or empty", t.getMessage());
+	}
+
+	@Test
+	public void fileOrIncludePathPatternMustBeDefined() throws Exception {
+		S3UploadStep step = new S3UploadStep("my-bucket", false, false);
+		S3UploadStep.Execution execution = new S3UploadStep.Execution(step, Mockito.mock(StepContext.class));
+		Throwable t = Assertions.catchThrowable(execution::run);
+		Assert.assertTrue(t instanceof IllegalArgumentException);
+		Assert.assertEquals("File or IncludePathPattern must not be null", t.getMessage());
+	}
+
+	@Test
+	public void doNotAcceptFileAndIncludePathPatternArguments() throws Exception {
+		S3UploadStep step = new S3UploadStep("my-bucket", false, false);
+		step.setFile("file.txt");
+		step.setIncludePathPattern("*.txt");
+		S3UploadStep.Execution execution = new S3UploadStep.Execution(step, Mockito.mock(StepContext.class));
+		Throwable t = Assertions.catchThrowable(execution::run);
+		Assert.assertTrue(t instanceof IllegalArgumentException);
+		Assert.assertEquals("File and IncludePathPattern cannot be use together", t.getMessage());
+	}
+
 }
