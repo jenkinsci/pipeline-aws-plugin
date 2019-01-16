@@ -253,6 +253,7 @@ public class S3UploadStep extends AbstractS3Step {
 			final String contentEncoding = this.step.getContentEncoding();
 			final String contentType = this.step.getContentType();
 			final String sseAlgorithm = this.step.getSseAlgorithm();
+			boolean omitSourcePath = false;
 
 			if (this.step.getMetadatas() != null && this.step.getMetadatas().length != 0) {
 				for (String metadata : this.step.getMetadatas()) {
@@ -275,6 +276,7 @@ public class S3UploadStep extends AbstractS3Step {
 			}
 			if (file != null) {
 				children.add(dir.child(file));
+				omitSourcePath = true;
 			} else if (excludePathPattern != null && !excludePathPattern.trim().isEmpty()) {
 				children.addAll(Arrays.asList(dir.list(includePathPattern, excludePathPattern, true)));
 			} else {
@@ -287,7 +289,7 @@ public class S3UploadStep extends AbstractS3Step {
 			if (children.isEmpty()) {
 				listener.getLogger().println("Nothing to upload");
 				return null;
-			} else if (children.size() == 1) {
+			} else if (omitSourcePath) {
 				FilePath child = children.get(0);
 				listener.getLogger().format("Uploading %s to s3://%s/%s %n", child.toURI(), bucket, path);
 				if (!child.exists()) {
