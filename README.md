@@ -560,6 +560,12 @@ The step returns an array of Account objects with the following fields:
 def accounts = listAWSAccounts()
 ```
 
+You can specify a parent id (Root, Orga unit) with the optional parameter `parent`
+
+```groovy
+def accounts = listAWSAccounts('ou-1234-12345678')
+```
+
 ## updateIdP
 
 Create or update a SAML identity provider with the given metadata document.
@@ -639,6 +645,7 @@ ec2ShareAmi(
 # Changelog
 
 ## current master
+* add `parent` argument to `listAWSAccounts`
 
 ## 1.36
 * add `jenkinsStackUpdateStatus` to stack outputs. Specifies if stack was modified

@@ -33,10 +33,13 @@ import org.jenkinsci.plugins.workflow.steps.StepDescriptor;
 import org.jenkinsci.plugins.workflow.steps.StepExecution;
 import org.jenkinsci.plugins.workflow.steps.SynchronousNonBlockingStepExecution;
 import org.kohsuke.stapler.DataBoundConstructor;
+import org.kohsuke.stapler.DataBoundSetter;
 
 import com.amazonaws.services.organizations.AWSOrganizations;
 import com.amazonaws.services.organizations.AWSOrganizationsClientBuilder;
 import com.amazonaws.services.organizations.model.Account;
+import com.amazonaws.services.organizations.model.ListAccountsForParentRequest;
+import com.amazonaws.services.organizations.model.ListAccountsForParentResult;
 import com.amazonaws.services.organizations.model.ListAccountsRequest;
 import com.amazonaws.services.organizations.model.ListAccountsResult;
 
@@ -46,14 +49,21 @@ import hudson.model.TaskListener;
 
 public class ListAWSAccountsStep extends Step {
 
+	private String parent;
+
 	@DataBoundConstructor
 	public ListAWSAccountsStep() {
 		//
 	}
 
+	@DataBoundSetter
+	public void setParent(String parent) {
+		this.parent = parent;
+	}
+
 	@Override
 	public StepExecution start(StepContext context) throws Exception {
-		return new ListAWSAccountsStep.Execution(context);
+		return new ListAWSAccountsStep.Execution(this, context);
 	}
 
 	@Extension
@@ -77,8 +87,11 @@ public class ListAWSAccountsStep extends Step {
 
 	public static class Execution extends SynchronousNonBlockingStepExecution<List> {
 
-		public Execution(StepContext context) {
+		private final transient ListAWSAccountsStep step;
+
+		public Execution(ListAWSAccountsStep step, StepContext context) {
 			super(context);
+			this.step = step;
 		}
 
 		@Override
@@ -86,7 +99,7 @@ public class ListAWSAccountsStep extends Step {
 			this.getContext().get(TaskListener.class).getLogger().format("Getting AWS accounts %n");
 
 			AWSOrganizations client = AWSClientFactory.create(AWSOrganizationsClientBuilder.standard(), Execution.this.getContext());
-			List<Account> accounts = this.getAccounts(client, null);
+			List<Account> accounts = this.getAccounts(client, this.step.parent, null);
 
 			return accounts.stream().map(account -> {
 				Map<String, String> awsAccount = new HashMap<>();
@@ -99,11 +112,20 @@ public class ListAWSAccountsStep extends Step {
 			}).collect(Collectors.toList());
 		}
 
-		private List<Account> getAccounts(AWSOrganizations client, String startToken) {
-			ListAccountsResult result = client.listAccounts(new ListAccountsRequest().withNextToken(startToken));
-			List<Account> accounts = result.getAccounts();
-			if (result.getNextToken() != null) {
-				accounts.addAll(this.getAccounts(client, result.getNextToken()));
+		private List<Account> getAccounts(AWSOrganizations client, String parent, String startToken) {
+			final List<Account> accounts;
+			final String nextToken;
+			if (parent != null) {
+				ListAccountsForParentResult result = client.listAccountsForParent(new ListAccountsForParentRequest().withParentId(parent).withNextToken(startToken));
+				accounts = result.getAccounts();
+				nextToken = result.getNextToken();
+			} else {
+				ListAccountsResult result = client.listAccounts(new ListAccountsRequest().withNextToken(startToken));
+				accounts = result.getAccounts();
+				nextToken = result.getNextToken();
+			}
+			if (nextToken != null) {
+				accounts.addAll(this.getAccounts(client, parent, nextToken));
 			}
 			return accounts;
 		}
