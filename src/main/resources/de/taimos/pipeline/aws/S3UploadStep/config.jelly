@@ -45,4 +45,7 @@
 	<f:entry title="${%Enable Payload Signing}" field="payloadSigningEnabled">
 		<f:checkbox />
 	</f:entry>
+	<f:entry title="${%Redirect Location}" field="redirectLocation">
+		<f:textbox />
+	</f:entry>
 </j:jelly>
