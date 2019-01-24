@@ -652,6 +652,7 @@ ec2ShareAmi(
 
 ## current master
 * add `parent` argument to `listAWSAccounts`
+* Add redirect location option to `s3Upload`
 
 ## 1.36
 * add `jenkinsStackUpdateStatus` to stack outputs. Specifies if stack was modified
