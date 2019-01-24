@@ -217,6 +217,12 @@ s3Upload(file: 'foo.txt', bucket: 'my-bucket', path: 'path/to/target/file.txt', 
 s3upload(file: 'bar-dir', bucket: 'my-bucket', path: 'path/to/target', kmsId: 'alias/bar')
 ```
 
+A redirect location can be added to uploaded files.
+
+```groovy
+s3Upload(file: 'file.txt', bucket: 'my-bucket', redirectLocation: '/redirect')
+```
+
 ### s3Download
 
 Download a file/folder from S3 to the local workspace.
@@ -646,6 +652,7 @@ ec2ShareAmi(
 
 ## current master
 * add `parent` argument to `listAWSAccounts`
+* Add redirect location option to `s3Upload`
 
 ## 1.36
 * add `jenkinsStackUpdateStatus` to stack outputs. Specifies if stack was modified

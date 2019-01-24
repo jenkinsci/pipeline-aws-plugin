@@ -76,6 +76,7 @@ public class S3UploadStep extends AbstractS3Step {
 	private String contentEncoding;
 	private String contentType;
 	private String sseAlgorithm;
+	private String redirectLocation;
 
 	@DataBoundConstructor
 	public S3UploadStep(String bucket, boolean pathStyleAccessEnabled, boolean payloadSigningEnabled) {
@@ -139,6 +140,15 @@ public class S3UploadStep extends AbstractS3Step {
 	@DataBoundSetter
 	public void setWorkingDir(String workingDir) {
 		this.workingDir = workingDir;
+	}
+
+	public String getRedirectLocation() {
+		return this.redirectLocation;
+	}
+
+	@DataBoundSetter
+	public void setRedirectLocation(String redirectLocation) {
+		this.redirectLocation = redirectLocation;
 	}
 
 	public String[] getMetadatas() {
@@ -253,6 +263,7 @@ public class S3UploadStep extends AbstractS3Step {
 			final String contentEncoding = this.step.getContentEncoding();
 			final String contentType = this.step.getContentType();
 			final String sseAlgorithm = this.step.getSseAlgorithm();
+			final String redirectLocation = this.step.getRedirectLocation();
 			boolean omitSourcePath = false;
 
 			if (this.step.getMetadatas() != null && this.step.getMetadatas().length != 0) {
@@ -297,7 +308,7 @@ public class S3UploadStep extends AbstractS3Step {
 					throw new FileNotFoundException(child.toURI().toString());
 				}
 
-				child.act(new RemoteUploader(Execution.this.step.createS3ClientOptions(), Execution.this.getContext().get(EnvVars.class), listener, bucket, path, metadatas, acl, cacheControl, contentEncoding, contentType, kmsId, sseAlgorithm));
+				child.act(new RemoteUploader(Execution.this.step.createS3ClientOptions(), Execution.this.getContext().get(EnvVars.class), listener, bucket, path, metadatas, acl, cacheControl, contentEncoding, contentType, kmsId, sseAlgorithm, redirectLocation));
 
 				listener.getLogger().println("Upload complete");
 				return String.format("s3://%s/%s", bucket, path);
@@ -330,8 +341,9 @@ public class S3UploadStep extends AbstractS3Step {
 		private final String contentType;
 		private final String kmsId;
 		private final String sseAlgorithm;
+		private final String redirectLocation;
 
-		RemoteUploader(S3ClientOptions amazonS3ClientOptions, EnvVars envVars, TaskListener taskListener, String bucket, String path, Map<String, String> metadatas, CannedAccessControlList acl, String cacheControl, String contentEncoding, String contentType, String kmsId, String sseAlgorithm) {
+		RemoteUploader(S3ClientOptions amazonS3ClientOptions, EnvVars envVars, TaskListener taskListener, String bucket, String path, Map<String, String> metadatas, CannedAccessControlList acl, String cacheControl, String contentEncoding, String contentType, String kmsId, String sseAlgorithm, String redirectLocation) {
 			this.amazonS3ClientOptions = amazonS3ClientOptions;
 			this.envVars = envVars;
 			this.taskListener = taskListener;
@@ -344,6 +356,7 @@ public class S3UploadStep extends AbstractS3Step {
 			this.contentType = contentType;
 			this.kmsId = kmsId;
 			this.sseAlgorithm = sseAlgorithm;
+			this.redirectLocation = redirectLocation;
 		}
 
 		@Override
@@ -388,6 +401,10 @@ public class S3UploadStep extends AbstractS3Step {
 				if (this.kmsId != null && !this.kmsId.isEmpty()) {
 					RemoteUploader.this.taskListener.getLogger().format("Using KMS: %s%n", this.kmsId);
 					request.withSSEAwsKeyManagementParams(new SSEAwsKeyManagementParams(this.kmsId));
+				}
+
+				if (this.redirectLocation != null && !this.redirectLocation.isEmpty()) {
+					request.withRedirectLocation(this.redirectLocation);
 				}
 
 				final Upload upload = mgr.upload(request);
