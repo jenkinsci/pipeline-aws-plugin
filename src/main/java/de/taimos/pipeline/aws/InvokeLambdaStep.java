@@ -24,7 +24,7 @@ package de.taimos.pipeline.aws;
 import java.nio.charset.StandardCharsets;
 import java.util.Set;
 
-import javax.xml.bind.DatatypeConverter;
+import java.util.Base64;
 
 import org.jenkinsci.plugins.workflow.steps.Step;
 import org.jenkinsci.plugins.workflow.steps.StepContext;
@@ -159,7 +159,7 @@ public class InvokeLambdaStep extends Step {
 		}
 
 		private String getLogResult(InvokeResult result) {
-			return new String(DatatypeConverter.parseBase64Binary(result.getLogResult()), StandardCharsets.UTF_8);
+			return new String(Base64.getDecoder().decode(result.getLogResult()), StandardCharsets.UTF_8);
 		}
 
 	}
