@@ -316,7 +316,7 @@ public class S3UploadStep extends AbstractS3Step {
 				List<File> fileList = new ArrayList<>();
 				listener.getLogger().format("Uploading %s to s3://%s/%s %n", includePathPattern, bucket, path);
 				for (FilePath child : children) {
-					child.act(new FeedList(fileList));
+					fileList.add(child.act(FIND_FILE_ON_SLAVE));
 				}
 				dir.act(new RemoteListUploader(Execution.this.step.createS3ClientOptions(), Execution.this.getContext().get(EnvVars.class), listener, fileList, bucket, path, metadatas, acl, cacheControl, contentEncoding, contentType, kmsId, sseAlgorithm));
 				listener.getLogger().println("Upload complete");
@@ -542,23 +542,13 @@ public class S3UploadStep extends AbstractS3Step {
 			fileUpload.waitForCompletion();
 			return null;
 		}
-
 	}
 
-	private static class FeedList extends MasterToSlaveFileCallable<Void> {
-
-		private final List<File> fileList;
-
-		FeedList(List<File> fileList) {
-			this.fileList = fileList;
-		}
-
+	private static MasterToSlaveFileCallable<File> FIND_FILE_ON_SLAVE = new MasterToSlaveFileCallable<File>() {
 		@Override
-		public Void invoke(File localFile, VirtualChannel channel) throws IOException, InterruptedException {
-			this.fileList.add(localFile);
-			return null;
+		public File invoke(File localFile, VirtualChannel channel) throws IOException, InterruptedException {
+			return localFile;
 		}
-
-	}
+	};
 
 }
