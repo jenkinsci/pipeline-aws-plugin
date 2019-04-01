@@ -12,6 +12,7 @@
     <version>1.37-SNAPSHOT</version>
     <packaging>hpi</packaging>
     <name>Pipeline: AWS Steps</name>
+    <description>This plugins adds Jenkins pipeline steps to interact with the AWS API</description>
     <scm>
         <connection>scm:git:ssh://github.com/jenkinsci/pipeline-aws-plugin.git</connection>
         <developerConnection>scm:git:ssh://git@github.com/jenkinsci/pipeline-aws-plugin.git</developerConnection>
