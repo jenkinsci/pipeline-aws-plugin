@@ -31,6 +31,8 @@ This plugins adds Jenkins pipeline steps to interact with the AWS API.
 * [listAWSAccounts](#listawsaccounts)
 * [updateIdP](#updateidp)
 * [setAccountAlias](#setaccountalias)
+* [ecrDeleteImages](#ecrdeleteimages)
+* [ecrListImages](#ecrlistimages)
 * [ecrLogin](#ecrlogin)
 * [invokeLambda](#invokelambda)
 * [ec2ShareAmi](#ec2ShareAmi)
@@ -615,6 +617,22 @@ Create or update the AWS account alias.
 setAccountAlias(name: 'awsAlias')
 ```
 
+## ecrDeleteImages
+
+Delete images in a repository.
+
+```groovy
+ecrDeleteImages(repositoryName: 'foo', imageIds: ['imageDigest': 'digest', 'imageTag': 'tag'])
+```
+
+## ecrListImages
+
+List images in a repository.
+
+```groovy
+def images = ecrListImages(repositoryName: 'foo')
+```
+
 ## ecrLogin
 
 Create login string to authenticate docker with the ECR.
@@ -674,6 +692,8 @@ ec2ShareAmi(
 * Add Xerces dependency to fix #117
 * Add ability to upload a String to an S3 object by adding `text` option to `s3Upload`
 * Add support for SessionToken when using iamMfaToken #170
+* Add ecrListImages
+* Add ecrDeleteImages
 
 ## 1.36
 * add `jenkinsStackUpdateStatus` to stack outputs. Specifies if stack was modified
