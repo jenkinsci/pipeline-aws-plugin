@@ -24,6 +24,7 @@ package de.taimos.pipeline.aws;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.ByteArrayInputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -65,6 +66,7 @@ public class S3UploadStep extends AbstractS3Step {
 
 	private final String bucket;
 	private String file;
+	private String text;
 	private String path = "";
 	private String kmsId;
 	private String includePathPattern;
@@ -91,6 +93,15 @@ public class S3UploadStep extends AbstractS3Step {
 	@DataBoundSetter
 	public void setFile(String file) {
 		this.file = file;
+	}
+
+	public String getText() {
+		return this.text;
+	}
+
+	@DataBoundSetter
+	public void setText(String text) {
+		this.text = text;
 	}
 
 	public String getBucket() {
@@ -251,6 +262,7 @@ public class S3UploadStep extends AbstractS3Step {
 		@Override
 		public String run() throws Exception {
 			final String file = this.step.getFile();
+			final String text = this.step.getText();
 			final String bucket = this.step.getBucket();
 			final String path = this.step.getPath();
 			final String kmsId = this.step.getKmsId();
@@ -265,6 +277,7 @@ public class S3UploadStep extends AbstractS3Step {
 			final String sseAlgorithm = this.step.getSseAlgorithm();
 			final String redirectLocation = this.step.getRedirectLocation();
 			boolean omitSourcePath = false;
+			boolean sendingText = false;
 
 			if (this.step.getMetadatas() != null && this.step.getMetadatas().length != 0) {
 				for (String metadata : this.step.getMetadatas()) {
@@ -277,6 +290,7 @@ public class S3UploadStep extends AbstractS3Step {
 			Preconditions.checkArgument(bucket != null && !bucket.isEmpty(), "Bucket must not be null or empty");
 			Preconditions.checkArgument(file != null || includePathPattern != null, "File or IncludePathPattern must not be null");
 			Preconditions.checkArgument(includePathPattern == null || file == null, "File and IncludePathPattern cannot be use together");
+			Preconditions.checkArgument(text == null || file != null, "If you provide Text aregument, you must also provide a File name.");
 
 			final List<FilePath> children = new ArrayList<>();
 			final FilePath dir;
@@ -285,7 +299,9 @@ public class S3UploadStep extends AbstractS3Step {
 			} else {
 				dir = this.getContext().get(FilePath.class);
 			}
-			if (file != null) {
+			if (text != null) {
+				sendingText = true;
+			} else if (file != null) {
 				children.add(dir.child(file));
 				omitSourcePath = true;
 			} else if (excludePathPattern != null && !excludePathPattern.trim().isEmpty()) {
@@ -297,7 +313,21 @@ public class S3UploadStep extends AbstractS3Step {
 
 			TaskListener listener = Execution.this.getContext().get(TaskListener.class);
 
-			if (children.isEmpty()) {
+			if (sendingText) {
+				if (path.endsWith("/") || path.isEmpty()) {
+					path += file;
+				} else if (!path.endsWith(file)) {
+					path += "/" + file;
+				}
+				
+				listener.getLogger().format("Uploading text string to s3://%s/%s %n", bucket, path);
+				
+				RemoteTextUploader rtu = new RemoteTextUploader(Execution.this.step.createS3ClientOptions(), Execution.this.getContext().get(EnvVars.class), listener, text, bucket, path, metadatas, acl, cacheControl, contentEncoding, contentType, kmsId, sseAlgorithm, redirectLocation);
+				rtu.invoke(null, null);
+				
+				listener.getLogger().println("Upload complete");
+				return String.format("s3://%s/%s", bucket, path);
+			} else if (children.isEmpty()) {
 				listener.getLogger().println("Nothing to upload");
 				return null;
 			} else if (omitSourcePath) {
@@ -322,6 +352,100 @@ public class S3UploadStep extends AbstractS3Step {
 				listener.getLogger().println("Upload complete");
 				return String.format("s3://%s/%s", bucket, path);
 			}
+		}
+
+	}
+
+	private static class RemoteTextUploader extends MasterToSlaveFileCallable<Void> {
+
+		protected static final long serialVersionUID = 1L;
+		private final S3ClientOptions amazonS3ClientOptions;
+		private final EnvVars envVars;
+		private final TaskListener taskListener;
+		private final String text;
+		private final String bucket;
+		private final String path;
+		private final Map<String, String> metadatas;
+		private final CannedAccessControlList acl;
+		private final String cacheControl;
+		private final String contentEncoding;
+		private final String contentType;
+		private final String kmsId;
+		private final String sseAlgorithm;
+		private final String redirectLocation;
+
+		RemoteTextUploader(S3ClientOptions amazonS3ClientOptions, EnvVars envVars, TaskListener taskListener, String text, String bucket, String path, Map<String, String> metadatas, CannedAccessControlList acl, String cacheControl, String contentEncoding, String contentType, String kmsId, String sseAlgorithm, String redirectLocation) {
+			this.amazonS3ClientOptions = amazonS3ClientOptions;
+			this.envVars = envVars;
+			this.taskListener = taskListener;
+			this.text = text;
+			this.bucket = bucket;
+			this.path = path;
+			this.metadatas = metadatas;
+			this.acl = acl;
+			this.cacheControl = cacheControl;
+			this.contentEncoding = contentEncoding;
+			this.contentType = contentType;
+			this.kmsId = kmsId;
+			this.sseAlgorithm = sseAlgorithm;
+			this.redirectLocation = redirectLocation;
+		}
+
+		@Override
+		public Void invoke(File localFile, VirtualChannel channel) throws IOException, InterruptedException {
+			TransferManager mgr = TransferManagerBuilder.standard()
+					.withS3Client(AWSClientFactory.create(this.amazonS3ClientOptions.createAmazonS3ClientBuilder(), this.envVars))
+					.build();
+
+			byte[] bytes = this.text.getBytes()
+			PutObjectRequest request = new PutObjectRequest(this.bucket, path, new ByteArrayInputStream(bytes));
+			ObjectMetadata metas = new ObjectMetadata();
+
+			metas.setContentLength(bytes.length);
+			
+			// Add metadata
+			if ((this.metadatas != null && this.metadatas.size() > 0) || (this.cacheControl != null && !this.cacheControl.isEmpty()) || (this.contentEncoding != null && !this.contentEncoding.isEmpty()) || (this.contentType != null && !this.contentType.isEmpty()) || (this.sseAlgorithm != null && !this.sseAlgorithm.isEmpty())) {
+				if (this.metadatas != null && this.metadatas.size() > 0) {
+					metas.setUserMetadata(this.metadatas);
+				}
+				if (this.cacheControl != null && !this.cacheControl.isEmpty()) {
+					metas.setCacheControl(this.cacheControl);
+				}
+				if (this.contentEncoding != null && !this.contentEncoding.isEmpty()) {
+					metas.setContentEncoding(this.contentEncoding);
+				}
+				if (this.contentType != null && !this.contentType.isEmpty()) {
+					metas.setContentType(this.contentType);
+				}
+				if (this.sseAlgorithm != null && !this.sseAlgorithm.isEmpty()) {
+					metas.setSSEAlgorithm(this.sseAlgorithm);
+				}
+			}
+			request.withMetadata(metas);
+
+			// Add acl
+			if (this.acl != null) {
+				request.withCannedAcl(this.acl);
+			}
+
+			// Add kms
+			if (this.kmsId != null && !this.kmsId.isEmpty()) {
+				RemoteTextUploader.this.taskListener.getLogger().format("Using KMS: %s%n", this.kmsId);
+				request.withSSEAwsKeyManagementParams(new SSEAwsKeyManagementParams(this.kmsId));
+			}
+
+			if (this.redirectLocation != null && !this.redirectLocation.isEmpty()) {
+				request.withRedirectLocation(this.redirectLocation);
+			}
+
+			final Upload upload = mgr.upload(request);
+			upload.addProgressListener((ProgressListener) progressEvent -> {
+				if (progressEvent.getEventType() == ProgressEventType.TRANSFER_COMPLETED_EVENT) {
+					RemoteTextUploader.this.taskListener.getLogger().println("Finished: " + upload.getDescription());
+				}
+			});
+			upload.waitForCompletion();
+			return null;
 		}
 
 	}
