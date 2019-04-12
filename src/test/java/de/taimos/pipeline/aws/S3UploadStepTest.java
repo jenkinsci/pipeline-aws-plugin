@@ -34,12 +34,14 @@ public class S3UploadStepTest {
 	public void gettersWorkAsExpectedForFileCase() throws Exception {
 		S3UploadStep step = new S3UploadStep("my-bucket", false, false);
 		step.setFile("my-file");
+		step.setText("my content text");
 		step.setKmsId("alias/foo");
 		step.setAcl(CannedAccessControlList.PublicRead);
 		step.setCacheControl("my-cachecontrol");
 		step.setSseAlgorithm("AES256");
 		step.setRedirectLocation("/redirect");
 		Assert.assertEquals("my-file", step.getFile());
+		Assert.assertEquals("my content text", step.getText());
 		Assert.assertEquals("my-bucket", step.getBucket());
 		Assert.assertEquals(CannedAccessControlList.PublicRead, step.getAcl());
 		Assert.assertEquals("my-cachecontrol", step.getCacheControl());
@@ -94,6 +96,17 @@ public class S3UploadStepTest {
 		Throwable t = Assertions.catchThrowable(execution::run);
 		Assert.assertTrue(t instanceof IllegalArgumentException);
 		Assert.assertEquals("File and IncludePathPattern cannot be use together", t.getMessage());
+	}
+
+	@Test
+	public void textArgumentMustBeUsedWithFileArgument() throws Exception {
+		S3UploadStep step = new S3UploadStep("my-bucket", false, false);
+		step.setFile("file.txt");
+		step.setText("uploadable text");
+		S3UploadStep.Execution execution = new S3UploadStep.Execution(step, Mockito.mock(StepContext.class));
+		Throwable t = Assertions.catchThrowable(execution::run);
+		Assert.assertTrue(t instanceof IllegalArgumentException);
+		Assert.assertEquals("If you provide Text aregument, you must also provide a File name.", t.getMessage());
 	}
 
 }
