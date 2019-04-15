@@ -278,7 +278,8 @@ public class S3UploadStep extends AbstractS3Step {
 			final String redirectLocation = this.step.getRedirectLocation();
 			boolean omitSourcePath = false;
 			boolean sendingText = false;
-
+			String localPath = null;
+			
 			if (this.step.getMetadatas() != null && this.step.getMetadatas().length != 0) {
 				for (String metadata : this.step.getMetadatas()) {
 					if (metadata.contains(":")) {
@@ -315,18 +316,18 @@ public class S3UploadStep extends AbstractS3Step {
 
 			if (sendingText) {
 				if (path.endsWith("/") || path.isEmpty()) {
-					path += file;
+					localPath = path + file;
 				} else if (!path.endsWith(file)) {
-					path += "/" + file;
+					localPath = path + "/" + file;
 				}
 				
-				listener.getLogger().format("Uploading text string to s3://%s/%s %n", bucket, path);
+				listener.getLogger().format("Uploading text string to s3://%s/%s %n", bucket, localPath);
 				
-				RemoteTextUploader rtu = new RemoteTextUploader(Execution.this.step.createS3ClientOptions(), Execution.this.getContext().get(EnvVars.class), listener, text, bucket, path, metadatas, acl, cacheControl, contentEncoding, contentType, kmsId, sseAlgorithm, redirectLocation);
+				RemoteTextUploader rtu = new RemoteTextUploader(Execution.this.step.createS3ClientOptions(), Execution.this.getContext().get(EnvVars.class), listener, text, bucket, localPath, metadatas, acl, cacheControl, contentEncoding, contentType, kmsId, sseAlgorithm, redirectLocation);
 				rtu.invoke(null, null);
 				
 				listener.getLogger().println("Upload complete");
-				return String.format("s3://%s/%s", bucket, path);
+				return String.format("s3://%s/%s", bucket, localPath);
 			} else if (children.isEmpty()) {
 				listener.getLogger().println("Nothing to upload");
 				return null;
@@ -397,8 +398,8 @@ public class S3UploadStep extends AbstractS3Step {
 					.withS3Client(AWSClientFactory.create(this.amazonS3ClientOptions.createAmazonS3ClientBuilder(), this.envVars))
 					.build();
 
-			byte[] bytes = this.text.getBytes()
-			PutObjectRequest request = new PutObjectRequest(this.bucket, path, new ByteArrayInputStream(bytes));
+			byte[] bytes = this.text.getBytes();
+			PutObjectRequest request = null;
 			ObjectMetadata metas = new ObjectMetadata();
 
 			metas.setContentLength(bytes.length);
@@ -421,7 +422,8 @@ public class S3UploadStep extends AbstractS3Step {
 					metas.setSSEAlgorithm(this.sseAlgorithm);
 				}
 			}
-			request.withMetadata(metas);
+
+			request = new PutObjectRequest(this.bucket, path, new ByteArrayInputStream(bytes), metas);
 
 			// Add acl
 			if (this.acl != null) {
