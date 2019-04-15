@@ -31,6 +31,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.nio.charset.Charset;
 
 import org.jenkinsci.plugins.workflow.steps.StepContext;
 import org.jenkinsci.plugins.workflow.steps.StepDescriptor;
@@ -398,7 +399,7 @@ public class S3UploadStep extends AbstractS3Step {
 					.withS3Client(AWSClientFactory.create(this.amazonS3ClientOptions.createAmazonS3ClientBuilder(), this.envVars))
 					.build();
 
-			byte[] bytes = this.text.getBytes();
+			byte[] bytes = this.text.getBytes(Charset.forName("UTF-8"));
 			PutObjectRequest request = null;
 			ObjectMetadata metas = new ObjectMetadata();
 
