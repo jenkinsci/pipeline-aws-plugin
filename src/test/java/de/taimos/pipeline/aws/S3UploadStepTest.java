@@ -98,15 +98,4 @@ public class S3UploadStepTest {
 		Assert.assertEquals("File and IncludePathPattern cannot be use together", t.getMessage());
 	}
 
-	@Test
-	public void textArgumentMustBeUsedWithFileArgument() throws Exception {
-		S3UploadStep step = new S3UploadStep("my-bucket", false, false);
-		step.setFile("file.txt");
-		step.setText("uploadable text");
-		S3UploadStep.Execution execution = new S3UploadStep.Execution(step, Mockito.mock(StepContext.class));
-		Throwable t = Assertions.catchThrowable(execution::run);
-		Assert.assertTrue(t instanceof IllegalArgumentException);
-		Assert.assertEquals("If you provide Text aregument, you must also provide a File name.", t.getMessage());
-	}
-
 }
