@@ -316,16 +316,64 @@ public class S3UploadStep extends AbstractS3Step {
 			TaskListener listener = Execution.this.getContext().get(TaskListener.class);
 
 			if (sendingText) {
-				if (path.endsWith("/") || path.isEmpty()) {
-					localPath = path + file;
-				} else if (!path.endsWith(file)) {
-					localPath = path + "/" + file;
-				}
-				
 				listener.getLogger().format("Uploading text string to s3://%s/%s %n", bucket, localPath);
 				
-				RemoteTextUploader rtu = new RemoteTextUploader(Execution.this.step.createS3ClientOptions(), Execution.this.getContext().get(EnvVars.class), listener, text, bucket, localPath, metadatas, acl, cacheControl, contentEncoding, contentType, kmsId, sseAlgorithm, redirectLocation);
-				rtu.invoke(null, null);
+				S3ClientOptions amazonS3ClientOptions = Execution.this.step.createS3ClientOptions();
+				EnvVars envVars = Execution.this.getContext().get(EnvVars.class);
+				
+				TransferManager mgr = TransferManagerBuilder.standard()
+						.withS3Client(AWSClientFactory.create(amazonS3ClientOptions.createAmazonS3ClientBuilder(), envVars))
+						.build();
+
+				byte[] bytes = text.getBytes(Charset.forName("UTF-8"));
+				PutObjectRequest request = null;
+				ObjectMetadata metas = new ObjectMetadata();
+
+				metas.setContentLength(bytes.length);
+
+				// Add metadata
+				if ((metadatas != null && metadatas.size() > 0) || (cacheControl != null && !cacheControl.isEmpty()) || (contentEncoding != null && !contentEncoding.isEmpty()) || (contentType != null && !contentType.isEmpty()) || (sseAlgorithm != null && !sseAlgorithm.isEmpty())) {
+					if (metadatas != null && metadatas.size() > 0) {
+						metas.setUserMetadata(metadatas);
+					}
+					if (cacheControl != null && !cacheControl.isEmpty()) {
+						metas.setCacheControl(cacheControl);
+					}
+					if (contentEncoding != null && !contentEncoding.isEmpty()) {
+						metas.setContentEncoding(contentEncoding);
+					}
+					if (contentType != null && !contentType.isEmpty()) {
+						metas.setContentType(contentType);
+					}
+					if (sseAlgorithm != null && !sseAlgorithm.isEmpty()) {
+						metas.setSSEAlgorithm(sseAlgorithm);
+					}
+				}
+
+				request = new PutObjectRequest(bucket, path, new ByteArrayInputStream(bytes), metas);
+
+				// Add acl
+				if (acl != null) {
+					request.withCannedAcl(acl);
+				}
+
+				// Add kms
+				if (kmsId != null && !kmsId.isEmpty()) {
+					listener.getLogger().format("Using KMS: %s%n", kmsId);
+					request.withSSEAwsKeyManagementParams(new SSEAwsKeyManagementParams(kmsId));
+				}
+
+				if (redirectLocation != null && !redirectLocation.isEmpty()) {
+					request.withRedirectLocation(redirectLocation);
+				}
+
+				final Upload upload = mgr.upload(request);
+				upload.addProgressListener((ProgressListener) progressEvent -> {
+					if (progressEvent.getEventType() == ProgressEventType.TRANSFER_COMPLETED_EVENT) {
+						listener.getLogger().println("Finished: " + upload.getDescription());
+					}
+				});
+				upload.waitForCompletion();
 				
 				listener.getLogger().println("Upload complete");
 				return String.format("s3://%s/%s", bucket, localPath);
@@ -354,101 +402,6 @@ public class S3UploadStep extends AbstractS3Step {
 				listener.getLogger().println("Upload complete");
 				return String.format("s3://%s/%s", bucket, path);
 			}
-		}
-
-	}
-
-	private static class RemoteTextUploader extends MasterToSlaveFileCallable<Void> {
-
-		protected static final long serialVersionUID = 1L;
-		private final S3ClientOptions amazonS3ClientOptions;
-		private final EnvVars envVars;
-		private final TaskListener taskListener;
-		private final String text;
-		private final String bucket;
-		private final String path;
-		private final Map<String, String> metadatas;
-		private final CannedAccessControlList acl;
-		private final String cacheControl;
-		private final String contentEncoding;
-		private final String contentType;
-		private final String kmsId;
-		private final String sseAlgorithm;
-		private final String redirectLocation;
-
-		RemoteTextUploader(S3ClientOptions amazonS3ClientOptions, EnvVars envVars, TaskListener taskListener, String text, String bucket, String path, Map<String, String> metadatas, CannedAccessControlList acl, String cacheControl, String contentEncoding, String contentType, String kmsId, String sseAlgorithm, String redirectLocation) {
-			this.amazonS3ClientOptions = amazonS3ClientOptions;
-			this.envVars = envVars;
-			this.taskListener = taskListener;
-			this.text = text;
-			this.bucket = bucket;
-			this.path = path;
-			this.metadatas = metadatas;
-			this.acl = acl;
-			this.cacheControl = cacheControl;
-			this.contentEncoding = contentEncoding;
-			this.contentType = contentType;
-			this.kmsId = kmsId;
-			this.sseAlgorithm = sseAlgorithm;
-			this.redirectLocation = redirectLocation;
-		}
-
-		@Override
-		public Void invoke(File localFile, VirtualChannel channel) throws IOException, InterruptedException {
-			TransferManager mgr = TransferManagerBuilder.standard()
-					.withS3Client(AWSClientFactory.create(this.amazonS3ClientOptions.createAmazonS3ClientBuilder(), this.envVars))
-					.build();
-
-			byte[] bytes = this.text.getBytes(Charset.forName("UTF-8"));
-			PutObjectRequest request = null;
-			ObjectMetadata metas = new ObjectMetadata();
-
-			metas.setContentLength(bytes.length);
-			
-			// Add metadata
-			if ((this.metadatas != null && this.metadatas.size() > 0) || (this.cacheControl != null && !this.cacheControl.isEmpty()) || (this.contentEncoding != null && !this.contentEncoding.isEmpty()) || (this.contentType != null && !this.contentType.isEmpty()) || (this.sseAlgorithm != null && !this.sseAlgorithm.isEmpty())) {
-				if (this.metadatas != null && this.metadatas.size() > 0) {
-					metas.setUserMetadata(this.metadatas);
-				}
-				if (this.cacheControl != null && !this.cacheControl.isEmpty()) {
-					metas.setCacheControl(this.cacheControl);
-				}
-				if (this.contentEncoding != null && !this.contentEncoding.isEmpty()) {
-					metas.setContentEncoding(this.contentEncoding);
-				}
-				if (this.contentType != null && !this.contentType.isEmpty()) {
-					metas.setContentType(this.contentType);
-				}
-				if (this.sseAlgorithm != null && !this.sseAlgorithm.isEmpty()) {
-					metas.setSSEAlgorithm(this.sseAlgorithm);
-				}
-			}
-
-			request = new PutObjectRequest(this.bucket, path, new ByteArrayInputStream(bytes), metas);
-
-			// Add acl
-			if (this.acl != null) {
-				request.withCannedAcl(this.acl);
-			}
-
-			// Add kms
-			if (this.kmsId != null && !this.kmsId.isEmpty()) {
-				RemoteTextUploader.this.taskListener.getLogger().format("Using KMS: %s%n", this.kmsId);
-				request.withSSEAwsKeyManagementParams(new SSEAwsKeyManagementParams(this.kmsId));
-			}
-
-			if (this.redirectLocation != null && !this.redirectLocation.isEmpty()) {
-				request.withRedirectLocation(this.redirectLocation);
-			}
-
-			final Upload upload = mgr.upload(request);
-			upload.addProgressListener((ProgressListener) progressEvent -> {
-				if (progressEvent.getEventType() == ProgressEventType.TRANSFER_COMPLETED_EVENT) {
-					RemoteTextUploader.this.taskListener.getLogger().println("Finished: " + upload.getDescription());
-				}
-			});
-			upload.waitForCompletion();
-			return null;
 		}
 
 	}
