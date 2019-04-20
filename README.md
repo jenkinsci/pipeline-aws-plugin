@@ -226,8 +226,8 @@ s3Upload(file: 'file.txt', bucket: 'my-bucket', redirectLocation: '/redirect')
 Creating an S3 object by creating the file whose contents is the provided text argument.
 
 ```groovy
-s3Upload(file: 'file.txt', bucket: 'my-bucket', text: 'Some Text Content')
-s3Upload(file: 'file.txt', bucket: 'my-bucket', text: 'Some Text Content', path: 'path/to/targetFolder/')
+s3Upload(path: 'file.txt', bucket: 'my-bucket', text: 'Some Text Content')
+s3Upload(path: 'path/to/targetFolder/file.txt', bucket: 'my-bucket', text: 'Some Text Content')
 ```
 
 ### s3Download
