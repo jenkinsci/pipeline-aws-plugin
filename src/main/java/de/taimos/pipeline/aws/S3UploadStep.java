@@ -291,8 +291,8 @@ public class S3UploadStep extends AbstractS3Step {
 
 			Preconditions.checkArgument(bucket != null && !bucket.isEmpty(), "Bucket must not be null or empty");
 			Preconditions.checkArgument(file != null || includePathPattern != null, "File or IncludePathPattern must not be null");
-			Preconditions.checkArgument(includePathPattern == null || file == null, "File and IncludePathPattern cannot be use together");
-			Preconditions.checkArgument(text == null || file != null, "If you provide Text aregument, you must also provide a File name.");
+			Preconditions.checkArgument(includePathPattern == null || file == null, "File and IncludePathPattern cannot be used together.");
+			Preconditions.checkArgument(text != null && file != null, "File and Text cannot be used together.");
 
 			final List<FilePath> children = new ArrayList<>();
 			final FilePath dir;
@@ -332,22 +332,20 @@ public class S3UploadStep extends AbstractS3Step {
 				metas.setContentLength(bytes.length);
 
 				// Add metadata
-				if ((metadatas != null && metadatas.size() > 0) || (cacheControl != null && !cacheControl.isEmpty()) || (contentEncoding != null && !contentEncoding.isEmpty()) || (contentType != null && !contentType.isEmpty()) || (sseAlgorithm != null && !sseAlgorithm.isEmpty())) {
-					if (metadatas != null && metadatas.size() > 0) {
-						metas.setUserMetadata(metadatas);
-					}
-					if (cacheControl != null && !cacheControl.isEmpty()) {
-						metas.setCacheControl(cacheControl);
-					}
-					if (contentEncoding != null && !contentEncoding.isEmpty()) {
-						metas.setContentEncoding(contentEncoding);
-					}
-					if (contentType != null && !contentType.isEmpty()) {
-						metas.setContentType(contentType);
-					}
-					if (sseAlgorithm != null && !sseAlgorithm.isEmpty()) {
-						metas.setSSEAlgorithm(sseAlgorithm);
-					}
+				if (metadatas != null && metadatas.size() > 0) {
+					metas.setUserMetadata(metadatas);
+				}
+				if (cacheControl != null && !cacheControl.isEmpty()) {
+					metas.setCacheControl(cacheControl);
+				}
+				if (contentEncoding != null && !contentEncoding.isEmpty()) {
+					metas.setContentEncoding(contentEncoding);
+				}
+				if (contentType != null && !contentType.isEmpty()) {
+					metas.setContentType(contentType);
+				}
+				if (sseAlgorithm != null && !sseAlgorithm.isEmpty()) {
+					metas.setSSEAlgorithm(sseAlgorithm);
 				}
 
 				request = new PutObjectRequest(bucket, path, new ByteArrayInputStream(bytes), metas);
