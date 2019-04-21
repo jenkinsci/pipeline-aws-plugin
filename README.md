@@ -660,6 +660,7 @@ ec2ShareAmi(
 ## current master
 * add `parent` argument to `listAWSAccounts`
 * Add redirect location option to `s3Upload`
+* Add Xerces dependency to fix #117
 * Add ability to upload a String to an S3 object by adding `text` option to `s3Upload`
 
 ## 1.36
