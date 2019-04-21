@@ -159,7 +159,7 @@ files = s3FindFiles(pathStyleAccessEnabled: true, bucket:'my-bucket')
 
 ### s3Upload
 
-Upload a file/folder from the workspace to an S3 bucket.
+Upload a file/folder from the workspace (or a String) to an S3 bucket.
 If the `file` parameter denotes a directory, the complete directory including all subfolders will be uploaded.
 
 ```groovy
@@ -221,6 +221,13 @@ A redirect location can be added to uploaded files.
 
 ```groovy
 s3Upload(file: 'file.txt', bucket: 'my-bucket', redirectLocation: '/redirect')
+```
+
+Creating an S3 object by creating the file whose contents is the provided text argument.
+
+```groovy
+s3Upload(path: 'file.txt', bucket: 'my-bucket', text: 'Some Text Content')
+s3Upload(path: 'path/to/targetFolder/file.txt', bucket: 'my-bucket', text: 'Some Text Content')
 ```
 
 ### s3Download
@@ -654,6 +661,7 @@ ec2ShareAmi(
 * add `parent` argument to `listAWSAccounts`
 * Add redirect location option to `s3Upload`
 * Add Xerces dependency to fix #117
+* Add ability to upload a String to an S3 object by adding `text` option to `s3Upload`
 
 ## 1.36
 * add `jenkinsStackUpdateStatus` to stack outputs. Specifies if stack was modified
