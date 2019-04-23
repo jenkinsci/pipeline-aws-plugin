@@ -662,6 +662,7 @@ ec2ShareAmi(
 * Add redirect location option to `s3Upload`
 * Add Xerces dependency to fix #117
 * Add ability to upload a String to an S3 object by adding `text` option to `s3Upload`
+* Add support for SessionToken when using iamMfaToken #170
 
 ## 1.36
 * add `jenkinsStackUpdateStatus` to stack outputs. Specifies if stack was modified
