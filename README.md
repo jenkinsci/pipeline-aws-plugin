@@ -13,6 +13,7 @@ This plugins adds Jenkins pipeline steps to interact with the AWS API.
 * [s3Download](#s3download)
 * [s3Copy](#s3copy)
 * [s3Delete](#s3delete)
+* [s3DoesObjectExist](#s3doesobjectexist)
 * [s3FindFiles](#s3findfiles)
 * [s3PresignURL](#s3presignurl)
 * [cfnValidate](#cfnvalidate)
@@ -153,6 +154,7 @@ s3Upload(pathStyleAccessEnabled: true, payloadSigningEnabled: true, file:'file.t
 s3Copy(pathStyleAccessEnabled: true, fromBucket:'my-bucket', fromPath:'path/to/source/file.txt', toBucket:'other-bucket', toPath:'path/to/destination/file.txt')
 s3Delete(pathStyleAccessEnabled: true, bucket:'my-bucket', path:'path/to/source/file.txt')
 s3Download(pathStyleAccessEnabled: true, file:'file.txt', bucket:'my-bucket', path:'path/to/source/file.txt', force:true)
+exists = s3DoesObjectExist(pathStyleAccessEnabled: true, bucket:'my-bucket', path:'path/to/source/file.txt')
 files = s3FindFiles(pathStyleAccessEnabled: true, bucket:'my-bucket')
 
 ```
@@ -258,6 +260,14 @@ If the path ends in a "/", then the path will be interpreted to be a folder, and
 ```groovy
 s3Delete(bucket:'my-bucket', path:'path/to/source/file.txt')
 s3Delete(bucket:'my-bucket', path:'path/to/sourceFolder/')
+```
+
+### s3DoesObjectExist
+
+Check if object exists in S3 bucket.
+
+```groovy
+exists = s3DoesObjectExist(bucket:'my-bucket', path:'path/to/source/file.txt')
 ```
 
 ### s3FindFiles
@@ -658,6 +668,7 @@ ec2ShareAmi(
 # Changelog
 
 ## current master
+* add `s3DoesObjectExist` step
 * add `parent` argument to `listAWSAccounts`
 * Add redirect location option to `s3Upload`
 * Add Xerces dependency to fix #117
