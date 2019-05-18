@@ -232,6 +232,12 @@ s3Upload(path: 'file.txt', bucket: 'my-bucket', text: 'Some Text Content')
 s3Upload(path: 'path/to/targetFolder/file.txt', bucket: 'my-bucket', text: 'Some Text Content')
 ```
 
+Log messages can be less verbose. Disable it when you feel the logs are excessive but you will lose the visibility of what files having been uploaded to S3.
+
+```groovy
+s3Upload(path: 'source/path/', bucket: 'my-bucket', verbose: false)
+```
+
 ### s3Download
 
 Download a file/folder from S3 to the local workspace.
@@ -350,7 +356,7 @@ Additionally you can specify a list of tags that are set on the stack and all re
 
 The step returns the outputs of the stack as a map. It also contains special values prefixed with `jenkins`:
 
-* `jenkinsStackUpdateStatus` - "true"/"false" whether the stack was modified or not 
+* `jenkinsStackUpdateStatus` - "true"/"false" whether the stack was modified or not
 
 When cfnUpdate creates a stack and the creation fails, the stack is deleted instead of being left in a broken state.
 
@@ -441,7 +447,7 @@ Additionally you can specify a list of tags that are set on the stack and all re
 
 The step returns the outputs of the stack as a map. It also contains special values prefixed with `jenkins`:
 
-* `jenkinsStackUpdateStatus` - "true"/"false" whether the stack was modified or not 
+* `jenkinsStackUpdateStatus` - "true"/"false" whether the stack was modified or not
 
 
 To prevent running into rate limiting on the AWS API you can change the default polling interval of 1000 ms using the parameter `pollIntervall`. Using the value `0` disables event printing.

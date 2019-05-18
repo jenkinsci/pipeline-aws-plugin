@@ -80,6 +80,7 @@ public class S3UploadStep extends AbstractS3Step {
 	private String contentType;
 	private String sseAlgorithm;
 	private String redirectLocation;
+	private boolean verbose = true;
 
 	@DataBoundConstructor
 	public S3UploadStep(String bucket, boolean pathStyleAccessEnabled, boolean payloadSigningEnabled) {
@@ -225,6 +226,15 @@ public class S3UploadStep extends AbstractS3Step {
 		this.sseAlgorithm = sseAlgorithm;
 	}
 
+	@DataBoundSetter
+	public void setVerbose(boolean verbose) {
+		this.verbose = verbose;
+	}
+
+	public boolean getVerbose() {
+		return this.verbose;
+	}
+
 	@Override
 	public StepExecution start(StepContext context) throws Exception {
 		return new S3UploadStep.Execution(this, context);
@@ -277,10 +287,11 @@ public class S3UploadStep extends AbstractS3Step {
 			final String contentType = this.step.getContentType();
 			final String sseAlgorithm = this.step.getSseAlgorithm();
 			final String redirectLocation = this.step.getRedirectLocation();
+			final boolean verbose = this.step.getVerbose();
 			boolean omitSourcePath = false;
 			boolean sendingText = false;
 			String localPath = null;
-			
+
 			if (this.step.getMetadatas() != null && this.step.getMetadatas().length != 0) {
 				for (String metadata : this.step.getMetadatas()) {
 					if (metadata.contains(":")) {
@@ -316,10 +327,10 @@ public class S3UploadStep extends AbstractS3Step {
 
 			if (sendingText) {
 				listener.getLogger().format("Uploading text string to s3://%s/%s %n", bucket, localPath);
-				
+
 				S3ClientOptions amazonS3ClientOptions = Execution.this.step.createS3ClientOptions();
 				EnvVars envVars = Execution.this.getContext().get(EnvVars.class);
-				
+
 				TransferManager mgr = TransferManagerBuilder.standard()
 						.withS3Client(AWSClientFactory.create(amazonS3ClientOptions.createAmazonS3ClientBuilder(), envVars))
 						.build();
@@ -367,11 +378,13 @@ public class S3UploadStep extends AbstractS3Step {
 				final Upload upload = mgr.upload(request);
 				upload.addProgressListener((ProgressListener) progressEvent -> {
 					if (progressEvent.getEventType() == ProgressEventType.TRANSFER_COMPLETED_EVENT) {
-						listener.getLogger().println("Finished: " + upload.getDescription());
+						if (verbose) {
+							listener.getLogger().println("Finished: " + upload.getDescription());
+						}
 					}
 				});
 				upload.waitForCompletion();
-				
+
 				listener.getLogger().println("Upload complete");
 				return String.format("s3://%s/%s", bucket, localPath);
 			} else if (children.isEmpty()) {
