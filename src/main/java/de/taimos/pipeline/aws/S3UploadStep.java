@@ -375,15 +375,20 @@ public class S3UploadStep extends AbstractS3Step {
 					request.withRedirectLocation(redirectLocation);
 				}
 
-				final Upload upload = mgr.upload(request);
-				upload.addProgressListener((ProgressListener) progressEvent -> {
-					if (progressEvent.getEventType() == ProgressEventType.TRANSFER_COMPLETED_EVENT) {
-						if (verbose) {
-							listener.getLogger().println("Finished: " + upload.getDescription());
+				try {
+					final Upload upload = mgr.upload(request);
+					upload.addProgressListener((ProgressListener) progressEvent -> {
+						if (progressEvent.getEventType() == ProgressEventType.TRANSFER_COMPLETED_EVENT) {
+							if (verbose) {
+								listener.getLogger().println("Finished: " + upload.getDescription());
+							}
 						}
-					}
-				});
-				upload.waitForCompletion();
+					});
+					upload.waitForCompletion();
+				}
+				finally{
+					mgr.shutdownNow();
+				}
 
 				listener.getLogger().println("Upload complete");
 				return String.format("s3://%s/%s", bucket, localPath);
@@ -497,13 +502,18 @@ public class S3UploadStep extends AbstractS3Step {
 					request.withRedirectLocation(this.redirectLocation);
 				}
 
-				final Upload upload = mgr.upload(request);
-				upload.addProgressListener((ProgressListener) progressEvent -> {
-					if (progressEvent.getEventType() == ProgressEventType.TRANSFER_COMPLETED_EVENT) {
-						RemoteUploader.this.taskListener.getLogger().println("Finished: " + upload.getDescription());
-					}
-				});
-				upload.waitForCompletion();
+				try {
+					final Upload upload = mgr.upload(request);
+					upload.addProgressListener((ProgressListener) progressEvent -> {
+						if (progressEvent.getEventType() == ProgressEventType.TRANSFER_COMPLETED_EVENT) {
+							RemoteUploader.this.taskListener.getLogger().println("Finished: " + upload.getDescription());
+						}
+					});
+					upload.waitForCompletion();
+				}
+				finally {
+					mgr.shutdownNow();
+				}
 				return null;
 			}
 			if (localFile.isDirectory()) {
@@ -535,15 +545,21 @@ public class S3UploadStep extends AbstractS3Step {
 						}
 					}
 				};
-				fileUpload = mgr.uploadDirectory(this.bucket, this.path, localFile, true, metadatasProvider);
-				for (final Upload upload : fileUpload.getSubTransfers()) {
-					upload.addProgressListener((ProgressListener) progressEvent -> {
-						if (progressEvent.getEventType() == ProgressEventType.TRANSFER_COMPLETED_EVENT) {
-							RemoteUploader.this.taskListener.getLogger().println("Finished: " + upload.getDescription());
-						}
-					});
+
+				try {
+					fileUpload = mgr.uploadDirectory(this.bucket, this.path, localFile, true, metadatasProvider);
+					for (final Upload upload : fileUpload.getSubTransfers()) {
+						upload.addProgressListener((ProgressListener) progressEvent -> {
+							if (progressEvent.getEventType() == ProgressEventType.TRANSFER_COMPLETED_EVENT) {
+								RemoteUploader.this.taskListener.getLogger().println("Finished: " + upload.getDescription());
+							}
+						});
+					}
+					fileUpload.waitForCompletion();
 				}
-				fileUpload.waitForCompletion();
+				finally {
+					mgr.shutdownNow();
+				}
 				return null;
 			}
 			return null;
@@ -621,15 +637,20 @@ public class S3UploadStep extends AbstractS3Step {
 
 				}
 			};
-			fileUpload = mgr.uploadFileList(this.bucket, this.path, localFile, this.fileList, metadatasProvider);
-			for (final Upload upload : fileUpload.getSubTransfers()) {
-				upload.addProgressListener((ProgressListener) progressEvent -> {
-					if (progressEvent.getEventType() == ProgressEventType.TRANSFER_COMPLETED_EVENT) {
-						RemoteListUploader.this.taskListener.getLogger().println("Finished: " + upload.getDescription());
-					}
-				});
+			try {
+				fileUpload = mgr.uploadFileList(this.bucket, this.path, localFile, this.fileList, metadatasProvider);
+				for (final Upload upload : fileUpload.getSubTransfers()) {
+					upload.addProgressListener((ProgressListener) progressEvent -> {
+						if (progressEvent.getEventType() == ProgressEventType.TRANSFER_COMPLETED_EVENT) {
+							RemoteListUploader.this.taskListener.getLogger().println("Finished: " + upload.getDescription());
+						}
+					});
+				}
+				fileUpload.waitForCompletion();
 			}
-			fileUpload.waitForCompletion();
+			finally {
+				mgr.shutdownNow();
+			}
 			return null;
 		}
 	}

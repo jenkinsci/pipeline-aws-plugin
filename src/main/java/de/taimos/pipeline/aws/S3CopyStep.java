@@ -248,13 +248,18 @@ public class S3CopyStep extends AbstractS3Step {
 			TransferManager mgr = TransferManagerBuilder.standard()
 					.withS3Client(AWSClientFactory.create(s3ClientOptions.createAmazonS3ClientBuilder(), envVars))
 					.build();
-			final Copy copy = mgr.copy(request);
-			copy.addProgressListener((ProgressListener) progressEvent -> {
-				if (progressEvent.getEventType() == ProgressEventType.TRANSFER_COMPLETED_EVENT) {
-					listener.getLogger().println("Finished: " + copy.getDescription());
-				}
-			});
-			copy.waitForCompletion();
+			try {
+				final Copy copy = mgr.copy(request);
+				copy.addProgressListener((ProgressListener) progressEvent -> {
+					if (progressEvent.getEventType() == ProgressEventType.TRANSFER_COMPLETED_EVENT) {
+						listener.getLogger().println("Finished: " + copy.getDescription());
+					}
+				});
+				copy.waitForCompletion();
+			}
+			finally{
+				mgr.shutdownNow();
+			}
 
 			listener.getLogger().println("Copy complete");
 			return String.format("s3://%s/%s", toBucket, toPath);

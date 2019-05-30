@@ -100,6 +100,7 @@ public class S3UploadStepTransferManagerIntegrationTest {
 				Mockito.any(ObjectMetadataProvider.class));
 		Mockito.verify(upload).getSubTransfers();
 		Mockito.verify(upload).waitForCompletion();
+		Mockito.verify(transferManager).shutdownNow();
 		Mockito.verifyNoMoreInteractions(transferManager, upload);
 
 		Assert.assertEquals(1, captor.getValue().size());
