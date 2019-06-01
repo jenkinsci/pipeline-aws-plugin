@@ -178,18 +178,28 @@ public class S3DownloadStep extends AbstractS3Step {
 					.build();
 
 			if (this.path == null || this.path.isEmpty() || this.path.endsWith("/")) {
-				final MultipleFileDownload fileDownload = mgr.downloadDirectory(this.bucket, this.path, localFile);
-				fileDownload.waitForCompletion();
-				RemoteDownloader.this.taskListener.getLogger().println("Finished: " + fileDownload.getDescription());
+				try {
+					final MultipleFileDownload fileDownload = mgr.downloadDirectory(this.bucket, this.path, localFile);
+					fileDownload.waitForCompletion();
+					RemoteDownloader.this.taskListener.getLogger().println("Finished: " + fileDownload.getDescription());
+				}
+				finally {
+					mgr.shutdownNow();
+				}
 				return null;
 			} else {
-				final Download download = mgr.download(this.bucket, this.path, localFile);
-				download.addProgressListener((ProgressListener) progressEvent -> {
-					if (progressEvent.getEventType() == ProgressEventType.TRANSFER_COMPLETED_EVENT) {
-						RemoteDownloader.this.taskListener.getLogger().println("Finished: " + download.getDescription());
-					}
-				});
-				download.waitForCompletion();
+				try {
+					final Download download = mgr.download(this.bucket, this.path, localFile);
+					download.addProgressListener((ProgressListener) progressEvent -> {
+						if (progressEvent.getEventType() == ProgressEventType.TRANSFER_COMPLETED_EVENT) {
+							RemoteDownloader.this.taskListener.getLogger().println("Finished: " + download.getDescription());
+						}
+					});
+					download.waitForCompletion();
+				}
+				finally {
+					mgr.shutdownNow();
+				}
 				return null;
 			}
 		}

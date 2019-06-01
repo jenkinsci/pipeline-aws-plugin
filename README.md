@@ -680,6 +680,7 @@ ec2ShareAmi(
 * Add Xerces dependency to fix #117
 * Add ability to upload a String to an S3 object by adding `text` option to `s3Upload`
 * Add support for SessionToken when using iamMfaToken #170
+* Fix instances of TransferManger from aws-sdk were never closed properly
 
 ## 1.36
 * add `jenkinsStackUpdateStatus` to stack outputs. Specifies if stack was modified
