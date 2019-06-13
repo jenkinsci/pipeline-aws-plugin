@@ -144,7 +144,11 @@ public class CloudFormationStack {
 
 			req.withRollbackConfiguration(rollbackConfig);
 
-			req.withParameters(params).withTags(tags).withRoleARN(roleArn);
+			req.withParameters(params);
+			if(tags != null && tags.size() > 0){
+				req.withTags(tags);
+			}
+			req.withRoleARN(roleArn);
 
 			this.client.updateStack(req);
 
