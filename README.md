@@ -701,6 +701,7 @@ ec2ShareAmi(
 * Add ecrListImages
 * Add ecrDeleteImages
 * Fix instances of TransferManger from aws-sdk were never closed properly
+* Handle `Stopped` status for CodeDeployment deployments
 
 ## 1.36
 * add `jenkinsStackUpdateStatus` to stack outputs. Specifies if stack was modified
