@@ -92,6 +92,8 @@ public class WaitDeployStep extends Step {
 
 		private static final String FAILED_STATUS = "Failed";
 
+		private static final String STOPPED_STATUS = "Stopped";
+
 		@SuppressFBWarnings(value = "SE_TRANSIENT_FIELD_NOT_RESTORED", justification = "Only used when starting.")
 		private final transient String deploymentId;
 
@@ -121,6 +123,9 @@ public class WaitDeployStep extends Step {
 					listener.getLogger().println("Deployment completed in error");
 					String errorMessage = deployment.getDeploymentInfo().getErrorInformation().getMessage();
 					throw new Exception("Deployment Failed: " + errorMessage);
+				} else if (STOPPED_STATUS.equals(deploymentStatus)) {
+					listener.getLogger().println("Deployment was stopped");
+					throw new Exception("Deployment was stopped");
 				} else {
 					listener.getLogger().println("Deployment still in progress... sleeping");
 					try {
