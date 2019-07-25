@@ -325,7 +325,6 @@ public class S3UploadStep extends AbstractS3Step {
 
 			if (this.step.getTags() != null && this.step.getTags().length() != 0) {
 				//[tag1:value1, tag2:value2]
-				System.out.println(this.step.getTags());
 				String tagsNoBraces = this.step.getTags().substring(1, this.step.getTags().length()-1);
 				String[] pairs= tagsNoBraces.split(", ");
 				for(String pair : pairs){
