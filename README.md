@@ -117,10 +117,10 @@ When you use Jenkins Declarative Pipelines you can also use `withAWS` in an opti
 
 ```groovy
 options {
-    withAWS(profile:'myProfile')
+	withAWS(profile:'myProfile')
 }
 stages {
-    ...
+	...
 }
 ```
 
@@ -675,8 +675,8 @@ The step returns the object returned by the Lambda.
 
 ```groovy
 def result = invokeLambda(
-    functionName: 'myLambdaFunction',
-    payload: [ "key": "value", "anotherkey" : [ "another", "value"] ]
+	functionName: 'myLambdaFunction',
+	payload: [ "key": "value", "anotherkey" : [ "another", "value"] ]
 )
 ```
 
@@ -684,9 +684,9 @@ Alternatively payload and return value can be Strings instead of Objects:
 
 ```groovy
 String result = invokeLambda(
-    functionName: 'myLambdaFunction',
-    payloadAsString: '{"key": "value"}',
-    returnValueAsString: true
+	functionName: 'myLambdaFunction',
+	payloadAsString: '{"key": "value"}',
+	returnValueAsString: true
 )
 ```
 
@@ -696,8 +696,8 @@ Share an AMI image to one or more accounts
 
 ```groovy
 ec2ShareAmi(
-    amiId: 'ami-23842',
-    accountIds: [ "0123456789", "1234567890" ]
+	amiId: 'ami-23842',
+	accountIds: [ "0123456789", "1234567890" ]
 )
 ```
 
