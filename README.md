@@ -117,10 +117,10 @@ When you use Jenkins Declarative Pipelines you can also use `withAWS` in an opti
 
 ```groovy
 options {
-	withAWS(profile:'myProfile')
+    withAWS(profile:'myProfile')
 }
 stages {
-	...
+    ...
 }
 ```
 
@@ -232,6 +232,18 @@ Creating an S3 object by creating the file whose contents is the provided text a
 ```groovy
 s3Upload(path: 'file.txt', bucket: 'my-bucket', text: 'Some Text Content')
 s3Upload(path: 'path/to/targetFolder/file.txt', bucket: 'my-bucket', text: 'Some Text Content')
+```
+
+Tags can be added to uploaded files.
+
+```groovy
+s3Upload(file: 'file.txt', bucket: 'my-bucket', tags: '[tag1:value1, tag2:value2]')
+
+def tags=[:]
+tags["tag1"]="value1"
+tags["tag2"]="value2"
+
+s3Upload(file: 'file.txt', bucket: 'my-bucket', tags: tags.toString())
 ```
 
 Log messages can be less verbose. Disable it when you feel the logs are excessive but you will lose the visibility of what files having been uploaded to S3.
@@ -663,8 +675,8 @@ The step returns the object returned by the Lambda.
 
 ```groovy
 def result = invokeLambda(
-	functionName: 'myLambdaFunction',
-	payload: [ "key": "value", "anotherkey" : [ "another", "value"] ]
+    functionName: 'myLambdaFunction',
+    payload: [ "key": "value", "anotherkey" : [ "another", "value"] ]
 )
 ```
 
@@ -672,9 +684,9 @@ Alternatively payload and return value can be Strings instead of Objects:
 
 ```groovy
 String result = invokeLambda(
-	functionName: 'myLambdaFunction',
-	payloadAsString: '{"key": "value"}',
-	returnValueAsString: true
+    functionName: 'myLambdaFunction',
+    payloadAsString: '{"key": "value"}',
+    returnValueAsString: true
 )
 ```
 
@@ -684,8 +696,8 @@ Share an AMI image to one or more accounts
 
 ```groovy
 ec2ShareAmi(
-	amiId: 'ami-23842',
-	accountIds: [ "0123456789", "1234567890" ]
+    amiId: 'ami-23842',
+    accountIds: [ "0123456789", "1234567890" ]
 )
 ```
 
@@ -702,6 +714,7 @@ ec2ShareAmi(
 * Add ecrDeleteImages
 * Fix instances of TransferManger from aws-sdk were never closed properly
 * Handle `Stopped` status for CodeDeployment deployments
+* Add tags to files uploaded with S3Upload
 
 ## 1.36
 * add `jenkinsStackUpdateStatus` to stack outputs. Specifies if stack was modified

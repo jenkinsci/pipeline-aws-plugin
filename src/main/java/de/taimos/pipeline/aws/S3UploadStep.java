@@ -45,11 +45,14 @@ import com.amazonaws.event.ProgressListener;
 import com.amazonaws.services.s3.Headers;
 import com.amazonaws.services.s3.model.CannedAccessControlList;
 import com.amazonaws.services.s3.model.ObjectMetadata;
+import com.amazonaws.services.s3.model.ObjectTagging;
 import com.amazonaws.services.s3.model.PutObjectRequest;
 import com.amazonaws.services.s3.model.SSEAlgorithm;
 import com.amazonaws.services.s3.model.SSEAwsKeyManagementParams;
+import com.amazonaws.services.s3.model.Tag;
 import com.amazonaws.services.s3.transfer.MultipleFileUpload;
 import com.amazonaws.services.s3.transfer.ObjectMetadataProvider;
+import com.amazonaws.services.s3.transfer.ObjectTaggingProvider;
 import com.amazonaws.services.s3.transfer.TransferManager;
 import com.amazonaws.services.s3.transfer.TransferManagerBuilder;
 import com.amazonaws.services.s3.transfer.Upload;
@@ -74,6 +77,7 @@ public class S3UploadStep extends AbstractS3Step {
 	private String excludePathPattern;
 	private String workingDir;
 	private String[] metadatas;
+	private String tags;
 	private CannedAccessControlList acl;
 	private String cacheControl;
 	private String contentEncoding;
@@ -181,6 +185,24 @@ public class S3UploadStep extends AbstractS3Step {
 		}
 	}
 
+	public String getTags() {
+		if (this.tags != null) {
+			return this.tags;
+		} else {
+			return null;
+		}
+	}
+
+
+	@DataBoundSetter
+	public void setTags(String tags) {
+		if (tags != null ) {
+			this.tags = tags;
+		} else {
+			this.tags = null;
+		}
+	}
+
 	public CannedAccessControlList getAcl() {
 		return this.acl;
 	}
@@ -281,6 +303,7 @@ public class S3UploadStep extends AbstractS3Step {
 			final String excludePathPattern = this.step.getExcludePathPattern();
 			final String workingDir = this.step.getWorkingDir();
 			final Map<String, String> metadatas = new HashMap<>();
+			final Map<String, String> tags = new HashMap<String, String>();
 			final CannedAccessControlList acl = this.step.getAcl();
 			final String cacheControl = this.step.getCacheControl();
 			final String contentEncoding = this.step.getContentEncoding();
@@ -297,6 +320,17 @@ public class S3UploadStep extends AbstractS3Step {
 					if (metadata.contains(":")) {
 						metadatas.put(metadata.substring(0, metadata.indexOf(':')), metadata.substring(metadata.indexOf(':') + 1));
 					}
+				}
+			}
+
+			if (this.step.getTags() != null && this.step.getTags().length() != 0) {
+				//[tag1:value1, tag2:value2]
+				System.out.println(this.step.getTags());
+				String tagsNoBraces = this.step.getTags().substring(1, this.step.getTags().length()-1);
+				String[] pairs= tagsNoBraces.split(", ");
+				for(String pair : pairs){
+					String[] entry = pair.split(":");
+					tags.put(entry[0], entry[1]);
 				}
 			}
 
@@ -365,6 +399,19 @@ public class S3UploadStep extends AbstractS3Step {
 					request.withCannedAcl(acl);
 				}
 
+				//add tags
+				if(tags != null){
+					List<Tag> tagList = new ArrayList<Tag>();
+
+					for (Map.Entry<String, String> entry : tags.entrySet()) {
+						Tag tag = new Tag(entry.getKey(), entry.getValue());
+						tagList.add(tag);
+					}
+
+					request.withTagging(new ObjectTagging(tagList));
+				}
+
+
 				// Add kms
 				if (kmsId != null && !kmsId.isEmpty()) {
 					listener.getLogger().format("Using KMS: %s%n", kmsId);
@@ -403,7 +450,7 @@ public class S3UploadStep extends AbstractS3Step {
 					throw new FileNotFoundException(child.toURI().toString());
 				}
 
-				child.act(new RemoteUploader(Execution.this.step.createS3ClientOptions(), Execution.this.getContext().get(EnvVars.class), listener, bucket, path, metadatas, acl, cacheControl, contentEncoding, contentType, kmsId, sseAlgorithm, redirectLocation));
+				child.act(new RemoteUploader(Execution.this.step.createS3ClientOptions(), Execution.this.getContext().get(EnvVars.class), listener, bucket, path, metadatas, tags, acl, cacheControl, contentEncoding, contentType, kmsId, sseAlgorithm, redirectLocation));
 
 				listener.getLogger().println("Upload complete");
 				return String.format("s3://%s/%s", bucket, path);
@@ -413,7 +460,7 @@ public class S3UploadStep extends AbstractS3Step {
 				for (FilePath child : children) {
 					fileList.add(child.act(FIND_FILE_ON_SLAVE));
 				}
-				dir.act(new RemoteListUploader(Execution.this.step.createS3ClientOptions(), Execution.this.getContext().get(EnvVars.class), listener, fileList, bucket, path, metadatas, acl, cacheControl, contentEncoding, contentType, kmsId, sseAlgorithm));
+				dir.act(new RemoteListUploader(Execution.this.step.createS3ClientOptions(), Execution.this.getContext().get(EnvVars.class), listener, fileList, bucket, path, metadatas, tags, acl, cacheControl, contentEncoding, contentType, kmsId, sseAlgorithm));
 				listener.getLogger().println("Upload complete");
 				return String.format("s3://%s/%s", bucket, path);
 			}
@@ -430,6 +477,7 @@ public class S3UploadStep extends AbstractS3Step {
 		private final String bucket;
 		private final String path;
 		private final Map<String, String> metadatas;
+		private final Map<String, String> tags;
 		private final CannedAccessControlList acl;
 		private final String cacheControl;
 		private final String contentEncoding;
@@ -438,13 +486,14 @@ public class S3UploadStep extends AbstractS3Step {
 		private final String sseAlgorithm;
 		private final String redirectLocation;
 
-		RemoteUploader(S3ClientOptions amazonS3ClientOptions, EnvVars envVars, TaskListener taskListener, String bucket, String path, Map<String, String> metadatas, CannedAccessControlList acl, String cacheControl, String contentEncoding, String contentType, String kmsId, String sseAlgorithm, String redirectLocation) {
+		RemoteUploader(S3ClientOptions amazonS3ClientOptions, EnvVars envVars, TaskListener taskListener, String bucket, String path, Map<String, String> metadatas, Map<String, String> tags, CannedAccessControlList acl, String cacheControl, String contentEncoding, String contentType, String kmsId, String sseAlgorithm, String redirectLocation) {
 			this.amazonS3ClientOptions = amazonS3ClientOptions;
 			this.envVars = envVars;
 			this.taskListener = taskListener;
 			this.bucket = bucket;
 			this.path = path;
 			this.metadatas = metadatas;
+			this.tags=tags;
 			this.acl = acl;
 			this.cacheControl = cacheControl;
 			this.contentEncoding = contentEncoding;
@@ -485,6 +534,17 @@ public class S3UploadStep extends AbstractS3Step {
 						metas.setSSEAlgorithm(this.sseAlgorithm);
 					}
 					request.withMetadata(metas);
+				}
+
+				//add tags
+				if(tags != null){
+					List<Tag> tagList = new ArrayList<Tag>();
+
+					for (Map.Entry<String, String> entry : tags.entrySet()) {
+						Tag tag = new Tag(entry.getKey(), entry.getValue());
+						tagList.add(tag);
+					}
+					request.withTagging(new ObjectTagging(tagList));
 				}
 
 				// Add acl
@@ -577,6 +637,7 @@ public class S3UploadStep extends AbstractS3Step {
 		private final String path;
 		private final List<File> fileList;
 		private final Map<String, String> metadatas;
+		private final Map<String, String> tags;
 		private final CannedAccessControlList acl;
 		private final String cacheControl;
 		private final String contentEncoding;
@@ -584,7 +645,7 @@ public class S3UploadStep extends AbstractS3Step {
 		private final String kmsId;
 		private final String sseAlgorithm;
 
-		RemoteListUploader(S3ClientOptions amazonS3ClientOptions, EnvVars envVars, TaskListener taskListener, List<File> fileList, String bucket, String path, Map<String, String> metadatas, CannedAccessControlList acl, final String cacheControl, final String contentEncoding, final String contentType, String kmsId, String sseAlgorithm) {
+		RemoteListUploader(S3ClientOptions amazonS3ClientOptions, EnvVars envVars, TaskListener taskListener, List<File> fileList, String bucket, String path, Map<String, String> metadatas, Map<String, String> tags, CannedAccessControlList acl, final String cacheControl, final String contentEncoding, final String contentType, String kmsId, String sseAlgorithm) {
 			this.amazonS3ClientOptions = amazonS3ClientOptions;
 			this.envVars = envVars;
 			this.taskListener = taskListener;
@@ -592,6 +653,7 @@ public class S3UploadStep extends AbstractS3Step {
 			this.bucket = bucket;
 			this.path = path;
 			this.metadatas = metadatas;
+			this.tags = tags;
 			this.acl = acl;
 			this.cacheControl = cacheControl;
 			this.contentEncoding = contentEncoding;
@@ -637,8 +699,22 @@ public class S3UploadStep extends AbstractS3Step {
 
 				}
 			};
+
+			ObjectTaggingProvider objectTaggingProvider =(uploadContext) -> {
+				List<Tag> tagList = new ArrayList<Tag>();
+
+				//add tags
+				if(tags != null){
+					for (Map.Entry<String, String> entry : tags.entrySet()) {
+						Tag tag = new Tag(entry.getKey(), entry.getValue());
+						tagList.add(tag);
+					}
+				}
+				return new ObjectTagging(tagList);
+			};
+
 			try {
-				fileUpload = mgr.uploadFileList(this.bucket, this.path, localFile, this.fileList, metadatasProvider);
+				fileUpload = mgr.uploadFileList(this.bucket, this.path, localFile, this.fileList, metadatasProvider, objectTaggingProvider);
 				for (final Upload upload : fileUpload.getSubTransfers()) {
 					upload.addProgressListener((ProgressListener) progressEvent -> {
 						if (progressEvent.getEventType() == ProgressEventType.TRANSFER_COMPLETED_EVENT) {
