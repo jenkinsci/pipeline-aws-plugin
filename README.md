@@ -171,10 +171,11 @@ s3Upload(file:'file.txt', bucket:'my-bucket', path:'path/to/target/file.txt')
 s3Upload(file:'someFolder', bucket:'my-bucket', path:'path/to/targetFolder/')
 ```
 
-Another way to use it with include/exclude pattern in a subdirectory (workingDir).
+Another way to use it is with include/exclude patterns which are applied in the specified subdirectory (`workingDir`).
+The option accepts a comma-separated list of patterns.
 
 ```groovy
-s3Upload(bucket:"my-bucket", path:'path/to/targetFolder/', includePathPattern:'**/*', workingDir:'dist', excludePathPattern:'**/*.svg')
+s3Upload(bucket:"my-bucket", path:'path/to/targetFolder/', includePathPattern:'**/*', workingDir:'dist', excludePathPattern:'**/*.svg,**/*.jpg')
 ```
 
 Specific user metadatas can be added to uploaded files
