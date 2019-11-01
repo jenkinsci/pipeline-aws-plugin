@@ -693,6 +693,7 @@ ec2ShareAmi(
 # Changelog
 
 ## current master
+* add `notificationARNs` argument to `cfnUpdate` and `cfnUpdateStackSet`
 * add `s3DoesObjectExist` step
 * add `parent` argument to `listAWSAccounts`
 * Add redirect location option to `s3Upload`
