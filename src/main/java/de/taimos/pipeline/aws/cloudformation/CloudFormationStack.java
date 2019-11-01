@@ -108,14 +108,14 @@ public class CloudFormationStack {
 		return map;
 	}
 
-	public Map<String, String> create(String templateBody, String templateUrl, Collection<Parameter> params, Collection<Tag> tags, PollConfiguration pollConfiguration, String roleArn, String onFailure, Boolean enableTerminationProtection) throws ExecutionException {
+	public Map<String, String> create(String templateBody, String templateUrl, Collection<Parameter> params, Collection<Tag> tags, Collection<String> notificationARNs, PollConfiguration pollConfiguration, String roleArn, String onFailure, Boolean enableTerminationProtection) throws ExecutionException {
 		if ((templateBody == null || templateBody.isEmpty()) && (templateUrl == null || templateUrl.isEmpty())) {
 			throw new IllegalArgumentException("Either a file or url for the template must be specified");
 		}
 
 		CreateStackRequest req = new CreateStackRequest();
 		req.withStackName(this.stack).withCapabilities(Capability.CAPABILITY_IAM, Capability.CAPABILITY_NAMED_IAM, Capability.CAPABILITY_AUTO_EXPAND).withEnableTerminationProtection(enableTerminationProtection);
-		req.withTemplateBody(templateBody).withTemplateURL(templateUrl).withParameters(params).withTags(tags)
+		req.withTemplateBody(templateBody).withTemplateURL(templateUrl).withParameters(params).withTags(tags).withNotificationARNs(notificationARNs)
 				.withTimeoutInMinutes(pollConfiguration.getTimeout() == null ? null : (int) pollConfiguration.getTimeout().toMinutes())
 				.withRoleARN(roleArn)
 				.withOnFailure(OnFailure.valueOf(onFailure));
@@ -129,7 +129,7 @@ public class CloudFormationStack {
 	}
 
 
-	public Map<String, String> update(String templateBody, String templateUrl, Collection<Parameter> params, Collection<Tag> tags, PollConfiguration pollConfiguration, String roleArn, RollbackConfiguration rollbackConfig) throws ExecutionException {
+	public Map<String, String> update(String templateBody, String templateUrl, Collection<Parameter> params, Collection<Tag> tags, Collection<String> notificationARNs, PollConfiguration pollConfiguration, String roleArn, RollbackConfiguration rollbackConfig) throws ExecutionException {
 		try {
 			UpdateStackRequest req = new UpdateStackRequest();
 			req.withStackName(this.stack).withCapabilities(Capability.CAPABILITY_IAM, Capability.CAPABILITY_NAMED_IAM, Capability.CAPABILITY_AUTO_EXPAND);
@@ -147,6 +147,9 @@ public class CloudFormationStack {
 			req.withParameters(params);
 			if(tags != null && tags.size() > 0){
 				req.withTags(tags);
+			}
+			if (notificationARNs != null && notificationARNs.size() > 0) {
+				req.withNotificationARNs(notificationARNs);
 			}
 			req.withRoleARN(roleArn);
 
@@ -171,7 +174,7 @@ public class CloudFormationStack {
 		}
 	}
 
-	public void createChangeSet(String changeSetName, String templateBody, String templateUrl, Collection<Parameter> params, Collection<Tag> tags, PollConfiguration pollConfiguration, ChangeSetType changeSetType, String roleArn, RollbackConfiguration rollbackConfig) throws ExecutionException {
+	public void createChangeSet(String changeSetName, String templateBody, String templateUrl, Collection<Parameter> params, Collection<Tag> tags, Collection<String> notificationARNs, PollConfiguration pollConfiguration, ChangeSetType changeSetType, String roleArn, RollbackConfiguration rollbackConfig) throws ExecutionException {
 		try {
 			CreateChangeSetRequest req = new CreateChangeSetRequest();
 			req.withChangeSetName(changeSetName).withStackName(this.stack).withCapabilities(Capability.CAPABILITY_IAM, Capability.CAPABILITY_NAMED_IAM, Capability.CAPABILITY_AUTO_EXPAND).withChangeSetType(changeSetType);
@@ -195,7 +198,7 @@ public class CloudFormationStack {
 				throw new IllegalArgumentException("Cannot create a CloudFormation change set without a valid change set type.");
 			}
 
-			req.withParameters(params).withTags(tags).withRoleARN(roleArn).withRollbackConfiguration(rollbackConfig);
+			req.withParameters(params).withTags(tags).withNotificationARNs(notificationARNs).withRoleARN(roleArn).withRollbackConfiguration(rollbackConfig);
 
 			this.client.createChangeSet(req);
 
