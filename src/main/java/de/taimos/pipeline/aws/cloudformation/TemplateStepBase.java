@@ -192,7 +192,7 @@ public abstract class TemplateStepBase extends Step implements ParameterProvider
 		return tagList;
 	}
 
-	protected final Collection<String> getAwsNotificationARNs(StepExecution stepExecution) {
+	protected final Collection<String> getAwsNotificationARNs() {
 		Collection<String> notificationARNsList = new ArrayList<>();
 		if (this.notificationARNs != null) {
 			for (String notificationARN : this.notificationARNs) {
