@@ -39,6 +39,13 @@ This plugins adds Jenkins pipeline steps to interact with the AWS API.
 
 [**see the changelog for release information**](#changelog)
 
+# Primary/Agent setups
+
+This plugin is not optimized to setups with a primary and multiple agents. 
+Only steps that touch the workspace are executed on the agents while the rest is executed on the master.
+
+For the best experience make sure that primary and agents have the same IAM permission and networking capabilities.
+
 # Usage / Steps
 
 ## withAWS
@@ -693,17 +700,23 @@ ec2ShareAmi(
 # Changelog
 
 ## current master
+
+## 1.39
 * add `notificationARNs` argument to `cfnUpdate` and `cfnUpdateStackSet`
-* add `s3DoesObjectExist` step
-* add `parent` argument to `listAWSAccounts`
-* Add redirect location option to `s3Upload`
-* Add Xerces dependency to fix #117
-* Add ability to upload a String to an S3 object by adding `text` option to `s3Upload`
-* Add support for SessionToken when using iamMfaToken #170
+* Handle `Stopped` status for CodeDeployment deployments
+
+## 1.38
 * Add ecrListImages
 * Add ecrDeleteImages
 * Fix instances of TransferManger from aws-sdk were never closed properly
-* Handle `Stopped` status for CodeDeployment deployments
+* add `s3DoesObjectExist` step
+
+## 1.37
+* add `parent` argument to `listAWSAccounts`
+* Add Xerces dependency to fix #117
+* Add ability to upload a String to an S3 object by adding `text` option to `s3Upload`
+* Add redirect location option to `s3Upload`
+* Add support for SessionToken when using iamMfaToken #170
 
 ## 1.36
 * add `jenkinsStackUpdateStatus` to stack outputs. Specifies if stack was modified
