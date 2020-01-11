@@ -728,6 +728,7 @@ ec2ShareAmi(
 # Changelog
 
 ## current master
+* Add ecrSetRepositoryPolicy
 
 ## 1.39
 * add `notificationARNs` argument to `cfnUpdate` and `cfnUpdateStackSet`
