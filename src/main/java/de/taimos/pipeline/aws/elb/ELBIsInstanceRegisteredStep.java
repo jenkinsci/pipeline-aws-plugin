@@ -127,6 +127,7 @@ public class ELBIsInstanceRegisteredStep extends Step {
 			for (TargetHealthDescription target : targets) {
 				if (target.getTarget().getId().equals(this.step.instanceID) && target.getTargetHealth().getState().equals("healthy") ) {
 					rval = true;
+					break;
 				}
 			}
 			listener.getLogger().println(res.toString());

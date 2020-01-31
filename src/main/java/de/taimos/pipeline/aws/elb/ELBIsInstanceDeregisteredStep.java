@@ -127,6 +127,7 @@ public class ELBIsInstanceDeregisteredStep extends Step {
 			for (TargetHealthDescription target : targets) {
 				if (target.getTarget().getId().equals(this.step.instanceID) ) {
 					rval = false;
+					break;
 				}
 			}
 			listener.getLogger().println(res.toString());
