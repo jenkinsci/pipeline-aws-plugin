@@ -664,6 +664,12 @@ For older versions of docker that need the email parameter use:
 def login = ecrLogin(email:true)
 ```
 
+It's also possible to specify AWS accounts to perform ECR login into:
+
+```groovy
+def login = ecrLogin(registryIds: ['123456789', '987654321'])
+```
+
 ## invokeLambda
 
 Invoke a Lambda function.
@@ -724,6 +730,7 @@ ec2ShareAmi(
 # Changelog
 
 ## current master
+* add `registryIds` argument to `ecrLogin`
 * fix CloudFormation CreateChangeSet for a stack with IN_REVIEW state
 * Add lambdaCleanupVersions
 
