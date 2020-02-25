@@ -724,6 +724,7 @@ ec2ShareAmi(
 # Changelog
 
 ## current master
+* fix CloudFormation CreateChangeSet for a stack with IN_REVIEW state
 
 ## 1.39
 * add `notificationARNs` argument to `cfnUpdate` and `cfnUpdateStackSet`
