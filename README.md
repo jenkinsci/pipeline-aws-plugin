@@ -35,6 +35,7 @@ This plugins adds Jenkins pipeline steps to interact with the AWS API.
 * [ecrListImages](#ecrlistimages)
 * [ecrLogin](#ecrlogin)
 * [invokeLambda](#invokelambda)
+* [lambdaCleanupVersions](#lambdacleanupversions)
 * [ec2ShareAmi](#ec2ShareAmi)
 
 [**see the changelog for release information**](#changelog)
@@ -683,6 +684,20 @@ String result = invokeLambda(
 	functionName: 'myLambdaFunction',
 	payloadAsString: '{"key": "value"}',
 	returnValueAsString: true
+)
+```
+
+## lambdaCleanupVersions
+
+Cleans up lambda function versions older than the daysAgo flag.
+The main use case around this is for tooling like AWS Serverless Application Model.
+It creates lambda functions, but marks them as `DeletionPolicy: Retain` so the versions are never deleted.
+Overtime, these unused versions will accumulate and the account/region might hit the limit for maximum storage of lambda functions.
+
+```groovy
+lambdaCleanupVerisons(
+	functionName: 'myLambdaFunction',
+	daysAgo: 14
 )
 ```
 
