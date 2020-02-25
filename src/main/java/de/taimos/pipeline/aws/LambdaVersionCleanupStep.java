@@ -147,9 +147,7 @@ public class LambdaVersionCleanupStep extends Step {
 			do {
 				ListVersionsByFunctionResult result = client.listVersionsByFunction(request);
 				list.addAll(result.getVersions());
-				if (result.getNextMarker() != null) {
-					request.setMarker(result.getNextMarker());
-				}
+				request.setMarker(result.getNextMarker());
 			} while (request.getMarker() != null);
 
 			return list;

@@ -93,6 +93,34 @@ import java.util.Arrays;
 		}
 
 		@Test
+		public void paginatedResponse() throws Exception {
+			WorkflowJob job = this.jenkinsRule.jenkins.createProject(WorkflowJob.class, "cfnTest");
+			Mockito.when(this.awsLambda.listAliases(Mockito.eq(new ListAliasesRequest().withFunctionName("foo")))).thenReturn(new ListAliasesResult());
+			Mockito.when(this.awsLambda.listVersionsByFunction(Mockito.eq(new ListVersionsByFunctionRequest().withFunctionName("foo")))).thenReturn(new ListVersionsByFunctionResult()
+					.withNextMarker("baz")
+					);
+			Mockito.when(this.awsLambda.listVersionsByFunction(Mockito.eq(new ListVersionsByFunctionRequest().withFunctionName("foo").withMarker("baz")))).thenReturn(new ListVersionsByFunctionResult()
+					.withVersions(Arrays.asList(
+							new FunctionConfiguration().withVersion("v2").withLastModified("2018-02-05T11:15:12Z")
+							))
+					);
+			job.setDefinition(new CpsFlowDefinition(""
+						+ "node {\n"
+						+ "  lambdaVersionCleanup(functionName: 'foo', daysAgo: 5)\n"
+						+ "}\n", true)
+					);
+			this.jenkinsRule.assertBuildStatusSuccess(job.scheduleBuild2(0));
+
+			Mockito.verify(this.awsLambda).deleteFunction(new DeleteFunctionRequest()
+					.withQualifier("v2")
+					.withFunctionName("foo")
+					);
+			Mockito.verify(this.awsLambda, Mockito.times(2)).listVersionsByFunction(Mockito.any());
+			Mockito.verify(this.awsLambda).listAliases(Mockito.any());
+			Mockito.verifyNoMoreInteractions(this.awsLambda);
+		}
+
+		@Test
 		public void ignoreLatest() throws Exception {
 			WorkflowJob job = this.jenkinsRule.jenkins.createProject(WorkflowJob.class, "cfnTest");
 			Mockito.when(this.awsLambda.listAliases(Mockito.eq(new ListAliasesRequest().withFunctionName("foo")))).thenReturn(new ListAliasesResult());
