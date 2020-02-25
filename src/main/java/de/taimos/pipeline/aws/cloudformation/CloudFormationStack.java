@@ -59,6 +59,9 @@ public class CloudFormationStack {
 	private final TaskListener listener;
 
 	public CloudFormationStack(AmazonCloudFormation client, String stack, TaskListener listener) {
+		if (listener == null) {
+			throw new IllegalStateException("listener is null");
+		}
 		this.client = client;
 		this.stack = stack;
 		this.listener = listener;
@@ -67,10 +70,17 @@ public class CloudFormationStack {
 	public boolean exists() {
 		try {
 			DescribeStacksResult result = this.client.describeStacks(new DescribeStacksRequest().withStackName(this.stack));
+			if (this.listener.getLogger() == null) {
+				throw new IllegalStateException("logger is null");
+			}
+			this.listener.getLogger().format("Found %d stacks in result %n", result.getStacks().size());
+			for (Stack stack : result.getStacks()) {
+				this.listener.getLogger().format("Found stackName=%s stackId=%s status=%s statusReason=%s in result %n", stack.getStackName(), stack.getStackId(), stack.getStackStatus(), stack.getStackStatusReason());
+			}
 			return !result.getStacks().isEmpty();
 		} catch (AmazonCloudFormationException e) {
+			this.listener.getLogger().format("Got error from describeStacks: %s %n", e.getErrorMessage());
 			if ("AccessDenied".equals(e.getErrorCode())) {
-				this.listener.getLogger().format("Got error from describeStacks: %s %n", e.getErrorMessage());
 				throw e;
 			} else if ("ValidationError".equals(e.getErrorCode()) && e.getErrorMessage().contains("does not exist")) {
 				return false;
@@ -82,11 +92,12 @@ public class CloudFormationStack {
 
 	public boolean changeSetExists(String changeSetName) {
 		try {
-			this.client.describeChangeSet(new DescribeChangeSetRequest().withStackName(this.stack).withChangeSetName(changeSetName));
+			DescribeChangeSetResult result = this.client.describeChangeSet(new DescribeChangeSetRequest().withStackName(this.stack).withChangeSetName(changeSetName));
+			this.listener.getLogger().format("Found changeSet=%s status=%s statusReason=%s %n", result.getChangeSetName(), result.getStatus(), result.getStatusReason());
 			return true;
 		} catch (AmazonCloudFormationException e) {
+			this.listener.getLogger().format("Got error from describeStacks: %s %n", e.getErrorMessage());
 			if ("AccessDenied".equals(e.getErrorCode())) {
-				this.listener.getLogger().format("Got error from describeStacks: %s %n", e.getErrorMessage());
 				throw e;
 			}
 			return false;
@@ -175,6 +186,16 @@ public class CloudFormationStack {
 	}
 
 	public void createChangeSet(String changeSetName, String templateBody, String templateUrl, Collection<Parameter> params, Collection<Tag> tags, Collection<String> notificationARNs, PollConfiguration pollConfiguration, ChangeSetType changeSetType, String roleArn, RollbackConfiguration rollbackConfig) throws ExecutionException {
+		ChangeSetType effectiveChangeSetType;
+		if (isInReview()) {
+			effectiveChangeSetType = ChangeSetType.CREATE;
+		} else {
+			effectiveChangeSetType = changeSetType;
+		}
+		doCreateChangeSet(changeSetName, templateBody, templateUrl, params, tags, notificationARNs, pollConfiguration, effectiveChangeSetType, roleArn, rollbackConfig);
+	}
+
+	private void doCreateChangeSet(String changeSetName, String templateBody, String templateUrl, Collection<Parameter> params, Collection<Tag> tags, Collection<String> notificationARNs, PollConfiguration pollConfiguration, ChangeSetType changeSetType, String roleArn, RollbackConfiguration rollbackConfig) throws ExecutionException {
 		try {
 			CreateChangeSetRequest req = new CreateChangeSetRequest();
 			req.withChangeSetName(changeSetName).withStackName(this.stack).withCapabilities(Capability.CAPABILITY_IAM, Capability.CAPABILITY_NAMED_IAM, Capability.CAPABILITY_AUTO_EXPAND).withChangeSetType(changeSetType);
@@ -267,7 +288,7 @@ public class CloudFormationStack {
 	private boolean isInReview() {
 		if (this.exists()) {
 			DescribeStacksResult result = this.client.describeStacks(new DescribeStacksRequest().withStackName(this.stack));
-			return !result.getStacks().isEmpty() && result.getStacks().get(0).getStackStatus().equals("REVIEW_IN_PROGRESS");
+			return result.getStacks().size() > 0 && result.getStacks().get(0).getStackStatus().equals("REVIEW_IN_PROGRESS");
 		}
 		return false;
 	}
