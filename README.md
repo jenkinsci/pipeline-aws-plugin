@@ -35,6 +35,7 @@ This plugins adds Jenkins pipeline steps to interact with the AWS API.
 * [ecrListImages](#ecrlistimages)
 * [ecrLogin](#ecrlogin)
 * [invokeLambda](#invokelambda)
+* [lambdaCleanupVersions](#lambdacleanupversions)
 * [ec2ShareAmi](#ec2ShareAmi)
 
 [**see the changelog for release information**](#changelog)
@@ -686,6 +687,29 @@ String result = invokeLambda(
 )
 ```
 
+## lambdaCleanupVersions
+
+Cleans up lambda function versions older than the daysAgo flag.
+The main use case around this is for tooling like AWS Serverless Application Model.
+It creates lambda functions, but marks them as `DeletionPolicy: Retain` so the versions are never deleted.
+Overtime, these unused versions will accumulate and the account/region might hit the limit for maximum storage of lambda functions.
+
+```groovy
+lambdaCleanupVersions(
+	functionName: 'myLambdaFunction',
+	daysAgo: 14
+)
+```
+
+To discover and delete all old versions of functions created by a AWS CloudFormation stack:
+
+```groovy
+lambdaCleanupVersions(
+	stackName: 'myStack',
+	daysAgo: 14
+)
+```
+
 ## ec2ShareAmi
 
 Share an AMI image to one or more accounts
@@ -701,6 +725,7 @@ ec2ShareAmi(
 
 ## current master
 * fix CloudFormation CreateChangeSet for a stack with IN_REVIEW state
+* Add lambdaCleanupVersions
 
 ## 1.39
 * add `notificationARNs` argument to `cfnUpdate` and `cfnUpdateStackSet`
