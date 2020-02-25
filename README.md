@@ -701,6 +701,15 @@ lambdaCleanupVerisons(
 )
 ```
 
+To discover and delete all old versions of functions created by a AWS CloudFormation stack:
+
+```groovy
+lambdaCleanupVerisons(
+	stackName: 'myStack',
+	daysAgo: 14
+)
+```
+
 ## ec2ShareAmi
 
 Share an AMI image to one or more accounts

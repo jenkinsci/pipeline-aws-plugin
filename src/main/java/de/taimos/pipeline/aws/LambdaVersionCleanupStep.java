@@ -42,6 +42,11 @@ import org.jenkinsci.plugins.workflow.steps.SynchronousNonBlockingStepExecution;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
 
+import com.amazonaws.services.cloudformation.AmazonCloudFormation;
+import com.amazonaws.services.cloudformation.AmazonCloudFormationClientBuilder;
+import com.amazonaws.services.cloudformation.model.DescribeStackResourcesRequest;
+import com.amazonaws.services.cloudformation.model.DescribeStackResourcesResult;
+import com.amazonaws.services.cloudformation.model.StackResource;
 import com.amazonaws.services.lambda.AWSLambda;
 import com.amazonaws.services.lambda.AWSLambdaClientBuilder;
 import com.amazonaws.services.lambda.model.ListVersionsByFunctionRequest;
@@ -81,12 +86,22 @@ import java.time.format.DateTimeFormatter;
 public class LambdaVersionCleanupStep extends Step {
 
 	private String functionName;
-	private ZonedDateTime versionCutoff;
+	private String stackName;
+	private final ZonedDateTime versionCutoff;
 
 	@DataBoundConstructor
-	public LambdaVersionCleanupStep(String functionName, int daysAgo) {
-		this.functionName = functionName;
+	public LambdaVersionCleanupStep(int daysAgo) {
 		this.versionCutoff = ZonedDateTime.now().minus(Period.ofDays(daysAgo));
+	}
+
+	@DataBoundSetter
+	public void setFunctionName(String functionName) {
+		this.functionName = functionName;
+	}
+
+	@DataBoundSetter
+	public void setStackName(String stackName) {
+		this.stackName = stackName;
 	}
 
 	@Override
@@ -139,15 +154,11 @@ public class LambdaVersionCleanupStep extends Step {
 			return list;
 		}
 
-		@Override
-		public String run() throws Exception {
+		private void deleteAllVersions(AWSLambda client, String functionName) throws Exception {
 			TaskListener listener = Execution.this.getContext().get(TaskListener.class);
-
-			listener.getLogger().format("Looking for old versions functionName=%s", this.step.functionName);
-			AWSLambda client = AWSClientFactory.create(AWSLambdaClientBuilder.standard(), this.getContext());
-
-			List<FunctionConfiguration> allVersions = findAllVersions(client, this.step.functionName);
-			listener.getLogger().format("Found old versions functionName=%s count=%d", this.step.functionName, allVersions.size());
+			listener.getLogger().format("Looking for old versions functionName=%s", functionName);
+			List<FunctionConfiguration> allVersions = findAllVersions(client, functionName);
+			listener.getLogger().format("Found old versions functionName=%s count=%d", functionName, allVersions.size());
 			List<FunctionConfiguration> filteredVersions = allVersions.stream()
 				.filter( (function) -> {
 					ZonedDateTime parsedDateTime = ZonedDateTime.parse(function.getLastModified(), DateTimeFormatter.ISO_ZONED_DATE_TIME);
@@ -155,13 +166,40 @@ public class LambdaVersionCleanupStep extends Step {
 				})
 				.collect(Collectors.toList());
 			for (FunctionConfiguration functionConfiguration : filteredVersions) {
-				listener.getLogger().format("Deleting old version functionName=%s version=%s", this.step.functionName, functionConfiguration.getVersion());
+				listener.getLogger().format("Deleting old version functionName=%s version=%s", functionName, functionConfiguration.getVersion());
 				client.deleteFunction(new DeleteFunctionRequest()
-						.withFunctionName(this.step.functionName)
+						.withFunctionName(functionName)
 						.withQualifier(functionConfiguration.getVersion())
 				);
 			}
+		}
+		
+		private void deleteAllStackFunctionVersions(AWSLambda client, String stackName) throws Exception  {
+			TaskListener listener = Execution.this.getContext().get(TaskListener.class);
+			AmazonCloudFormation cloudformation = AWSClientFactory.create(AmazonCloudFormationClientBuilder.standard(), this.getContext());
+			DescribeStackResourcesResult result = cloudformation.describeStackResources(new DescribeStackResourcesRequest()
+					.withStackName(stackName)
+			);
+			listener.getLogger().format("result: " + result);
+			for (StackResource stackResource : result.getStackResources()) {
+				if ("AWS::Lambda::Function".equals(stackResource.getResourceType())) {
+					deleteAllVersions(client, stackResource.getPhysicalResourceId());
+				}
+			}
+		}
 
+		@Override
+		public String run() throws Exception {
+
+			AWSLambda client = AWSClientFactory.create(AWSLambdaClientBuilder.standard(), this.getContext());
+
+			if (this.step.functionName != null) {
+				deleteAllVersions(client, this.step.functionName);
+			}
+
+			if (this.step.stackName != null) {
+				deleteAllStackFunctionVersions(client, this.step.stackName);
+			}
 			return null;
 		}
 
