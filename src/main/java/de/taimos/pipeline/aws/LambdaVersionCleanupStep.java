@@ -53,6 +53,8 @@ import com.amazonaws.services.lambda.model.ListVersionsByFunctionRequest;
 import com.amazonaws.services.lambda.model.ListVersionsByFunctionResult;
 import com.amazonaws.services.lambda.model.DeleteFunctionRequest;
 import com.amazonaws.services.lambda.model.FunctionConfiguration;
+import com.amazonaws.services.lambda.model.ListAliasesRequest;
+import com.amazonaws.services.lambda.model.ListAliasesResult;
 import com.amazonaws.event.ProgressEventType;
 import com.amazonaws.event.ProgressListener;
 import com.amazonaws.services.s3.Headers;
@@ -81,7 +83,6 @@ import jenkins.MasterToSlaveFileCallable;
 
 import java.time.ZonedDateTime;
 import java.time.Period;
-import java.time.format.DateTimeFormatter;
 
 public class LambdaVersionCleanupStep extends Step {
 
@@ -156,17 +157,24 @@ public class LambdaVersionCleanupStep extends Step {
 
 		private void deleteAllVersions(AWSLambda client, String functionName) throws Exception {
 			TaskListener listener = Execution.this.getContext().get(TaskListener.class);
-			listener.getLogger().format("Looking for old versions functionName=%s", functionName);
+			listener.getLogger().format("Looking for old versions functionName=%s%n", functionName);
+			List<String> aliasedVersions = client.listAliases(new ListAliasesRequest()
+					.withFunctionName(functionName)).getAliases().stream()
+					.map( (alias) -> alias.getFunctionVersion())
+					.collect(Collectors.toList());
+			listener.getLogger().format("Found alises functionName=%s alias=%s%n", functionName, aliasedVersions);
 			List<FunctionConfiguration> allVersions = findAllVersions(client, functionName);
-			listener.getLogger().format("Found old versions functionName=%s count=%d", functionName, allVersions.size());
+			listener.getLogger().format("Found old versions functionName=%s count=%d%n", functionName, allVersions.size());
 			List<FunctionConfiguration> filteredVersions = allVersions.stream()
 				.filter( (function) -> {
-					ZonedDateTime parsedDateTime = ZonedDateTime.parse(function.getLastModified(), DateTimeFormatter.ISO_ZONED_DATE_TIME);
+					ZonedDateTime parsedDateTime = DateTimeUtils.parse(function.getLastModified());
 					return parsedDateTime.isBefore(this.step.versionCutoff);
 				})
+				.filter( (function) -> !"$LATEST".equals(function.getVersion()))
+				.filter( (function) -> !aliasedVersions.contains(function.getVersion()))
 				.collect(Collectors.toList());
 			for (FunctionConfiguration functionConfiguration : filteredVersions) {
-				listener.getLogger().format("Deleting old version functionName=%s version=%s", functionName, functionConfiguration.getVersion());
+				listener.getLogger().format("Deleting old version functionName=%s version=%s lastModified=%s%n", functionName, functionConfiguration.getVersion(), functionConfiguration.getLastModified());
 				client.deleteFunction(new DeleteFunctionRequest()
 						.withFunctionName(functionName)
 						.withQualifier(functionConfiguration.getVersion())
@@ -176,11 +184,11 @@ public class LambdaVersionCleanupStep extends Step {
 		
 		private void deleteAllStackFunctionVersions(AWSLambda client, String stackName) throws Exception  {
 			TaskListener listener = Execution.this.getContext().get(TaskListener.class);
+			listener.getLogger().format("Deleting old versions from stackName=%s%n", stackName);
 			AmazonCloudFormation cloudformation = AWSClientFactory.create(AmazonCloudFormationClientBuilder.standard(), this.getContext());
 			DescribeStackResourcesResult result = cloudformation.describeStackResources(new DescribeStackResourcesRequest()
 					.withStackName(stackName)
 			);
-			listener.getLogger().format("result: " + result);
 			for (StackResource stackResource : result.getStackResources()) {
 				if ("AWS::Lambda::Function".equals(stackResource.getResourceType())) {
 					deleteAllVersions(client, stackResource.getPhysicalResourceId());
