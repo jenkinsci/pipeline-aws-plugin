@@ -695,7 +695,7 @@ It creates lambda functions, but marks them as `DeletionPolicy: Retain` so the v
 Overtime, these unused versions will accumulate and the account/region might hit the limit for maximum storage of lambda functions.
 
 ```groovy
-lambdaCleanupVerisons(
+lambdaCleanupVersions(
 	functionName: 'myLambdaFunction',
 	daysAgo: 14
 )
@@ -704,7 +704,7 @@ lambdaCleanupVerisons(
 To discover and delete all old versions of functions created by a AWS CloudFormation stack:
 
 ```groovy
-lambdaCleanupVerisons(
+lambdaCleanupVersions(
 	stackName: 'myStack',
 	daysAgo: 14
 )
