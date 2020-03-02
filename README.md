@@ -691,10 +691,10 @@ def result = ecrSetRepositoryPolicy(registryId: 'my-registryId',
 
 ```groovy
 def policyFile ="${env.WORKSPACE}/policyText.json"
-def policyJson = new File(policyFile).text
+def policyText = readFile file: policyFile
 def result = ecrSetRepositoryPolicy(registryId: 'my-registryId',
                                      repositoryName: 'my-repositoryName',
-                                     policyText: policyJson
+                                     policyText: policyText
 )
 ```
 
