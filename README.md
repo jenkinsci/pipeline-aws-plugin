@@ -36,6 +36,7 @@ This plugins adds Jenkins pipeline steps to interact with the AWS API.
 * [ecrLogin](#ecrlogin)
 * [ecrSetRepositoryPolicy](#ecrsetrepositorypolicy)
 * [invokeLambda](#invokelambda)
+* [lambdaCleanupVersions](#lambdacleanupversions)
 * [ec2ShareAmi](#ec2ShareAmi)
 
 [**see the changelog for release information**](#changelog)
@@ -664,6 +665,7 @@ For older versions of docker that need the email parameter use:
 def login = ecrLogin(email:true)
 ```
 
+<<<<<<< HEAD
 ## ecrSetRepositoryPolicy
 
 Sets the json policy document containing ECR permissions.
@@ -689,6 +691,12 @@ def result = ecrSetRepositoryPolicy(registryId: 'my-registryId',
                                      repositoryName: 'my-repositoryName',
                                      policyText: policyJson
 )
+=======
+It's also possible to specify AWS accounts to perform ECR login into:
+
+```groovy
+def login = ecrLogin(registryIds: ['123456789', '987654321'])
+>>>>>>> upstream/master
 ```
 
 ## invokeLambda
@@ -714,6 +722,29 @@ String result = invokeLambda(
 )
 ```
 
+## lambdaCleanupVersions
+
+Cleans up lambda function versions older than the daysAgo flag.
+The main use case around this is for tooling like AWS Serverless Application Model.
+It creates lambda functions, but marks them as `DeletionPolicy: Retain` so the versions are never deleted.
+Overtime, these unused versions will accumulate and the account/region might hit the limit for maximum storage of lambda functions.
+
+```groovy
+lambdaCleanupVersions(
+	functionName: 'myLambdaFunction',
+	daysAgo: 14
+)
+```
+
+To discover and delete all old versions of functions created by a AWS CloudFormation stack:
+
+```groovy
+lambdaCleanupVersions(
+	stackName: 'myStack',
+	daysAgo: 14
+)
+```
+
 ## ec2ShareAmi
 
 Share an AMI image to one or more accounts
@@ -728,6 +759,9 @@ ec2ShareAmi(
 # Changelog
 
 ## current master
+* add `registryIds` argument to `ecrLogin`
+* fix CloudFormation CreateChangeSet for a stack with IN_REVIEW state
+* Add lambdaCleanupVersions
 * Add ecrSetRepositoryPolicy
 
 ## 1.39
