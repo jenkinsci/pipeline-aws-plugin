@@ -102,6 +102,7 @@
               <encoding>UTF-8</encoding>
               <consoleOutput>true</consoleOutput>
               <failsOnError>true</failsOnError>
+              <linkXRef>false</linkXRef>
             </configuration>
             <goals>
               <goal>check</goal>

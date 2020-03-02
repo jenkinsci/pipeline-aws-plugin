@@ -665,7 +665,6 @@ For older versions of docker that need the email parameter use:
 def login = ecrLogin(email:true)
 ```
 
-<<<<<<< HEAD
 ## ecrSetRepositoryPolicy
 
 Sets the json policy document containing ECR permissions.
@@ -696,7 +695,6 @@ It's also possible to specify AWS accounts to perform ECR login into:
 
 ```groovy
 def login = ecrLogin(registryIds: ['123456789', '987654321'])
->>>>>>> upstream/master
 ```
 
 ## invokeLambda
