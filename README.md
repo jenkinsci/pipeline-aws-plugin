@@ -34,6 +34,7 @@ This plugins adds Jenkins pipeline steps to interact with the AWS API.
 * [ecrDeleteImages](#ecrdeleteimages)
 * [ecrListImages](#ecrlistimages)
 * [ecrLogin](#ecrlogin)
+* [ecrSetRepositoryPolicy](#ecrsetrepositorypolicy)
 * [invokeLambda](#invokelambda)
 * [lambdaCleanupVersions](#lambdacleanupversions)
 * [ec2ShareAmi](#ec2ShareAmi)
@@ -670,6 +671,33 @@ It's also possible to specify AWS accounts to perform ECR login into:
 def login = ecrLogin(registryIds: ['123456789', '987654321'])
 ```
 
+## ecrSetRepositoryPolicy
+
+Sets the json policy document containing ECR permissions.
+
+* registryId - The AWS account ID associated with the registry that contains the repository.
+* repositoryName - The name of the repository to receive the policy.
+* policyText - The JSON repository policy text to apply to the repository. For more information, see [Amazon ECR Repository Policy Examples](https://docs.aws.amazon.com/AmazonECR/latest/userguide/RepositoryPolicyExamples.html) in the _Amazon Elastic Container Registry User Guide_. 
+
+The step returns the object returned by the command.
+* Note - make sure you set the correct region in the credentials in order to find the repository
+
+```groovy
+def result = ecrSetRepositoryPolicy(registryId: 'my-registryId',
+                                     repositoryName: 'my-repositoryName',
+                                     policyText: 'json-policyText'
+)
+```
+
+```groovy
+def policyFile ="${env.WORKSPACE}/policyText.json"
+def policyText = readFile file: policyFile
+def result = ecrSetRepositoryPolicy(registryId: 'my-registryId',
+                                     repositoryName: 'my-repositoryName',
+                                     policyText: policyText
+)
+```
+
 ## invokeLambda
 
 Invoke a Lambda function.
@@ -733,6 +761,7 @@ ec2ShareAmi(
 * add `registryIds` argument to `ecrLogin`
 * fix CloudFormation CreateChangeSet for a stack with IN_REVIEW state
 * Add lambdaCleanupVersions
+* Add ecrSetRepositoryPolicy
 
 ## 1.39
 * add `notificationARNs` argument to `cfnUpdate` and `cfnUpdateStackSet`
