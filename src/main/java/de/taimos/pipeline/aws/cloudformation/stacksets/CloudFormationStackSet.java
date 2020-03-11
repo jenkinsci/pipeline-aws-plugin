@@ -31,6 +31,7 @@ import com.amazonaws.services.cloudformation.model.DescribeStackSetOperationRequ
 import com.amazonaws.services.cloudformation.model.DescribeStackSetOperationResult;
 import com.amazonaws.services.cloudformation.model.DescribeStackSetRequest;
 import com.amazonaws.services.cloudformation.model.DescribeStackSetResult;
+import com.amazonaws.services.cloudformation.model.LimitExceededException;
 import com.amazonaws.services.cloudformation.model.ListStackInstancesRequest;
 import com.amazonaws.services.cloudformation.model.ListStackInstancesResult;
 import com.amazonaws.services.cloudformation.model.OperationInProgressException;
@@ -153,7 +154,6 @@ public class CloudFormationStackSet {
 			this.listener.getLogger().format("Attempting to update CloudFormation stack set %s %n", this.stackSet);
 
 			UpdateStackSetResult result = this.client.updateStackSet(req);
-
 			this.listener.getLogger().format("Updated CloudFormation stack set %s %n", this.stackSet);
 			return result;
 		} catch (OperationInProgressException | StaleRequestException e) {
@@ -165,6 +165,20 @@ public class CloudFormationStackSet {
 				this.listener.getLogger().format("StackSet %s busy. Waiting %d ms %n", this.stackSet, sleepDuration);
 				Thread.sleep(sleepDuration);
 				return doUpdate(req, attempt + 1);
+			}
+		} catch (LimitExceededException lee) {
+			if (lee.getMessage().startsWith("StackSet operations cannot involve more than")) {
+				if (attempt == MAX_STACK_SET_RETRY_ATTEMPT_COUNT) {
+					this.listener.getLogger().format("Retries exhausted and cloudformation stack set operations %s is still busy%n", this.stackSet);
+					throw lee;
+				} else {
+					long sleepDuration = this.sleepStrategy.calculateSleepDuration(attempt);
+					this.listener.getLogger().format("Too many concurrent operations in progress (%s). Waiting for %s update. Waiting %d ms %n", lee.getMessage(), this.stackSet, sleepDuration);
+					Thread.sleep(sleepDuration);
+					return doUpdate(req, attempt + 1);
+				}
+			} else {
+				throw lee;
 			}
 		}
 	}

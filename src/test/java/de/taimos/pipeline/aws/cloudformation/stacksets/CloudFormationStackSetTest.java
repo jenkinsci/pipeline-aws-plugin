@@ -302,6 +302,27 @@ public class CloudFormationStackSetTest {
 	}
 
 	@Test
+	public void update_TooManyOperations_LimitExceeded() throws InterruptedException {
+		UpdateStackSetResult expected = new UpdateStackSetResult();
+		Mockito.when(client.updateStackSet(Mockito.any(UpdateStackSetRequest.class)))
+				.thenThrow(new LimitExceededException("StackSet operations cannot involve more than 3500"))
+				.thenReturn(expected);
+
+		Mockito.when(this.sleepStrategy.calculateSleepDuration(Mockito.anyInt())).thenReturn(5L);
+
+		UpdateStackSetResult result = stackSet.update(null, null, new UpdateStackSetRequest());
+		Assertions.assertThat(result).isSameAs(expected);
+		ArgumentCaptor<UpdateStackSetRequest> captor = ArgumentCaptor.forClass(UpdateStackSetRequest.class);
+		Mockito.verify(client, Mockito.times(2)).updateStackSet(captor.capture());
+		Assertions.assertThat(captor.getValue()).isEqualTo(new UpdateStackSetRequest()
+				.withStackSetName("foo")
+				.withCapabilities(Capability.values())
+				.withUsePreviousTemplate(true)
+		);
+		Mockito.verify(this.sleepStrategy).calculateSleepDuration(1);
+	}
+
+	@Test
 	public void waitForStackStateStatus() throws InterruptedException {
 		Mockito.when(client.describeStackSet(new DescribeStackSetRequest()
 				.withStackSetName("foo")

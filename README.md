@@ -769,6 +769,7 @@ ec2ShareAmi(
 * Add lambdaCleanupVersions
 * Add ecrSetRepositoryPolicy
 * Add batching support for cfnUpdateStackSet
+* Retry stack set deployments on LimitExceededException when there are too many StackSet operations occuring.
 
 ## 1.39
 * add `notificationARNs` argument to `cfnUpdate` and `cfnUpdateStackSet`
