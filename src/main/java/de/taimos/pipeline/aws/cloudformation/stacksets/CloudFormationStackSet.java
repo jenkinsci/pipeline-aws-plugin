@@ -31,9 +31,11 @@ import com.amazonaws.services.cloudformation.model.DescribeStackSetOperationRequ
 import com.amazonaws.services.cloudformation.model.DescribeStackSetOperationResult;
 import com.amazonaws.services.cloudformation.model.DescribeStackSetRequest;
 import com.amazonaws.services.cloudformation.model.DescribeStackSetResult;
+import com.amazonaws.services.cloudformation.model.ListStackInstancesRequest;
+import com.amazonaws.services.cloudformation.model.ListStackInstancesResult;
 import com.amazonaws.services.cloudformation.model.OperationInProgressException;
 import com.amazonaws.services.cloudformation.model.Parameter;
-import com.amazonaws.services.cloudformation.model.StackSetOperationPreferences;
+import com.amazonaws.services.cloudformation.model.StackInstanceSummary;
 import com.amazonaws.services.cloudformation.model.StackSetOperationStatus;
 import com.amazonaws.services.cloudformation.model.StackSetStatus;
 import com.amazonaws.services.cloudformation.model.StaleRequestException;
@@ -43,7 +45,9 @@ import com.amazonaws.services.cloudformation.model.UpdateStackSetResult;
 import hudson.model.TaskListener;
 
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
 
 public class CloudFormationStackSet {
 
@@ -82,14 +86,14 @@ public class CloudFormationStackSet {
 
 		this.listener.getLogger().println("Creating stack set " + this.stackSet);
 		CreateStackSetRequest req = new CreateStackSetRequest()
-				.withStackSetName(this.stackSet)
-				.withCapabilities(Capability.CAPABILITY_IAM, Capability.CAPABILITY_NAMED_IAM, Capability.CAPABILITY_AUTO_EXPAND)
-				.withTemplateBody(templateBody)
-				.withTemplateURL(templateUrl)
-				.withParameters(params)
-				.withAdministrationRoleARN(administratorRoleArn)
-				.withExecutionRoleName(executionRoleName)
-				.withTags(tags);
+			.withStackSetName(this.stackSet)
+			.withCapabilities(Capability.CAPABILITY_IAM, Capability.CAPABILITY_NAMED_IAM, Capability.CAPABILITY_AUTO_EXPAND)
+			.withTemplateBody(templateBody)
+			.withTemplateURL(templateUrl)
+			.withParameters(params)
+			.withAdministrationRoleARN(administratorRoleArn)
+			.withExecutionRoleName(executionRoleName)
+			.withTags(tags);
 		CreateStackSetResult result = this.client.createStackSet(req);
 		this.listener.getLogger().println("Created Stack set stackSetId=" + result.getStackSetId());
 		return result;
@@ -127,17 +131,11 @@ public class CloudFormationStackSet {
 		}
 	}
 
-	public UpdateStackSetResult update(String templateBody, String templateUrl, Collection<Parameter> params, Collection<Tag> tags,
-									String administratorRoleArn, String executionRoleName, StackSetOperationPreferences operationPreferences) throws InterruptedException {
+	public UpdateStackSetResult update(String templateBody, String templateUrl, UpdateStackSetRequest request)  throws InterruptedException {
 		this.listener.getLogger().format("Updating CloudFormation stack set %s %n", this.stackSet);
-		UpdateStackSetRequest req = new UpdateStackSetRequest()
-				.withStackSetName(this.stackSet)
-				.withCapabilities(Capability.CAPABILITY_IAM, Capability.CAPABILITY_NAMED_IAM, Capability.CAPABILITY_AUTO_EXPAND)
-				.withParameters(params)
-				.withAdministrationRoleARN(administratorRoleArn)
-				.withExecutionRoleName(executionRoleName)
-				.withOperationPreferences(operationPreferences)
-				.withTags(tags);
+		UpdateStackSetRequest req = request
+			.withStackSetName(this.stackSet)
+			.withCapabilities(Capability.CAPABILITY_IAM, Capability.CAPABILITY_NAMED_IAM, Capability.CAPABILITY_AUTO_EXPAND);
 
 		if (templateBody != null && !templateBody.isEmpty()) {
 			req.setTemplateBody(templateBody);
@@ -179,24 +177,36 @@ public class CloudFormationStackSet {
 		return this.client.describeStackSet(new DescribeStackSetRequest().withStackSetName(this.stackSet));
 	}
 
+	public List<StackInstanceSummary> findStackSetInstances() {
+		List<StackInstanceSummary> summaries = new ArrayList<>();
+		ListStackInstancesRequest request = new ListStackInstancesRequest()
+			.withStackSetName(this.stackSet);
+		do {
+			ListStackInstancesResult result = this.client.listStackInstances(request);
+			request.setNextToken(result.getNextToken());
+			summaries.addAll(result.getSummaries());
+		} while (request.getNextToken() != null);
+		return summaries;
+	}
+
 	private DescribeStackSetOperationResult describeStackOperation(String operationId, int attempt) {
-			try {
+		try {
 			return this.client.describeStackSetOperation(new DescribeStackSetOperationRequest()
 					.withStackSetName(this.stackSet)
 					.withOperationId(operationId)
-			);
+					);
 		} catch (AmazonCloudFormationException acfe) {
-				if ("Throttling".equals(acfe.getErrorCode())) {
-					this.listener.getLogger().format("Cloudformation throttling exception. RequestId=%s OperationId=%s apiMethod=describeStackOperation", acfe.getRequestId(), operationId);
+			if ("Throttling".equals(acfe.getErrorCode())) {
+				this.listener.getLogger().format("Cloudformation throttling exception. RequestId=%s OperationId=%s apiMethod=describeStackOperation", acfe.getRequestId(), operationId);
 				try {
 					Thread.sleep(this.sleepStrategy.calculateSleepDuration(attempt));
 				} catch (InterruptedException e) {
-						Thread.currentThread().interrupt();
-						throw new IllegalStateException("describeStackOperation(" + operationId + ") was cancelled");
+					Thread.currentThread().interrupt();
+					throw new IllegalStateException("describeStackOperation(" + operationId + ") was cancelled");
 				}
 				return describeStackOperation(operationId, attempt + 1);
 			} else {
-					throw acfe;
+				throw acfe;
 			}
 		}
 	}
