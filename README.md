@@ -532,6 +532,12 @@ To set a operation preferences:
   cfnUpdateStackSet(stackSet:'myStackSet', url:'https://s3.amazonaws.com/my-templates-bucket/template.yaml', operationPreferences: [failureToleranceCount: 5])
 ```
 
+When the stack set gets really big, the recommendation from AWS is to batch the update requests. This option is *not* part of the AWS API, but is an implementation to facilitate updating a large stack set.
+To automatically batch via region (find all stack instances, group them by region, and submit each region separately): (
+```groovy
+  cfnUpdateStackSet(stackSet:'myStackSet', url:'https://s3.amazonaws.com/my-templates-bucket/template.yaml', batchingOptions: [regions: true])
+```
+
 ## cfnDeleteStackSet
 
 Deletes a stack set.
@@ -762,6 +768,8 @@ ec2ShareAmi(
 * fix CloudFormation CreateChangeSet for a stack with IN_REVIEW state
 * Add lambdaCleanupVersions
 * Add ecrSetRepositoryPolicy
+* Add batching support for cfnUpdateStackSet
+* Retry stack set deployments on LimitExceededException when there are too many StackSet operations occuring.
 
 ## 1.39
 * add `notificationARNs` argument to `cfnUpdate` and `cfnUpdateStackSet`
