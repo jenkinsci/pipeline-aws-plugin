@@ -764,12 +764,14 @@ ec2ShareAmi(
 # Changelog
 
 ## current master
+* Add batching support for cfnUpdateStackSet
+* Retry stack set deployments on LimitExceededException when there are too many StackSet operations occuring.
+
+## 1.40
 * add `registryIds` argument to `ecrLogin`
 * fix CloudFormation CreateChangeSet for a stack with IN_REVIEW state
 * Add lambdaCleanupVersions
 * Add ecrSetRepositoryPolicy
-* Add batching support for cfnUpdateStackSet
-* Retry stack set deployments on LimitExceededException when there are too many StackSet operations occuring.
 
 ## 1.39
 * add `notificationARNs` argument to `cfnUpdate` and `cfnUpdateStackSet`
