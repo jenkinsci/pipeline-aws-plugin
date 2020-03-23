@@ -34,7 +34,9 @@ This plugins adds Jenkins pipeline steps to interact with the AWS API.
 * [ecrDeleteImages](#ecrdeleteimages)
 * [ecrListImages](#ecrlistimages)
 * [ecrLogin](#ecrlogin)
+* [ecrSetRepositoryPolicy](#ecrsetrepositorypolicy)
 * [invokeLambda](#invokelambda)
+* [lambdaCleanupVersions](#lambdacleanupversions)
 * [ec2ShareAmi](#ec2ShareAmi)
 * [elbRegisterInstance](#elbRegisterInstance)
 * [elbDeregisterInstance](#elbDeregisterInstance)
@@ -534,6 +536,12 @@ To set a operation preferences:
   cfnUpdateStackSet(stackSet:'myStackSet', url:'https://s3.amazonaws.com/my-templates-bucket/template.yaml', operationPreferences: [failureToleranceCount: 5])
 ```
 
+When the stack set gets really big, the recommendation from AWS is to batch the update requests. This option is *not* part of the AWS API, but is an implementation to facilitate updating a large stack set.
+To automatically batch via region (find all stack instances, group them by region, and submit each region separately): (
+```groovy
+  cfnUpdateStackSet(stackSet:'myStackSet', url:'https://s3.amazonaws.com/my-templates-bucket/template.yaml', batchingOptions: [regions: true])
+```
+
 ## cfnDeleteStackSet
 
 Deletes a stack set.
@@ -667,6 +675,39 @@ For older versions of docker that need the email parameter use:
 def login = ecrLogin(email:true)
 ```
 
+It's also possible to specify AWS accounts to perform ECR login into:
+
+```groovy
+def login = ecrLogin(registryIds: ['123456789', '987654321'])
+```
+
+## ecrSetRepositoryPolicy
+
+Sets the json policy document containing ECR permissions.
+
+* registryId - The AWS account ID associated with the registry that contains the repository.
+* repositoryName - The name of the repository to receive the policy.
+* policyText - The JSON repository policy text to apply to the repository. For more information, see [Amazon ECR Repository Policy Examples](https://docs.aws.amazon.com/AmazonECR/latest/userguide/RepositoryPolicyExamples.html) in the _Amazon Elastic Container Registry User Guide_. 
+
+The step returns the object returned by the command.
+* Note - make sure you set the correct region in the credentials in order to find the repository
+
+```groovy
+def result = ecrSetRepositoryPolicy(registryId: 'my-registryId',
+                                     repositoryName: 'my-repositoryName',
+                                     policyText: 'json-policyText'
+)
+```
+
+```groovy
+def policyFile ="${env.WORKSPACE}/policyText.json"
+def policyText = readFile file: policyFile
+def result = ecrSetRepositoryPolicy(registryId: 'my-registryId',
+                                     repositoryName: 'my-repositoryName',
+                                     policyText: policyText
+)
+```
+
 ## invokeLambda
 
 Invoke a Lambda function.
@@ -687,6 +728,29 @@ String result = invokeLambda(
 	functionName: 'myLambdaFunction',
 	payloadAsString: '{"key": "value"}',
 	returnValueAsString: true
+)
+```
+
+## lambdaCleanupVersions
+
+Cleans up lambda function versions older than the daysAgo flag.
+The main use case around this is for tooling like AWS Serverless Application Model.
+It creates lambda functions, but marks them as `DeletionPolicy: Retain` so the versions are never deleted.
+Overtime, these unused versions will accumulate and the account/region might hit the limit for maximum storage of lambda functions.
+
+```groovy
+lambdaCleanupVersions(
+	functionName: 'myLambdaFunction',
+	daysAgo: 14
+)
+```
+
+To discover and delete all old versions of functions created by a AWS CloudFormation stack:
+
+```groovy
+lambdaCleanupVersions(
+	stackName: 'myStack',
+	daysAgo: 14
 )
 ```
 
@@ -757,6 +821,14 @@ elbIsInstanceDeregistered(
 # Changelog
 
 ## current master
+* Add batching support for cfnUpdateStackSet
+* Retry stack set deployments on LimitExceededException when there are too many StackSet operations occuring.
+
+## 1.40
+* add `registryIds` argument to `ecrLogin`
+* fix CloudFormation CreateChangeSet for a stack with IN_REVIEW state
+* Add lambdaCleanupVersions
+* Add ecrSetRepositoryPolicy
 
 ## 1.39
 * add `notificationARNs` argument to `cfnUpdate` and `cfnUpdateStackSet`
