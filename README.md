@@ -823,6 +823,7 @@ elbIsInstanceDeregistered(
 ## current master
 * Add batching support for cfnUpdateStackSet
 * Retry stack set deployments on LimitExceededException when there are too many StackSet operations occuring.
+* Add ELB methods to mangage instances during deployemnts ( [elbRegisterInstance](#elbRegisterInstance), [elbDeregisterInstance](#elbDeregisterInstance), [elbIsInstanceRegistered](#elbIsInstanceRegistered), [elbIsInstanceDeregistered](#elbIsInstanceDeregistered) )
 
 ## 1.40
 * add `registryIds` argument to `ecrLogin`
