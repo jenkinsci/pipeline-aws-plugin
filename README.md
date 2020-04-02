@@ -38,6 +38,10 @@ This plugins adds Jenkins pipeline steps to interact with the AWS API.
 * [invokeLambda](#invokelambda)
 * [lambdaCleanupVersions](#lambdacleanupversions)
 * [ec2ShareAmi](#ec2ShareAmi)
+* [elbRegisterInstance](#elbRegisterInstance)
+* [elbDeregisterInstance](#elbDeregisterInstance)
+* [elbIsInstanceRegistered](#elbIsInstanceRegistered)
+* [elbIsInstanceDeregistered](#elbIsInstanceDeregistered)
 
 [**see the changelog for release information**](#changelog)
 
@@ -756,8 +760,61 @@ Share an AMI image to one or more accounts
 
 ```groovy
 ec2ShareAmi(
-	amiId: 'ami-23842',
-	accountIds: [ "0123456789", "1234567890" ]
+    amiId: 'ami-23842',
+    accountIds: [ "0123456789", "1234567890" ]
+)
+```
+
+## elbRegisterInstance
+
+Registers a target to a Target Group.
+
+```groovy
+elbRegisterInstance(
+    targetGroupARN: 'arn:aws:elasticloadbalancing:us-west-2:123456789:targetgroup/my-load-balancer/123456789',
+    instanceID: 'i-myid',
+    port: 8080
+)
+```
+
+## elbDeregisterInstance
+
+Deregisters a target from a Target Group.
+
+```groovy
+elbDeregisterInstance(
+    targetGroupARN: 'arn:aws:elasticloadbalancing:us-west-2:123456789:targetgroup/my-load-balancer/123456789',
+    instanceID: 'i-myid',
+    port: 8080
+)
+```
+
+## elbIsInstanceRegistered
+
+Check if target has registered and healthy.
+
+The step returns true or false.
+
+
+```groovy
+elbIsInstanceRegistered(
+    targetGroupARN: 'arn:aws:elasticloadbalancing:us-west-2:123456789:targetgroup/my-load-balancer/123456789',
+    instanceID: 'i-myid',
+    port: 8080
+)
+```
+
+## elbIsInstanceDeregistered
+
+Check if target has completed removed from the Target Group.
+
+The step returns true or false.
+
+```groovy
+elbIsInstanceDeregistered(
+    targetGroupARN: 'arn:aws:elasticloadbalancing:us-west-2:123456789:targetgroup/my-load-balancer/123456789',
+    instanceID: 'i-myid',
+    port: 8080
 )
 ```
 
@@ -766,6 +823,7 @@ ec2ShareAmi(
 ## current master
 * Add batching support for cfnUpdateStackSet
 * Retry stack set deployments on LimitExceededException when there are too many StackSet operations occuring.
+* Add ELB methods to mangage instances during deployemnts ( [elbRegisterInstance](#elbRegisterInstance), [elbDeregisterInstance](#elbDeregisterInstance), [elbIsInstanceRegistered](#elbIsInstanceRegistered), [elbIsInstanceDeregistered](#elbIsInstanceDeregistered) )
 
 ## 1.40
 * add `registryIds` argument to `ecrLogin`
