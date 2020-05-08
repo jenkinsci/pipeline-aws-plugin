@@ -428,10 +428,12 @@ Note: When creating a stack, either `file` or `url` are required. When updating 
 
 Remove the given stack from CloudFormation.
 
-To prevent running into rate limiting on the AWS API you can change the default polling interval of 1000 ms using the parameter `pollIntervall`. Using the value `0` disables event printing.
+To prevent running into rate limiting on the AWS API you can change the default polling interval of 1000 ms using the parameter `pollIntervall`. Using the value `0` disables event printing.  
+
+Note: When deleting a stack only 'stack' parameter is required.
 
 ```groovy
-cfnDelete(stack:'my-stack', pollInterval:1000)
+cfnDelete(stack:'my-stack', pollInterval:1000, retainResources :['mylogicalid'], roleArn: 'my-arn', clientRequestToken: 'my-request-token')
 ```
 
 ## cfnDescribe
