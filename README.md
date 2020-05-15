@@ -860,11 +860,6 @@ elbIsInstanceDeregistered(
 * Add ability to upload a String to an S3 object by adding `text` option to `s3Upload`
 * Add redirect location option to `s3Upload`
 * Add support for SessionToken when using iamMfaToken #170
-* Add ecrListImages
-* Add ecrDeleteImages
-* Fix instances of TransferManger from aws-sdk were never closed properly
-* Handle `Stopped` status for CodeDeployment deployments
-
 
 ## 1.36
 * add `jenkinsStackUpdateStatus` to stack outputs. Specifies if stack was modified
