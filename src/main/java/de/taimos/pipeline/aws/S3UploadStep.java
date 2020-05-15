@@ -538,16 +538,6 @@ public class S3UploadStep extends AbstractS3Step {
 					));
 				}
 
-				if(tags != null){
-					List<Tag> tagList = new ArrayList<Tag>();
-
-					for (Map.Entry<String, String> entry : tags.entrySet()) {
-						Tag tag = new Tag(entry.getKey(), entry.getValue());
-						tagList.add(tag);
-					}
-					request.withTagging(new ObjectTagging(tagList));
-				}
-
 				// Add acl
 				if (this.acl != null) {
 					request.withCannedAcl(this.acl);
