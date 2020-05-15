@@ -31,6 +31,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 import java.nio.charset.Charset;
 
 import org.jenkinsci.plugins.workflow.steps.StepContext;
@@ -399,15 +400,10 @@ public class S3UploadStep extends AbstractS3Step {
 				}
 
 				//add tags
-				if(tags != null){
-					List<Tag> tagList = new ArrayList<Tag>();
-
-					for (Map.Entry<String, String> entry : tags.entrySet()) {
-						Tag tag = new Tag(entry.getKey(), entry.getValue());
-						tagList.add(tag);
-					}
-
-					request.withTagging(new ObjectTagging(tagList));
+				if(!tags.isEmpty()){
+					request.withTagging(new ObjectTagging(
+						tags.entrySet().stream().map(tag-> new Tag(tag.getKey(), tag.getValue())).collect(Collectors.toList())
+					));
 				}
 
 
@@ -536,6 +532,12 @@ public class S3UploadStep extends AbstractS3Step {
 				}
 
 				//add tags
+				if(!tags.isEmpty()){
+					request.withTagging(new ObjectTagging(
+						tags.entrySet().stream().map(tag-> new Tag(tag.getKey(), tag.getValue())).collect(Collectors.toList())
+					));
+				}
+
 				if(tags != null){
 					List<Tag> tagList = new ArrayList<Tag>();
 
