@@ -3,12 +3,17 @@ package de.taimos.pipeline.aws.cloudformation.stacksets;
 import com.amazonaws.client.builder.AwsSyncClientBuilder;
 import com.amazonaws.services.cloudformation.AmazonCloudFormation;
 import com.amazonaws.services.cloudformation.model.Parameter;
+import com.amazonaws.services.cloudformation.model.StackInstanceSummary;
 import com.amazonaws.services.cloudformation.model.StackSetOperationPreferences;
+import com.amazonaws.services.cloudformation.model.StackSetSummary;
 import com.amazonaws.services.cloudformation.model.Tag;
+import com.amazonaws.services.cloudformation.model.UpdateStackSetRequest;
 import com.amazonaws.services.cloudformation.model.UpdateStackSetResult;
 import de.taimos.pipeline.aws.AWSClientFactory;
 import hudson.EnvVars;
 import hudson.model.TaskListener;
+import lombok.Builder;
+import lombok.Value;
 import org.assertj.core.api.Assertions;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
@@ -26,8 +31,22 @@ import org.powermock.modules.junit4.PowerMockRunner;
 
 import java.io.PrintWriter;
 import java.time.Duration;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
+import java.util.function.BiConsumer;
+import java.util.function.BinaryOperator;
+import java.util.function.Function;
+import java.util.function.Supplier;
+import java.util.stream.Collector;
+import java.util.stream.Collectors;
+
+import static java.util.Arrays.asList;
+import static java.util.Collections.singletonList;
 
 @RunWith(PowerMockRunner.class)
 @PrepareForTest(
@@ -100,7 +119,7 @@ public class CFNUpdateStackSetStepTest {
 		WorkflowJob job = jenkinsRule.jenkins.createProject(WorkflowJob.class, "cfnTest");
 		Mockito.when(stackSet.exists()).thenReturn(true);
 		String operationId = UUID.randomUUID().toString();
-		Mockito.when(stackSet.update(Mockito.anyString(), Mockito.anyString(), Mockito.anyCollectionOf(Parameter.class), Mockito.anyCollectionOf(Tag.class), Mockito.isNull(String.class), Mockito.isNull(String.class), Mockito.any()))
+		Mockito.when(stackSet.update(Mockito.anyString(), Mockito.anyString(), Mockito.any(UpdateStackSetRequest.class)))
 				.thenReturn(new UpdateStackSetResult()
 						.withOperationId(operationId)
 				);
@@ -121,10 +140,9 @@ public class CFNUpdateStackSetStepTest {
 						Mockito.any(TaskListener.class),
 						Mockito.eq(SleepStrategy.EXPONENTIAL_BACKOFF_STRATEGY)
 				);
-		@SuppressWarnings("unchecked")
-		ArgumentCaptor<List<Parameter>> parameterCapture = (ArgumentCaptor<List<Parameter>>)(Object)ArgumentCaptor.forClass(List.class);
-		Mockito.verify(stackSet).update(Mockito.anyString(), Mockito.anyString(), parameterCapture.capture(), Mockito.anyCollectionOf(Tag.class), Mockito.isNull(String.class), Mockito.isNull(String.class), Mockito.any());
-		Assertions.assertThat(parameterCapture.getValue()).containsExactlyInAnyOrder(
+		ArgumentCaptor<UpdateStackSetRequest> requestCapture = ArgumentCaptor.forClass(UpdateStackSetRequest.class);
+		Mockito.verify(stackSet).update(Mockito.anyString(), Mockito.anyString(), requestCapture.capture());
+		Assertions.assertThat(requestCapture.getValue().getParameters()).containsExactlyInAnyOrder(
 				new Parameter()
 						.withParameterKey("foo")
 						.withParameterValue("bar"),
@@ -141,7 +159,7 @@ public class CFNUpdateStackSetStepTest {
 		WorkflowJob job = jenkinsRule.jenkins.createProject(WorkflowJob.class, "cfnTest");
 		Mockito.when(stackSet.exists()).thenReturn(true);
 		String operationId = UUID.randomUUID().toString();
-		Mockito.when(stackSet.update(Mockito.anyString(), Mockito.anyString(), Mockito.anyCollectionOf(Parameter.class), Mockito.anyCollectionOf(Tag.class), Mockito.isNull(String.class), Mockito.isNull(String.class), Mockito.any()))
+		Mockito.when(stackSet.update(Mockito.anyString(), Mockito.anyString(), Mockito.any(UpdateStackSetRequest.class)))
 				.thenReturn(new UpdateStackSetResult()
 						.withOperationId(operationId)
 				);
@@ -159,12 +177,10 @@ public class CFNUpdateStackSetStepTest {
 						Mockito.any(TaskListener.class),
 						Mockito.eq(SleepStrategy.EXPONENTIAL_BACKOFF_STRATEGY)
 				);
-		@SuppressWarnings("unchecked")
-		ArgumentCaptor<StackSetOperationPreferences> stackSetOperationPreferencesArgumentCaptor = ArgumentCaptor.forClass(StackSetOperationPreferences.class);
-		Mockito.verify(stackSet).update(Mockito.anyString(), Mockito.anyString(), Mockito.any(),
-				Mockito.anyCollectionOf(Tag.class), Mockito.isNull(String.class), Mockito.isNull(String.class), stackSetOperationPreferencesArgumentCaptor.capture());
+		ArgumentCaptor<UpdateStackSetRequest> requestCapture = ArgumentCaptor.forClass(UpdateStackSetRequest.class);
+		Mockito.verify(stackSet).update(Mockito.anyString(), Mockito.anyString(), requestCapture.capture());
 
-		Assertions.assertThat(stackSetOperationPreferencesArgumentCaptor.getValue()).isEqualTo(new StackSetOperationPreferences()
+		Assertions.assertThat(requestCapture.getValue().getOperationPreferences()).isEqualTo(new StackSetOperationPreferences()
 				.withFailureToleranceCount(5)
                 .withRegionOrder("us-west-2")
 				.withFailureTolerancePercentage(17)
@@ -180,7 +196,7 @@ public class CFNUpdateStackSetStepTest {
 		WorkflowJob job = jenkinsRule.jenkins.createProject(WorkflowJob.class, "cfnTest");
 		Mockito.when(stackSet.exists()).thenReturn(true);
 		String operationId = UUID.randomUUID().toString();
-		Mockito.when(stackSet.update(Mockito.anyString(), Mockito.anyString(), Mockito.anyCollectionOf(Parameter.class), Mockito.anyCollectionOf(Tag.class), Mockito.anyString(), Mockito.anyString(), Mockito.any()))
+		Mockito.when(stackSet.update(Mockito.anyString(), Mockito.anyString(), Mockito.any(UpdateStackSetRequest.class)))
 				.thenReturn(new UpdateStackSetResult()
 						.withOperationId(operationId)
 				);
@@ -198,7 +214,7 @@ public class CFNUpdateStackSetStepTest {
 						Mockito.any(TaskListener.class),
 						Mockito.eq(SleepStrategy.EXPONENTIAL_BACKOFF_STRATEGY)
 				);
-		Mockito.verify(stackSet).update(Mockito.anyString(), Mockito.anyString(), Mockito.anyCollectionOf(Parameter.class), Mockito.anyCollectionOf(Tag.class), Mockito.eq("bar"), Mockito.eq("baz"), Mockito.any());
+		Mockito.verify(stackSet).update(Mockito.anyString(), Mockito.anyString(), Mockito.any(UpdateStackSetRequest.class));
 	}
 
 	@Test
@@ -220,5 +236,66 @@ public class CFNUpdateStackSetStepTest {
 						Mockito.eq(SleepStrategy.EXPONENTIAL_BACKOFF_STRATEGY)
 				);
 		Mockito.verify(stackSet, Mockito.never()).create(Mockito.anyString(), Mockito.anyString(), Mockito.anyCollectionOf(Parameter.class), Mockito.anyCollectionOf(Tag.class), Mockito.isNull(String.class), Mockito.isNull(String.class));
+	}
+
+	@Test
+	public void updateWithRegionBatches() throws Exception {
+		WorkflowJob job = jenkinsRule.jenkins.createProject(WorkflowJob.class, "cfnTest");
+		Mockito.when(stackSet.exists()).thenReturn(true);
+		String operationId = UUID.randomUUID().toString();
+		Mockito.when(stackSet.update(Mockito.anyString(), Mockito.anyString(), Mockito.any(UpdateStackSetRequest.class)))
+				.thenReturn(new UpdateStackSetResult()
+						.withOperationId(operationId)
+				);
+		Mockito.when(stackSet.findStackSetInstances()).thenReturn(asList(
+				new StackInstanceSummary().withAccount("a1").withRegion("r1"),
+				new StackInstanceSummary().withAccount("a2").withRegion("r1"),
+				new StackInstanceSummary().withAccount("a2").withRegion("r2"),
+				new StackInstanceSummary().withAccount("a3").withRegion("r3")
+		));
+		job.setDefinition(new CpsFlowDefinition(""
+				+ "node {\n"
+				+ "  cfnUpdateStackSet(stackSet: 'foo'," +
+				"       pollInterval: 27," +
+				"       batchingOptions: [" +
+				"         regions: true" +
+				"       ]" +
+				"    )"
+				+ "}\n", true)
+		);
+		jenkinsRule.assertBuildStatusSuccess(job.scheduleBuild2(0));
+
+		PowerMockito.verifyNew(CloudFormationStackSet.class, Mockito.atLeastOnce())
+				.withArguments(
+						Mockito.any(AmazonCloudFormation.class),
+						Mockito.eq("foo"),
+						Mockito.any(TaskListener.class),
+						Mockito.eq(SleepStrategy.EXPONENTIAL_BACKOFF_STRATEGY)
+				);
+		ArgumentCaptor<UpdateStackSetRequest> requestCapture = ArgumentCaptor.forClass(UpdateStackSetRequest.class);
+		Mockito.verify(stackSet, Mockito.times(3)).update(Mockito.anyString(), Mockito.anyString(), requestCapture.capture());
+		Map<String, List<String>> capturedRegionAccounts = requestCapture.getAllValues()
+				.stream()
+				.flatMap(summary -> summary.getRegions()
+						.stream()
+						.flatMap(region -> summary.getAccounts().stream()
+								.map(accountId -> RegionAccountIdTuple.builder().accountId(accountId).region(region).build())
+						))
+				.collect(Collectors.groupingBy(RegionAccountIdTuple::getRegion, Collectors.mapping(RegionAccountIdTuple::getAccountId, Collectors.toList())));
+		Assertions.assertThat(capturedRegionAccounts).containsAllEntriesOf(new HashMap<String, List<String>>() {
+			{
+				put("r1", asList("a1", "a2"));
+				put("r2", singletonList("a2"));
+				put("r3", singletonList("a3"));
+			}
+		});
+
+		Mockito.verify(stackSet, Mockito.times(3)).waitForOperationToComplete(Mockito.any(), Mockito.any());
+	}
+
+	@Value
+	@Builder
+	private static class RegionAccountIdTuple {
+		String region, accountId;
 	}
 }

@@ -23,9 +23,11 @@ package de.taimos.pipeline.aws.cloudformation.stacksets;
 
 import com.amazonaws.services.cloudformation.model.DescribeStackSetResult;
 import com.amazonaws.services.cloudformation.model.Parameter;
+import com.amazonaws.services.cloudformation.model.StackInstanceSummary;
 import com.amazonaws.services.cloudformation.model.StackSetOperationPreferences;
 import com.amazonaws.services.cloudformation.model.StackSetStatus;
 import com.amazonaws.services.cloudformation.model.Tag;
+import com.amazonaws.services.cloudformation.model.UpdateStackSetRequest;
 import com.amazonaws.services.cloudformation.model.UpdateStackSetResult;
 import de.taimos.pipeline.aws.utils.StepUtils;
 import hudson.Extension;
@@ -37,7 +39,10 @@ import org.kohsuke.stapler.DataBoundSetter;
 
 import javax.annotation.Nonnull;
 import java.util.Collection;
+import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 public class CFNUpdateStackSetStep extends AbstractCFNCreateStackSetStep {
 
@@ -47,6 +52,7 @@ public class CFNUpdateStackSetStep extends AbstractCFNCreateStackSetStep {
 	}
 
 	private StackSetOperationPreferences operationPreferences;
+	private BatchingOptions batchingOptions;
 
 	public StackSetOperationPreferences getOperationPreferences() {
 		return operationPreferences;
@@ -55,6 +61,11 @@ public class CFNUpdateStackSetStep extends AbstractCFNCreateStackSetStep {
 	@DataBoundSetter
 	public void setOperationPreferences(JenkinsStackSetOperationPreferences operationPreferences) {
 		this.operationPreferences = operationPreferences;
+	}
+
+	@DataBoundSetter
+	public void setBatchingOptions(BatchingOptions batchingOptions) {
+		this.batchingOptions = batchingOptions;
 	}
 
 	@Extension
@@ -101,9 +112,29 @@ public class CFNUpdateStackSetStep extends AbstractCFNCreateStackSetStep {
 		public DescribeStackSetResult whenStackSetExists(Collection<Parameter> parameters, Collection<Tag> tags) throws Exception {
 			final String url = this.getStep().getUrl();
 			CloudFormationStackSet cfnStackSet = this.getCfnStackSet();
-			UpdateStackSetResult operation = cfnStackSet.update(this.getStep().readTemplate(this), url, parameters, tags,
-					this.getStep().getAdministratorRoleArn(), this.getStep().getExecutionRoleName(), this.getStep().getOperationPreferences());
-			cfnStackSet.waitForOperationToComplete(operation.getOperationId(), getStep().getPollConfiguration().getPollInterval());
+			UpdateStackSetRequest req = new UpdateStackSetRequest()
+				.withParameters(parameters)
+				.withAdministrationRoleARN(this.getStep().getAdministratorRoleArn())
+				.withExecutionRoleName(this.getStep().getExecutionRoleName())
+				.withOperationPreferences(this.getStep().getOperationPreferences())
+				.withTags(tags);
+			if (this.getStep().batchingOptions != null && this.getStep().batchingOptions.isRegions()) {
+				this.getListener().getLogger().println("Batching updates by region");
+				List<StackInstanceSummary> summaries = cfnStackSet.findStackSetInstances();
+				Map<String, List<StackInstanceSummary>> batches = summaries.stream().collect(Collectors.groupingBy(StackInstanceSummary::getRegion));
+				for (Map.Entry<String, List<StackInstanceSummary>> entry : batches.entrySet()) {
+					this.getListener().getLogger().format("Updating stack set update batch for region=%s %n", entry.getKey());
+					UpdateStackSetResult operation = cfnStackSet.update(this.getStep().readTemplate(this), url, req.clone()
+							.withRegions(entry.getKey())
+							.withAccounts(entry.getValue().stream().map(StackInstanceSummary::getAccount).collect(Collectors.toList()))
+					);
+					cfnStackSet.waitForOperationToComplete(operation.getOperationId(), getStep().getPollConfiguration().getPollInterval());
+					this.getListener().getLogger().format("Updated stack set update batch for region=%s %n", entry.getKey());
+				}
+			} else {
+				UpdateStackSetResult operation = cfnStackSet.update(this.getStep().readTemplate(this), url, req);
+				cfnStackSet.waitForOperationToComplete(operation.getOperationId(), getStep().getPollConfiguration().getPollInterval());
+			}
 			return cfnStackSet.describe();
 		}
 

@@ -34,10 +34,23 @@ This plugins adds Jenkins pipeline steps to interact with the AWS API.
 * [ecrDeleteImages](#ecrdeleteimages)
 * [ecrListImages](#ecrlistimages)
 * [ecrLogin](#ecrlogin)
+* [ecrSetRepositoryPolicy](#ecrsetrepositorypolicy)
 * [invokeLambda](#invokelambda)
+* [lambdaCleanupVersions](#lambdacleanupversions)
 * [ec2ShareAmi](#ec2ShareAmi)
+* [elbRegisterInstance](#elbRegisterInstance)
+* [elbDeregisterInstance](#elbDeregisterInstance)
+* [elbIsInstanceRegistered](#elbIsInstanceRegistered)
+* [elbIsInstanceDeregistered](#elbIsInstanceDeregistered)
 
 [**see the changelog for release information**](#changelog)
+
+# Primary/Agent setups
+
+This plugin is not optimized to setups with a primary and multiple agents. 
+Only steps that touch the workspace are executed on the agents while the rest is executed on the master.
+
+For the best experience make sure that primary and agents have the same IAM permission and networking capabilities.
 
 # Usage / Steps
 
@@ -171,10 +184,11 @@ s3Upload(file:'file.txt', bucket:'my-bucket', path:'path/to/target/file.txt')
 s3Upload(file:'someFolder', bucket:'my-bucket', path:'path/to/targetFolder/')
 ```
 
-Another way to use it with include/exclude pattern in a subdirectory (workingDir).
+Another way to use it is with include/exclude patterns which are applied in the specified subdirectory (`workingDir`).
+The option accepts a comma-separated list of patterns.
 
 ```groovy
-s3Upload(bucket:"my-bucket", path:'path/to/targetFolder/', includePathPattern:'**/*', workingDir:'dist', excludePathPattern:'**/*.svg')
+s3Upload(bucket:"my-bucket", path:'path/to/targetFolder/', includePathPattern:'**/*', workingDir:'dist', excludePathPattern:'**/*.svg,**/*.jpg')
 ```
 
 Specific user metadatas can be added to uploaded files
@@ -377,12 +391,12 @@ When cfnUpdate creates a stack and the creation fails, the stack is deleted inst
 To prevent running into rate limiting on the AWS API you can change the default polling interval of 1000 ms using the parameter `pollIntervall`. Using the value `0` disables event printing.
 
 ```groovy
-def outputs = cfnUpdate(stack:'my-stack', file:'template.yaml', params:['InstanceType=t2.nano'], keepParams:['Version'], timeoutInMinutes:10, tags:['TagName=Value'], pollInterval:1000)
+def outputs = cfnUpdate(stack:'my-stack', file:'template.yaml', params:['InstanceType=t2.nano'], keepParams:['Version'], timeoutInMinutes:10, tags:['TagName=Value'], notificationARNs:['arn:aws:sns:us-east-1:993852309656:topic'], pollInterval:1000)
 ```
 
 or the parameters can be specified as a map:
 ```groovy
-def outputs = cfnUpdate(stack:'my-stack', file:'template.yaml', params:['InstanceType': 't2.nano'], keepParams:['Version'], timeoutInMinutes:10, tags:['TagName=Value'], pollInterval:1000)
+def outputs = cfnUpdate(stack:'my-stack', file:'template.yaml', params:['InstanceType': 't2.nano'], keepParams:['Version'], timeoutInMinutes:10, tags:['TagName=Value'], notificationARNs:['arn:aws:sns:us-east-1:993852309656:topic'], pollInterval:1000)
 ```
 
 Alternatively, you can specify a URL to a template on S3 (you'll need this if you hit the 51200 byte limit on template):
@@ -467,11 +481,11 @@ The step returns the outputs of the stack as a map. It also contains special val
 To prevent running into rate limiting on the AWS API you can change the default polling interval of 1000 ms using the parameter `pollIntervall`. Using the value `0` disables event printing.
 
 ```groovy
-cfnCreateChangeSet(stack:'my-stack', changeSet:'my-change-set', file:'template.yaml', params:['InstanceType=t2.nano'], keepParams:['Version'], tags:['TagName=Value'], pollInterval:1000)
+cfnCreateChangeSet(stack:'my-stack', changeSet:'my-change-set', file:'template.yaml', params:['InstanceType=t2.nano'], keepParams:['Version'], tags:['TagName=Value'], notificationARNs:['arn:aws:sns:us-east-1:993852309656:topic'], pollInterval:1000)
 ```
 or the parameters can be specified as a map:
 ```groovy
-cfnCreateChangeSet(stack:'my-stack', changeSet:'my-change-set', file:'template.yaml', params:['InstanceType': 't2.nano'], keepParams:['Version'], tags:['TagName=Value'], pollInterval:1000)
+cfnCreateChangeSet(stack:'my-stack', changeSet:'my-change-set', file:'template.yaml', params:['InstanceType': 't2.nano'], keepParams:['Version'], tags:['TagName=Value'], notificationARNs:['arn:aws:sns:us-east-1:993852309656:topic'], pollInterval:1000)
 ```
 
 Alternatively, you can specify a URL to a template on S3 (you'll need this if you hit the 51200 byte limit on template):
@@ -532,6 +546,12 @@ To set a custom administrator role ARN:
 To set a operation preferences:
 ```groovy
   cfnUpdateStackSet(stackSet:'myStackSet', url:'https://s3.amazonaws.com/my-templates-bucket/template.yaml', operationPreferences: [failureToleranceCount: 5])
+```
+
+When the stack set gets really big, the recommendation from AWS is to batch the update requests. This option is *not* part of the AWS API, but is an implementation to facilitate updating a large stack set.
+To automatically batch via region (find all stack instances, group them by region, and submit each region separately): (
+```groovy
+  cfnUpdateStackSet(stackSet:'myStackSet', url:'https://s3.amazonaws.com/my-templates-bucket/template.yaml', batchingOptions: [regions: true])
 ```
 
 ## cfnDeleteStackSet
@@ -667,6 +687,39 @@ For older versions of docker that need the email parameter use:
 def login = ecrLogin(email:true)
 ```
 
+It's also possible to specify AWS accounts to perform ECR login into:
+
+```groovy
+def login = ecrLogin(registryIds: ['123456789', '987654321'])
+```
+
+## ecrSetRepositoryPolicy
+
+Sets the json policy document containing ECR permissions.
+
+* registryId - The AWS account ID associated with the registry that contains the repository.
+* repositoryName - The name of the repository to receive the policy.
+* policyText - The JSON repository policy text to apply to the repository. For more information, see [Amazon ECR Repository Policy Examples](https://docs.aws.amazon.com/AmazonECR/latest/userguide/RepositoryPolicyExamples.html) in the _Amazon Elastic Container Registry User Guide_. 
+
+The step returns the object returned by the command.
+* Note - make sure you set the correct region in the credentials in order to find the repository
+
+```groovy
+def result = ecrSetRepositoryPolicy(registryId: 'my-registryId',
+                                     repositoryName: 'my-repositoryName',
+                                     policyText: 'json-policyText'
+)
+```
+
+```groovy
+def policyFile ="${env.WORKSPACE}/policyText.json"
+def policyText = readFile file: policyFile
+def result = ecrSetRepositoryPolicy(registryId: 'my-registryId',
+                                     repositoryName: 'my-repositoryName',
+                                     policyText: policyText
+)
+```
+
 ## invokeLambda
 
 Invoke a Lambda function.
@@ -690,31 +743,128 @@ String result = invokeLambda(
 )
 ```
 
+## lambdaCleanupVersions
+
+Cleans up lambda function versions older than the daysAgo flag.
+The main use case around this is for tooling like AWS Serverless Application Model.
+It creates lambda functions, but marks them as `DeletionPolicy: Retain` so the versions are never deleted.
+Overtime, these unused versions will accumulate and the account/region might hit the limit for maximum storage of lambda functions.
+
+```groovy
+lambdaCleanupVersions(
+	functionName: 'myLambdaFunction',
+	daysAgo: 14
+)
+```
+
+To discover and delete all old versions of functions created by a AWS CloudFormation stack:
+
+```groovy
+lambdaCleanupVersions(
+	stackName: 'myStack',
+	daysAgo: 14
+)
+```
+
 ## ec2ShareAmi
 
 Share an AMI image to one or more accounts
 
 ```groovy
 ec2ShareAmi(
-	amiId: 'ami-23842',
-	accountIds: [ "0123456789", "1234567890" ]
+    amiId: 'ami-23842',
+    accountIds: [ "0123456789", "1234567890" ]
+)
+```
+
+## elbRegisterInstance
+
+Registers a target to a Target Group.
+
+```groovy
+elbRegisterInstance(
+    targetGroupARN: 'arn:aws:elasticloadbalancing:us-west-2:123456789:targetgroup/my-load-balancer/123456789',
+    instanceID: 'i-myid',
+    port: 8080
+)
+```
+
+## elbDeregisterInstance
+
+Deregisters a target from a Target Group.
+
+```groovy
+elbDeregisterInstance(
+    targetGroupARN: 'arn:aws:elasticloadbalancing:us-west-2:123456789:targetgroup/my-load-balancer/123456789',
+    instanceID: 'i-myid',
+    port: 8080
+)
+```
+
+## elbIsInstanceRegistered
+
+Check if target has registered and healthy.
+
+The step returns true or false.
+
+
+```groovy
+elbIsInstanceRegistered(
+    targetGroupARN: 'arn:aws:elasticloadbalancing:us-west-2:123456789:targetgroup/my-load-balancer/123456789',
+    instanceID: 'i-myid',
+    port: 8080
+)
+```
+
+## elbIsInstanceDeregistered
+
+Check if target has completed removed from the Target Group.
+
+The step returns true or false.
+
+```groovy
+elbIsInstanceDeregistered(
+    targetGroupARN: 'arn:aws:elasticloadbalancing:us-west-2:123456789:targetgroup/my-load-balancer/123456789',
+    instanceID: 'i-myid',
+    port: 8080
 )
 ```
 
 # Changelog
 
 ## current master
+* Add batching support for cfnUpdateStackSet
+* Retry stack set deployments on LimitExceededException when there are too many StackSet operations occuring.
+* Add ELB methods to mangage instances during deployemnts ( [elbRegisterInstance](#elbRegisterInstance), [elbDeregisterInstance](#elbDeregisterInstance), [elbIsInstanceRegistered](#elbIsInstanceRegistered), [elbIsInstanceDeregistered](#elbIsInstanceDeregistered) )
+* Add tags to files uploaded with S3Upload
+
+## 1.40
+* add `registryIds` argument to `ecrLogin`
+* fix CloudFormation CreateChangeSet for a stack with IN_REVIEW state
+* Add lambdaCleanupVersions
+* Add ecrSetRepositoryPolicy
+
+## 1.39
+* add `notificationARNs` argument to `cfnUpdate` and `cfnUpdateStackSet`
+* Handle `Stopped` status for CodeDeployment deployments
+
+## 1.38
+* Add ecrListImages
+* Add ecrDeleteImages
+* Fix instances of TransferManger from aws-sdk were never closed properly
 * add `s3DoesObjectExist` step
+
+## 1.37
 * add `parent` argument to `listAWSAccounts`
-* Add redirect location option to `s3Upload`
 * Add Xerces dependency to fix #117
 * Add ability to upload a String to an S3 object by adding `text` option to `s3Upload`
+* Add redirect location option to `s3Upload`
 * Add support for SessionToken when using iamMfaToken #170
 * Add ecrListImages
 * Add ecrDeleteImages
 * Fix instances of TransferManger from aws-sdk were never closed properly
 * Handle `Stopped` status for CodeDeployment deployments
-* Add tags to files uploaded with S3Upload
+
 
 ## 1.36
 * add `jenkinsStackUpdateStatus` to stack outputs. Specifies if stack was modified

@@ -24,6 +24,7 @@ public abstract class TemplateStepBase extends Step implements ParameterProvider
 	private Object params;
 	private String[] keepParams;
 	private String[] tags;
+	private String[] notificationARNs;
 	private String tagsFile;
 	private String paramsFile;
 	private PollConfiguration pollConfiguration = PollConfiguration.DEFAULT;
@@ -83,6 +84,15 @@ public abstract class TemplateStepBase extends Step implements ParameterProvider
 	@DataBoundSetter
 	public void setTags(String[] tags) {
 		this.tags = tags.clone();
+	}
+
+	public String[] getNotificationARNs() {
+		return this.notificationARNs != null ? this.notificationARNs.clone() : null;
+	}
+
+	@DataBoundSetter
+	public void setNotificationARNs(String[] notificationARNs) {
+		this.notificationARNs = notificationARNs.clone();
 	}
 
 	public String getTagsFile() {
@@ -180,6 +190,18 @@ public abstract class TemplateStepBase extends Step implements ParameterProvider
 			}
 		}
 		return tagList;
+	}
+
+	protected final Collection<String> getAwsNotificationARNs() {
+		Collection<String> notificationARNsList = new ArrayList<>();
+		if (this.notificationARNs != null) {
+			for (String notificationARN : this.notificationARNs) {
+				if (notificationARN != null && !notificationARN.isEmpty()) {
+					notificationARNsList.add(notificationARN);
+				}
+			}
+		}
+		return notificationARNsList;
 	}
 
 	protected String readTemplate(StepExecution stepExecution) {

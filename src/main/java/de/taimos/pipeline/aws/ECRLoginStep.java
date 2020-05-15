@@ -21,6 +21,7 @@
 
 package de.taimos.pipeline.aws;
 
+import java.util.List;
 import java.util.Set;
 
 import org.apache.commons.codec.Charsets;
@@ -44,6 +45,7 @@ import hudson.Extension;
 public class ECRLoginStep extends Step {
 
 	private Boolean email = false;
+	private List<String> registryIds;
 
 	@DataBoundConstructor
 	public ECRLoginStep() {
@@ -62,6 +64,15 @@ public class ECRLoginStep extends Step {
 
 	public Boolean getEmail() {
 		return this.email;
+	}
+
+	@DataBoundSetter
+	public void setRegistryIds(List<String> registryIds) {
+		this.registryIds = registryIds;
+	}
+
+	public List<String> getRegistryIds() {
+		return this.registryIds;
 	}
 
 	@Extension
@@ -96,7 +107,12 @@ public class ECRLoginStep extends Step {
 		protected String run() throws Exception {
 			AmazonECR ecr = AWSClientFactory.create(AmazonECRClientBuilder.standard(), this.getContext());
 
-			GetAuthorizationTokenResult token = ecr.getAuthorizationToken(new GetAuthorizationTokenRequest());
+			GetAuthorizationTokenRequest request = new GetAuthorizationTokenRequest();
+			List<String> registryIds;
+			if((registryIds = this.step.getRegistryIds()) != null) {
+				request.setRegistryIds(registryIds);
+			}
+			GetAuthorizationTokenResult token = ecr.getAuthorizationToken(request);
 
 			if (token.getAuthorizationData().size() != 1) {
 				throw new RuntimeException("Did not get authorizationData from AWS");

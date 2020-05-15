@@ -15,14 +15,13 @@ import java.util.UUID;
 
 public class CloudFormationStackSetTest {
 
-	private TaskListener listener;
 	private AmazonCloudFormation client;
 	private SleepStrategy sleepStrategy;
 	private CloudFormationStackSet stackSet;
 
 	@Before
 	public void setup() {
-		listener = Mockito.mock(TaskListener.class);
+		TaskListener listener = Mockito.mock(TaskListener.class);
 		Mockito.when(listener.getLogger()).thenReturn(System.out);
 		client = Mockito.mock(AmazonCloudFormation.class);
 		sleepStrategy = Mockito.mock(SleepStrategy.class);
@@ -167,7 +166,9 @@ public class CloudFormationStackSetTest {
 				.withKey("bar")
 				.withValue("baz");
 
-		UpdateStackSetResult result = stackSet.update("body", null, Collections.singletonList(parameter1), Collections.singletonList(tag1), null, null, null);
+		UpdateStackSetResult result = stackSet.update("body", null, new UpdateStackSetRequest()
+				.withParameters(parameter1)
+				.withTags(tag1));
 		Assertions.assertThat(result).isSameAs(expected);
 		ArgumentCaptor<UpdateStackSetRequest> captor = ArgumentCaptor.forClass(UpdateStackSetRequest.class);
 		Mockito.verify(client).updateStackSet(captor.capture());
@@ -193,7 +194,9 @@ public class CloudFormationStackSetTest {
 				.withKey("bar")
 				.withValue("baz");
 
-		UpdateStackSetResult result = stackSet.update(null, "url", Collections.singletonList(parameter1), Collections.singletonList(tag1), null, null, null);
+		UpdateStackSetResult result = stackSet.update(null, "url", new UpdateStackSetRequest()
+				.withParameters(parameter1)
+				.withTags(tag1));
 		Assertions.assertThat(result).isSameAs(expected);
 		ArgumentCaptor<UpdateStackSetRequest> captor = ArgumentCaptor.forClass(UpdateStackSetRequest.class);
 		Mockito.verify(client).updateStackSet(captor.capture());
@@ -203,34 +206,6 @@ public class CloudFormationStackSetTest {
 				.withParameters(parameter1)
 				.withTags(tag1)
 				.withTemplateURL("url")
-		);
-	}
-
-	@Test
-	public void updateAdministratorRoleArn() throws InterruptedException {
-		UpdateStackSetResult expected = new UpdateStackSetResult();
-		Mockito.when(client.updateStackSet(Mockito.any(UpdateStackSetRequest.class)))
-				.thenReturn(expected);
-
-		Parameter parameter1 = new Parameter()
-				.withParameterKey("foo")
-				.withParameterValue("bar");
-		Tag tag1 = new Tag()
-				.withKey("bar")
-				.withValue("baz");
-
-		UpdateStackSetResult result = stackSet.update("body", null, Collections.singletonList(parameter1), Collections.singletonList(tag1), "bar", "baz", null);
-		Assertions.assertThat(result).isSameAs(expected);
-		ArgumentCaptor<UpdateStackSetRequest> captor = ArgumentCaptor.forClass(UpdateStackSetRequest.class);
-		Mockito.verify(client).updateStackSet(captor.capture());
-		Assertions.assertThat(captor.getValue()).isEqualTo(new UpdateStackSetRequest()
-				.withStackSetName("foo")
-				.withCapabilities(Capability.values())
-				.withParameters(parameter1)
-				.withAdministrationRoleARN("bar")
-				.withExecutionRoleName("baz")
-				.withTags(tag1)
-				.withTemplateBody("body")
 		);
 	}
 
@@ -247,7 +222,9 @@ public class CloudFormationStackSetTest {
 				.withKey("bar")
 				.withValue("baz");
 
-		UpdateStackSetResult result = stackSet.update(null, null, Collections.singletonList(parameter1), Collections.singletonList(tag1), null, null, null);
+		UpdateStackSetResult result = stackSet.update(null, null, new UpdateStackSetRequest()
+				.withParameters(parameter1)
+				.withTags(tag1));
 		Assertions.assertThat(result).isSameAs(expected);
 		ArgumentCaptor<UpdateStackSetRequest> captor = ArgumentCaptor.forClass(UpdateStackSetRequest.class);
 		Mockito.verify(client).updateStackSet(captor.capture());
@@ -276,8 +253,9 @@ public class CloudFormationStackSetTest {
 				.withKey("bar")
 				.withValue("baz");
 
-		UpdateStackSetResult result = stackSet.update(null, null, Collections.singletonList(parameter1), Collections.singletonList(tag1),
-				null, null, null);
+		UpdateStackSetResult result = stackSet.update(null, null, new UpdateStackSetRequest()
+				.withParameters(parameter1)
+				.withTags(tag1));
 		Assertions.assertThat(result).isSameAs(expected);
 		ArgumentCaptor<UpdateStackSetRequest> captor = ArgumentCaptor.forClass(UpdateStackSetRequest.class);
 		Mockito.verify(client, Mockito.times(2)).updateStackSet(captor.capture());
@@ -307,7 +285,9 @@ public class CloudFormationStackSetTest {
 				.withKey("bar")
 				.withValue("baz");
 
-		UpdateStackSetResult result = stackSet.update(null, null, Collections.singletonList(parameter1), Collections.singletonList(tag1), null, null, null);
+		UpdateStackSetResult result = stackSet.update(null, null, new UpdateStackSetRequest()
+				.withParameters(parameter1)
+				.withTags(tag1));
 		Assertions.assertThat(result).isSameAs(expected);
 		ArgumentCaptor<UpdateStackSetRequest> captor = ArgumentCaptor.forClass(UpdateStackSetRequest.class);
 		Mockito.verify(client, Mockito.times(2)).updateStackSet(captor.capture());
@@ -316,6 +296,27 @@ public class CloudFormationStackSetTest {
 				.withCapabilities(Capability.values())
 				.withParameters(parameter1)
 				.withTags(tag1)
+				.withUsePreviousTemplate(true)
+		);
+		Mockito.verify(this.sleepStrategy).calculateSleepDuration(1);
+	}
+
+	@Test
+	public void update_TooManyOperations_LimitExceeded() throws InterruptedException {
+		UpdateStackSetResult expected = new UpdateStackSetResult();
+		Mockito.when(client.updateStackSet(Mockito.any(UpdateStackSetRequest.class)))
+				.thenThrow(new LimitExceededException("StackSet operations cannot involve more than 3500"))
+				.thenReturn(expected);
+
+		Mockito.when(this.sleepStrategy.calculateSleepDuration(Mockito.anyInt())).thenReturn(5L);
+
+		UpdateStackSetResult result = stackSet.update(null, null, new UpdateStackSetRequest());
+		Assertions.assertThat(result).isSameAs(expected);
+		ArgumentCaptor<UpdateStackSetRequest> captor = ArgumentCaptor.forClass(UpdateStackSetRequest.class);
+		Mockito.verify(client, Mockito.times(2)).updateStackSet(captor.capture());
+		Assertions.assertThat(captor.getValue()).isEqualTo(new UpdateStackSetRequest()
+				.withStackSetName("foo")
+				.withCapabilities(Capability.values())
 				.withUsePreviousTemplate(true)
 		);
 		Mockito.verify(this.sleepStrategy).calculateSleepDuration(1);
