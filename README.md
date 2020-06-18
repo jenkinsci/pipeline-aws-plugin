@@ -248,6 +248,18 @@ s3Upload(path: 'file.txt', bucket: 'my-bucket', text: 'Some Text Content')
 s3Upload(path: 'path/to/targetFolder/file.txt', bucket: 'my-bucket', text: 'Some Text Content')
 ```
 
+Tags can be added to uploaded files.
+
+```groovy
+s3Upload(file: 'file.txt', bucket: 'my-bucket', tags: '[tag1:value1, tag2:value2]')
+
+def tags=[:]
+tags["tag1"]="value1"
+tags["tag2"]="value2"
+
+s3Upload(file: 'file.txt', bucket: 'my-bucket', tags: tags.toString())
+```
+
 Log messages can be less verbose. Disable it when you feel the logs are excessive but you will lose the visibility of what files having been uploaded to S3.
 
 ```groovy
@@ -827,6 +839,7 @@ elbIsInstanceDeregistered(
 * Add batching support for cfnUpdateStackSet
 * Retry stack set deployments on LimitExceededException when there are too many StackSet operations occuring.
 * Add ELB methods to mangage instances during deployemnts ( [elbRegisterInstance](#elbRegisterInstance), [elbDeregisterInstance](#elbDeregisterInstance), [elbIsInstanceRegistered](#elbIsInstanceRegistered), [elbIsInstanceDeregistered](#elbIsInstanceDeregistered) )
+* Add tags to files uploaded with S3Upload
 
 ## 1.40
 * add `registryIds` argument to `ecrLogin`

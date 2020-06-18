@@ -51,4 +51,7 @@
 	<f:entry title="${%Redirect Location}" field="redirectLocation">
 		<f:textbox />
 	</f:entry>
+    <f:entry title="${%Tags}" field="tags">
+        <f:textbox />
+    </f:entry>
 </j:jelly>
