@@ -43,6 +43,9 @@ import java.util.Set;
 public class CFNDeleteStep extends Step {
 
 	private final String stack;
+	private String[] retainResources;
+	private String roleArn;
+	private String clientRequestToken;
 	private PollConfiguration pollConfiguration = PollConfiguration.DEFAULT;
 
 	@DataBoundConstructor
@@ -52,6 +55,33 @@ public class CFNDeleteStep extends Step {
 
 	public String getStack() {
 		return this.stack;
+	}
+
+	public String[] getRetainResources() {
+		return this.retainResources != null ? this.retainResources.clone() : null;
+	}
+
+	@DataBoundSetter
+	public void setRetainResources(String[] retainResources) {
+		this.retainResources = retainResources.clone();
+	}
+
+	public String getRoleArn() {
+		return this.roleArn;
+	}
+
+	@DataBoundSetter
+	public void setRoleArn(String roleArn) {
+		this.roleArn = roleArn;
+	}
+
+	public String getClientRequestToken() {
+		return this.clientRequestToken;
+	}
+
+	@DataBoundSetter
+	public void setClientRequestToken(String clientRequestToken) {
+		this.clientRequestToken = clientRequestToken;
 	}
 
 	public PollConfiguration getPollConfiguration() {
@@ -117,7 +147,7 @@ public class CFNDeleteStep extends Step {
 
 			AmazonCloudFormation client = AWSClientFactory.create(AmazonCloudFormationClientBuilder.standard(), Execution.this.getContext());
 			CloudFormationStack cfnStack = new CloudFormationStack(client, stack, listener);
-			cfnStack.delete(Execution.this.step.getPollConfiguration());
+			cfnStack.delete(Execution.this.step.getPollConfiguration(), this.step.getRetainResources(), this.step.getRoleArn(), this.step.getClientRequestToken());
 			listener.getLogger().println("Stack deletion complete");
 			return null;
 		}

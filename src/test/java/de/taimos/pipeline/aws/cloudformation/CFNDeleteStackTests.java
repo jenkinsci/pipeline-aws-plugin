@@ -20,6 +20,8 @@ import de.taimos.pipeline.aws.AWSClientFactory;
 import hudson.EnvVars;
 import hudson.model.TaskListener;
 
+import java.time.Duration;
+
 @RunWith(PowerMockRunner.class)
 @PrepareForTest(
 		value = AWSClientFactory.class,
@@ -50,13 +52,14 @@ public class CFNDeleteStackTests {
 		WorkflowJob job = this.jenkinsRule.jenkins.createProject(WorkflowJob.class, "cfnTest");
 		job.setDefinition(new CpsFlowDefinition(""
 														+ "node {\n"
-														+ "  cfnDelete(stack: 'foo', pollInterval: 25, timeoutInMinutes: 17)"
+														+ "  cfnDelete(stack: 'foo', pollInterval: 25, timeoutInMinutes: 17, roleArn: 'myarn', clientRequestToken: 'myrequesttoken')"
 														+ "}\n", true)
 		);
 		this.jenkinsRule.assertBuildStatusSuccess(job.scheduleBuild2(0));
 
 		PowerMockito.verifyNew(CloudFormationStack.class).withArguments(Mockito.any(AmazonCloudFormation.class), Mockito.eq("foo"), Mockito.any(TaskListener.class));
-		Mockito.verify(this.stack).delete(Mockito.any(PollConfiguration.class));
+		PollConfiguration pollConfiguration = PollConfiguration.builder().pollInterval(Duration.ofMillis(25)).timeout(Duration.ofMinutes(17)).build();
+		Mockito.verify(this.stack).delete(Mockito.eq(pollConfiguration), Mockito.anyVararg(), Mockito.eq("myarn"), Mockito.eq("myrequesttoken"));
 	}
 
 }

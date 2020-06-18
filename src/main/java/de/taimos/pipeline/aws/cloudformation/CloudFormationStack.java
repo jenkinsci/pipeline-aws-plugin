@@ -273,8 +273,12 @@ public class CloudFormationStack {
 		}
 	}
 
-	public void delete(PollConfiguration pollConfiguration) throws ExecutionException {
-		this.client.deleteStack(new DeleteStackRequest().withStackName(this.stack));
+	public void delete(PollConfiguration pollConfiguration, String[] retainResources, String roleArn, String clientRequestToken) throws ExecutionException {
+		DeleteStackRequest req = new DeleteStackRequest().withStackName(this.stack).withRoleARN(roleArn).withClientRequestToken(clientRequestToken);
+		if (retainResources != null){
+			req.withRetainResources(retainResources);
+		}
+		this.client.deleteStack(req);
 		new EventPrinter(this.client, this.listener).waitAndPrintStackEvents(this.stack, this.client.waiters().stackDeleteComplete(), pollConfiguration);
 	}
 
