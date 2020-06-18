@@ -25,7 +25,7 @@
             <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
             <distribution>repo</distribution></license>
     </licenses>
-    <url>https://wiki.jenkins.io/display/JENKINS/Pipeline+AWS+Plugin</url>
+    <url>https://github.com/jenkinsci/pipeline-aws-plugin</url>
     <organization>
         <name>Taimos GmbH</name>
         <url>https://www.taimos.de</url>

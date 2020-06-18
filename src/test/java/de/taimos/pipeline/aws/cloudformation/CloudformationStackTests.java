@@ -430,12 +430,36 @@ public class CloudformationStackTests {
 
 		CloudFormationStack stack = new CloudFormationStack(client, "foo", taskListener);
 
-		stack.delete(PollConfiguration.DEFAULT);
+		stack.delete(PollConfiguration.DEFAULT, new String[]{"myresourcetoretain"}, "myarn", "myclientrequesttoken");
 
 		ArgumentCaptor<DeleteStackRequest> captor = ArgumentCaptor.forClass(DeleteStackRequest.class);
 		Mockito.verify(client).deleteStack(captor.capture());
 		Assertions.assertThat(captor.getValue()).isEqualTo(new DeleteStackRequest()
 																   .withStackName("foo")
+																   .withClientRequestToken("myclientrequesttoken")
+																   .withRoleARN("myarn")
+																   .withRetainResources("myresourcetoretain")
+
+		);
+		Mockito.verify(this.eventPrinter).waitAndPrintStackEvents(Mockito.eq("foo"), Mockito.any(Waiter.class), Mockito.eq(PollConfiguration.DEFAULT));
+	}
+
+	@Test
+	public void deleteStackByStackNameOnly() throws ExecutionException {
+		TaskListener taskListener = Mockito.mock(TaskListener.class);
+		Mockito.when(taskListener.getLogger()).thenReturn(System.out);
+		AmazonCloudFormation client = Mockito.mock(AmazonCloudFormation.class);
+		Mockito.when(client.waiters()).thenReturn(new AmazonCloudFormationWaiters(client));
+
+		CloudFormationStack stack = new CloudFormationStack(client, "foo", taskListener);
+
+		stack.delete(PollConfiguration.DEFAULT, null, null, null);
+
+		ArgumentCaptor<DeleteStackRequest> captor = ArgumentCaptor.forClass(DeleteStackRequest.class);
+		Mockito.verify(client).deleteStack(captor.capture());
+		Assertions.assertThat(captor.getValue()).isEqualTo(new DeleteStackRequest()
+				.withStackName("foo")
+
 		);
 		Mockito.verify(this.eventPrinter).waitAndPrintStackEvents(Mockito.eq("foo"), Mockito.any(Waiter.class), Mockito.eq(PollConfiguration.DEFAULT));
 	}
