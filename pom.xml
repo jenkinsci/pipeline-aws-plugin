@@ -4,7 +4,7 @@
     <parent>
         <groupId>org.jenkins-ci.plugins</groupId>
         <artifactId>plugin</artifactId>
-        <version>3.18</version>
+        <version>3.50</version>
         <relativePath />
     </parent>
     <groupId>de.taimos</groupId>
@@ -137,7 +137,7 @@
         <dependency>
             <groupId>org.jenkins-ci.plugins</groupId>
             <artifactId>aws-java-sdk</artifactId>
-            <version>1.11.457</version>
+            <version>1.11.791</version>
         </dependency>
         <dependency>
             <groupId>org.jenkins-ci.plugins</groupId>
@@ -216,7 +216,7 @@
         <dependency>
             <groupId>org.objenesis</groupId>
             <artifactId>objenesis</artifactId>
-            <version>2.5</version>
+            <version>3.0.1</version>
             <scope>test</scope>
         </dependency>
         <dependency>
