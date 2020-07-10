@@ -19,10 +19,11 @@
  * #L%
  */
 
-package de.taimos.pipeline.aws;
+package de.taimos.pipeline.aws.code.deploy;
 
 import java.util.Set;
 
+import de.taimos.pipeline.aws.AWSClientFactory;
 import org.jenkinsci.plugins.workflow.steps.Step;
 import org.jenkinsci.plugins.workflow.steps.StepContext;
 import org.jenkinsci.plugins.workflow.steps.StepDescriptor;
@@ -86,14 +87,6 @@ public class WaitDeployStep extends Step {
 
 	public static class Execution extends SynchronousNonBlockingStepExecution<Void> {
 
-		private static final Long POLLING_INTERVAL = 10000L;
-
-		private static final String SUCCEEDED_STATUS = "Succeeded";
-
-		private static final String FAILED_STATUS = "Failed";
-
-		private static final String STOPPED_STATUS = "Stopped";
-
 		@SuppressFBWarnings(value = "SE_TRANSIENT_FIELD_NOT_RESTORED", justification = "Only used when starting.")
 		private final transient String deploymentId;
 
@@ -109,34 +102,7 @@ public class WaitDeployStep extends Step {
 
 			listener.getLogger().format("Checking Deployment(%s) status", this.deploymentId);
 
-			while (true) {
-				GetDeploymentRequest getDeploymentRequest = new GetDeploymentRequest().withDeploymentId(this.deploymentId);
-				GetDeploymentResult deployment = client.getDeployment(getDeploymentRequest);
-				String deploymentStatus = deployment.getDeploymentInfo().getStatus();
-
-				listener.getLogger().format("DeploymentStatus(%s)", deploymentStatus);
-
-				if (SUCCEEDED_STATUS.equals(deploymentStatus)) {
-					listener.getLogger().println("Deployment completed successfully");
-					return null;
-				} else if (FAILED_STATUS.equals(deploymentStatus)) {
-					listener.getLogger().println("Deployment completed in error");
-					String errorMessage = deployment.getDeploymentInfo().getErrorInformation().getMessage();
-					throw new Exception("Deployment Failed: " + errorMessage);
-				} else if (STOPPED_STATUS.equals(deploymentStatus)) {
-					listener.getLogger().println("Deployment was stopped");
-					throw new Exception("Deployment was stopped");
-				} else {
-					listener.getLogger().println("Deployment still in progress... sleeping");
-					try {
-						Thread.sleep(POLLING_INTERVAL);
-					} catch (InterruptedException e) {
-						//
-					}
-				}
-
-			}
-
+			return new DeployUtils().waitDeployment(this.deploymentId, listener, client);
 		}
 
 		private static final long serialVersionUID = 1L;

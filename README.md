@@ -27,6 +27,7 @@ This plugins adds Jenkins pipeline steps to interact with the AWS API.
 * [cfnDeleteStackSet](#cfndeletestackset)
 * [snsPublish](#snspublish)
 * [deployAPI](#deployapi)
+* [createDeployment](#createDeployment)
 * [awaitDeploymentCompletion](#awaitdeploymentcompletion)
 * [listAWSAccounts](#listawsaccounts)
 * [updateIdP](#updateidp)
@@ -587,6 +588,40 @@ Additionally you can specify a description and stage variables.
 
 ```groovy
 deployAPI(api:'myApiId', stage:'Prod', description:"Build: ${env.BUILD_ID}", variables:['key=value'])
+```
+
+## createDeployment
+
+Deploys an application revision through the specified deployment group (AWS CodeDeploy)
+
+From S3 bucket:
+```groovy
+createDeployment(
+        s3Bucket: 'jenkins.bucket',
+        s3Key: 'artifacts/SimpleWebApp.zip',
+        s3BundleType: 'zip', // [Valid values: tar | tgz | zip | YAML | JSON]
+        applicationName: 'SampleWebApp',
+        deploymentGroupName: 'SampleDeploymentGroup',
+        deploymentConfigName: 'CodeDeployDefault.AllAtOnce',
+        description: 'Test deploy',
+        waitForCompletion: 'true',
+        //Optional values 
+        ignoreApplicationStopFailures: 'false',
+        fileExistsBehavior: 'OVERWRITE'// [Valid values: DISALLOW, OVERWRITE, RETAIN]
+)
+```
+
+From GitHub:
+```groovy
+createDeployment(
+        gitHubRepository: 'MykhayloGnylorybov/AwsCodeDeployArtifact',
+        gitHubCommitId: 'e9ee742f44c9a0f97ee3aa94593e7b6aad6e2d14',
+        applicationName: 'SampleWebApp',
+        deploymentGroupName: 'SampleDeploymentGroup',
+        deploymentConfigName: 'CodeDeployDefault.AllAtOnce',
+        description: 'Test deploy',
+        waitForCompletion: 'true'
+)
 ```
 
 ## awaitDeploymentCompletion
