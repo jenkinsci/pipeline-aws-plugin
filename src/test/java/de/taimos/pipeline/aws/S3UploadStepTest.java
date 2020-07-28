@@ -51,6 +51,15 @@ public class S3UploadStepTest {
 	}
 
 	@Test
+	public void gettersWorkAsExpectedForContentDisposition() throws Exception {
+		S3UploadStep step = new S3UploadStep("my-bucket", false, false);
+		step.setFile("my-file");
+		step.setContentDisposition("attachment");
+		Assert.assertEquals("my-file", step.getFile());
+		Assert.assertEquals("attachment", step.getContentDisposition());
+	}
+
+	@Test
 	public void gettersWorkAsExpectedForPatternCase() throws Exception {
 		S3UploadStep step = new S3UploadStep("my-bucket", false, false);
 		step.setIncludePathPattern("**");

@@ -212,7 +212,7 @@ s3Upload(file:'file.txt', bucket:'my-bucket', contentEncoding: 'gzip')
 Specific content type can be added to uploaded files
 
 ```groovy
-s3Upload(bucket:"my-bucket", path:'path/to/targetFolder/', includePathPattern:'**/*.ttf', workingDir:'dist', contentType:'application/x-font-ttf')
+s3Upload(bucket:"my-bucket", path:'path/to/targetFolder/', includePathPattern:'**/*.ttf', workingDir:'dist', contentType:'application/x-font-ttf', contentDisposition:'attachment')
 ```
 
 Canned ACLs can be added to upload requests.
