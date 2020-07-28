@@ -243,8 +243,8 @@ public class CloudFormationStack {
 	}
 
 	public Map<String, String> executeChangeSet(String changeSetName, PollConfiguration pollConfiguration) throws ExecutionException {
-		if (!this.changeSetHasChanges(changeSetName) || !this.exists()) {
-			// If the change set has no changes or the stack was not prepared we should simply delete it.
+		if (!this.exists()) {
+			// If the stack was not prepared we should simply delete it.
 			this.listener.getLogger().format("Deleting empty change set %s for stack %s %n", changeSetName, this.stack);
 			DeleteChangeSetRequest req = new DeleteChangeSetRequest().withChangeSetName(changeSetName).withStackName(this.stack);
 			this.client.deleteChangeSet(req);
