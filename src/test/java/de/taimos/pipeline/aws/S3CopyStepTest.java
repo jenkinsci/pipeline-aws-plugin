@@ -38,6 +38,7 @@ public class S3CopyStepTest
 		step.setAcl(CannedAccessControlList.PublicRead);
 		step.setCacheControl("my-cachecontrol");
 		step.setContentType("text/plain");
+		step.setContentDisposition("attachment");
 		step.setSseAlgorithm("AES256");
 		Assert.assertEquals("my-bucket", step.getFromBucket());
 		Assert.assertEquals("my-path", step.getFromPath());
@@ -49,5 +50,6 @@ public class S3CopyStepTest
 		Assert.assertEquals("my-cachecontrol", step.getCacheControl());
 		Assert.assertEquals("text/plain", step.getContentType());
 		Assert.assertEquals("AES256", step.getSseAlgorithm());
+		Assert.assertEquals("attachment", step.getContentDisposition());
 	}
 }
