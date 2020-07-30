@@ -3,3 +3,8 @@
 /target
 deploy.sh
 work/*
+
+.classpath
+.project
+.factorypath
+.settings/

@@ -1,2 +1,3 @@
+image: openjdk:8-jdk
 tasks:
   - init: mvn install -DskipTests=false
