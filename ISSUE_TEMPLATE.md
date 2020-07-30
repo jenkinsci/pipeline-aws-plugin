@@ -1,3 +1,8 @@
+[ ] 🐞 Bug
+[ ] 🚀 Feature
+[ ] 🛠 Task
+[ ] 📄 Documentation
+
 ### Description
 
 [Description of the bug or feature]
