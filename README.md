@@ -870,12 +870,14 @@ elbIsInstanceDeregistered(
 
 ## current master
 * Adds new parameters to cfnDelete for roleArn, clientRequestToken, and retainResources.
-* Add batching support for cfnUpdateStackSet
-* Retry stack set deployments on LimitExceededException when there are too many StackSet operations occuring.
 * Add ELB methods to mangage instances during deployemnts ( [elbRegisterInstance](#elbRegisterInstance), [elbDeregisterInstance](#elbDeregisterInstance), [elbIsInstanceRegistered](#elbIsInstanceRegistered), [elbIsInstanceDeregistered](#elbIsInstanceDeregistered) )
 * Add tags to files uploaded with S3Upload
 * Add `createDeployment` step
 * fix `cfnExecuteChangeSet` when no resource change (#210)
+
+## 1.41
+* Add batching support for cfnUpdateStackSet
+* Retry stack set deployments on LimitExceededException when there are too many StackSet operations occuring.
 
 ## 1.40
 * add `registryIds` argument to `ecrLogin`
