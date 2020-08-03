@@ -869,6 +869,8 @@ elbIsInstanceDeregistered(
 # Changelog
 
 ## current master
+
+## 1.42
 * Adds new parameters to cfnDelete for roleArn, clientRequestToken, and retainResources.
 * Add ELB methods to mangage instances during deployemnts ( [elbRegisterInstance](#elbRegisterInstance), [elbDeregisterInstance](#elbDeregisterInstance), [elbIsInstanceRegistered](#elbIsInstanceRegistered), [elbIsInstanceDeregistered](#elbIsInstanceDeregistered) )
 * Add tags to files uploaded with S3Upload
