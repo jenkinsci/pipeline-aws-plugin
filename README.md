@@ -48,6 +48,7 @@ This plugins adds Jenkins pipeline steps to interact with the AWS API.
 * [ebCreateEnvironment](#ebCreateEnvironment)
 * [ebSwapEnvironmentCNAMEs](#ebSwapEnvironmentCNAMEs)
 * [ebWaitOnEnvironmentStatus](#ebWaitOnEnvironmentStatus)
+* [ebWaitOnEnvironmentHealth](#ebWaitOnEnvironmentHealth)
 
 [**see the changelog for release information**](#changelog)
 
@@ -1063,7 +1064,7 @@ ebWaitOnEnvironmentHealth(
 )
 
 // Detect immediately if environment becomes red
-ebWaitOnEnvironmentStatus(
+ebWaitOnEnvironmentHealth(
     applicationName: "my-application",
     environmentName: "temporary",
     health: "Red",
