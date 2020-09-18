@@ -36,7 +36,7 @@ This plugins adds Jenkins pipeline steps to interact with the AWS API.
 * [ecrLogin](#ecrlogin)
 * [ecrSetRepositoryPolicy](#ecrsetrepositorypolicy)
 * [invokeLambda](#invokelambda)
-* [lambdaCleanupVersions](#lambdacleanupversions)
+* [lambdaVersionCleanup](#lambdacleanupversions)
 * [ec2ShareAmi](#ec2ShareAmi)
 * [elbRegisterInstance](#elbRegisterInstance)
 * [elbDeregisterInstance](#elbDeregisterInstance)
@@ -786,7 +786,7 @@ String result = invokeLambda(
 )
 ```
 
-## lambdaCleanupVersions
+## lambdaVersionCleanup
 
 Cleans up lambda function versions older than the daysAgo flag.
 The main use case around this is for tooling like AWS Serverless Application Model.
@@ -794,7 +794,7 @@ It creates lambda functions, but marks them as `DeletionPolicy: Retain` so the v
 Overtime, these unused versions will accumulate and the account/region might hit the limit for maximum storage of lambda functions.
 
 ```groovy
-lambdaCleanupVersions(
+lambdaVersionCleanup(
 	functionName: 'myLambdaFunction',
 	daysAgo: 14
 )
@@ -803,7 +803,7 @@ lambdaCleanupVersions(
 To discover and delete all old versions of functions created by a AWS CloudFormation stack:
 
 ```groovy
-lambdaCleanupVersions(
+lambdaVersionCleanup(
 	stackName: 'myStack',
 	daysAgo: 14
 )
@@ -1076,6 +1076,7 @@ ebWaitOnEnvironmentHealth(
 
 ## current master
 * Add Elastic Beanstalk steps (`ebCreateApplication, ebCreateApplicationVersion, ebCreateConfigurationTemplate, ebCreateEnvironment, ebSwapEnvironmentCNAMEs, ebWaitOnEnvironmentStatus, ebWaitOnEnvironmentHealth`) 
+* Fix documentation for lambdaVersionCleanup
 
 ## 1.42
 * Adds new parameters to cfnDelete for roleArn, clientRequestToken, and retainResources.
