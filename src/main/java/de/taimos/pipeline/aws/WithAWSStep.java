@@ -295,6 +295,7 @@ public class WithAWSStep extends Step {
 			this.withFederatedUserId(awsEnv);
 
 			EnvironmentExpander expander = new EnvironmentExpander() {
+				private static final long serialVersionUID = 1L;
 				@Override
 				public void expand(@Nonnull EnvVars envVars) {
 					envVars.overrideAll(awsEnv);
@@ -312,7 +313,7 @@ public class WithAWSStep extends Step {
 
 		private void withFederatedUserId(@Nonnull EnvVars localEnv) {
 			if (!StringUtils.isNullOrEmpty(this.step.getFederatedUserId())) {
-				AWSSecurityTokenService sts = AWSClientFactory.create(AWSSecurityTokenServiceClientBuilder.standard(), this.envVars);
+				AWSSecurityTokenService sts = AWSClientFactory.create(AWSSecurityTokenServiceClientBuilder.standard(), this.getContext(), this.envVars);
 				GetFederationTokenRequest getFederationTokenRequest = new GetFederationTokenRequest();
 				getFederationTokenRequest.setDurationSeconds(this.step.getDuration());
 				getFederationTokenRequest.setName(this.step.getFederatedUserId());
@@ -368,8 +369,8 @@ public class WithAWSStep extends Step {
 
 		private void withRole(@Nonnull EnvVars localEnv) throws IOException, InterruptedException {
 			if (!StringUtils.isNullOrEmpty(this.step.getRole())) {
-				
-				AWSSecurityTokenService sts = AWSClientFactory.create(AWSSecurityTokenServiceClientBuilder.standard(), this.envVars);
+
+				AWSSecurityTokenService sts = AWSClientFactory.create(AWSSecurityTokenServiceClientBuilder.standard(), this.getContext(), this.envVars);
 
 				AssumeRole assumeRole = IamRoleUtils.validRoleArn(this.step.getRole()) ? new AssumeRole(this.step.getRole()) :
 						new AssumeRole(this.step.getRole(), this.createAccountId(sts), IamRoleUtils.selectPartitionName(this.step.getRegion()));

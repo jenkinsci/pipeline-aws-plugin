@@ -54,10 +54,15 @@ This plugins adds Jenkins pipeline steps to interact with the AWS API.
 
 # Primary/Agent setups
 
-This plugin is not optimized to setups with a primary and multiple agents. 
+This plugin is not optimized to setups with a primary and multiple agents.
 Only steps that touch the workspace are executed on the agents while the rest is executed on the master.
 
 For the best experience make sure that primary and agents have the same IAM permission and networking capabilities.
+
+## Retrieve credentials from node
+
+By default, credentials lookup is done on the master node for all steps.
+To enable credentials lookup on the current node, enable `Retrieve credentials from node` in Jenkins global configuration.
 
 # Usage / Steps
 

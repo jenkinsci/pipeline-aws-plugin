@@ -120,7 +120,7 @@ abstract class AbstractCFNCreateStep extends TemplateStepBase {
 
 			this.checkPreconditions();
 
-			AmazonCloudFormation client = AWSClientFactory.create(AmazonCloudFormationClientBuilder.standard(), Execution.this.getEnvVars());
+			AmazonCloudFormation client = AWSClientFactory.create(AmazonCloudFormationClientBuilder.standard(), Execution.this.getContext(), Execution.this.getEnvVars());
 			CloudFormationStack cfnStack = new CloudFormationStack(client, stack, Execution.this.getListener());
 			if (cfnStack.exists()) {
 				Collection<Parameter> parameters = ParameterParser.parseWithKeepParams(Execution.this.getWorkspace(), Execution.this.getStep());
@@ -135,7 +135,7 @@ abstract class AbstractCFNCreateStep extends TemplateStepBase {
 		}
 
 		protected CloudFormationStack getCfnStack() {
-			AmazonCloudFormation client = AWSClientFactory.create(AmazonCloudFormationClientBuilder.standard(), this.getEnvVars());
+			AmazonCloudFormation client = AWSClientFactory.create(AmazonCloudFormationClientBuilder.standard(), this.getContext(), this.getEnvVars());
 			return new CloudFormationStack(client, this.getStack(), this.getListener());
 		}
 

@@ -118,9 +118,9 @@ public class ELBIsInstanceDeregisteredStep extends Step {
 		protected Boolean run() throws Exception {
 			TaskListener listener = this.getContext().get(TaskListener.class);
 			listener.getLogger().println("elbIsInstanceDeregistered instanceID: " + this.step.instanceID + " port: " + this.step.port + " from targetGroupARN: " + this.step.targetGroupARN);
-			
+
 			Boolean rval = true;
-			AmazonElasticLoadBalancing client = AWSClientFactory.create(AmazonElasticLoadBalancingClientBuilder.standard(), this.getEnvVars());
+			AmazonElasticLoadBalancing client = AWSClientFactory.create(AmazonElasticLoadBalancingClientBuilder.standard(), this.getContext(), this.getEnvVars());
 			DescribeTargetHealthRequest req = new DescribeTargetHealthRequest().withTargetGroupArn(this.step.targetGroupARN);
 			DescribeTargetHealthResult res = client.describeTargetHealth(req);
 			List<TargetHealthDescription> targets = res.getTargetHealthDescriptions();
@@ -131,10 +131,10 @@ public class ELBIsInstanceDeregisteredStep extends Step {
 				}
 			}
 			listener.getLogger().println(res.toString());
-			
+
 			return rval;
 		}
-		
+
 		public EnvVars getEnvVars() {
 			try {
 				return this.getContext().get(EnvVars.class);

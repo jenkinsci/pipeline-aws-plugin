@@ -1,0 +1,8 @@
+<?jelly escape-by-default='true'?>
+<j:jelly xmlns:j="jelly:core" xmlns:f="/lib/form">
+	<f:section title="${%Pipeline: AWS Steps}" name="enableCredentialsFromNode">
+		<f:entry title="${%Retrieve credentials from node}" description="${%By default, the master's instance profile is used}">
+			<f:checkbox field="enableCredentialsFromNode"/>
+		</f:entry>
+	</f:section>
+</j:jelly>
