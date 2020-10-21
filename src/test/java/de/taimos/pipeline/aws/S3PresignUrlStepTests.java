@@ -3,27 +3,41 @@ package de.taimos.pipeline.aws;
 
 import com.amazonaws.HttpMethod;
 import com.amazonaws.client.builder.AwsSyncClientBuilder;
+
 import com.amazonaws.services.s3.AmazonS3;
+
 import hudson.EnvVars;
+
+import java.net.URL;
+import java.util.Date;
+
 import org.assertj.core.api.Assertions;
+
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
+
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
 import org.jenkinsci.plugins.workflow.job.WorkflowRun;
+
+import org.jenkinsci.plugins.workflow.steps.StepContext;
+
 import org.joda.time.DateTime;
+
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+
 import org.jvnet.hudson.test.JenkinsRule;
+
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
+
 import org.powermock.api.mockito.PowerMockito;
+
 import org.powermock.core.classloader.annotations.PowerMockIgnore;
 import org.powermock.core.classloader.annotations.PrepareForTest;
-import org.powermock.modules.junit4.PowerMockRunner;
 
-import java.net.URL;
-import java.util.Date;
+import org.powermock.modules.junit4.PowerMockRunner;
 
 @RunWith(PowerMockRunner.class)
 @PrepareForTest(AWSClientFactory.class)
@@ -38,7 +52,7 @@ public class S3PresignUrlStepTests {
 	public void setupSdk() throws Exception {
 		PowerMockito.mockStatic(AWSClientFactory.class);
 		this.s3 = Mockito.mock(AmazonS3.class);
-		PowerMockito.when(AWSClientFactory.create(Mockito.any(AwsSyncClientBuilder.class), Mockito.any(EnvVars.class)))
+		PowerMockito.when(AWSClientFactory.create(Mockito.any(AwsSyncClientBuilder.class), Mockito.any(StepContext.class), Mockito.any(EnvVars.class)))
 				.thenReturn(this.s3);
 	}
 
