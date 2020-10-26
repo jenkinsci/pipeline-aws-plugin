@@ -1,9 +1,11 @@
 package de.taimos.pipeline.aws;
 
-import java.util.Collections;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 
+import com.amazonaws.services.cloudformation.model.ListStackResourcesRequest;
+import com.amazonaws.services.cloudformation.model.ListStackResourcesResult;
+import com.amazonaws.services.cloudformation.model.StackResourceSummary;
 import org.jenkinsci.plugins.workflow.steps.StepContext;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
@@ -20,10 +22,6 @@ import org.powermock.modules.junit4.PowerMockRunner;
 
 import com.amazonaws.client.builder.AwsSyncClientBuilder;
 import com.amazonaws.services.cloudformation.AmazonCloudFormation;
-import com.amazonaws.services.cloudformation.AmazonCloudFormationClientBuilder;
-import com.amazonaws.services.cloudformation.model.DescribeStackResourcesRequest;
-import com.amazonaws.services.cloudformation.model.DescribeStackResourcesResult;
-import com.amazonaws.services.cloudformation.model.StackResource;
 import com.amazonaws.services.lambda.model.AliasConfiguration;
 import com.amazonaws.services.lambda.model.ListVersionsByFunctionRequest;
 import com.amazonaws.services.lambda.model.ListVersionsByFunctionResult;
@@ -33,10 +31,6 @@ import com.amazonaws.services.lambda.model.ListAliasesRequest;
 import com.amazonaws.services.lambda.model.ListAliasesResult;
 import com.amazonaws.services.lambda.AWSLambdaClientBuilder;
 
-import de.taimos.pipeline.aws.AWSClientFactory;
-import hudson.EnvVars;
-import hudson.model.Run;
-import hudson.model.TaskListener;
 import com.amazonaws.services.lambda.AWSLambda;
 
 import java.util.Arrays;
@@ -176,15 +170,32 @@ import java.util.Arrays;
 							new FunctionConfiguration().withVersion("v2").withLastModified("2018-02-05T11:15:12Z")
 							))
 					);
-			Mockito.when(this.cloudformation.describeStackResources(new DescribeStackResourcesRequest().withStackName("baz"))).thenReturn(new DescribeStackResourcesResult().withStackResources(
-						new StackResource()
+			Mockito.when(this.awsLambda.listAliases(Mockito.eq(new ListAliasesRequest().withFunctionName("foo2")))).thenReturn(new ListAliasesResult());
+			Mockito.when(this.awsLambda.listVersionsByFunction(Mockito.eq(new ListVersionsByFunctionRequest().withFunctionName("foo2")))).thenReturn(new ListVersionsByFunctionResult()
+					.withVersions(Arrays.asList(
+							new FunctionConfiguration().withVersion("v1").withLastModified(ZonedDateTime.now().format(DateTimeFormatter.ISO_ZONED_DATE_TIME)),
+							new FunctionConfiguration().withVersion("v2").withLastModified("2018-02-05T11:15:12Z")
+					))
+			);
+			Mockito.when(this.cloudformation.listStackResources(new ListStackResourcesRequest().withStackName("baz"))).thenReturn(new ListStackResourcesResult().withStackResourceSummaries(
+						new StackResourceSummary()
 						.withResourceType("AWS::Lambda::Function")
 						.withPhysicalResourceId("foo"),
-						new StackResource()
+						new StackResourceSummary()
 						.withResourceType("AWS::Baz::Function")
 						.withPhysicalResourceId("bar")
 						)
+					.withNextToken("foo")
 					);
+			Mockito.when(this.cloudformation.listStackResources(new ListStackResourcesRequest().withStackName("baz").withNextToken("foo"))).thenReturn(new ListStackResourcesResult().withStackResourceSummaries(
+					new StackResourceSummary()
+							.withResourceType("AWS::Lambda::Function")
+							.withPhysicalResourceId("foo2"),
+					new StackResourceSummary()
+							.withResourceType("AWS::Baz::Function")
+							.withPhysicalResourceId("bar")
+					)
+			);
 			job.setDefinition(new CpsFlowDefinition(""
 						+ "node {\n"
 						+ "  lambdaVersionCleanup(stackName: 'baz', daysAgo: 5)\n"
@@ -196,8 +207,12 @@ import java.util.Arrays;
 					.withQualifier("v2")
 					.withFunctionName("foo")
 					);
-			Mockito.verify(this.awsLambda).listVersionsByFunction(Mockito.any());
-			Mockito.verify(this.awsLambda).listAliases(Mockito.any());
+			Mockito.verify(this.awsLambda).deleteFunction(new DeleteFunctionRequest()
+					.withQualifier("v2")
+					.withFunctionName("foo2")
+			);
+			Mockito.verify(this.awsLambda, Mockito.times(2)).listVersionsByFunction(Mockito.any());
+			Mockito.verify(this.awsLambda, Mockito.times(2)).listAliases(Mockito.any());
 			Mockito.verifyNoMoreInteractions(this.awsLambda);
 		}
 
