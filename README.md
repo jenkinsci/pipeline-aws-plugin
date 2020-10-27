@@ -1079,12 +1079,14 @@ ebWaitOnEnvironmentHealth(
 * Fix documentation for lambdaVersionCleanup
 * Fix wrong partition detection when assuming role
 * Fix resource listing for lambdaVersionCleanup when using a cloudformation stack with lots of resources
+* Fix cfnExecuteChangeSet to correctly handle no resource change, but updates to outputs (#210)
 
 ## 1.42
 * Adds new parameters to cfnDelete for roleArn, clientRequestToken, and retainResources.
 * Add ELB methods to mangage instances during deployemnts ( [elbRegisterInstance](#elbRegisterInstance), [elbDeregisterInstance](#elbDeregisterInstance), [elbIsInstanceRegistered](#elbIsInstanceRegistered), [elbIsInstanceDeregistered](#elbIsInstanceDeregistered) )
 * Add tags to files uploaded with S3Upload
 * Add `createDeployment` step
+* fix `cfnExecuteChangeSet` when no resource change (#210)
 
 ## 1.41
 * Add batching support for cfnUpdateStackSet
