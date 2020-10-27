@@ -111,11 +111,11 @@ public class CloudformationStackTests {
 	public void executeChangeSetWithChanges() throws ExecutionException {
 		TaskListener taskListener = Mockito.mock(TaskListener.class);
 		Mockito.when(taskListener.getLogger()).thenReturn(System.out);
+		Mockito.when(taskListener.getLogger()).thenReturn(System.out);
 		AmazonCloudFormation client = Mockito.mock(AmazonCloudFormation.class);
 		Mockito.when(client.waiters()).thenReturn(new AmazonCloudFormationWaiters(client));
-		CloudFormationStack stack = new CloudFormationStack(client, "foo", taskListener);
 
-		// with resource changes in changeset
+		CloudFormationStack stack = new CloudFormationStack(client, "foo", taskListener);
 		Mockito.when(client.describeChangeSet(new DescribeChangeSetRequest()
 													  .withStackName("foo")
 													  .withChangeSetName("bar")
@@ -138,23 +138,17 @@ public class CloudformationStackTests {
 		TaskListener taskListener = Mockito.mock(TaskListener.class);
 		Mockito.when(taskListener.getLogger()).thenReturn(System.out);
 		AmazonCloudFormation client = Mockito.mock(AmazonCloudFormation.class);
-		Mockito.when(client.waiters()).thenReturn(new AmazonCloudFormationWaiters(client));
 		CloudFormationStack stack = new CloudFormationStack(client, "foo", taskListener);
-
-		// no resource changes in changeset
 		Mockito.when(client.describeChangeSet(new DescribeChangeSetRequest()
 													  .withStackName("foo")
 													  .withChangeSetName("bar")
 		)).thenReturn(new DescribeChangeSetResult());
-
 		Mockito.when(client.describeStacks(new DescribeStacksRequest().withStackName("foo")))
-				.thenReturn(new DescribeStacksResult().withStacks(new Stack().withStackStatus("CREATE_COMPLETE").withOutputs(new Output().withOutputKey("bar").withOutputValue("baz"))));
+				.thenReturn(new DescribeStacksResult().withStacks(new Stack().withOutputs(new Output().withOutputKey("bar").withOutputValue("baz"))));
 
 		Map<String, String> outputs = stack.executeChangeSet("bar", PollConfiguration.DEFAULT);
-
-		Mockito.verify(client).executeChangeSet(Mockito.any(ExecuteChangeSetRequest.class));
-		Mockito.verify(this.eventPrinter).waitAndPrintStackEvents(Mockito.eq("foo"), Mockito.any(Waiter.class), Mockito.eq(PollConfiguration.DEFAULT));
-		Assertions.assertThat(outputs).containsEntry("bar", "baz").containsEntry("jenkinsStackUpdateStatus", "true");
+		Mockito.verify(client, Mockito.never()).executeChangeSet(Mockito.any(ExecuteChangeSetRequest.class));
+		Assertions.assertThat(outputs).containsEntry("bar", "baz").containsEntry("jenkinsStackUpdateStatus", "false");
 	}
 
 	@Test
