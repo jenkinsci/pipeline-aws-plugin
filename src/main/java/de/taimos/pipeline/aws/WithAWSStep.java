@@ -373,7 +373,7 @@ public class WithAWSStep extends Step {
 				AWSSecurityTokenService sts = AWSClientFactory.create(AWSSecurityTokenServiceClientBuilder.standard(), this.getContext(), this.envVars);
 
 				AssumeRole assumeRole = IamRoleUtils.validRoleArn(this.step.getRole()) ? new AssumeRole(this.step.getRole()) :
-						new AssumeRole(this.step.getRole(), this.createAccountId(sts), IamRoleUtils.selectPartitionName(this.step.getRegion()));
+						new AssumeRole(this.step.getRole(), this.createAccountId(sts), this.step.getRegion());
 				assumeRole.withDurationSeconds(this.step.getDuration());
 				assumeRole.withExternalId(this.step.getExternalId());
 				assumeRole.withPolicy(this.step.getPolicy());
@@ -381,6 +381,7 @@ public class WithAWSStep extends Step {
 				assumeRole.withSessionName(this.createRoleSessionName());
 
 				this.getContext().get(TaskListener.class).getLogger().format("Requesting assume role");
+				this.getContext().get(TaskListener.class).getLogger().format("Assuming role ARN is %s", assumeRole.toString());
 				AssumedRole assumedRole = assumeRole.assumedRole(sts);
 				this.getContext().get(TaskListener.class).getLogger().format("Assumed role %s with id %s %n ", assumedRole.getAssumedRoleUser().getArn(), assumedRole.getAssumedRoleUser().getAssumedRoleId());
 

@@ -64,6 +64,11 @@ public class AssumedRole {
 		public AssumeRole(final String roleArn) {
 			this.roleArn = roleArn;
 		}
+
+		@Override
+		public String toString() {
+			return this.roleArn;
+		}
 		
 		public AssumeRole withSessionName(final String sessionName) {
 			this.sessionName = StringUtils.isNullOrEmpty(sessionName) ? null : sessionName;

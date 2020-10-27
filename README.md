@@ -1082,6 +1082,8 @@ ebWaitOnEnvironmentHealth(
 ## current master
 * Add Elastic Beanstalk steps (`ebCreateApplication, ebCreateApplicationVersion, ebCreateConfigurationTemplate, ebCreateEnvironment, ebSwapEnvironmentCNAMEs, ebWaitOnEnvironmentStatus, ebWaitOnEnvironmentHealth`) 
 * Fix documentation for lambdaVersionCleanup
+* Fix wrong partition detection when assuming role
+* Fix resource listing for lambdaVersionCleanup when using a cloudformation stack with lots of resources
 
 ## 1.42
 * Adds new parameters to cfnDelete for roleArn, clientRequestToken, and retainResources.
