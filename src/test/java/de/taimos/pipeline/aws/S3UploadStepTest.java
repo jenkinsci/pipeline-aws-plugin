@@ -93,7 +93,7 @@ public class S3UploadStepTest {
 		S3UploadStep.Execution execution = new S3UploadStep.Execution(step, Mockito.mock(StepContext.class));
 		Throwable t = Assertions.catchThrowable(execution::run);
 		Assert.assertTrue(t instanceof IllegalArgumentException);
-		Assert.assertEquals("File or IncludePathPattern must not be null", t.getMessage());
+		Assert.assertEquals("At least one argument of Text, File or IncludePathPattern must be included", t.getMessage());
 	}
 
 	@Test
@@ -104,7 +104,29 @@ public class S3UploadStepTest {
 		S3UploadStep.Execution execution = new S3UploadStep.Execution(step, Mockito.mock(StepContext.class));
 		Throwable t = Assertions.catchThrowable(execution::run);
 		Assert.assertTrue(t instanceof IllegalArgumentException);
-		Assert.assertEquals("File and IncludePathPattern cannot be use together", t.getMessage());
+		Assert.assertEquals("File and IncludePathPattern cannot be used together", t.getMessage());
+	}
+
+	@Test
+	public void doNotAcceptFileAndIncludePathPatternArguments() throws Exception {
+		S3UploadStep step = new S3UploadStep("my-bucket", false, false);
+		step.setText("Just some text content.");
+		step.setIncludePathPattern("*.txt");
+		S3UploadStep.Execution execution = new S3UploadStep.Execution(step, Mockito.mock(StepContext.class));
+		Throwable t = Assertions.catchThrowable(execution::run);
+		Assert.assertTrue(t instanceof IllegalArgumentException);
+		Assert.assertEquals("Text and IncludePathPattern cannot be used together", t.getMessage());
+	}
+
+	@Test
+	public void doNotAcceptFileAndIncludePathPatternArguments() throws Exception {
+		S3UploadStep step = new S3UploadStep("my-bucket", false, false);
+		step.setFile("file.txt");
+		step.setText("Just some text content.");
+		S3UploadStep.Execution execution = new S3UploadStep.Execution(step, Mockito.mock(StepContext.class));
+		Throwable t = Assertions.catchThrowable(execution::run);
+		Assert.assertTrue(t instanceof IllegalArgumentException);
+		Assert.assertEquals("File and Text cannot be used together", t.getMessage());
 	}
 
 }
