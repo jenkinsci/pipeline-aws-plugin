@@ -1,5 +1,4 @@
-# Status
-
+[![Gitpod ready-to-code](https://img.shields.io/badge/Gitpod-ready--to--code-blue?logo=gitpod)](https://gitpod.io/#https://github.com/jenkinsci/pipeline-aws-plugin)
 [![Build Status](https://ci.jenkins.io/buildStatus/icon?job=Plugins/pipeline-aws-plugin/master)](https://ci.jenkins.io/job/Plugins/job/pipeline-aws-plugin/job/master/)
 
 # Features
@@ -13,6 +12,7 @@ This plugins adds Jenkins pipeline steps to interact with the AWS API.
 * [s3Download](#s3download)
 * [s3Copy](#s3copy)
 * [s3Delete](#s3delete)
+* [s3DoesObjectExist](#s3doesobjectexist)
 * [s3FindFiles](#s3findfiles)
 * [s3PresignURL](#s3presignurl)
 * [cfnValidate](#cfnvalidate)
@@ -26,15 +26,38 @@ This plugins adds Jenkins pipeline steps to interact with the AWS API.
 * [cfnDeleteStackSet](#cfndeletestackset)
 * [snsPublish](#snspublish)
 * [deployAPI](#deployapi)
+* [createDeployment](#createDeployment)
 * [awaitDeploymentCompletion](#awaitdeploymentcompletion)
 * [listAWSAccounts](#listawsaccounts)
 * [updateIdP](#updateidp)
 * [setAccountAlias](#setaccountalias)
+* [ecrDeleteImages](#ecrdeleteimages)
+* [ecrListImages](#ecrlistimages)
 * [ecrLogin](#ecrlogin)
+* [ecrSetRepositoryPolicy](#ecrsetrepositorypolicy)
 * [invokeLambda](#invokelambda)
+* [lambdaVersionCleanup](#lambdacleanupversions)
 * [ec2ShareAmi](#ec2ShareAmi)
+* [elbRegisterInstance](#elbRegisterInstance)
+* [elbDeregisterInstance](#elbDeregisterInstance)
+* [elbIsInstanceRegistered](#elbIsInstanceRegistered)
+* [elbIsInstanceDeregistered](#elbIsInstanceDeregistered)
+* [ebCreateApplication](#ebCreateApplication)
+* [ebCreateApplicationVersion](#ebCreateApplicationVersion)
+* [ebCreateConfigurationTemplate](#ebCreateConfigurationTemplate)
+* [ebCreateEnvironment](#ebCreateEnvironment)
+* [ebSwapEnvironmentCNAMEs](#ebSwapEnvironmentCNAMEs)
+* [ebWaitOnEnvironmentStatus](#ebWaitOnEnvironmentStatus)
+* [ebWaitOnEnvironmentHealth](#ebWaitOnEnvironmentHealth)
 
 [**see the changelog for release information**](#changelog)
+
+# Primary/Agent setups
+
+This plugin is not optimized to setups with a primary and multiple agents. 
+Only steps that touch the workspace are executed on the agents while the rest is executed on the master.
+
+For the best experience make sure that primary and agents have the same IAM permission and networking capabilities.
 
 # Usage / Steps
 
@@ -89,7 +112,7 @@ withAWS(profile:'myProfile') {
 Assume role information (account is optional - uses current account as default. externalId, roleSessionName and policy are optional. duration is optional - if specified it represents the maximum amount of time in seconds the session may persist for, defaults to 3600.):
 
 ```groovy
-withAWS(role:'admin', roleAccount:'123456789012', externalId: 'my-external-id', policy: '{"Version":"2012-10-17","Statement":[{"Sid":"Stmt1","Effect":"Deny","Action":"s3:DeleteObject","Resource":"*"}]}', duration: '3600', roleSessionName: 'my-custom-session-name') {
+withAWS(role:'admin', roleAccount:'123456789012', externalId: 'my-external-id', policy: '{"Version":"2012-10-17","Statement":[{"Sid":"Stmt1","Effect":"Deny","Action":"s3:DeleteObject","Resource":"*"}]}', duration: 3600, roleSessionName: 'my-custom-session-name') {
     // do something
 }
 ```
@@ -97,7 +120,7 @@ withAWS(role:'admin', roleAccount:'123456789012', externalId: 'my-external-id', 
 Assume federated user id information (federatedUserId is optional - if specified it generates a set of temporary credentials and allows you to push a federated user id into cloud trail for auditing. duration is optional - if specified it represents the maximum amount of time in seconds the session may persist for, defaults to 3600.):
 
 ```groovy
-withAWS(region:'eu-central-1',credentials:'nameOfSystemCredentials',federatedUserId:"${submitter}@${releaseVersion}", duration: '3600') {
+withAWS(region:'eu-central-1',credentials:'nameOfSystemCredentials',federatedUserId:"${submitter}@${releaseVersion}", duration: 3600) {
     // do something
 }
 ```
@@ -153,13 +176,14 @@ s3Upload(pathStyleAccessEnabled: true, payloadSigningEnabled: true, file:'file.t
 s3Copy(pathStyleAccessEnabled: true, fromBucket:'my-bucket', fromPath:'path/to/source/file.txt', toBucket:'other-bucket', toPath:'path/to/destination/file.txt')
 s3Delete(pathStyleAccessEnabled: true, bucket:'my-bucket', path:'path/to/source/file.txt')
 s3Download(pathStyleAccessEnabled: true, file:'file.txt', bucket:'my-bucket', path:'path/to/source/file.txt', force:true)
+exists = s3DoesObjectExist(pathStyleAccessEnabled: true, bucket:'my-bucket', path:'path/to/source/file.txt')
 files = s3FindFiles(pathStyleAccessEnabled: true, bucket:'my-bucket')
 
 ```
 
 ### s3Upload
 
-Upload a file/folder from the workspace to an S3 bucket.
+Upload a file/folder from the workspace (or a String) to an S3 bucket.
 If the `file` parameter denotes a directory, the complete directory including all subfolders will be uploaded.
 
 ```groovy
@@ -167,10 +191,11 @@ s3Upload(file:'file.txt', bucket:'my-bucket', path:'path/to/target/file.txt')
 s3Upload(file:'someFolder', bucket:'my-bucket', path:'path/to/targetFolder/')
 ```
 
-Another way to use it with include/exclude pattern in a subdirectory (workingDir).
+Another way to use it is with include/exclude patterns which are applied in the specified subdirectory (`workingDir`).
+The option accepts a comma-separated list of patterns.
 
 ```groovy
-s3Upload(bucket:"my-bucket", path:'path/to/targetFolder/', includePathPattern:'**/*', workingDir:'dist', excludePathPattern:'**/*.svg')
+s3Upload(bucket:"my-bucket", path:'path/to/targetFolder/', includePathPattern:'**/*', workingDir:'dist', excludePathPattern:'**/*.svg,**/*.jpg')
 ```
 
 Specific user metadatas can be added to uploaded files
@@ -193,7 +218,7 @@ s3Upload(file:'file.txt', bucket:'my-bucket', contentEncoding: 'gzip')
 Specific content type can be added to uploaded files
 
 ```groovy
-s3Upload(bucket:"my-bucket", path:'path/to/targetFolder/', includePathPattern:'**/*.ttf', workingDir:'dist', contentType:'application/x-font-ttf')
+s3Upload(bucket:"my-bucket", path:'path/to/targetFolder/', includePathPattern:'**/*.ttf', workingDir:'dist', contentType:'application/x-font-ttf', contentDisposition:'attachment')
 ```
 
 Canned ACLs can be added to upload requests.
@@ -221,6 +246,31 @@ A redirect location can be added to uploaded files.
 
 ```groovy
 s3Upload(file: 'file.txt', bucket: 'my-bucket', redirectLocation: '/redirect')
+```
+
+Creating an S3 object by creating the file whose contents is the provided text argument.
+
+```groovy
+s3Upload(path: 'file.txt', bucket: 'my-bucket', text: 'Some Text Content')
+s3Upload(path: 'path/to/targetFolder/file.txt', bucket: 'my-bucket', text: 'Some Text Content')
+```
+
+Tags can be added to uploaded files.
+
+```groovy
+s3Upload(file: 'file.txt', bucket: 'my-bucket', tags: '[tag1:value1, tag2:value2]')
+
+def tags=[:]
+tags["tag1"]="value1"
+tags["tag2"]="value2"
+
+s3Upload(file: 'file.txt', bucket: 'my-bucket', tags: tags.toString())
+```
+
+Log messages can be less verbose. Disable it when you feel the logs are excessive but you will lose the visibility of what files having been uploaded to S3.
+
+```groovy
+s3Upload(path: 'source/path/', bucket: 'my-bucket', verbose: false)
 ```
 
 ### s3Download
@@ -251,6 +301,14 @@ If the path ends in a "/", then the path will be interpreted to be a folder, and
 ```groovy
 s3Delete(bucket:'my-bucket', path:'path/to/source/file.txt')
 s3Delete(bucket:'my-bucket', path:'path/to/sourceFolder/')
+```
+
+### s3DoesObjectExist
+
+Check if object exists in S3 bucket.
+
+```groovy
+exists = s3DoesObjectExist(bucket:'my-bucket', path:'path/to/source/file.txt')
 ```
 
 ### s3FindFiles
@@ -333,19 +391,19 @@ Additionally you can specify a list of tags that are set on the stack and all re
 
 The step returns the outputs of the stack as a map. It also contains special values prefixed with `jenkins`:
 
-* `jenkinsStackUpdateStatus` - "true"/"false" whether the stack was modified or not 
+* `jenkinsStackUpdateStatus` - "true"/"false" whether the stack was modified or not
 
 When cfnUpdate creates a stack and the creation fails, the stack is deleted instead of being left in a broken state.
 
 To prevent running into rate limiting on the AWS API you can change the default polling interval of 1000 ms using the parameter `pollIntervall`. Using the value `0` disables event printing.
 
 ```groovy
-def outputs = cfnUpdate(stack:'my-stack', file:'template.yaml', params:['InstanceType=t2.nano'], keepParams:['Version'], timeoutInMinutes:10, tags:['TagName=Value'], pollInterval:1000)
+def outputs = cfnUpdate(stack:'my-stack', file:'template.yaml', params:['InstanceType=t2.nano'], keepParams:['Version'], timeoutInMinutes:10, tags:['TagName=Value'], notificationARNs:['arn:aws:sns:us-east-1:993852309656:topic'], pollInterval:1000)
 ```
 
 or the parameters can be specified as a map:
 ```groovy
-def outputs = cfnUpdate(stack:'my-stack', file:'template.yaml', params:['InstanceType': 't2.nano'], keepParams:['Version'], timeoutInMinutes:10, tags:['TagName=Value'], pollInterval:1000)
+def outputs = cfnUpdate(stack:'my-stack', file:'template.yaml', params:['InstanceType': 't2.nano'], keepParams:['Version'], timeoutInMinutes:10, tags:['TagName=Value'], notificationARNs:['arn:aws:sns:us-east-1:993852309656:topic'], pollInterval:1000)
 ```
 
 Alternatively, you can specify a URL to a template on S3 (you'll need this if you hit the 51200 byte limit on template):
@@ -389,10 +447,12 @@ Note: When creating a stack, either `file` or `url` are required. When updating 
 
 Remove the given stack from CloudFormation.
 
-To prevent running into rate limiting on the AWS API you can change the default polling interval of 1000 ms using the parameter `pollIntervall`. Using the value `0` disables event printing.
+To prevent running into rate limiting on the AWS API you can change the default polling interval of 1000 ms using the parameter `pollIntervall`. Using the value `0` disables event printing.  
+
+Note: When deleting a stack only 'stack' parameter is required.
 
 ```groovy
-cfnDelete(stack:'my-stack', pollInterval:1000)
+cfnDelete(stack:'my-stack', pollInterval:1000, retainResources :['mylogicalid'], roleArn: 'my-arn', clientRequestToken: 'my-request-token')
 ```
 
 ## cfnDescribe
@@ -424,17 +484,17 @@ Additionally you can specify a list of tags that are set on the stack and all re
 
 The step returns the outputs of the stack as a map. It also contains special values prefixed with `jenkins`:
 
-* `jenkinsStackUpdateStatus` - "true"/"false" whether the stack was modified or not 
+* `jenkinsStackUpdateStatus` - "true"/"false" whether the stack was modified or not
 
 
 To prevent running into rate limiting on the AWS API you can change the default polling interval of 1000 ms using the parameter `pollIntervall`. Using the value `0` disables event printing.
 
 ```groovy
-cfnCreateChangeSet(stack:'my-stack', changeSet:'my-change-set', file:'template.yaml', params:['InstanceType=t2.nano'], keepParams:['Version'], tags:['TagName=Value'], pollInterval:1000)
+cfnCreateChangeSet(stack:'my-stack', changeSet:'my-change-set', file:'template.yaml', params:['InstanceType=t2.nano'], keepParams:['Version'], tags:['TagName=Value'], notificationARNs:['arn:aws:sns:us-east-1:993852309656:topic'], pollInterval:1000)
 ```
 or the parameters can be specified as a map:
 ```groovy
-cfnCreateChangeSet(stack:'my-stack', changeSet:'my-change-set', file:'template.yaml', params:['InstanceType': 't2.nano'], keepParams:['Version'], tags:['TagName=Value'], pollInterval:1000)
+cfnCreateChangeSet(stack:'my-stack', changeSet:'my-change-set', file:'template.yaml', params:['InstanceType': 't2.nano'], keepParams:['Version'], tags:['TagName=Value'], notificationARNs:['arn:aws:sns:us-east-1:993852309656:topic'], pollInterval:1000)
 ```
 
 Alternatively, you can specify a URL to a template on S3 (you'll need this if you hit the 51200 byte limit on template):
@@ -497,6 +557,12 @@ To set a operation preferences:
   cfnUpdateStackSet(stackSet:'myStackSet', url:'https://s3.amazonaws.com/my-templates-bucket/template.yaml', operationPreferences: [failureToleranceCount: 5])
 ```
 
+When the stack set gets really big, the recommendation from AWS is to batch the update requests. This option is *not* part of the AWS API, but is an implementation to facilitate updating a large stack set.
+To automatically batch via region (find all stack instances, group them by region, and submit each region separately): (
+```groovy
+  cfnUpdateStackSet(stackSet:'myStackSet', url:'https://s3.amazonaws.com/my-templates-bucket/template.yaml', batchingOptions: [regions: true])
+```
+
 ## cfnDeleteStackSet
 
 Deletes a stack set.
@@ -528,6 +594,40 @@ Additionally you can specify a description and stage variables.
 
 ```groovy
 deployAPI(api:'myApiId', stage:'Prod', description:"Build: ${env.BUILD_ID}", variables:['key=value'])
+```
+
+## createDeployment
+
+Deploys an application revision through the specified deployment group (AWS CodeDeploy)
+
+From S3 bucket:
+```groovy
+createDeployment(
+        s3Bucket: 'jenkins.bucket',
+        s3Key: 'artifacts/SimpleWebApp.zip',
+        s3BundleType: 'zip', // [Valid values: tar | tgz | zip | YAML | JSON]
+        applicationName: 'SampleWebApp',
+        deploymentGroupName: 'SampleDeploymentGroup',
+        deploymentConfigName: 'CodeDeployDefault.AllAtOnce',
+        description: 'Test deploy',
+        waitForCompletion: 'true',
+        //Optional values 
+        ignoreApplicationStopFailures: 'false',
+        fileExistsBehavior: 'OVERWRITE'// [Valid values: DISALLOW, OVERWRITE, RETAIN]
+)
+```
+
+From GitHub:
+```groovy
+createDeployment(
+        gitHubRepository: 'MykhayloGnylorybov/AwsCodeDeployArtifact',
+        gitHubCommitId: 'e9ee742f44c9a0f97ee3aa94593e7b6aad6e2d14',
+        applicationName: 'SampleWebApp',
+        deploymentGroupName: 'SampleDeploymentGroup',
+        deploymentConfigName: 'CodeDeployDefault.AllAtOnce',
+        description: 'Test deploy',
+        waitForCompletion: 'true'
+)
 ```
 
 ## awaitDeploymentCompletion
@@ -598,6 +698,22 @@ Create or update the AWS account alias.
 setAccountAlias(name: 'awsAlias')
 ```
 
+## ecrDeleteImages
+
+Delete images in a repository.
+
+```groovy
+ecrDeleteImages(repositoryName: 'foo', imageIds: ['imageDigest': 'digest', 'imageTag': 'tag'])
+```
+
+## ecrListImages
+
+List images in a repository.
+
+```groovy
+def images = ecrListImages(repositoryName: 'foo')
+```
+
 ## ecrLogin
 
 Create login string to authenticate docker with the ECR.
@@ -612,6 +728,39 @@ For older versions of docker that need the email parameter use:
 
 ```groovy
 def login = ecrLogin(email:true)
+```
+
+It's also possible to specify AWS accounts to perform ECR login into:
+
+```groovy
+def login = ecrLogin(registryIds: ['123456789', '987654321'])
+```
+
+## ecrSetRepositoryPolicy
+
+Sets the json policy document containing ECR permissions.
+
+* registryId - The AWS account ID associated with the registry that contains the repository.
+* repositoryName - The name of the repository to receive the policy.
+* policyText - The JSON repository policy text to apply to the repository. For more information, see [Amazon ECR Repository Policy Examples](https://docs.aws.amazon.com/AmazonECR/latest/userguide/RepositoryPolicyExamples.html) in the _Amazon Elastic Container Registry User Guide_. 
+
+The step returns the object returned by the command.
+* Note - make sure you set the correct region in the credentials in order to find the repository
+
+```groovy
+def result = ecrSetRepositoryPolicy(registryId: 'my-registryId',
+                                     repositoryName: 'my-repositoryName',
+                                     policyText: 'json-policyText'
+)
+```
+
+```groovy
+def policyFile ="${env.WORKSPACE}/policyText.json"
+def policyText = readFile file: policyFile
+def result = ecrSetRepositoryPolicy(registryId: 'my-registryId',
+                                     repositoryName: 'my-repositoryName',
+                                     policyText: policyText
+)
 ```
 
 ## invokeLambda
@@ -637,22 +786,333 @@ String result = invokeLambda(
 )
 ```
 
+## lambdaVersionCleanup
+
+Cleans up lambda function versions older than the daysAgo flag.
+The main use case around this is for tooling like AWS Serverless Application Model.
+It creates lambda functions, but marks them as `DeletionPolicy: Retain` so the versions are never deleted.
+Overtime, these unused versions will accumulate and the account/region might hit the limit for maximum storage of lambda functions.
+
+```groovy
+lambdaVersionCleanup(
+	functionName: 'myLambdaFunction',
+	daysAgo: 14
+)
+```
+
+To discover and delete all old versions of functions created by a AWS CloudFormation stack:
+
+```groovy
+lambdaVersionCleanup(
+	stackName: 'myStack',
+	daysAgo: 14
+)
+```
+
 ## ec2ShareAmi
 
 Share an AMI image to one or more accounts
 
 ```groovy
 ec2ShareAmi(
-	amiId: 'ami-23842',
-	accountIds: [ "0123456789", "1234567890" ]
+    amiId: 'ami-23842',
+    accountIds: [ "0123456789", "1234567890" ]
+)
+```
+
+## elbRegisterInstance
+
+Registers a target to a Target Group.
+
+```groovy
+elbRegisterInstance(
+    targetGroupARN: 'arn:aws:elasticloadbalancing:us-west-2:123456789:targetgroup/my-load-balancer/123456789',
+    instanceID: 'i-myid',
+    port: 8080
+)
+```
+
+## elbDeregisterInstance
+
+Deregisters a target from a Target Group.
+
+```groovy
+elbDeregisterInstance(
+    targetGroupARN: 'arn:aws:elasticloadbalancing:us-west-2:123456789:targetgroup/my-load-balancer/123456789',
+    instanceID: 'i-myid',
+    port: 8080
+)
+```
+
+## elbIsInstanceRegistered
+
+Check if target has registered and healthy.
+
+The step returns true or false.
+
+
+```groovy
+elbIsInstanceRegistered(
+    targetGroupARN: 'arn:aws:elasticloadbalancing:us-west-2:123456789:targetgroup/my-load-balancer/123456789',
+    instanceID: 'i-myid',
+    port: 8080
+)
+```
+
+## elbIsInstanceDeregistered
+
+Check if target has completed removed from the Target Group.
+
+The step returns true or false.
+
+```groovy
+elbIsInstanceDeregistered(
+    targetGroupARN: 'arn:aws:elasticloadbalancing:us-west-2:123456789:targetgroup/my-load-balancer/123456789',
+    instanceID: 'i-myid',
+    port: 8080
+)
+```
+
+## ebCreateApplication
+Creates a new Elastic Beanstalk application.
+
+Arguments:
+ * applicationName _(Required)_ - Name of the application to be created
+ * description - Descriptive text to add to the application
+
+[AWS reference](https://docs.aws.amazon.com/elasticbeanstalk/latest/api/API_CreateApplication.html)
+
+```groovy
+ebCreateApplication(
+    applicatName: "my-application",
+    description: "My first application"
+)
+```
+
+## ebCreateApplicationVersion
+Creates a new deployable version for an existing Elastic Beanstalk application.
+This version created is based on files uploaded to an S3 bucket, that are used to create a deployable version of the application.
+This version label can be used to deploy a new environment.
+
+Arguments:
+ * applicationName _(Required)_ - Name of the application where the new version should be created
+ * versionLabel _(Required)_ - Name of the version to be created
+ * s3Bucket _(Required)_ - Name of the S3 Bucket where the source code / executable of this version exists
+ * s3Key: _(Required)_ - Path in the S3 Bucket where the source code / executable of this version exists
+ * description - Descriptive text of the application version
+
+[AWS reference](https://docs.aws.amazon.com/elasticbeanstalk/latest/api/API_CreateApplicationVersion.html)
+
+```groovy
+ebCreateApplicationVersion(
+    applicationName: "my-application",
+    versionLabel: "my-application-1.0.0",
+    s3Bucket: "my-bucket",
+    s3Key: "my-application.jar",
+    description: "My first application version"
+)
+```
+
+## ebCreateConfigurationTemplate
+Creates a new deployable version for an existing Elastic Beanstalk application.
+This version created is based on files uploaded to an S3 bucket, that are used to create a deployable version of the application.
+This version label can be used to deploy a new environment.
+
+Arguments:
+ * applicationName _(Required)_ - Name of the application where the new configuration template should be created
+ * templateName _(Required)_ - Name of the configuration template to be created
+ * environmentId - Id of the environment to use as a source for the new configuration template. _Required if no solutionStackName or sourceConfiguration are provided_
+ * solutionStackName - Solution stack string for the new configuration template. List of supported platforms can be seen in 
+[AWS](https://docs.aws.amazon.com/elasticbeanstalk/latest/dg/concepts.platforms.html). _Required if no environmentId or sourceConfiguration are provided_
+ * sourceConfigurationApplication - Name of the application that has the source configuration to copy over. Should be used in conjunction with sourceConfigurationTemplate. _Required if no environmentId or solutionStackName are provided_ 
+ * sourceConfigurationTemplate - Name of the configuration to be used as a source for the new configuration template. Should be used in conjunction with sourceConfigurationApplication. _Required if no environmentId or solutionStackName are provided_
+ * description - Descriptive text of the application configuration template
+
+[AWS reference](https://docs.aws.amazon.com/elasticbeanstalk/latest/api/API_CreateConfigurationTemplate.html)
+
+```groovy
+// Create configuration template based on existing environment
+ebCreateConfigurationTemplate(
+    applicationName: "my-application",
+    templateName: "my-application-production-template",
+    environmentId: "my-application-production",
+    description: "Configuration template for the production environment of my application"
+)
+
+// Create configuration template based on a solution stack
+ebCreateConfigurationTemplate(
+    applicationName: "my-application",
+    templateName: "my-application-production-template",
+    solutionStackName: "64bit Amazon Linux 2018.03 v3.3.9 running Tomcat 8.5 Java 8",
+    description: "Configuration template for the production environment of my application"
+)
+
+// Create configuration template based on an existing configuration template
+ebCreateConfigurationTemplate(
+    applicationName: "my-application",
+    templateName: "my-application-production-template",
+    sourceConfigurationApplication: "my-other-application",
+    sourceConfigurationTemplate: "my-other-application-production-template",
+    description: "Configuration template for the production environment of my application"
+)
+```
+
+## ebCreateEnvironment
+Creates a new environment for an existing Elastic Beanstalk application.
+This environment can be created based on existing configuration templates and application versions for that application.
+
+Arguments:
+ * applicationName _(Required)_ - Name of the application where the new environment should be created
+ * environmentName _(Required)_ - Name of the environment to be created
+ * templateName - Name of the configuration template to use with the environment to be created. _Mutually exclusive with solutionStackName_
+ * solutionStackName - Solution stack string for the new environment. List of supported platforms can be seen in 
+[AWS](https://docs.aws.amazon.com/elasticbeanstalk/latest/dg/concepts.platforms.html). _Mutually exclusive with templateName_
+ * versionLabel - Name of the application version to be deployed in the new environment
+ * updateOnExisting - If set to false the command will throw an exception if the environment already exists. Otherwise, in case the environment already exists, it will be updated. _Defaults to true_
+ * description - Descriptive text of the environment
+
+[AWS reference](https://docs.aws.amazon.com/elasticbeanstalk/latest/api/API_CreateEnvironment.html)
+
+```groovy
+// Create environment from existing configuration template
+ebCreateEnvironment(
+    applicationName: "my-application",
+    environmentName: "production",
+    templateName: "my-application-production-template",
+    versionLabel: "my-application-1.0.0",
+    description: "Production environment of my application"
+)
+
+// Create environment with no configuration template, using a Supported Platform string
+ebCreateEnvironment(
+    applicationName: "my-application",
+    environmentName: "production",
+    solutionStackName: "64bit Amazon Linux 2018.03 v3.3.9 running Tomcat 8.5 Java 8",
+    versionLabel: "my-application-1.0.0",
+    description: "Production environment of my application"
+)
+```
+
+## ebSwapEnvironmentCNAMEs
+Swaps the CNAMEs of the environments. This is useful for [Blue-Green deployments](https://en.wikipedia.org/wiki/Blue-green_deployment).
+
+Arguments:
+ * sourceEnvironmentId - Id of the source environment. _Should be used with destinationEnvironmentId_
+ * sourceEnvironmentName - Name of the source environment. _Should be used with destinationEnvironmentName_
+ * destinationEnvironmentId - Id of the destination environment. _Should be used with sourceEnvironmentId_
+ * destinationEnvironmentName - Name of the destination environment. _Should be used with sourceEnvironmentName_
+
+[AWS reference](https://docs.aws.amazon.com/elasticbeanstalk/latest/api/API_SwapEnvironmentCNAMEs.html  )
+
+```groovy
+// Swap CNAMEs using Ids
+ebSwapEnvironmentCNAMEs(
+    sourceEnvironmentId: "e-65abcdefgh",
+    destinationEnvironmentId: "e-66zxcvbdg"
+)
+
+// Swap CNAMEs using the environment names
+ebCreateEnvironment(
+    sourceEnvironmentName: "production",
+    destinationEnvironmentName: "production-2"
+)
+```
+
+## ebWaitOnEnvironmentStatus
+Waits for environment to be in the specified status. 
+
+This can be used to ensure that the environment is ready to accept commands, like an update, or a termination command.
+Be aware this does not guarantee that the application has finished starting up. 
+If an application has a long startup time, the environment will be ready for new commands before the application has finished the boot.
+
+Arguments:
+ * applicationName - Name of the application of that environment
+ * environmentName - Name of the environment
+ * status - Status to wait for. Valid values: `Launching | Updating | Ready | Terminating | Terminated`. _Defaults to Ready_
+
+```groovy
+// Wait for environment to be ready for new commands
+ebWaitOnEnvironmentStatus(
+    applicationName: "my-application",
+    environmentName: "production"
+)
+
+// Wait for environment to be terminated
+ebWaitOnEnvironmentStatus(
+    applicationName: "my-application",
+    environmentName: "temporary",
+    status: "Terminated"
+)
+```
+
+## ebWaitOnEnvironmentHealth
+Waits for environment to reach the desired health status, and remain there for a minimum amount of time.
+
+This can be used to ensure that the environment has finished the startup process, and that the web application is ready and available.
+
+Arguments:
+ * applicationName _(Required)_ - Name of the application of that environment
+ * environmentName _(Required)_ - Name of the environment
+ * health - Health status to wait for. Valid values: `Green | Yellow | Red | Grey`. _Defaults to Green_
+ * stabilityThreshold - Amount of time (in seconds) to wait before considering the status stable. Can be disabled by setting it to 0. _Defaults to 60_
+
+```groovy
+// Wait for environment health to be green for at least 1 minute
+ebWaitOnEnvironmentHealth(
+    applicationName: "my-application",
+    environmentName: "production"
+)
+
+// Detect immediately if environment becomes red
+ebWaitOnEnvironmentHealth(
+    applicationName: "my-application",
+    environmentName: "temporary",
+    health: "Red",
+    stabilityThreshold: 0
 )
 ```
 
 # Changelog
 
 ## current master
+* Add Elastic Beanstalk steps (`ebCreateApplication, ebCreateApplicationVersion, ebCreateConfigurationTemplate, ebCreateEnvironment, ebSwapEnvironmentCNAMEs, ebWaitOnEnvironmentStatus, ebWaitOnEnvironmentHealth`) 
+* Fix documentation for lambdaVersionCleanup
+* Fix wrong partition detection when assuming role
+* Fix resource listing for lambdaVersionCleanup when using a cloudformation stack with lots of resources
+
+## 1.42
+* Adds new parameters to cfnDelete for roleArn, clientRequestToken, and retainResources.
+* Add ELB methods to mangage instances during deployemnts ( [elbRegisterInstance](#elbRegisterInstance), [elbDeregisterInstance](#elbDeregisterInstance), [elbIsInstanceRegistered](#elbIsInstanceRegistered), [elbIsInstanceDeregistered](#elbIsInstanceDeregistered) )
+* Add tags to files uploaded with S3Upload
+* Add `createDeployment` step
+* fix `cfnExecuteChangeSet` when no resource change (#210)
+
+## 1.41
+* Add batching support for cfnUpdateStackSet
+* Retry stack set deployments on LimitExceededException when there are too many StackSet operations occuring.
+
+## 1.40
+* add `registryIds` argument to `ecrLogin`
+* fix CloudFormation CreateChangeSet for a stack with IN_REVIEW state
+* Add lambdaCleanupVersions
+* Add ecrSetRepositoryPolicy
+
+## 1.39
+* add `notificationARNs` argument to `cfnUpdate` and `cfnUpdateStackSet`
+* Handle `Stopped` status for CodeDeployment deployments
+
+## 1.38
+* Add ecrListImages
+* Add ecrDeleteImages
+* Fix instances of TransferManger from aws-sdk were never closed properly
+* add `s3DoesObjectExist` step
+
+## 1.37
 * add `parent` argument to `listAWSAccounts`
+* Add Xerces dependency to fix #117
+* Add ability to upload a String to an S3 object by adding `text` option to `s3Upload`
 * Add redirect location option to `s3Upload`
+* Add support for SessionToken when using iamMfaToken #170
 
 ## 1.36
 * add `jenkinsStackUpdateStatus` to stack outputs. Specifies if stack was modified

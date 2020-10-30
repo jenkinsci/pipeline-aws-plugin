@@ -20,6 +20,7 @@ import com.amazonaws.client.builder.AwsSyncClientBuilder;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.transfer.MultipleFileUpload;
 import com.amazonaws.services.s3.transfer.ObjectMetadataProvider;
+import com.amazonaws.services.s3.transfer.ObjectTaggingProvider;
 import com.amazonaws.services.s3.transfer.TransferManager;
 import com.amazonaws.services.s3.transfer.TransferManagerBuilder;
 import hudson.model.Run;
@@ -83,7 +84,7 @@ public class S3UploadStepTransferManagerIntegrationTest {
 		);
 
 		MultipleFileUpload upload = Mockito.mock(MultipleFileUpload.class);
-		Mockito.when(transferManager.uploadFileList(Mockito.eq("test-bucket"), Mockito.eq(""), Mockito.any(File.class), Mockito.any(List.class), Mockito.any(ObjectMetadataProvider.class)))
+		Mockito.when(transferManager.uploadFileList(Mockito.eq("test-bucket"), Mockito.eq(""), Mockito.any(File.class), Mockito.any(List.class), Mockito.any(ObjectMetadataProvider.class), Mockito.any(ObjectTaggingProvider.class)))
 				.thenReturn(upload);
 		Mockito.when(upload.getSubTransfers()).thenReturn(Collections.emptyList());
 
@@ -97,9 +98,11 @@ public class S3UploadStepTransferManagerIntegrationTest {
 				Mockito.eq(""),
 				captorDirectory.capture(),
 				captor.capture(),
-				Mockito.any(ObjectMetadataProvider.class));
+				Mockito.any(ObjectMetadataProvider.class),
+				Mockito.any(ObjectTaggingProvider.class));
 		Mockito.verify(upload).getSubTransfers();
 		Mockito.verify(upload).waitForCompletion();
+		Mockito.verify(transferManager).shutdownNow();
 		Mockito.verifyNoMoreInteractions(transferManager, upload);
 
 		Assert.assertEquals(1, captor.getValue().size());

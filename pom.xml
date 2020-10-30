@@ -9,7 +9,7 @@
     </parent>
     <groupId>de.taimos</groupId>
     <artifactId>pipeline-aws</artifactId>
-    <version>1.37-SNAPSHOT</version>
+    <version>1.43-SNAPSHOT</version>
     <packaging>hpi</packaging>
     <name>Pipeline: AWS Steps</name>
     <description>This plugins adds Jenkins pipeline steps to interact with the AWS API</description>
@@ -25,7 +25,7 @@
             <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
             <distribution>repo</distribution></license>
     </licenses>
-    <url>https://wiki.jenkins.io/display/JENKINS/Pipeline+AWS+Plugin</url>
+    <url>https://github.com/jenkinsci/pipeline-aws-plugin</url>
     <organization>
         <name>Taimos GmbH</name>
         <url>https://www.taimos.de</url>
@@ -73,6 +73,23 @@
     <build>
     <plugins>
       <plugin>
+        <artifactId>maven-enforcer-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>display-info</id>
+              <configuration>
+                <rules>
+                  <enforceBytecodeVersion>
+                    <excludes combine.children="append">
+                      <exclude>org.projectlombok:lombok</exclude>
+                    </excludes>
+                  </enforceBytecodeVersion>
+                </rules>
+              </configuration>
+            </execution>
+          </executions>
+      </plugin>
+      <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-checkstyle-plugin</artifactId>
         <version>3.0.0</version>
@@ -99,7 +116,7 @@
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
-            <version>1.16.6</version>
+            <version>1.18.6</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
@@ -140,7 +157,12 @@
         <dependency>
             <groupId>org.yaml</groupId>
             <artifactId>snakeyaml</artifactId>
-            <version>1.20</version>
+            <version>1.26</version>
+        </dependency>
+        <dependency>
+            <groupId>xerces</groupId>
+            <artifactId>xercesImpl</artifactId>
+            <version>2.12.0</version>
         </dependency>
 
         <dependency>

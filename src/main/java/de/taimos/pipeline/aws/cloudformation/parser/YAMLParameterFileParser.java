@@ -29,6 +29,7 @@ import java.util.Collection;
 import java.util.Map;
 
 import org.yaml.snakeyaml.Yaml;
+import org.yaml.snakeyaml.constructor.SafeConstructor;
 
 import com.amazonaws.services.cloudformation.model.Parameter;
 import com.google.common.base.Charsets;
@@ -38,7 +39,7 @@ public class YAMLParameterFileParser implements ParameterFileParser {
 
 	@Override
 	public Collection<Parameter> parseParams(InputStream fileContent) throws IOException {
-		Yaml yaml = new Yaml();
+		Yaml yaml = new Yaml(new SafeConstructor());
 		@SuppressWarnings("unchecked")
 		Map<String, Object> parse = yaml.load(new InputStreamReader(fileContent, Charsets.UTF_8));
 

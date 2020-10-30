@@ -58,6 +58,7 @@ public class S3CopyStep extends AbstractS3Step {
 	private CannedAccessControlList acl;
 	private String cacheControl;
 	private String contentType;
+	private String contentDisposition;
 	private String sseAlgorithm;
 
 	@DataBoundConstructor
@@ -138,6 +139,15 @@ public class S3CopyStep extends AbstractS3Step {
 		this.contentType = contentType;
 	}
 
+	public String getContentDisposition() {
+		return this.contentDisposition;
+	}
+
+	@DataBoundSetter
+	public void setContentDisposition(String contentDisposition) {
+		this.contentDisposition = contentDisposition;
+	}
+
 	public String getSseAlgorithm() {
 		return this.sseAlgorithm;
 	}
@@ -194,6 +204,7 @@ public class S3CopyStep extends AbstractS3Step {
 			final CannedAccessControlList acl = this.step.getAcl();
 			final String cacheControl = this.step.getCacheControl();
 			final String contentType = this.step.getContentType();
+			final String contentDisposition = this.step.getContentDisposition();
 			final String sseAlgorithm = this.step.getSseAlgorithm();
 			final S3ClientOptions s3ClientOptions = this.step.createS3ClientOptions();
 			final EnvVars envVars = this.getContext().get(EnvVars.class);
@@ -217,7 +228,7 @@ public class S3CopyStep extends AbstractS3Step {
 			CopyObjectRequest request = new CopyObjectRequest(fromBucket, fromPath, toBucket, toPath);
 
 			// Add metadata
-			if (metadatas.size() > 0 || (cacheControl != null && !cacheControl.isEmpty()) || (contentType != null && !contentType.isEmpty()) || (sseAlgorithm != null && !sseAlgorithm.isEmpty())) {
+			if (metadatas.size() > 0 || (cacheControl != null && !cacheControl.isEmpty()) || (contentType != null && !contentType.isEmpty()) || (contentDisposition != null && !contentDisposition.isEmpty())|| (sseAlgorithm != null && !sseAlgorithm.isEmpty())) {
 				ObjectMetadata metas = new ObjectMetadata();
 				if (metadatas.size() > 0) {
 					metas.setUserMetadata(metadatas);
@@ -227,6 +238,9 @@ public class S3CopyStep extends AbstractS3Step {
 				}
 				if (contentType != null && !contentType.isEmpty()) {
 					metas.setContentType(contentType);
+				}
+				if (contentDisposition != null && !contentDisposition.isEmpty()) {
+					metas.setContentDisposition(contentDisposition);
 				}
 				if (sseAlgorithm != null && !sseAlgorithm.isEmpty()) {
 					metas.setSSEAlgorithm(sseAlgorithm);
@@ -248,13 +262,18 @@ public class S3CopyStep extends AbstractS3Step {
 			TransferManager mgr = TransferManagerBuilder.standard()
 					.withS3Client(AWSClientFactory.create(s3ClientOptions.createAmazonS3ClientBuilder(), envVars))
 					.build();
-			final Copy copy = mgr.copy(request);
-			copy.addProgressListener((ProgressListener) progressEvent -> {
-				if (progressEvent.getEventType() == ProgressEventType.TRANSFER_COMPLETED_EVENT) {
-					listener.getLogger().println("Finished: " + copy.getDescription());
-				}
-			});
-			copy.waitForCompletion();
+			try {
+				final Copy copy = mgr.copy(request);
+				copy.addProgressListener((ProgressListener) progressEvent -> {
+					if (progressEvent.getEventType() == ProgressEventType.TRANSFER_COMPLETED_EVENT) {
+						listener.getLogger().println("Finished: " + copy.getDescription());
+					}
+				});
+				copy.waitForCompletion();
+			}
+			finally{
+				mgr.shutdownNow();
+			}
 
 			listener.getLogger().println("Copy complete");
 			return String.format("s3://%s/%s", toBucket, toPath);

@@ -38,6 +38,7 @@ import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
 
 import com.amazonaws.auth.AWSCredentials;
+import com.amazonaws.auth.BasicSessionCredentials;
 import com.amazonaws.services.securitytoken.AWSSecurityTokenService;
 import com.amazonaws.services.securitytoken.AWSSecurityTokenServiceClientBuilder;
 import com.amazonaws.services.securitytoken.model.Credentials;
@@ -349,6 +350,8 @@ public class WithAWSStep extends Step {
 						// with this token.
 						this.getContext().get(TaskListener.class).getLogger().format("Constructing AWS Credentials utilizing MFA Token");
 						awsCredentials = amazonWebServicesCredentials.getCredentials(this.step.getIamMfaToken());
+						BasicSessionCredentials basicSessionCredentials = (BasicSessionCredentials) awsCredentials;
+						localEnv.override(AWSClientFactory.AWS_SESSION_TOKEN, basicSessionCredentials.getSessionToken());
 					}
 
 					localEnv.override(AWSClientFactory.AWS_ACCESS_KEY_ID, awsCredentials.getAWSAccessKeyId());
@@ -369,7 +372,7 @@ public class WithAWSStep extends Step {
 				AWSSecurityTokenService sts = AWSClientFactory.create(AWSSecurityTokenServiceClientBuilder.standard(), this.envVars);
 
 				AssumeRole assumeRole = IamRoleUtils.validRoleArn(this.step.getRole()) ? new AssumeRole(this.step.getRole()) :
-						new AssumeRole(this.step.getRole(), this.createAccountId(sts), IamRoleUtils.selectPartitionName(this.step.getRegion()));
+						new AssumeRole(this.step.getRole(), this.createAccountId(sts), this.step.getRegion());
 				assumeRole.withDurationSeconds(this.step.getDuration());
 				assumeRole.withExternalId(this.step.getExternalId());
 				assumeRole.withPolicy(this.step.getPolicy());
@@ -377,6 +380,7 @@ public class WithAWSStep extends Step {
 				assumeRole.withSessionName(this.createRoleSessionName());
 
 				this.getContext().get(TaskListener.class).getLogger().format("Requesting assume role");
+				this.getContext().get(TaskListener.class).getLogger().format("Assuming role ARN is %s", assumeRole.toString());
 				AssumedRole assumedRole = assumeRole.assumedRole(sts);
 				this.getContext().get(TaskListener.class).getLogger().format("Assumed role %s with id %s %n ", assumedRole.getAssumedRoleUser().getArn(), assumedRole.getAssumedRoleUser().getAssumedRoleId());
 

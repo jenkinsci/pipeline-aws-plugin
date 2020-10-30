@@ -87,9 +87,9 @@ abstract class AbstractCFNCreateStep extends TemplateStepBase {
 
 		protected abstract void checkPreconditions();
 
-		protected abstract T whenStackExists(Collection<Parameter> parameters, Collection<Tag> tags, RollbackConfiguration rollbackConfiguration) throws Exception;
+		protected abstract T whenStackExists(Collection<Parameter> parameters, Collection<Tag> tags, Collection<String> notificationARNs, RollbackConfiguration rollbackConfiguration) throws Exception;
 
-		protected abstract T whenStackMissing(Collection<Parameter> parameters, Collection<Tag> tags) throws Exception;
+		protected abstract T whenStackMissing(Collection<Parameter> parameters, Collection<Tag> tags, Collection<String> notificationARNs) throws Exception;
 
 		private String getStack() {
 			return this.getStep().getStack();
@@ -124,10 +124,10 @@ abstract class AbstractCFNCreateStep extends TemplateStepBase {
 			CloudFormationStack cfnStack = new CloudFormationStack(client, stack, Execution.this.getListener());
 			if (cfnStack.exists()) {
 				Collection<Parameter> parameters = ParameterParser.parseWithKeepParams(Execution.this.getWorkspace(), Execution.this.getStep());
-				return Execution.this.whenStackExists(parameters, Execution.this.getStep().getAwsTags(Execution.this), Execution.this.getStep().getRollbackConfiguration());
+				return Execution.this.whenStackExists(parameters, Execution.this.getStep().getAwsTags(Execution.this), Execution.this.getStep().getAwsNotificationARNs(), Execution.this.getStep().getRollbackConfiguration());
 			} else if (create) {
 				Collection<Parameter> parameters = ParameterParser.parse(Execution.this.getWorkspace(), Execution.this.getStep());
-				return Execution.this.whenStackMissing(parameters, Execution.this.getStep().getAwsTags(Execution.this));
+				return Execution.this.whenStackMissing(parameters, Execution.this.getStep().getAwsTags(Execution.this), Execution.this.getStep().getAwsNotificationARNs());
 			} else {
 				Execution.this.getListener().getLogger().println("No stack found with the name and skipped creation due to configuration.");
 				return null;

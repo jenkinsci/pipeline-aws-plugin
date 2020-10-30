@@ -3,6 +3,9 @@
 	<f:entry title="${%File}" field="file">
 		<f:textbox />
 	</f:entry>
+	<f:entry title="${%Text}" field="text">
+		<f:textbox />
+	</f:entry>
 	<f:entry title="${%Bucket}" field="bucket">
 		<f:textbox />
 	</f:entry>
@@ -48,4 +51,7 @@
 	<f:entry title="${%Redirect Location}" field="redirectLocation">
 		<f:textbox />
 	</f:entry>
+    <f:entry title="${%Tags}" field="tags">
+        <f:textbox />
+    </f:entry>
 </j:jelly>

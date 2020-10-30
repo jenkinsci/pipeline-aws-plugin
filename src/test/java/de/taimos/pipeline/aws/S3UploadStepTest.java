@@ -34,18 +34,29 @@ public class S3UploadStepTest {
 	public void gettersWorkAsExpectedForFileCase() throws Exception {
 		S3UploadStep step = new S3UploadStep("my-bucket", false, false);
 		step.setFile("my-file");
+		step.setText("my content text");
 		step.setKmsId("alias/foo");
 		step.setAcl(CannedAccessControlList.PublicRead);
 		step.setCacheControl("my-cachecontrol");
 		step.setSseAlgorithm("AES256");
 		step.setRedirectLocation("/redirect");
 		Assert.assertEquals("my-file", step.getFile());
+		Assert.assertEquals("my content text", step.getText());
 		Assert.assertEquals("my-bucket", step.getBucket());
 		Assert.assertEquals(CannedAccessControlList.PublicRead, step.getAcl());
 		Assert.assertEquals("my-cachecontrol", step.getCacheControl());
 		Assert.assertEquals("AES256", step.getSseAlgorithm());
 		Assert.assertEquals("alias/foo", step.getKmsId());
 		Assert.assertEquals("/redirect", step.getRedirectLocation());
+	}
+
+	@Test
+	public void gettersWorkAsExpectedForContentDisposition() throws Exception {
+		S3UploadStep step = new S3UploadStep("my-bucket", false, false);
+		step.setFile("my-file");
+		step.setContentDisposition("attachment");
+		Assert.assertEquals("my-file", step.getFile());
+		Assert.assertEquals("attachment", step.getContentDisposition());
 	}
 
 	@Test
