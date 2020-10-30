@@ -325,7 +325,6 @@ public class S3UploadStep extends AbstractS3Step {
 			final boolean verbose = this.step.getVerbose();
 			boolean omitSourcePath = false;
 			boolean sendingText = false;
-			String localPath = null;
 
 			if (this.step.getMetadatas() != null && this.step.getMetadatas().length != 0) {
 				for (String metadata : this.step.getMetadatas()) {
@@ -346,7 +345,7 @@ public class S3UploadStep extends AbstractS3Step {
 			}
 
 			Preconditions.checkArgument(bucket != null && !bucket.isEmpty(), "Bucket must not be null or empty");
-			Preconditions.checkArgument(file != null || includePathPattern != null, "File or IncludePathPattern must not be null");
+			Preconditions.checkArgument(text != null || file != null || includePathPattern != null, "File or IncludePathPattern must not be null");
 			Preconditions.checkArgument(includePathPattern == null || file == null, "File and IncludePathPattern cannot be use together");
 
 			final List<FilePath> children = new ArrayList<>();
@@ -371,7 +370,7 @@ public class S3UploadStep extends AbstractS3Step {
 			TaskListener listener = Execution.this.getContext().get(TaskListener.class);
 
 			if (sendingText) {
-				listener.getLogger().format("Uploading text string to s3://%s/%s %n", bucket, localPath);
+				listener.getLogger().format("Uploading text string to s3://%s/%s %n", bucket, path);
 
 				S3ClientOptions amazonS3ClientOptions = Execution.this.step.createS3ClientOptions();
 				EnvVars envVars = Execution.this.getContext().get(EnvVars.class);
@@ -447,7 +446,7 @@ public class S3UploadStep extends AbstractS3Step {
 				}
 
 				listener.getLogger().println("Upload complete");
-				return String.format("s3://%s/%s", bucket, localPath);
+				return String.format("s3://%s/%s", bucket, path);
 			} else if (children.isEmpty()) {
 				listener.getLogger().println("Nothing to upload");
 				return null;
