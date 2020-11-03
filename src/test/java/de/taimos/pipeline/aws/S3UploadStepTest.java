@@ -97,7 +97,7 @@ public class S3UploadStepTest {
 	}
 
 	@Test
-	public void doNotAcceptFileAndIncludePathPatternArguments() throws Exception {
+	public void doNotAcceptFileAndIncludePathPatternArgumentsFilePattern() throws Exception {
 		S3UploadStep step = new S3UploadStep("my-bucket", false, false);
 		step.setFile("file.txt");
 		step.setIncludePathPattern("*.txt");
@@ -108,7 +108,7 @@ public class S3UploadStepTest {
 	}
 
 	@Test
-	public void doNotAcceptFileAndIncludePathPatternArguments() throws Exception {
+	public void doNotAcceptFileAndIncludePathPatternArgumentsTextPattern() throws Exception {
 		S3UploadStep step = new S3UploadStep("my-bucket", false, false);
 		step.setText("Just some text content.");
 		step.setIncludePathPattern("*.txt");
@@ -119,7 +119,7 @@ public class S3UploadStepTest {
 	}
 
 	@Test
-	public void doNotAcceptFileAndIncludePathPatternArguments() throws Exception {
+	public void doNotAcceptFileAndIncludePathPatternArgumentsFileText() throws Exception {
 		S3UploadStep step = new S3UploadStep("my-bucket", false, false);
 		step.setFile("file.txt");
 		step.setText("Just some text content.");
