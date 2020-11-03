@@ -347,8 +347,8 @@ public class S3UploadStep extends AbstractS3Step {
 			Preconditions.checkArgument(bucket != null && !bucket.isEmpty(), "Bucket must not be null or empty");
 			Preconditions.checkArgument(text != null || file != null || includePathPattern != null, "At least one argument of Text, File or IncludePathPattern must be included");
 			Preconditions.checkArgument(includePathPattern == null || file == null, "File and IncludePathPattern cannot be used together");
-			Preconditions.checkArgument(text == null || file == null, "Text and IncludePathPattern cannot be used together");
-			Preconditions.checkArgument(includePathPattern == null || text == null, "File and Text cannot be used together");
+			Preconditions.checkArgument(text == null || file == null, "Text and File cannot be used together");
+			Preconditions.checkArgument(includePathPattern == null || text == null, "IncludePathPattern and Text cannot be used together");
 
 			final List<FilePath> children = new ArrayList<>();
 			final FilePath dir;
