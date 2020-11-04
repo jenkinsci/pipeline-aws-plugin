@@ -115,7 +115,7 @@ public class S3UploadStepTest {
 		S3UploadStep.Execution execution = new S3UploadStep.Execution(step, Mockito.mock(StepContext.class));
 		Throwable t = Assertions.catchThrowable(execution::run);
 		Assert.assertTrue(t instanceof IllegalArgumentException);
-		Assert.assertEquals("IncludePattern and Text cannot be used together", t.getMessage());
+		Assert.assertEquals("IncludePathPattern and Text cannot be used together", t.getMessage());
 	}
 
 	@Test
