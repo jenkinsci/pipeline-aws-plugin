@@ -82,6 +82,7 @@ public class WithAWSStep extends Step {
 	private String roleSessionName;
 	private String principalArn = "";
 	private String samlAssertion = "";
+	private boolean fromNode = false;
 
 	@DataBoundConstructor
 	public WithAWSStep() {
@@ -214,6 +215,15 @@ public class WithAWSStep extends Step {
 		this.samlAssertion = samlAssertion;
 	}
 
+	public boolean getFromNode() {
+		return this.fromNode;
+	}
+
+	@DataBoundSetter
+	public void setFromNode(final boolean fromNode) {
+		this.fromNode = fromNode;
+	}
+
 	@Override
 	public StepExecution start(StepContext context) throws Exception {
 		return new WithAWSStep.Execution(this, context);
@@ -279,6 +289,7 @@ public class WithAWSStep extends Step {
 			this.step = step;
 			try {
 				this.envVars = context.get(EnvVars.class);
+				this.envVars.put(AWSClientFactory.AWS_PIPELINE_STEPS_FROM_NODE, String.valueOf(this.step.getFromNode()));
 			} catch (Exception e) {
 				throw new IllegalStateException(e);
 			}
@@ -380,7 +391,7 @@ public class WithAWSStep extends Step {
 				assumeRole.withSamlAssertion(this.step.getSamlAssertion(), this.step.getPrincipalArn());
 				assumeRole.withSessionName(this.createRoleSessionName());
 
-				this.getContext().get(TaskListener.class).getLogger().format("Requesting assume role");
+				this.getContext().get(TaskListener.class).getLogger().format("Requesting assume role\n");
 				this.getContext().get(TaskListener.class).getLogger().format("Assuming role ARN is %s", assumeRole.toString());
 				AssumedRole assumedRole = assumeRole.assumedRole(sts);
 				this.getContext().get(TaskListener.class).getLogger().format("Assumed role %s with id %s %n ", assumedRole.getAssumedRoleUser().getArn(), assumedRole.getAssumedRoleUser().getAssumedRoleId());

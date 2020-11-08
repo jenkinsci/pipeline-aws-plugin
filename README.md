@@ -138,6 +138,16 @@ withAWS(role: 'myRole', roleAccount: '123456789', principalArn: 'arn:aws:iam::12
 }
 ```
 
+Authentication by retrieving credentials from the node in scope
+
+```groovy
+node('myNode') { // Credentials will be fetched from this node
+  withAWS(role: 'myRole', roleAccount: '123456789', region:'eu-west-1', fromNode: true) {
+    // do something
+  }
+}
+```
+
 When you use Jenkins Declarative Pipelines you can also use `withAWS` in an options block:
 
 ```groovy

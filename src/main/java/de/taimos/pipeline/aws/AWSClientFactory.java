@@ -55,6 +55,8 @@ public class AWSClientFactory implements Serializable {
 	static final String AWS_DEFAULT_REGION = "AWS_DEFAULT_REGION";
 	static final String AWS_REGION = "AWS_REGION";
 	static final String AWS_ENDPOINT_URL = "AWS_ENDPOINT_URL";
+	static final String AWS_PIPELINE_STEPS_FROM_NODE = "AWS_PIPELINE_STEPS_FROM_NODE";
+
 
 	private AWSClientFactory() {
 		//
@@ -111,11 +113,13 @@ public class AWSClientFactory implements Serializable {
 			return provider;
 		}
 
-		if (PluginImpl.getInstance().isEnableCredentialsFromNode() && context != null) {
-			try {
-				return AWSClientFactory.getCredentialsFromNode(context, vars);
-			} catch (Exception e) {
-				throw new RuntimeException("Unable to retrieve credentials from node.");
+		if (context != null) {
+			if (PluginImpl.getInstance().isEnableCredentialsFromNode() || Boolean.valueOf(vars.get(AWS_PIPELINE_STEPS_FROM_NODE))) {
+				try {
+					return AWSClientFactory.getCredentialsFromNode(context, vars);
+				} catch (Exception e) {
+					throw new RuntimeException("Unable to retrieve credentials from node.");
+				}
 			}
 		}
 
