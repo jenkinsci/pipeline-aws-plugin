@@ -391,7 +391,7 @@ public class WithAWSStep extends Step {
 				assumeRole.withSamlAssertion(this.step.getSamlAssertion(), this.step.getPrincipalArn());
 				assumeRole.withSessionName(this.createRoleSessionName());
 
-				this.getContext().get(TaskListener.class).getLogger().format("Requesting assume role\n");
+				this.getContext().get(TaskListener.class).getLogger().format("Requesting assume role%n");
 				this.getContext().get(TaskListener.class).getLogger().format("Assuming role ARN is %s", assumeRole.toString());
 				AssumedRole assumedRole = assumeRole.assumedRole(sts);
 				this.getContext().get(TaskListener.class).getLogger().format("Assumed role %s with id %s %n ", assumedRole.getAssumedRoleUser().getArn(), assumedRole.getAssumedRoleUser().getAssumedRoleId());
