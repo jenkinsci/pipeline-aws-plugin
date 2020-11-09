@@ -82,7 +82,7 @@ public class WithAWSStep extends Step {
 	private String roleSessionName;
 	private String principalArn = "";
 	private String samlAssertion = "";
-	private boolean fromNode = false;
+	private boolean useNode = false;
 
 	@DataBoundConstructor
 	public WithAWSStep() {
@@ -215,13 +215,13 @@ public class WithAWSStep extends Step {
 		this.samlAssertion = samlAssertion;
 	}
 
-	public boolean getFromNode() {
-		return this.fromNode;
+	public boolean getUseNode() {
+		return this.useNode;
 	}
 
 	@DataBoundSetter
-	public void setFromNode(final boolean fromNode) {
-		this.fromNode = fromNode;
+	public void setUseNode(final boolean useNode) {
+		this.useNode = useNode;
 	}
 
 	@Override
@@ -289,7 +289,7 @@ public class WithAWSStep extends Step {
 			this.step = step;
 			try {
 				this.envVars = context.get(EnvVars.class);
-				this.envVars.put(AWSClientFactory.AWS_PIPELINE_STEPS_FROM_NODE, String.valueOf(this.step.getFromNode()));
+				this.envVars.put(AWSClientFactory.AWS_PIPELINE_STEPS_FROM_NODE, String.valueOf(this.step.getUseNode()));
 			} catch (Exception e) {
 				throw new IllegalStateException(e);
 			}

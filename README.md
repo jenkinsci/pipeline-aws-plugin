@@ -142,7 +142,7 @@ Authentication by retrieving credentials from the node in scope
 
 ```groovy
 node('myNode') { // Credentials will be fetched from this node
-  withAWS(role: 'myRole', roleAccount: '123456789', region:'eu-west-1', fromNode: true) {
+  withAWS(role: 'myRole', roleAccount: '123456789', region:'eu-west-1', useNode: true) {
     // do something
   }
 }
