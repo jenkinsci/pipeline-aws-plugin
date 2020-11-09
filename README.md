@@ -62,7 +62,7 @@ For the best experience make sure that primary and agents have the same IAM perm
 ## Retrieve credentials from node
 
 By default, credentials lookup is done on the master node for all steps.
-To enable credentials lookup on the current node, enable `Retrieve credentials from node` in Jenkins global configuration.
+To enable credentials lookup on the current node, enable `Retrieve credentials from node` in Jenkins global configuration. This is globally applicable and restricts all access to the master's credentials.
 
 # Usage / Steps
 
