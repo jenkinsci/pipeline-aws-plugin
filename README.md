@@ -1094,6 +1094,7 @@ ebWaitOnEnvironmentHealth(
 * Fix documentation for lambdaVersionCleanup
 * Fix wrong partition detection when assuming role
 * Fix resource listing for lambdaVersionCleanup when using a cloudformation stack with lots of resources
+* Fix issues around S3UploadFile with text string argument
 
 ## 1.42
 * Adds new parameters to cfnDelete for roleArn, clientRequestToken, and retainResources.
