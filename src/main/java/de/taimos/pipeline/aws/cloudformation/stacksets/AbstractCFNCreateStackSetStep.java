@@ -42,6 +42,7 @@ import org.kohsuke.stapler.DataBoundSetter;
 import javax.annotation.Nonnull;
 import java.io.IOException;
 import java.util.Collection;
+import java.util.Objects;
 
 abstract class AbstractCFNCreateStackSetStep extends TemplateStepBase {
 
