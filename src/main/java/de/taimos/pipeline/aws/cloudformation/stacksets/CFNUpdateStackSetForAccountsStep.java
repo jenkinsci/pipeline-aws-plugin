@@ -181,7 +181,7 @@ public class CFNUpdateStackSetForAccountsStep extends AbstractCFNCreateStackSetS
 			CloudFormationStackSet cfnStackSet = this.getCfnStackSet();
 			cfnStackSet.create(this.getStep().readTemplate(this), url, parameters, tags,
 					this.getStep().getAdministratorRoleArn(), this.getStep().getExecutionRoleName());
-			DescribeStackSetResult describeResult = cfnStackSet.waitForStackState(StackSetStatus.ACTIVE, getStep().getPollConfiguration().getPollInterval());
+			cfnStackSet.waitForStackState(StackSetStatus.ACTIVE, getStep().getPollConfiguration().getPollInterval());
 			this.getListener().getLogger().format("Creation of Stackset completed");
 			CreateStackInstancesResult stackInstanceCreate = cfnStackSet.createStackInstances(this.getStep().getAccounts(), this.getStep().getRegions());
 			String getOpsId = stackInstanceCreate.getOperationId();
