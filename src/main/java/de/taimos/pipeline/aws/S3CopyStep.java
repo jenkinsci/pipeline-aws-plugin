@@ -260,7 +260,7 @@ public class S3CopyStep extends AbstractS3Step {
 			}
 
 			TransferManager mgr = TransferManagerBuilder.standard()
-					.withS3Client(AWSClientFactory.create(s3ClientOptions.createAmazonS3ClientBuilder(), envVars))
+					.withS3Client(AWSClientFactory.create(s3ClientOptions.createAmazonS3ClientBuilder(), this.getContext(), envVars))
 					.build();
 			try {
 				final Copy copy = mgr.copy(request);

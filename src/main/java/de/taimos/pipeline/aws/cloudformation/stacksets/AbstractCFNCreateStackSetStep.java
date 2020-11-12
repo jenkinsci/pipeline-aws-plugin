@@ -120,7 +120,7 @@ abstract class AbstractCFNCreateStackSetStep extends TemplateStepBase {
 
 			this.checkPreconditions();
 
-			AmazonCloudFormation client = AWSClientFactory.create(AmazonCloudFormationClientBuilder.standard(), Execution.this.getEnvVars());
+			AmazonCloudFormation client = AWSClientFactory.create(AmazonCloudFormationClientBuilder.standard(), Execution.this.getContext(), Execution.this.getEnvVars());
 			CloudFormationStackSet cfnStackSet = new CloudFormationStackSet(client, stackSet, Execution.this.getListener(), SleepStrategy.EXPONENTIAL_BACKOFF_STRATEGY);
 			if (cfnStackSet.exists()) {
 				Collection<Parameter> parameters = ParameterParser.parseWithKeepParams(getWorkspace(), getStep());
@@ -135,7 +135,7 @@ abstract class AbstractCFNCreateStackSetStep extends TemplateStepBase {
 		}
 
 		protected CloudFormationStackSet getCfnStackSet() {
-			AmazonCloudFormation client = AWSClientFactory.create(AmazonCloudFormationClientBuilder.standard(), this.getEnvVars());
+			AmazonCloudFormation client = AWSClientFactory.create(AmazonCloudFormationClientBuilder.standard(), this.getContext(), this.getEnvVars());
 			return new CloudFormationStackSet(client, this.getStackSet(), this.getListener(), SleepStrategy.EXPONENTIAL_BACKOFF_STRATEGY);
 		}
 

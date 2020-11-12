@@ -378,7 +378,7 @@ public class S3UploadStep extends AbstractS3Step {
 				EnvVars envVars = Execution.this.getContext().get(EnvVars.class);
 
 				TransferManager mgr = TransferManagerBuilder.standard()
-						.withS3Client(AWSClientFactory.create(amazonS3ClientOptions.createAmazonS3ClientBuilder(), envVars))
+						.withS3Client(AWSClientFactory.create(amazonS3ClientOptions.createAmazonS3ClientBuilder(), Execution.this.getContext(), envVars))
 						.build();
 
 				byte[] bytes = text.getBytes(Charset.forName("UTF-8"));

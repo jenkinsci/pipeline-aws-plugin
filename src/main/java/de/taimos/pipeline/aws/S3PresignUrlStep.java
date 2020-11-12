@@ -124,7 +124,7 @@ public class S3PresignUrlStep extends AbstractS3Step {
 			Preconditions.checkArgument(key != null && !key.isEmpty(), "Key must not be null or empty");
 
 			EnvVars envVars = this.getContext().get(EnvVars.class);
-			AmazonS3 s3 = AWSClientFactory.create(this.step.createS3ClientOptions().createAmazonS3ClientBuilder(), envVars);
+			AmazonS3 s3 = AWSClientFactory.create(this.step.createS3ClientOptions().createAmazonS3ClientBuilder(), this.getContext(), envVars);
 			Date expiration = DateTime.now().plusSeconds(this.step.getDurationInSeconds()).toDate();
 			URL url = s3.generatePresignedUrl(bucket, key, expiration, this.step.getHttpMethod());
 			return url.toString();

@@ -123,16 +123,16 @@ public class ELBRegisterInstanceStep extends Step {
 			ArrayList<TargetDescription> arr = new ArrayList<TargetDescription>();
 			arr.add(new TargetDescription().withId(this.step.instanceID).withPort(this.step.port));
 			RegisterTargetsRequest request = new RegisterTargetsRequest().withTargetGroupArn(this.step.targetGroupARN).withTargets( arr );
-			AmazonElasticLoadBalancing client = AWSClientFactory.create(AmazonElasticLoadBalancingClientBuilder.standard(), this.getEnvVars());
+			AmazonElasticLoadBalancing client = AWSClientFactory.create(AmazonElasticLoadBalancingClientBuilder.standard(), this.getContext(), this.getEnvVars());
 			client.registerTargets(request);
-			
+
 			DescribeTargetHealthRequest req = new DescribeTargetHealthRequest().withTargetGroupArn(this.step.targetGroupARN);
 			DescribeTargetHealthResult res = client.describeTargetHealth(req);
 			listener.getLogger().println(res.toString());
-			
+
 			return null;
 		}
-		
+
 		public EnvVars getEnvVars() {
 			try {
 				return this.getContext().get(EnvVars.class);

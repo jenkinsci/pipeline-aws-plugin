@@ -181,7 +181,7 @@ public class WithAWSStepTest {
 		final EnvVars envVars = new EnvVars();
 		envVars.put(AWSClientFactory.AWS_ENDPOINT_URL, "https://minio.mycompany.com");
 		envVars.put(AWSClientFactory.AWS_REGION, Regions.DEFAULT_REGION.getName());
-		final AmazonS3ClientBuilder amazonS3ClientBuilder = AWSClientFactory.configureBuilder(AmazonS3ClientBuilder.standard(), envVars);
+		final AmazonS3ClientBuilder amazonS3ClientBuilder = AWSClientFactory.configureBuilder(AmazonS3ClientBuilder.standard(), null, envVars);
 		Assert.assertEquals("https://minio.mycompany.com", amazonS3ClientBuilder.getEndpoint().getServiceEndpoint());
 
 	}
