@@ -54,10 +54,15 @@ This plugins adds Jenkins pipeline steps to interact with the AWS API.
 
 # Primary/Agent setups
 
-This plugin is not optimized to setups with a primary and multiple agents. 
+This plugin is not optimized to setups with a primary and multiple agents.
 Only steps that touch the workspace are executed on the agents while the rest is executed on the master.
 
 For the best experience make sure that primary and agents have the same IAM permission and networking capabilities.
+
+## Retrieve credentials from node
+
+By default, credentials lookup is done on the master node for all steps.
+To enable credentials lookup on the current node, enable `Retrieve credentials from node` in Jenkins global configuration. This is globally applicable and restricts all access to the master's credentials.
 
 # Usage / Steps
 
@@ -130,6 +135,16 @@ Authentication with a SAML assertion (fetched from your company IdP) by assuming
 ```groovy
 withAWS(role: 'myRole', roleAccount: '123456789', principalArn: 'arn:aws:iam::123456789:saml-provider/test', samlAssertion: 'base64SAML', region:'eu-west-1') {
   // do something
+}
+```
+
+Authentication by retrieving credentials from the node in scope
+
+```groovy
+node('myNode') { // Credentials will be fetched from this node
+  withAWS(role: 'myRole', roleAccount: '123456789', region:'eu-west-1', useNode: true) {
+    // do something
+  }
 }
 ```
 
