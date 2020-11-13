@@ -23,6 +23,7 @@ This plugins adds Jenkins pipeline steps to interact with the AWS API.
 * [cfnCreateChangeSet](#cfncreatechangeset)
 * [cfnExecuteChangeSet](#cfnexecutechangeset)
 * [cfnUpdateStackSet](#cfnupdatestackset)
+* [cfnUpdateStackSetForAccounts] (#cfnupdatestacksetforaccounts)
 * [cfnDeleteStackSet](#cfndeletestackset)
 * [snsPublish](#snspublish)
 * [deployAPI](#deployapi)
@@ -561,6 +562,31 @@ When the stack set gets really big, the recommendation from AWS is to batch the 
 To automatically batch via region (find all stack instances, group them by region, and submit each region separately): (
 ```groovy
   cfnUpdateStackSet(stackSet:'myStackSet', url:'https://s3.amazonaws.com/my-templates-bucket/template.yaml', batchingOptions: [regions: true])
+```
+## cfnUpdateStackSetForAccounts
+
+Create a stack set with Accounts and Regions. Other than the mandatory accounts and regions parameters, the function is identical to cfnUpdateStackSet function above. Function will only create stack instances if the stackset does not exist. Otherwise, it will only try to update the specified account/region stackinstances if they already exist in the StackSet. Will monitor the resulting StackSet operation and will fail the build step if the operation does not complete successfully.
+
+To prevent running into rate limiting on the AWS API you can change the default polling interval of 1000 ms using the parameter `pollIntervall`. Using the value `0` disables event printing.
+
+```groovy
+  cfnUpdateStackSetForAccounts(stackSet:'myStackSet', url:'https://s3.amazonaws.com/my-templates-bucket/template.yaml', accounts:["012345678901","012345678902" ], regions:["us-east-1","us-east-2"])
+```
+
+To set a custom administrator role ARN:
+```groovy
+  cfnUpdateStackSet(stackSet:'myStackSet', url:'https://s3.amazonaws.com/my-templates-bucket/template.yaml', administratorRoleArn: 'mycustomarn', accounts:["012345678901","012345678902" ], regions:["us-east-1","us-east-2"])
+```
+
+To set a operation preferences:
+```groovy
+  cfnUpdateStackSet(stackSet:'myStackSet', url:'https://s3.amazonaws.com/my-templates-bucket/template.yaml', operationPreferences: [failureToleranceCount: 5], accounts:["012345678901","012345678902" ], regions:["us-east-1","us-east-2"])
+```
+
+When the stack set gets really big, the recommendation from AWS is to batch the update requests. This option is *not* part of the AWS API, but is an implementation to facilitate updating a large stack set.
+To automatically batch via region (find all stack instances, group them by region, and submit each region separately): (
+```groovy
+  cfnUpdateStackSet(stackSet:'myStackSet', url:'https://s3.amazonaws.com/my-templates-bucket/template.yaml', batchingOptions: [regions: true], accounts:["012345678901","012345678902" ], regions:["us-east-1","us-east-2"])
 ```
 
 ## cfnDeleteStackSet
