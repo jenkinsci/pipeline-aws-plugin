@@ -30,6 +30,7 @@ import com.amazonaws.services.cloudformation.AmazonCloudFormation;
 import com.amazonaws.services.cloudformation.model.AmazonCloudFormationException;
 import com.amazonaws.services.cloudformation.model.Capability;
 import com.amazonaws.services.cloudformation.model.ChangeSetType;
+import com.amazonaws.services.cloudformation.model.ChangeSetStatus;
 import com.amazonaws.services.cloudformation.model.CreateChangeSetRequest;
 import com.amazonaws.services.cloudformation.model.CreateStackRequest;
 import com.amazonaws.services.cloudformation.model.DeleteChangeSetRequest;
@@ -104,9 +105,9 @@ public class CloudFormationStack {
 		}
 	}
 
-	private boolean changeSetHasChanges(String changeSetName) {
+	private boolean emptyChangeSet(String changeSetName) {
 		DescribeChangeSetResult result = this.client.describeChangeSet(new DescribeChangeSetRequest().withStackName(this.stack).withChangeSetName(changeSetName));
-		return !result.getChanges().isEmpty();
+		return ChangeSetStatus.FAILED.name().equals(result.getStatus()) && result.getStatusReason().toLowerCase().contains("the submitted information didn't contain changes");
 	}
 
 	public Map<String, String> describeOutputs() {
@@ -229,7 +230,7 @@ public class CloudFormationStack {
 
 		} catch (ExecutionException e) {
 			try {
-				if (this.changeSetExists(changeSetName) && !this.changeSetHasChanges(changeSetName)) {
+				if (this.changeSetExists(changeSetName) && this.emptyChangeSet(changeSetName)) {
 					// Ignore the failed creation of a change set with no changes.
 					this.listener.getLogger().format("Created empty change set %s for stack %s %n", changeSetName, this.stack);
 					return;
@@ -243,8 +244,8 @@ public class CloudFormationStack {
 	}
 
 	public Map<String, String> executeChangeSet(String changeSetName, PollConfiguration pollConfiguration) throws ExecutionException {
-		if (!this.exists()) {
-			// If the stack was not prepared we should simply delete it.
+		if (!this.exists() || this.emptyChangeSet(changeSetName)) {
+			// If the change set has no changes or the stack was not prepared we should simply delete it.
 			this.listener.getLogger().format("Deleting empty change set %s for stack %s %n", changeSetName, this.stack);
 			DeleteChangeSetRequest req = new DeleteChangeSetRequest().withChangeSetName(changeSetName).withStackName(this.stack);
 			this.client.deleteChangeSet(req);
