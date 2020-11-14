@@ -23,7 +23,7 @@ This plugins adds Jenkins pipeline steps to interact with the AWS API.
 * [cfnCreateChangeSet](#cfncreatechangeset)
 * [cfnExecuteChangeSet](#cfnexecutechangeset)
 * [cfnUpdateStackSet](#cfnupdatestackset)
-* [cfnUpdateStackSetForAccounts] (#cfnupdatestacksetforaccounts)
+* [cfnUpdateStackSetForAccounts](#cfnupdatestacksetforaccounts)
 * [cfnDeleteStackSet](#cfndeletestackset)
 * [snsPublish](#snspublish)
 * [deployAPI](#deployapi)
