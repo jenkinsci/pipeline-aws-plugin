@@ -107,7 +107,9 @@ public class CloudFormationStack {
 
 	private boolean emptyChangeSet(String changeSetName) {
 		DescribeChangeSetResult result = this.client.describeChangeSet(new DescribeChangeSetRequest().withStackName(this.stack).withChangeSetName(changeSetName));
-		return ChangeSetStatus.FAILED.name().equals(result.getStatus()) && result.getStatusReason().toLowerCase().contains("the submitted information didn't contain changes");
+		return ChangeSetStatus.FAILED.name().equals(result.getStatus()) &&
+				(result.getStatusReason().toLowerCase().contains("the submitted information didn't contain changes") ||
+				result.getStatusReason().toLowerCase().contains("no updates are to be performed"));
 	}
 
 	public Map<String, String> describeOutputs() {

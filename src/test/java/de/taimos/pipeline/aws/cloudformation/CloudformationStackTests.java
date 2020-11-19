@@ -5,6 +5,7 @@ import java.util.Collections;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
 
+import com.amazonaws.waiters.WaiterUnrecoverableException;
 import org.assertj.core.api.Assertions;
 import org.junit.After;
 import org.junit.Before;
@@ -227,6 +228,75 @@ public class CloudformationStackTests {
 																   .withRoleARN("myarn")
 		);
 		Mockito.verify(this.eventPrinter).waitAndPrintChangeSetEvents(Mockito.eq("foo"), Mockito.eq("c1"), Mockito.any(Waiter.class), Mockito.eq(PollConfiguration.DEFAULT));
+	}
+
+	@Test
+	public void createNewStackChangeSet_NoSubmittedChanges() throws ExecutionException {
+		TaskListener taskListener = Mockito.mock(TaskListener.class);
+		Mockito.when(taskListener.getLogger()).thenReturn(System.out);
+		AmazonCloudFormation client = Mockito.mock(AmazonCloudFormation.class);
+		Mockito.when(client.waiters()).thenReturn(new AmazonCloudFormationWaiters(client));
+		Mockito.when(client.describeStacks(Mockito.any())).thenReturn(new DescribeStacksResult());
+		Mockito.when(client.describeChangeSet(Mockito.any())).thenReturn(new DescribeChangeSetResult()
+				.withStatus(ChangeSetStatus.FAILED)
+				.withStatusReason("The submitted information didn't contain changes")
+		);
+		Mockito.doThrow(new ExecutionException(new WaiterUnrecoverableException("foo")))
+				.when(this.eventPrinter)
+						.waitAndPrintChangeSetEvents(Mockito.eq("foo"), Mockito.eq("c1"),
+								Mockito.any(Waiter.class), Mockito.eq(PollConfiguration.DEFAULT));
+
+		CloudFormationStack stack = new CloudFormationStack(client, "foo", taskListener);
+
+		stack.createChangeSet("c1", "templateBody", null, Collections.emptyList(), Collections.emptyList(), Collections.emptyList(), PollConfiguration.DEFAULT, ChangeSetType.CREATE, "myarn", null);
+		Mockito.verify(this.eventPrinter, Mockito.atLeastOnce()).waitAndPrintChangeSetEvents(Mockito.any(), Mockito.any(), Mockito.any(Waiter.class), Mockito.any());
+	}
+
+	@Test
+	public void createNewStackChangeSet_NoUpdatesToBePerformed() throws ExecutionException {
+		TaskListener taskListener = Mockito.mock(TaskListener.class);
+		Mockito.when(taskListener.getLogger()).thenReturn(System.out);
+		AmazonCloudFormation client = Mockito.mock(AmazonCloudFormation.class);
+		Mockito.when(client.waiters()).thenReturn(new AmazonCloudFormationWaiters(client));
+		Mockito.when(client.describeStacks(Mockito.any())).thenReturn(new DescribeStacksResult());
+		Mockito.when(client.describeChangeSet(Mockito.any())).thenReturn(new DescribeChangeSetResult()
+				.withStatus(ChangeSetStatus.FAILED)
+				.withStatusReason("No updates are to be performed")
+		);
+		Mockito.doThrow(new ExecutionException(new WaiterUnrecoverableException("foo")))
+				.when(this.eventPrinter)
+				.waitAndPrintChangeSetEvents(Mockito.eq("foo"), Mockito.eq("c1"),
+						Mockito.any(Waiter.class), Mockito.eq(PollConfiguration.DEFAULT));
+
+		CloudFormationStack stack = new CloudFormationStack(client, "foo", taskListener);
+
+		stack.createChangeSet("c1", "templateBody", null, Collections.emptyList(), Collections.emptyList(), Collections.emptyList(), PollConfiguration.DEFAULT, ChangeSetType.CREATE, "myarn", null);
+		Mockito.verify(this.eventPrinter, Mockito.atLeastOnce()).waitAndPrintChangeSetEvents(Mockito.any(), Mockito.any(), Mockito.any(Waiter.class), Mockito.any());
+	}
+
+	@Test(expected = ExecutionException.class)
+	public void createNewStackChangeSet_UnknownWaiterError() throws ExecutionException {
+		TaskListener taskListener = Mockito.mock(TaskListener.class);
+		Mockito.when(taskListener.getLogger()).thenReturn(System.out);
+		AmazonCloudFormation client = Mockito.mock(AmazonCloudFormation.class);
+		Mockito.when(client.waiters()).thenReturn(new AmazonCloudFormationWaiters(client));
+		Mockito.when(client.describeStacks(Mockito.any())).thenReturn(new DescribeStacksResult());
+		Mockito.when(client.describeChangeSet(Mockito.any())).thenReturn(new DescribeChangeSetResult()
+				.withStatus(ChangeSetStatus.FAILED)
+				.withStatusReason("someother failure")
+		);
+		Mockito.doThrow(new ExecutionException(new WaiterUnrecoverableException("foo")))
+				.when(this.eventPrinter)
+				.waitAndPrintChangeSetEvents(Mockito.eq("foo"), Mockito.eq("c1"),
+						Mockito.any(Waiter.class), Mockito.eq(PollConfiguration.DEFAULT));
+
+		CloudFormationStack stack = new CloudFormationStack(client, "foo", taskListener);
+
+		try {
+			stack.createChangeSet("c1", "templateBody", null, Collections.emptyList(), Collections.emptyList(), Collections.emptyList(), PollConfiguration.DEFAULT, ChangeSetType.CREATE, "myarn", null);
+		} finally {
+			Mockito.verify(this.eventPrinter, Mockito.atLeastOnce()).waitAndPrintChangeSetEvents(Mockito.any(), Mockito.any(), Mockito.any(Waiter.class), Mockito.any());
+		}
 	}
 
 	@Test
