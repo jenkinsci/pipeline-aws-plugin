@@ -20,10 +20,6 @@
  */
 package de.taimos.pipeline.aws;
 
-import com.amazonaws.retry.RetryPolicy;
-import org.apache.commons.lang.StringUtils;
-import org.jenkinsci.plugins.workflow.steps.StepContext;
-
 import com.amazonaws.ClientConfiguration;
 import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.auth.AWSStaticCredentialsProvider;
@@ -35,10 +31,21 @@ import com.amazonaws.client.builder.AwsClientBuilder;
 import com.amazonaws.client.builder.AwsSyncClientBuilder;
 import com.amazonaws.regions.Region;
 import com.amazonaws.regions.Regions;
+import com.amazonaws.retry.RetryPolicy;
 
 import hudson.EnvVars;
+import hudson.FilePath;
+import hudson.model.TaskListener;
 
-public class AWSClientFactory {
+import java.io.Serializable;
+import java.io.IOException;
+
+import org.apache.commons.lang.StringUtils;
+
+import org.jenkinsci.plugins.workflow.steps.StepContext;
+
+
+public class AWSClientFactory implements Serializable {
 
 	static final String AWS_PROFILE = "AWS_PROFILE";
 	static final String AWS_DEFAULT_PROFILE = "AWS_DEFAULT_PROFILE";
@@ -48,6 +55,8 @@ public class AWSClientFactory {
 	static final String AWS_DEFAULT_REGION = "AWS_DEFAULT_REGION";
 	static final String AWS_REGION = "AWS_REGION";
 	static final String AWS_ENDPOINT_URL = "AWS_ENDPOINT_URL";
+	static final String AWS_PIPELINE_STEPS_FROM_NODE = "AWS_PIPELINE_STEPS_FROM_NODE";
+
 
 	private AWSClientFactory() {
 		//
@@ -55,17 +64,21 @@ public class AWSClientFactory {
 
 	public static <B extends AwsSyncClientBuilder<?, T>, T> T create(B clientBuilder, StepContext context) {
 		try {
-			return configureBuilder(clientBuilder, context.get(EnvVars.class)).build();
+			return configureBuilder(clientBuilder, context, context.get(EnvVars.class)).build();
 		} catch (Exception e) {
 			throw new IllegalArgumentException(e);
 		}
 	}
 
-	public static <B extends AwsSyncClientBuilder<?, T>, T> T create(B clientBuilder, EnvVars vars) {
-		return configureBuilder(clientBuilder, vars).build();
+	public static <B extends AwsSyncClientBuilder<?, T>, T> T create(B clientBuilder, StepContext context, EnvVars vars) {
+		return configureBuilder(clientBuilder, context, vars).build();
 	}
 
-	public static <B extends AwsSyncClientBuilder<?, ?>> B configureBuilder(final B clientBuilder, final EnvVars vars) {
+	public static <B extends AwsSyncClientBuilder<?, T>, T> T create(B clientBuilder, EnvVars vars) {
+		return configureBuilder(clientBuilder, null, vars).build();
+	}
+
+	public static <B extends AwsSyncClientBuilder<?, ?>> B configureBuilder(final B clientBuilder, StepContext context, final EnvVars vars) {
 		if (clientBuilder == null) {
 			throw new IllegalArgumentException("ClientBuilder must not be null");
 		}
@@ -74,7 +87,9 @@ public class AWSClientFactory {
 		} else {
 			clientBuilder.setRegion(AWSClientFactory.getRegion(vars).getName());
 		}
-		clientBuilder.setCredentials(AWSClientFactory.getCredentials(vars));
+
+		clientBuilder.setCredentials(AWSClientFactory.getCredentials(vars, context));
+
 		clientBuilder.setClientConfiguration(AWSClientFactory.getClientConfiguration(vars));
 		return clientBuilder;
 	}
@@ -87,7 +102,7 @@ public class AWSClientFactory {
 		return clientConfiguration;
 	}
 
-	private static AWSCredentialsProvider getCredentials(EnvVars vars) {
+	private static AWSCredentialsProvider getCredentials(EnvVars vars, StepContext context) {
 		AWSCredentialsProvider provider = handleStaticCredentials(vars);
 		if (provider != null) {
 			return provider;
@@ -98,7 +113,24 @@ public class AWSClientFactory {
 			return provider;
 		}
 
+		if (context != null) {
+			if (PluginImpl.getInstance().isEnableCredentialsFromNode() || Boolean.valueOf(vars.get(AWS_PIPELINE_STEPS_FROM_NODE))) {
+				try {
+					return AWSClientFactory.getCredentialsFromNode(context, vars);
+				} catch (Exception e) {
+					throw new RuntimeException("Unable to retrieve credentials from node.");
+				}
+			}
+		}
+
 		return new DefaultAWSCredentialsProviderChain();
+	}
+
+	private static AWSCredentialsProvider getCredentialsFromNode(StepContext context, EnvVars envVars) throws IOException, InterruptedException {
+		FilePath ws = context.get(FilePath.class);
+		TaskListener listener = context.get(TaskListener.class);
+		SerializableAWSCredentialsProvider serializableAWSCredentialsProvider = ws.act(new AWSCredentialsProviderCallable(listener));
+		return serializableAWSCredentialsProvider;
 	}
 
 	private static AWSCredentialsProvider handleProfile(EnvVars vars) {
@@ -141,4 +173,6 @@ public class AWSClientFactory {
 		}
 		return Region.getRegion(Regions.DEFAULT_REGION);
 	}
+
+	private static final long serialVersionUID = 1L;
 }
