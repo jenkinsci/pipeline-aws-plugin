@@ -1096,6 +1096,7 @@ ebWaitOnEnvironmentHealth(
 * Fix resource listing for lambdaVersionCleanup when using a cloudformation stack with lots of resources
 * Fix issues around S3UploadFile with text string argument
 * Fix cfnExecuteChangeSet to correctly handle no resource change, but updates to outputs (#210)
+* Fix global configuration naming for JCasC
 
 ## 1.42
 * Adds new parameters to cfnDelete for roleArn, clientRequestToken, and retainResources.
