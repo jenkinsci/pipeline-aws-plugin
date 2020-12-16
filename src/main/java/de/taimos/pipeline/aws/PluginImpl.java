@@ -33,11 +33,13 @@ import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
 import org.kohsuke.stapler.StaplerRequest;
 
+import org.jenkinsci.Symbol;
 
 /**
 * Global configuration
 */
 @Extension
+@Symbol("pipelineStepsAWS")
 public class PluginImpl extends GlobalConfiguration {
 
 	private boolean enableCredentialsFromNode;
