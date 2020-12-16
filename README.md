@@ -1090,6 +1090,8 @@ ebWaitOnEnvironmentHealth(
 # Changelog
 
 ## current master
+
+## 1.43
 * Add Elastic Beanstalk steps (`ebCreateApplication, ebCreateApplicationVersion, ebCreateConfigurationTemplate, ebCreateEnvironment, ebSwapEnvironmentCNAMEs, ebWaitOnEnvironmentStatus, ebWaitOnEnvironmentHealth`) 
 * Fix documentation for lambdaVersionCleanup
 * Fix wrong partition detection when assuming role
