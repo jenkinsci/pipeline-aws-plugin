@@ -1090,13 +1090,15 @@ ebWaitOnEnvironmentHealth(
 # Changelog
 
 ## current master
-* Add Elastic Beanstalk steps (`ebCreateApplication, ebCreateApplicationVersion, ebCreateConfigurationTemplate, ebCreateEnvironment, ebSwapEnvironmentCNAMEs, ebWaitOnEnvironmentStatus, ebWaitOnEnvironmentHealth`)
+* Fix global configuration naming for JCasC. Please note that this is a breaking change if JCasC is defined. This can be fixed by renaming pluginImpl --> pipelineStepsAWS.
+
+## 1.43
+* Add Elastic Beanstalk steps (`ebCreateApplication, ebCreateApplicationVersion, ebCreateConfigurationTemplate, ebCreateEnvironment, ebSwapEnvironmentCNAMEs, ebWaitOnEnvironmentStatus, ebWaitOnEnvironmentHealth`) 
 * Fix documentation for lambdaVersionCleanup
 * Fix wrong partition detection when assuming role
 * Fix resource listing for lambdaVersionCleanup when using a cloudformation stack with lots of resources
 * Fix issues around S3UploadFile with text string argument
 * Fix cfnExecuteChangeSet to correctly handle no resource change, but updates to outputs (#210)
-* Fix global configuration naming for JCasC. Please note that this is a breaking change if JCasC is defined. This can be fixed by renaming pluginImpl --> pipelineStepsAWS.
 
 ## 1.42
 * Adds new parameters to cfnDelete for roleArn, clientRequestToken, and retainResources.
