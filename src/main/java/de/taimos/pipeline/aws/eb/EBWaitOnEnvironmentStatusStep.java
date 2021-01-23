@@ -6,7 +6,9 @@ import com.amazonaws.services.elasticbeanstalk.model.AWSElasticBeanstalkExceptio
 import com.amazonaws.services.elasticbeanstalk.model.DescribeEnvironmentsRequest;
 import com.amazonaws.services.elasticbeanstalk.model.DescribeEnvironmentsResult;
 import com.amazonaws.services.elasticbeanstalk.model.EnvironmentDescription;
+import de.taimos.pipeline.aws.AWSClientFactory;
 import de.taimos.pipeline.aws.utils.StepUtils;
+import hudson.EnvVars;
 import hudson.Extension;
 import hudson.model.TaskListener;
 import org.jenkinsci.plugins.workflow.steps.Step;
@@ -74,7 +76,12 @@ public class EBWaitOnEnvironmentStatusStep extends Step {
 		@Override
 		protected Void run() throws Exception {
 			TaskListener listener = this.getContext().get(TaskListener.class);
-			AWSElasticBeanstalk client = AWSElasticBeanstalkClientBuilder.defaultClient();
+			AWSElasticBeanstalk client = AWSClientFactory.create(
+					AWSElasticBeanstalkClientBuilder.standard(),
+					this.getContext(),
+					this.getContext().get(EnvVars.class)
+			);
+
 			listener.getLogger().format("Waiting on environment %s availability... %n", step.environmentName);
 
 			DescribeEnvironmentsRequest request = new DescribeEnvironmentsRequest();
