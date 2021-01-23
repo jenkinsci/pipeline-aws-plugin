@@ -1,10 +1,10 @@
 package de.taimos.pipeline.aws.eb;
 
 import com.amazonaws.services.elasticbeanstalk.AWSElasticBeanstalk;
-import com.amazonaws.services.elasticbeanstalk.AWSElasticBeanstalkClientBuilder;
 import com.amazonaws.services.elasticbeanstalk.model.ApplicationDescription;
 import com.amazonaws.services.elasticbeanstalk.model.CreateApplicationRequest;
 import com.amazonaws.services.elasticbeanstalk.model.CreateApplicationResult;
+import de.taimos.pipeline.aws.AWSClientFactory;
 import org.jenkinsci.plugins.workflow.steps.StepContext;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -17,7 +17,7 @@ import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
 
 @RunWith(PowerMockRunner.class)
-@PrepareForTest(AWSElasticBeanstalkClientBuilder.class)
+@PrepareForTest(AWSClientFactory.class)
 public class EBCreateApplicationStepTest {
     @Captor
     ArgumentCaptor<CreateApplicationRequest> captor;
