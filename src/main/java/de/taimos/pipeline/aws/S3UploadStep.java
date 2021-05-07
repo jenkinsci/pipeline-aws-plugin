@@ -620,8 +620,21 @@ public class S3UploadStep extends AbstractS3Step {
 					}
 				};
 
+				ObjectTaggingProvider objectTaggingProvider =(uploadContext) -> {
+					List<Tag> tagList = new ArrayList<Tag>();
+
+					//add tags
+					if(tags != null){
+						for (Map.Entry<String, String> entry : tags.entrySet()) {
+							Tag tag = new Tag(entry.getKey(), entry.getValue());
+							tagList.add(tag);
+						}
+					}
+					return new ObjectTagging(tagList);
+				};
+
 				try {
-					fileUpload = mgr.uploadDirectory(this.bucket, this.path, localFile, true, metadatasProvider);
+					fileUpload = mgr.uploadDirectory(this.bucket, this.path, localFile, true, metadatasProvider, objectTaggingProvider);
 					for (final Upload upload : fileUpload.getSubTransfers()) {
 						upload.addProgressListener((ProgressListener) progressEvent -> {
 							if (progressEvent.getEventType() == ProgressEventType.TRANSFER_COMPLETED_EVENT) {
