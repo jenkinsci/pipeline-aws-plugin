@@ -1092,6 +1092,7 @@ ebWaitOnEnvironmentHealth(
 ## current master
 * Fix global configuration naming for JCasC. Please note that this is a breaking change if JCasC is defined. This can be fixed by renaming pluginImpl --> pipelineStepsAWS.
 * Fix Elastic Beanstalk client creation bug that ignored provided configurations in the withAWSStep
+* Fix upload tags if file is a directory 
 
 ## 1.43
 * Add Elastic Beanstalk steps (`ebCreateApplication, ebCreateApplicationVersion, ebCreateConfigurationTemplate, ebCreateEnvironment, ebSwapEnvironmentCNAMEs, ebWaitOnEnvironmentStatus, ebWaitOnEnvironmentHealth`) 
