@@ -1014,8 +1014,10 @@ Swaps the CNAMEs of the environments. This is useful for [Blue-Green deployments
 Arguments:
  * sourceEnvironmentId - Id of the source environment. _Should be used with destinationEnvironmentId_
  * sourceEnvironmentName - Name of the source environment. _Should be used with destinationEnvironmentName_
+ * sourceEnvironmentCNAME - CNAME of the source environment. If provided, it will be used to lookup the id and name of the source environment.
  * destinationEnvironmentId - Id of the destination environment. _Should be used with sourceEnvironmentId_
  * destinationEnvironmentName - Name of the destination environment. _Should be used with sourceEnvironmentName_
+ * destinationEnvironmentCNAME - CNAME of the destunatuin environment. If provided, it will be used to lookup the id and name of the destination environment. 
 
 [AWS reference](https://docs.aws.amazon.com/elasticbeanstalk/latest/api/API_SwapEnvironmentCNAMEs.html  )
 
@@ -1030,6 +1032,12 @@ ebSwapEnvironmentCNAMEs(
 ebCreateEnvironment(
     sourceEnvironmentName: "production",
     destinationEnvironmentName: "production-2"
+)
+
+// Swap CNAMEs using the source environment name and destination environment CNAME
+ebCreateEnvironment(
+        sourceEnvironmentName: "green",
+        destinationEnvironmentCNAME: "production.eu-west-1.elasticbeanstalk.com"
 )
 ```
 
@@ -1092,6 +1100,7 @@ ebWaitOnEnvironmentHealth(
 ## current master
 * Fix global configuration naming for JCasC. Please note that this is a breaking change if JCasC is defined. This can be fixed by renaming pluginImpl --> pipelineStepsAWS.
 * Fix Elastic Beanstalk client creation bug that ignored provided configurations in the withAWSStep
+* Add CNAME parameters to Elastic Beanstalk `ebSwapEnvironmentCNAMEs` command that lookup the required id and name params
 
 ## 1.43
 * Add Elastic Beanstalk steps (`ebCreateApplication, ebCreateApplicationVersion, ebCreateConfigurationTemplate, ebCreateEnvironment, ebSwapEnvironmentCNAMEs, ebWaitOnEnvironmentStatus, ebWaitOnEnvironmentHealth`) 
