@@ -52,7 +52,7 @@ import java.util.Arrays;
 			this.cloudformation = Mockito.mock(AmazonCloudFormation.class);
 			PowerMockito.when(AWSClientFactory.create(Mockito.any(AwsSyncClientBuilder.class), Mockito.any(StepContext.class)))
 				.thenAnswer( (x) -> {
-					if (x.getArgumentAt(0, AwsSyncClientBuilder.class) instanceof AWSLambdaClientBuilder) {
+					if (x.getArgument(0) instanceof AWSLambdaClientBuilder) {
 						return awsLambda;
 					} else {
 						return cloudformation;
