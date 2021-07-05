@@ -44,7 +44,8 @@ import com.amazonaws.services.cloudformation.model.Tag;
 import com.amazonaws.services.cloudformation.model.UpdateStackSetRequest;
 import com.amazonaws.services.cloudformation.model.UpdateStackSetResult;
 import hudson.model.TaskListener;
-
+import com.amazonaws.services.cloudformation.model.CreateStackInstancesResult;
+import com.amazonaws.services.cloudformation.model.CreateStackInstancesRequest;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -99,7 +100,13 @@ public class CloudFormationStackSet {
 		this.listener.getLogger().println("Created Stack set stackSetId=" + result.getStackSetId());
 		return result;
 	}
+	public CreateStackInstancesResult createStackInstances (Collection<String> accounts, Collection<String> regions) {
 
+		CreateStackInstancesRequest req = new CreateStackInstancesRequest().withStackSetName(this.stackSet).withAccounts(accounts).withRegions(regions);
+		CreateStackInstancesResult result = this.client.createStackInstances(req);
+		this.listener.getLogger().println("Created Stack set instances");
+		return result;
+	}
 	DescribeStackSetResult waitForStackState(StackSetStatus expectedStatus, Duration pollInterval) throws InterruptedException {
 		DescribeStackSetResult result = describe();
 		this.listener.getLogger().println("stackSetId=" + result.getStackSet().getStackSetId() + " status=" + result.getStackSet().getStatus());
