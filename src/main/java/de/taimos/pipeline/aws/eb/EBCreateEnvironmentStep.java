@@ -9,7 +9,9 @@ import com.amazonaws.services.elasticbeanstalk.model.DescribeEnvironmentsResult;
 import com.amazonaws.services.elasticbeanstalk.model.EnvironmentDescription;
 import com.amazonaws.services.elasticbeanstalk.model.UpdateEnvironmentRequest;
 import com.amazonaws.services.elasticbeanstalk.model.UpdateEnvironmentResult;
+import de.taimos.pipeline.aws.AWSClientFactory;
 import de.taimos.pipeline.aws.utils.StepUtils;
+import hudson.EnvVars;
 import hudson.Extension;
 import hudson.model.TaskListener;
 import org.jenkinsci.plugins.workflow.steps.SynchronousNonBlockingStepExecution;
@@ -102,7 +104,12 @@ public class EBCreateEnvironmentStep extends Step {
 		@Override
 		protected Void run() throws Exception {
 			TaskListener listener = this.getContext().get(TaskListener.class);
-			AWSElasticBeanstalk client = AWSElasticBeanstalkClientBuilder.defaultClient();
+			AWSElasticBeanstalk client = AWSClientFactory.create(
+					AWSElasticBeanstalkClientBuilder.standard(),
+					this.getContext(),
+					this.getContext().get(EnvVars.class)
+			);
+
 			listener.getLogger().format("Creating environment (%s) %n", step.environmentName);
 
 			boolean environmentExists = false;
