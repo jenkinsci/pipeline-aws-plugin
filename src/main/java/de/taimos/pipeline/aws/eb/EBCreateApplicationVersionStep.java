@@ -5,7 +5,9 @@ import com.amazonaws.services.elasticbeanstalk.AWSElasticBeanstalkClientBuilder;
 import com.amazonaws.services.elasticbeanstalk.model.CreateApplicationVersionRequest;
 import com.amazonaws.services.elasticbeanstalk.model.CreateApplicationVersionResult;
 import com.amazonaws.services.elasticbeanstalk.model.S3Location;
+import de.taimos.pipeline.aws.AWSClientFactory;
 import de.taimos.pipeline.aws.utils.StepUtils;
+import hudson.EnvVars;
 import hudson.Extension;
 import hudson.model.TaskListener;
 import org.jenkinsci.plugins.workflow.steps.SynchronousNonBlockingStepExecution;
@@ -76,7 +78,12 @@ public class EBCreateApplicationVersionStep extends Step {
 		@Override
 		protected Void run() throws Exception {
 			TaskListener listener = this.getContext().get(TaskListener.class);
-			AWSElasticBeanstalk client = AWSElasticBeanstalkClientBuilder.defaultClient();
+			AWSElasticBeanstalk client = AWSClientFactory.create(
+					AWSElasticBeanstalkClientBuilder.standard(),
+					this.getContext(),
+					this.getContext().get(EnvVars.class)
+			);
+
 			listener.getLogger().format("Creating application version (%s) for application (%s) %n", step.versionLabel, step.applicationName);
 
 			CreateApplicationVersionRequest request = new CreateApplicationVersionRequest();

@@ -1,10 +1,10 @@
 package de.taimos.pipeline.aws.eb;
 
 import com.amazonaws.services.elasticbeanstalk.AWSElasticBeanstalk;
-import com.amazonaws.services.elasticbeanstalk.AWSElasticBeanstalkClientBuilder;
 import com.amazonaws.services.elasticbeanstalk.model.DescribeEnvironmentsRequest;
 import com.amazonaws.services.elasticbeanstalk.model.DescribeEnvironmentsResult;
 import com.amazonaws.services.elasticbeanstalk.model.EnvironmentDescription;
+import de.taimos.pipeline.aws.AWSClientFactory;
 import org.jenkinsci.plugins.workflow.steps.StepContext;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -19,7 +19,7 @@ import org.powermock.modules.junit4.PowerMockRunner;
 import java.util.Collections;
 
 @RunWith(PowerMockRunner.class)
-@PrepareForTest(AWSElasticBeanstalkClientBuilder.class)
+@PrepareForTest(AWSClientFactory.class)
 public class EBWaitOnEnvironmentStatusStepTest {
     @Captor
     ArgumentCaptor<DescribeEnvironmentsRequest> describeCaptor;

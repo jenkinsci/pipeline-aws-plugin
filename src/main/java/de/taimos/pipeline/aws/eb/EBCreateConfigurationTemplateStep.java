@@ -5,7 +5,9 @@ import com.amazonaws.services.elasticbeanstalk.AWSElasticBeanstalkClientBuilder;
 import com.amazonaws.services.elasticbeanstalk.model.CreateConfigurationTemplateRequest;
 import com.amazonaws.services.elasticbeanstalk.model.CreateConfigurationTemplateResult;
 import com.amazonaws.services.elasticbeanstalk.model.SourceConfiguration;
+import de.taimos.pipeline.aws.AWSClientFactory;
 import de.taimos.pipeline.aws.utils.StepUtils;
+import hudson.EnvVars;
 import hudson.Extension;
 import hudson.model.TaskListener;
 import org.jenkinsci.plugins.workflow.steps.SynchronousNonBlockingStepExecution;
@@ -96,7 +98,12 @@ public class EBCreateConfigurationTemplateStep extends Step {
 		@Override
 		protected Void run() throws Exception {
 			TaskListener listener = this.getContext().get(TaskListener.class);
-			AWSElasticBeanstalk client = AWSElasticBeanstalkClientBuilder.defaultClient();
+			AWSElasticBeanstalk client = AWSClientFactory.create(
+					AWSElasticBeanstalkClientBuilder.standard(),
+					this.getContext(),
+					this.getContext().get(EnvVars.class)
+			);
+
 			listener.getLogger().format("Creating configuration template (%s) for application (%s) %n", step.templateName, step.applicationName);
 
 			CreateConfigurationTemplateRequest request = new CreateConfigurationTemplateRequest();
