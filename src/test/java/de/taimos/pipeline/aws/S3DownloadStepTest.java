@@ -27,20 +27,27 @@ import org.junit.Test;
 public class S3DownloadStepTest {
 	@Test
 	public void gettersWorkAsExpected() throws Exception {
-		S3DownloadStep step = new S3DownloadStep("my-file", "my-bucket", false, false);
+		S3DownloadStep step = new S3DownloadStep("my-file", "my-bucket", false, false, false);
 		Assert.assertEquals("my-file", step.getFile());
 		Assert.assertEquals("my-bucket", step.getBucket());
 	}
 
 	@Test
 	public void defaultPathIsEmpty() throws Exception {
-		S3DownloadStep step = new S3DownloadStep("my-file", "my-bucket", false, false);
+		S3DownloadStep step = new S3DownloadStep("my-file", "my-bucket", false, false, false);
 		Assert.assertEquals("", step.getPath());
 	}
 
 	@Test
 	public void defaultForceIsFalse() throws Exception {
-		S3DownloadStep step = new S3DownloadStep("my-file", "my-bucket", false, false);
+		S3DownloadStep step = new S3DownloadStep("my-file", "my-bucket", false, false, false);
 		Assert.assertFalse(step.isForce());
 	}
+
+	@Test
+	public void defaultDisabledParallelIsFalse() throws Exception {
+		S3DownloadStep step = new S3DownloadStep("my-file", "my-bucket", false, false, false);
+		Assert.assertFalse(step.isDisableParallelDownloads());
+	}
+
 }
