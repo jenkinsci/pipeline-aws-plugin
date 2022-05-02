@@ -83,6 +83,7 @@ public class S3UploadStep extends AbstractS3Step {
 	private String cacheControl;
 	private String contentEncoding;
 	private String contentType;
+	private String contentDisposition;
 	private String sseAlgorithm;
 	private String redirectLocation;
 	private boolean verbose = true;
@@ -240,6 +241,15 @@ public class S3UploadStep extends AbstractS3Step {
 		this.contentType = contentType;
 	}
 
+	public String getContentDisposition() {
+		return this.contentDisposition;
+	}
+
+	@DataBoundSetter
+	public void setContentDisposition(String contentDisposition) {
+		this.contentDisposition = contentDisposition;
+	}
+
 	public String getSseAlgorithm() {
 		return this.sseAlgorithm;
 	}
@@ -309,12 +319,12 @@ public class S3UploadStep extends AbstractS3Step {
 			final String cacheControl = this.step.getCacheControl();
 			final String contentEncoding = this.step.getContentEncoding();
 			final String contentType = this.step.getContentType();
+			final String contentDisposition = this.step.getContentDisposition();
 			final String sseAlgorithm = this.step.getSseAlgorithm();
 			final String redirectLocation = this.step.getRedirectLocation();
 			final boolean verbose = this.step.getVerbose();
 			boolean omitSourcePath = false;
 			boolean sendingText = false;
-			String localPath = null;
 
 			if (this.step.getMetadatas() != null && this.step.getMetadatas().length != 0) {
 				for (String metadata : this.step.getMetadatas()) {
@@ -335,8 +345,10 @@ public class S3UploadStep extends AbstractS3Step {
 			}
 
 			Preconditions.checkArgument(bucket != null && !bucket.isEmpty(), "Bucket must not be null or empty");
-			Preconditions.checkArgument(file != null || includePathPattern != null, "File or IncludePathPattern must not be null");
-			Preconditions.checkArgument(includePathPattern == null || file == null, "File and IncludePathPattern cannot be use together");
+			Preconditions.checkArgument(text != null || file != null || includePathPattern != null, "At least one argument of Text, File or IncludePathPattern must be included");
+			Preconditions.checkArgument(includePathPattern == null || file == null, "File and IncludePathPattern cannot be used together");
+			Preconditions.checkArgument(text == null || file == null, "Text and File cannot be used together");
+			Preconditions.checkArgument(includePathPattern == null || text == null, "IncludePathPattern and Text cannot be used together");
 
 			final List<FilePath> children = new ArrayList<>();
 			final FilePath dir;
@@ -360,13 +372,13 @@ public class S3UploadStep extends AbstractS3Step {
 			TaskListener listener = Execution.this.getContext().get(TaskListener.class);
 
 			if (sendingText) {
-				listener.getLogger().format("Uploading text string to s3://%s/%s %n", bucket, localPath);
+				listener.getLogger().format("Uploading text string to s3://%s/%s %n", bucket, path);
 
 				S3ClientOptions amazonS3ClientOptions = Execution.this.step.createS3ClientOptions();
 				EnvVars envVars = Execution.this.getContext().get(EnvVars.class);
 
 				TransferManager mgr = TransferManagerBuilder.standard()
-						.withS3Client(AWSClientFactory.create(amazonS3ClientOptions.createAmazonS3ClientBuilder(), envVars))
+						.withS3Client(AWSClientFactory.create(amazonS3ClientOptions.createAmazonS3ClientBuilder(), Execution.this.getContext(), envVars))
 						.build();
 
 				byte[] bytes = text.getBytes(Charset.forName("UTF-8"));
@@ -387,6 +399,9 @@ public class S3UploadStep extends AbstractS3Step {
 				}
 				if (contentType != null && !contentType.isEmpty()) {
 					metas.setContentType(contentType);
+				}
+				if (contentDisposition != null && !contentDisposition.isEmpty()) {
+					metas.setContentDisposition(contentDisposition);
 				}
 				if (sseAlgorithm != null && !sseAlgorithm.isEmpty()) {
 					metas.setSSEAlgorithm(sseAlgorithm);
@@ -433,7 +448,7 @@ public class S3UploadStep extends AbstractS3Step {
 				}
 
 				listener.getLogger().println("Upload complete");
-				return String.format("s3://%s/%s", bucket, localPath);
+				return String.format("s3://%s/%s", bucket, path);
 			} else if (children.isEmpty()) {
 				listener.getLogger().println("Nothing to upload");
 				return null;
@@ -445,7 +460,7 @@ public class S3UploadStep extends AbstractS3Step {
 					throw new FileNotFoundException(child.toURI().toString());
 				}
 
-				child.act(new RemoteUploader(Execution.this.step.createS3ClientOptions(), Execution.this.getContext().get(EnvVars.class), listener, bucket, path, metadatas, tags, acl, cacheControl, contentEncoding, contentType, kmsId, sseAlgorithm, redirectLocation));
+				child.act(new RemoteUploader(Execution.this.step.createS3ClientOptions(), Execution.this.getContext().get(EnvVars.class), listener, bucket, path, metadatas, tags, acl, cacheControl, contentEncoding, contentType, contentDisposition, kmsId, sseAlgorithm, redirectLocation));
 
 				listener.getLogger().println("Upload complete");
 				return String.format("s3://%s/%s", bucket, path);
@@ -455,7 +470,7 @@ public class S3UploadStep extends AbstractS3Step {
 				for (FilePath child : children) {
 					fileList.add(child.act(FIND_FILE_ON_SLAVE));
 				}
-				dir.act(new RemoteListUploader(Execution.this.step.createS3ClientOptions(), Execution.this.getContext().get(EnvVars.class), listener, fileList, bucket, path, metadatas, tags, acl, cacheControl, contentEncoding, contentType, kmsId, sseAlgorithm));
+				dir.act(new RemoteListUploader(Execution.this.step.createS3ClientOptions(), Execution.this.getContext().get(EnvVars.class), listener, fileList, bucket, path, metadatas, tags, acl, cacheControl, contentEncoding, contentType, contentDisposition, kmsId, sseAlgorithm));
 				listener.getLogger().println("Upload complete");
 				return String.format("s3://%s/%s", bucket, path);
 			}
@@ -477,11 +492,12 @@ public class S3UploadStep extends AbstractS3Step {
 		private final String cacheControl;
 		private final String contentEncoding;
 		private final String contentType;
+		private final String contentDisposition;
 		private final String kmsId;
 		private final String sseAlgorithm;
 		private final String redirectLocation;
 
-		RemoteUploader(S3ClientOptions amazonS3ClientOptions, EnvVars envVars, TaskListener taskListener, String bucket, String path, Map<String, String> metadatas, Map<String, String> tags, CannedAccessControlList acl, String cacheControl, String contentEncoding, String contentType, String kmsId, String sseAlgorithm, String redirectLocation) {
+		RemoteUploader(S3ClientOptions amazonS3ClientOptions, EnvVars envVars, TaskListener taskListener, String bucket, String path, Map<String, String> metadatas, Map<String, String> tags, CannedAccessControlList acl, String cacheControl, String contentEncoding, String contentType, String contentDisposition, String kmsId, String sseAlgorithm, String redirectLocation) {
 			this.amazonS3ClientOptions = amazonS3ClientOptions;
 			this.envVars = envVars;
 			this.taskListener = taskListener;
@@ -493,6 +509,7 @@ public class S3UploadStep extends AbstractS3Step {
 			this.cacheControl = cacheControl;
 			this.contentEncoding = contentEncoding;
 			this.contentType = contentType;
+			this.contentDisposition = contentDisposition;
 			this.kmsId = kmsId;
 			this.sseAlgorithm = sseAlgorithm;
 			this.redirectLocation = redirectLocation;
@@ -511,7 +528,7 @@ public class S3UploadStep extends AbstractS3Step {
 				PutObjectRequest request = new PutObjectRequest(this.bucket, path, localFile);
 
 				// Add metadata
-				if ((this.metadatas != null && this.metadatas.size() > 0) || (this.cacheControl != null && !this.cacheControl.isEmpty()) || (this.contentEncoding != null && !this.contentEncoding.isEmpty()) || (this.contentType != null && !this.contentType.isEmpty()) || (this.sseAlgorithm != null && !this.sseAlgorithm.isEmpty())) {
+				if ((this.metadatas != null && this.metadatas.size() > 0) || (this.cacheControl != null && !this.cacheControl.isEmpty()) || (this.contentEncoding != null && !this.contentEncoding.isEmpty()) || (this.contentType != null && !this.contentType.isEmpty()) || (this.contentDisposition != null && !this.contentDisposition.isEmpty()) || (this.sseAlgorithm != null && !this.sseAlgorithm.isEmpty())) {
 					ObjectMetadata metas = new ObjectMetadata();
 					if (this.metadatas != null && this.metadatas.size() > 0) {
 						metas.setUserMetadata(this.metadatas);
@@ -524,6 +541,9 @@ public class S3UploadStep extends AbstractS3Step {
 					}
 					if (this.contentType != null && !this.contentType.isEmpty()) {
 						metas.setContentType(this.contentType);
+					}
+					if (this.contentDisposition != null && !this.contentDisposition.isEmpty()) {
+						metas.setContentDisposition(this.contentDisposition);
 					}
 					if (this.sseAlgorithm != null && !this.sseAlgorithm.isEmpty()) {
 						metas.setSSEAlgorithm(this.sseAlgorithm);
@@ -586,6 +606,9 @@ public class S3UploadStep extends AbstractS3Step {
 						if (RemoteUploader.this.contentType != null && !RemoteUploader.this.contentType.isEmpty()) {
 							meta.setContentType(RemoteUploader.this.contentType);
 						}
+						if (RemoteUploader.this.contentDisposition != null && !RemoteUploader.this.contentDisposition.isEmpty()) {
+							meta.setContentDisposition(RemoteUploader.this.contentDisposition);
+						}
 						if (RemoteUploader.this.kmsId != null && !RemoteUploader.this.kmsId.isEmpty()) {
 							final SSEAwsKeyManagementParams sseAwsKeyManagementParams = new SSEAwsKeyManagementParams(RemoteUploader.this.kmsId);
 							meta.setSSEAlgorithm(SSEAlgorithm.KMS.getAlgorithm());
@@ -597,8 +620,21 @@ public class S3UploadStep extends AbstractS3Step {
 					}
 				};
 
+				ObjectTaggingProvider objectTaggingProvider =(uploadContext) -> {
+					List<Tag> tagList = new ArrayList<Tag>();
+
+					//add tags
+					if(tags != null){
+						for (Map.Entry<String, String> entry : tags.entrySet()) {
+							Tag tag = new Tag(entry.getKey(), entry.getValue());
+							tagList.add(tag);
+						}
+					}
+					return new ObjectTagging(tagList);
+				};
+
 				try {
-					fileUpload = mgr.uploadDirectory(this.bucket, this.path, localFile, true, metadatasProvider);
+					fileUpload = mgr.uploadDirectory(this.bucket, this.path, localFile, true, metadatasProvider, objectTaggingProvider);
 					for (final Upload upload : fileUpload.getSubTransfers()) {
 						upload.addProgressListener((ProgressListener) progressEvent -> {
 							if (progressEvent.getEventType() == ProgressEventType.TRANSFER_COMPLETED_EVENT) {
@@ -633,10 +669,11 @@ public class S3UploadStep extends AbstractS3Step {
 		private final String cacheControl;
 		private final String contentEncoding;
 		private final String contentType;
+		private final String contentDisposition;
 		private final String kmsId;
 		private final String sseAlgorithm;
 
-		RemoteListUploader(S3ClientOptions amazonS3ClientOptions, EnvVars envVars, TaskListener taskListener, List<File> fileList, String bucket, String path, Map<String, String> metadatas, Map<String, String> tags, CannedAccessControlList acl, final String cacheControl, final String contentEncoding, final String contentType, String kmsId, String sseAlgorithm) {
+		RemoteListUploader(S3ClientOptions amazonS3ClientOptions, EnvVars envVars, TaskListener taskListener, List<File> fileList, String bucket, String path, Map<String, String> metadatas, Map<String, String> tags, CannedAccessControlList acl, final String cacheControl, final String contentEncoding, final String contentType, final String contentDisposition, String kmsId, String sseAlgorithm) {
 			this.amazonS3ClientOptions = amazonS3ClientOptions;
 			this.envVars = envVars;
 			this.taskListener = taskListener;
@@ -649,6 +686,7 @@ public class S3UploadStep extends AbstractS3Step {
 			this.cacheControl = cacheControl;
 			this.contentEncoding = contentEncoding;
 			this.contentType = contentType;
+			this.contentDisposition = contentDisposition;
 			this.kmsId = kmsId;
 			this.sseAlgorithm = sseAlgorithm;
 		}
@@ -675,6 +713,9 @@ public class S3UploadStep extends AbstractS3Step {
 					}
 					if (RemoteListUploader.this.contentType != null && !RemoteListUploader.this.contentType.isEmpty()) {
 						meta.setContentType(RemoteListUploader.this.contentType);
+					}
+					if (RemoteListUploader.this.contentDisposition != null && !RemoteListUploader.this.contentDisposition.isEmpty()) {
+						meta.setContentDisposition(RemoteListUploader.this.contentDisposition);
 					}
 					if (RemoteListUploader.this.sseAlgorithm != null && !RemoteListUploader.this.sseAlgorithm.isEmpty()) {
 						meta.setSSEAlgorithm(RemoteListUploader.this.sseAlgorithm);

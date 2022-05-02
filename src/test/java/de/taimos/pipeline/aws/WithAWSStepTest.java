@@ -181,7 +181,7 @@ public class WithAWSStepTest {
 		final EnvVars envVars = new EnvVars();
 		envVars.put(AWSClientFactory.AWS_ENDPOINT_URL, "https://minio.mycompany.com");
 		envVars.put(AWSClientFactory.AWS_REGION, Regions.DEFAULT_REGION.getName());
-		final AmazonS3ClientBuilder amazonS3ClientBuilder = AWSClientFactory.configureBuilder(AmazonS3ClientBuilder.standard(), envVars);
+		final AmazonS3ClientBuilder amazonS3ClientBuilder = AWSClientFactory.configureBuilder(AmazonS3ClientBuilder.standard(), null, envVars);
 		Assert.assertEquals("https://minio.mycompany.com", amazonS3ClientBuilder.getEndpoint().getServiceEndpoint());
 
 	}
@@ -312,6 +312,23 @@ public class WithAWSStepTest {
 		jenkinsRule.waitForCompletion(workflowRun);
 		jenkinsRule.assertBuildStatus(Result.FAILURE, workflowRun);
 		jenkinsRule.assertLogContains("Requesting assume role", workflowRun);
+	}
+
+	@Test
+	public void testStepWithAssumeRoleChina() throws Exception {
+		WorkflowJob job = jenkinsRule.jenkins.createProject(WorkflowJob.class, "testStepWithAssumeRoleChina");
+		job.setDefinition(new CpsFlowDefinition(""
+				+ "node {\n"
+				+ "  withAWS (role: 'myRole', roleAccount: '123456789012', region: 'cn-north-1') {\n"
+				+ "    echo 'It works!'\n"
+				+ "  }\n"
+				+ "}\n", true)
+		);
+		WorkflowRun workflowRun = job.scheduleBuild2(0).get();
+		jenkinsRule.waitForCompletion(workflowRun);
+		jenkinsRule.assertBuildStatus(Result.FAILURE, workflowRun);
+		jenkinsRule.assertLogContains("Requesting assume role", workflowRun);
+		jenkinsRule.assertLogContains("Assuming role ARN is arn:aws-cn:iam::123456789012:role/myRole" , workflowRun);
 	}
 
 	@Test

@@ -82,6 +82,7 @@ public class WithAWSStep extends Step {
 	private String roleSessionName;
 	private String principalArn = "";
 	private String samlAssertion = "";
+	private boolean useNode = false;
 
 	@DataBoundConstructor
 	public WithAWSStep() {
@@ -214,6 +215,15 @@ public class WithAWSStep extends Step {
 		this.samlAssertion = samlAssertion;
 	}
 
+	public boolean getUseNode() {
+		return this.useNode;
+	}
+
+	@DataBoundSetter
+	public void setUseNode(final boolean useNode) {
+		this.useNode = useNode;
+	}
+
 	@Override
 	public StepExecution start(StepContext context) throws Exception {
 		return new WithAWSStep.Execution(this, context);
@@ -279,6 +289,7 @@ public class WithAWSStep extends Step {
 			this.step = step;
 			try {
 				this.envVars = context.get(EnvVars.class);
+				this.envVars.put(AWSClientFactory.AWS_PIPELINE_STEPS_FROM_NODE, String.valueOf(this.step.getUseNode()));
 			} catch (Exception e) {
 				throw new IllegalStateException(e);
 			}
@@ -295,6 +306,7 @@ public class WithAWSStep extends Step {
 			this.withFederatedUserId(awsEnv);
 
 			EnvironmentExpander expander = new EnvironmentExpander() {
+				private static final long serialVersionUID = 1L;
 				@Override
 				public void expand(@Nonnull EnvVars envVars) {
 					envVars.overrideAll(awsEnv);
@@ -312,7 +324,7 @@ public class WithAWSStep extends Step {
 
 		private void withFederatedUserId(@Nonnull EnvVars localEnv) {
 			if (!StringUtils.isNullOrEmpty(this.step.getFederatedUserId())) {
-				AWSSecurityTokenService sts = AWSClientFactory.create(AWSSecurityTokenServiceClientBuilder.standard(), this.envVars);
+				AWSSecurityTokenService sts = AWSClientFactory.create(AWSSecurityTokenServiceClientBuilder.standard(), this.getContext(), this.envVars);
 				GetFederationTokenRequest getFederationTokenRequest = new GetFederationTokenRequest();
 				getFederationTokenRequest.setDurationSeconds(this.step.getDuration());
 				getFederationTokenRequest.setName(this.step.getFederatedUserId());
@@ -368,18 +380,19 @@ public class WithAWSStep extends Step {
 
 		private void withRole(@Nonnull EnvVars localEnv) throws IOException, InterruptedException {
 			if (!StringUtils.isNullOrEmpty(this.step.getRole())) {
-				
-				AWSSecurityTokenService sts = AWSClientFactory.create(AWSSecurityTokenServiceClientBuilder.standard(), this.envVars);
+
+				AWSSecurityTokenService sts = AWSClientFactory.create(AWSSecurityTokenServiceClientBuilder.standard(), this.getContext(), this.envVars);
 
 				AssumeRole assumeRole = IamRoleUtils.validRoleArn(this.step.getRole()) ? new AssumeRole(this.step.getRole()) :
-						new AssumeRole(this.step.getRole(), this.createAccountId(sts), IamRoleUtils.selectPartitionName(this.step.getRegion()));
+						new AssumeRole(this.step.getRole(), this.createAccountId(sts), this.step.getRegion());
 				assumeRole.withDurationSeconds(this.step.getDuration());
 				assumeRole.withExternalId(this.step.getExternalId());
 				assumeRole.withPolicy(this.step.getPolicy());
 				assumeRole.withSamlAssertion(this.step.getSamlAssertion(), this.step.getPrincipalArn());
 				assumeRole.withSessionName(this.createRoleSessionName());
 
-				this.getContext().get(TaskListener.class).getLogger().format("Requesting assume role");
+				this.getContext().get(TaskListener.class).getLogger().format("Requesting assume role%n");
+				this.getContext().get(TaskListener.class).getLogger().format("Assuming role ARN is %s", assumeRole.toString());
 				AssumedRole assumedRole = assumeRole.assumedRole(sts);
 				this.getContext().get(TaskListener.class).getLogger().format("Assumed role %s with id %s %n ", assumedRole.getAssumedRoleUser().getArn(), assumedRole.getAssumedRoleUser().getAssumedRoleId());
 

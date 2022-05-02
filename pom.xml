@@ -9,7 +9,7 @@
     </parent>
     <groupId>de.taimos</groupId>
     <artifactId>pipeline-aws</artifactId>
-    <version>1.42-SNAPSHOT</version>
+    <version>1.44-SNAPSHOT</version>
     <packaging>hpi</packaging>
     <name>Pipeline: AWS Steps</name>
     <description>This plugins adds Jenkins pipeline steps to interact with the AWS API</description>

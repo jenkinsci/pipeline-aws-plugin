@@ -21,19 +21,14 @@
 
 package de.taimos.pipeline.aws;
 
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.io.ByteArrayInputStream;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
-import java.nio.charset.Charset;
 
+import com.amazonaws.services.cloudformation.model.ListStackResourcesRequest;
+import com.amazonaws.services.cloudformation.model.ListStackResourcesResult;
+import com.amazonaws.services.cloudformation.model.StackResourceSummary;
 import org.jenkinsci.plugins.workflow.steps.Step;
 import org.jenkinsci.plugins.workflow.steps.StepContext;
 import org.jenkinsci.plugins.workflow.steps.StepDescriptor;
@@ -44,9 +39,6 @@ import org.kohsuke.stapler.DataBoundSetter;
 
 import com.amazonaws.services.cloudformation.AmazonCloudFormation;
 import com.amazonaws.services.cloudformation.AmazonCloudFormationClientBuilder;
-import com.amazonaws.services.cloudformation.model.DescribeStackResourcesRequest;
-import com.amazonaws.services.cloudformation.model.DescribeStackResourcesResult;
-import com.amazonaws.services.cloudformation.model.StackResource;
 import com.amazonaws.services.lambda.AWSLambda;
 import com.amazonaws.services.lambda.AWSLambdaClientBuilder;
 import com.amazonaws.services.lambda.model.ListVersionsByFunctionRequest;
@@ -54,32 +46,12 @@ import com.amazonaws.services.lambda.model.ListVersionsByFunctionResult;
 import com.amazonaws.services.lambda.model.DeleteFunctionRequest;
 import com.amazonaws.services.lambda.model.FunctionConfiguration;
 import com.amazonaws.services.lambda.model.ListAliasesRequest;
-import com.amazonaws.services.lambda.model.ListAliasesResult;
-import com.amazonaws.event.ProgressEventType;
-import com.amazonaws.event.ProgressListener;
-import com.amazonaws.services.s3.Headers;
-import com.amazonaws.services.s3.model.CannedAccessControlList;
-import com.amazonaws.services.s3.model.ObjectMetadata;
-import com.amazonaws.services.s3.model.PutObjectRequest;
-import com.amazonaws.services.s3.model.SSEAlgorithm;
-import com.amazonaws.services.s3.model.SSEAwsKeyManagementParams;
-import com.amazonaws.services.s3.transfer.MultipleFileUpload;
-import com.amazonaws.services.s3.transfer.ObjectMetadataProvider;
-import com.amazonaws.services.s3.transfer.TransferManager;
-import com.amazonaws.services.s3.transfer.TransferManagerBuilder;
-import com.amazonaws.services.s3.transfer.Upload;
-import com.google.common.base.Preconditions;
 
-import java.util.Date;
 import java.util.LinkedList;
 
 import de.taimos.pipeline.aws.utils.StepUtils;
-import hudson.EnvVars;
 import hudson.Extension;
-import hudson.FilePath;
 import hudson.model.TaskListener;
-import hudson.remoting.VirtualChannel;
-import jenkins.MasterToSlaveFileCallable;
 
 import java.time.ZonedDateTime;
 import java.time.Period;
@@ -179,18 +151,33 @@ public class LambdaVersionCleanupStep extends Step {
 				);
 			}
 		}
-		
+
+		private List<StackResourceSummary> findAllResourcesForStack(String stackName) {
+			AmazonCloudFormation cloudformation = AWSClientFactory.create(AmazonCloudFormationClientBuilder.standard(), this.getContext());
+			List<StackResourceSummary> stackResources = new ArrayList<>();
+			String nextToken = null;
+			do {
+				ListStackResourcesResult result = cloudformation.listStackResources(new ListStackResourcesRequest()
+						.withNextToken(nextToken)
+						.withStackName(stackName)
+				);
+				nextToken = result.getNextToken();
+				stackResources.addAll(result.getStackResourceSummaries());
+			} while (nextToken != null);
+			return stackResources;
+		}
+
 		private void deleteAllStackFunctionVersions(AWSLambda client, String stackName) throws Exception  {
 			TaskListener listener = Execution.this.getContext().get(TaskListener.class);
 			listener.getLogger().format("Deleting old versions from stackName=%s%n", stackName);
-			AmazonCloudFormation cloudformation = AWSClientFactory.create(AmazonCloudFormationClientBuilder.standard(), this.getContext());
-			DescribeStackResourcesResult result = cloudformation.describeStackResources(new DescribeStackResourcesRequest()
-					.withStackName(stackName)
-			);
-			for (StackResource stackResource : result.getStackResources()) {
-				if ("AWS::Lambda::Function".equals(stackResource.getResourceType())) {
-					deleteAllVersions(client, stackResource.getPhysicalResourceId());
-				}
+			List<StackResourceSummary> stackResources = findAllResourcesForStack(stackName);
+			listener.getLogger().format("Found %d resources in stackName=%s%n", stackResources.size(), stackName);
+			List<StackResourceSummary> lambdaFunctions = stackResources.stream()
+					.filter(resource -> "AWS::Lambda::Function".equals(resource.getResourceType()))
+					.collect(Collectors.toList());
+			listener.getLogger().format("Found %d lambda resources in stackName=%s%n", lambdaFunctions.size(), stackName);
+			for (StackResourceSummary stackResource : lambdaFunctions) {
+				deleteAllVersions(client, stackResource.getPhysicalResourceId());
 			}
 		}
 
