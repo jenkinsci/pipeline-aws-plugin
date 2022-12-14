@@ -152,7 +152,7 @@
         <dependency>
             <groupId>org.jenkins-ci.plugins</groupId>
             <artifactId>aws-credentials</artifactId>
-            <version>1.19</version>
+            <version>1.28.1</version>
         </dependency>
         <dependency>
             <groupId>org.yaml</groupId>
