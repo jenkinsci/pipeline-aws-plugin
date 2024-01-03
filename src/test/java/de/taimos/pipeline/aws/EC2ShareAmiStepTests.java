@@ -1,46 +1,31 @@
 package de.taimos.pipeline.aws;
 
-import com.amazonaws.client.builder.AwsSyncClientBuilder;
-import com.amazonaws.services.cloudformation.AmazonCloudFormation;
-import com.amazonaws.services.cloudformation.model.AmazonCloudFormationException;
-import com.amazonaws.services.cloudformation.model.ValidateTemplateRequest;
 import com.amazonaws.services.ec2.AmazonEC2;
 import com.amazonaws.services.ec2.model.LaunchPermission;
 import com.amazonaws.services.ec2.model.LaunchPermissionModifications;
 import com.amazonaws.services.ec2.model.ModifyImageAttributeRequest;
-import com.amazonaws.services.ec2.model.ModifyImageAttributeResult;
-import hudson.model.Result;
-import org.assertj.core.api.Assertions;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
-import org.jenkinsci.plugins.workflow.steps.StepContext;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
-import org.junit.runner.RunWith;
 import org.jvnet.hudson.test.JenkinsRule;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
-import org.powermock.api.mockito.PowerMockito;
-import org.powermock.core.classloader.annotations.PowerMockIgnore;
-import org.powermock.core.classloader.annotations.PrepareForTest;
-import org.powermock.modules.junit4.PowerMockRunner;
 
-@RunWith(PowerMockRunner.class)
-@PrepareForTest(AWSClientFactory.class)
-@PowerMockIgnore("javax.crypto.*")
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.equalTo;
+
 public class EC2ShareAmiStepTests {
 
 	@Rule
-	private JenkinsRule jenkinsRule = new JenkinsRule();
+	public JenkinsRule jenkinsRule = new JenkinsRule();
 	private AmazonEC2 ec2;
 
 	@Before
 	public void setupSdk() throws Exception {
-		PowerMockito.mockStatic(AWSClientFactory.class);
 		this.ec2 = Mockito.mock(AmazonEC2.class);
-		PowerMockito.when(AWSClientFactory.create(Mockito.any(AwsSyncClientBuilder.class), Mockito.any(StepContext.class)))
-				.thenReturn(this.ec2);
+		AWSClientFactory.setFactoryDelegate((x) -> this.ec2);
 	}
 
 	@Test
@@ -56,7 +41,7 @@ public class EC2ShareAmiStepTests {
 
 		ArgumentCaptor<ModifyImageAttributeRequest> captor = ArgumentCaptor.forClass(ModifyImageAttributeRequest.class);
 		Mockito.verify(this.ec2).modifyImageAttribute(captor.capture());
-		Assertions.assertThat(captor.getValue()).isEqualTo(new ModifyImageAttributeRequest()
+		assertThat(captor.getValue(), equalTo(new ModifyImageAttributeRequest()
 				.withImageId("foo")
 				.withLaunchPermission(new LaunchPermissionModifications()
 						.withAdd(new LaunchPermission()
@@ -66,7 +51,7 @@ public class EC2ShareAmiStepTests {
 								.withUserId("a2")
 						)
 				)
-		);
+		));
 	}
 
 }

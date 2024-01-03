@@ -3,7 +3,6 @@ package de.taimos.pipeline.aws.eb;
 import com.amazonaws.services.elasticbeanstalk.AWSElasticBeanstalk;
 import com.amazonaws.services.elasticbeanstalk.model.CreateConfigurationTemplateRequest;
 import com.amazonaws.services.elasticbeanstalk.model.CreateConfigurationTemplateResult;
-import de.taimos.pipeline.aws.AWSClientFactory;
 import org.jenkinsci.plugins.workflow.steps.StepContext;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -12,11 +11,9 @@ import org.junit.runner.RunWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
 import org.mockito.Mockito;
-import org.powermock.core.classloader.annotations.PrepareForTest;
-import org.powermock.modules.junit4.PowerMockRunner;
+import org.mockito.junit.MockitoJUnitRunner;
 
-@RunWith(PowerMockRunner.class)
-@PrepareForTest(AWSClientFactory.class)
+@RunWith(MockitoJUnitRunner.class)
 public class EBCreateConfigurationTemplateStepTest {
     @Captor
     ArgumentCaptor<CreateConfigurationTemplateRequest> captor;

@@ -30,6 +30,7 @@ import com.amazonaws.services.cloudformation.model.Parameter;
 import com.amazonaws.services.cloudformation.model.Tag;
 import com.google.common.base.Preconditions;
 import de.taimos.pipeline.aws.AWSClientFactory;
+import de.taimos.pipeline.aws.AWSUtilFactory;
 import de.taimos.pipeline.aws.cloudformation.TemplateStepBase;
 import de.taimos.pipeline.aws.cloudformation.parser.ParameterParser;
 import hudson.EnvVars;
@@ -121,7 +122,7 @@ abstract class AbstractCFNCreateStackSetStep extends TemplateStepBase {
 			this.checkPreconditions();
 
 			AmazonCloudFormation client = AWSClientFactory.create(AmazonCloudFormationClientBuilder.standard(), Execution.this.getContext(), Execution.this.getEnvVars());
-			CloudFormationStackSet cfnStackSet = new CloudFormationStackSet(client, stackSet, Execution.this.getListener(), SleepStrategy.EXPONENTIAL_BACKOFF_STRATEGY);
+			CloudFormationStackSet cfnStackSet = AWSUtilFactory.newCFStackSet(client, stackSet, Execution.this.getListener(), SleepStrategy.EXPONENTIAL_BACKOFF_STRATEGY);
 			if (cfnStackSet.exists()) {
 				Collection<Parameter> parameters = ParameterParser.parseWithKeepParams(getWorkspace(), getStep());
 				return Execution.this.whenStackSetExists(parameters, getStep().getAwsTags(Execution.this));
@@ -136,7 +137,7 @@ abstract class AbstractCFNCreateStackSetStep extends TemplateStepBase {
 
 		protected CloudFormationStackSet getCfnStackSet() {
 			AmazonCloudFormation client = AWSClientFactory.create(AmazonCloudFormationClientBuilder.standard(), this.getContext(), this.getEnvVars());
-			return new CloudFormationStackSet(client, this.getStackSet(), this.getListener(), SleepStrategy.EXPONENTIAL_BACKOFF_STRATEGY);
+			return AWSUtilFactory.newCFStackSet(client, this.getStackSet(), this.getListener(), SleepStrategy.EXPONENTIAL_BACKOFF_STRATEGY);
 		}
 
 		public C getStep() {

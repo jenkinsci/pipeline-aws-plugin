@@ -21,9 +21,14 @@
 
 package de.taimos.pipeline.aws.cloudformation;
 
-import java.util.Map;
-import java.util.Set;
-
+import com.amazonaws.services.cloudformation.AmazonCloudFormation;
+import com.amazonaws.services.cloudformation.AmazonCloudFormationClientBuilder;
+import com.google.common.base.Preconditions;
+import de.taimos.pipeline.aws.AWSClientFactory;
+import de.taimos.pipeline.aws.AWSUtilFactory;
+import de.taimos.pipeline.aws.utils.StepUtils;
+import hudson.Extension;
+import hudson.model.TaskListener;
 import org.jenkinsci.plugins.workflow.steps.Step;
 import org.jenkinsci.plugins.workflow.steps.StepContext;
 import org.jenkinsci.plugins.workflow.steps.StepDescriptor;
@@ -31,14 +36,8 @@ import org.jenkinsci.plugins.workflow.steps.StepExecution;
 import org.jenkinsci.plugins.workflow.steps.SynchronousNonBlockingStepExecution;
 import org.kohsuke.stapler.DataBoundConstructor;
 
-import com.amazonaws.services.cloudformation.AmazonCloudFormation;
-import com.amazonaws.services.cloudformation.AmazonCloudFormationClientBuilder;
-import com.google.common.base.Preconditions;
-
-import de.taimos.pipeline.aws.AWSClientFactory;
-import de.taimos.pipeline.aws.utils.StepUtils;
-import hudson.Extension;
-import hudson.model.TaskListener;
+import java.util.Map;
+import java.util.Set;
 
 public class CFNDescribeStep extends Step {
 
@@ -95,7 +94,7 @@ public class CFNDescribeStep extends Step {
 
 			listener.getLogger().format("Getting outputs of CloudFormation stack %s %n", stack);
 			AmazonCloudFormation client = AWSClientFactory.create(AmazonCloudFormationClientBuilder.standard(), Execution.this.getContext());
-			CloudFormationStack cfnStack = new CloudFormationStack(client, stack, listener);
+			CloudFormationStack cfnStack = AWSUtilFactory.newCFStack(client, stack, listener);
 			return cfnStack.describeOutputs();
 		}
 

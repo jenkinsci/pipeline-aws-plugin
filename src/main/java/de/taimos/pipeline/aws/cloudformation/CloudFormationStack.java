@@ -21,16 +21,11 @@
 
 package de.taimos.pipeline.aws.cloudformation;
 
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.concurrent.ExecutionException;
-
 import com.amazonaws.services.cloudformation.AmazonCloudFormation;
 import com.amazonaws.services.cloudformation.model.AmazonCloudFormationException;
 import com.amazonaws.services.cloudformation.model.Capability;
-import com.amazonaws.services.cloudformation.model.ChangeSetType;
 import com.amazonaws.services.cloudformation.model.ChangeSetStatus;
+import com.amazonaws.services.cloudformation.model.ChangeSetType;
 import com.amazonaws.services.cloudformation.model.CreateChangeSetRequest;
 import com.amazonaws.services.cloudformation.model.CreateStackRequest;
 import com.amazonaws.services.cloudformation.model.DeleteChangeSetRequest;
@@ -48,8 +43,12 @@ import com.amazonaws.services.cloudformation.model.Stack;
 import com.amazonaws.services.cloudformation.model.Tag;
 import com.amazonaws.services.cloudformation.model.UpdateStackRequest;
 import com.amazonaws.waiters.Waiter;
-
 import hudson.model.TaskListener;
+
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.ExecutionException;
 
 public class CloudFormationStack {
 
@@ -135,11 +134,15 @@ public class CloudFormationStack {
 				.withOnFailure(OnFailure.valueOf(onFailure));
 		this.client.createStack(req);
 
-		new EventPrinter(this.client, this.listener).waitAndPrintStackEvents(this.stack, this.client.waiters().stackCreateComplete(), pollConfiguration);
+		getEventPrinter().waitAndPrintStackEvents(this.stack, this.client.waiters().stackCreateComplete(), pollConfiguration);
 
 		Map<String, String> outputs = this.describeOutputs();
 		outputs.put(UPDATE_STATUS_OUTPUT, "true");
 		return outputs;
+	}
+
+	protected EventPrinter getEventPrinter() {
+		return new EventPrinter(this.client, this.listener);
 	}
 
 
@@ -169,7 +172,7 @@ public class CloudFormationStack {
 
 			this.client.updateStack(req);
 
-			new EventPrinter(this.client, this.listener).waitAndPrintStackEvents(this.stack, this.client.waiters().stackUpdateComplete(), pollConfiguration);
+			getEventPrinter().waitAndPrintStackEvents(this.stack, this.client.waiters().stackUpdateComplete(), pollConfiguration);
 
 			this.listener.getLogger().format("Updated CloudFormation stack %s %n", this.stack);
 
@@ -226,7 +229,7 @@ public class CloudFormationStack {
 
 			this.client.createChangeSet(req);
 
-			new EventPrinter(this.client, this.listener).waitAndPrintChangeSetEvents(this.stack, changeSetName, this.client.waiters().changeSetCreateComplete(), pollConfiguration);
+			getEventPrinter().waitAndPrintChangeSetEvents(this.stack, changeSetName, this.client.waiters().changeSetCreateComplete(), pollConfiguration);
 
 			this.listener.getLogger().format("Created CloudFormation change set %s for stack %s %n", changeSetName, this.stack);
 
@@ -267,7 +270,7 @@ public class CloudFormationStack {
 
 			ExecuteChangeSetRequest req = new ExecuteChangeSetRequest().withChangeSetName(changeSetName).withStackName(this.stack);
 			this.client.executeChangeSet(req);
-			new EventPrinter(this.client, this.listener).waitAndPrintStackEvents(this.stack, waiter, pollConfiguration);
+			getEventPrinter().waitAndPrintStackEvents(this.stack, waiter, pollConfiguration);
 			this.listener.getLogger().format("Executed change set %s for stack %s %n", changeSetName, this.stack);
 
 			Map<String, String> outputs = this.describeOutputs();
@@ -282,7 +285,7 @@ public class CloudFormationStack {
 			req.withRetainResources(retainResources);
 		}
 		this.client.deleteStack(req);
-		new EventPrinter(this.client, this.listener).waitAndPrintStackEvents(this.stack, this.client.waiters().stackDeleteComplete(), pollConfiguration);
+		getEventPrinter().waitAndPrintStackEvents(this.stack, this.client.waiters().stackDeleteComplete(), pollConfiguration);
 	}
 
 	public DescribeChangeSetResult describeChangeSet(String changeSet) {

@@ -1,51 +1,41 @@
 package de.taimos.pipeline.aws.cloudformation;
 
-import java.util.Collections;
-
+import com.amazonaws.services.cloudformation.AmazonCloudFormation;
+import de.taimos.pipeline.aws.AWSClientFactory;
+import de.taimos.pipeline.aws.AWSUtilFactory;
+import hudson.model.Run;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
-import org.junit.runner.RunWith;
 import org.jvnet.hudson.test.JenkinsRule;
 import org.mockito.Mockito;
-import org.powermock.api.mockito.PowerMockito;
-import org.powermock.core.classloader.annotations.PowerMockIgnore;
-import org.powermock.core.classloader.annotations.PrepareForTest;
-import org.powermock.modules.junit4.PowerMockRunner;
 
-import com.amazonaws.client.builder.AwsSyncClientBuilder;
-import com.amazonaws.services.cloudformation.AmazonCloudFormation;
+import java.util.Collections;
 
-import de.taimos.pipeline.aws.AWSClientFactory;
-import hudson.EnvVars;
-import hudson.model.Run;
-import hudson.model.TaskListener;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-@RunWith(PowerMockRunner.class)
-@PrepareForTest(
-		value = AWSClientFactory.class,
-		fullyQualifiedNames = "de.taimos.pipeline.aws.cloudformation.*"
-)
-@PowerMockIgnore("javax.crypto.*")
 public class CFNDescribeStackTests {
 
 	@Rule
-	private JenkinsRule jenkinsRule = new JenkinsRule();
+	public JenkinsRule jenkinsRule = new JenkinsRule();
 	private CloudFormationStack stack;
 	private AmazonCloudFormation cloudFormation;
+	private int stackCounter;
 
 	@Before
 	public void setupSdk() throws Exception {
 		this.stack = Mockito.mock(CloudFormationStack.class);
-		PowerMockito.mockStatic(AWSClientFactory.class);
-		PowerMockito.whenNew(CloudFormationStack.class)
-				.withAnyArguments()
-				.thenReturn(this.stack);
 		this.cloudFormation = Mockito.mock(AmazonCloudFormation.class);
-		PowerMockito.when(AWSClientFactory.create(Mockito.any(AwsSyncClientBuilder.class), Mockito.any(EnvVars.class)))
-				.thenReturn(this.cloudFormation);
+		AWSClientFactory.setFactoryDelegate((x) -> this.cloudFormation);
+		AWSUtilFactory.setStackSupplier(s -> {
+			assertEquals("foo", s);
+			stackCounter++;
+			return stack;
+		});
+		stackCounter = 0;
 	}
 
 	@Test
@@ -61,7 +51,7 @@ public class CFNDescribeStackTests {
 		Run run = this.jenkinsRule.assertBuildStatusSuccess(job.scheduleBuild2(0));
 		this.jenkinsRule.assertLogContains("foo=bar", run);
 
-		PowerMockito.verifyNew(CloudFormationStack.class).withArguments(Mockito.any(AmazonCloudFormation.class), Mockito.eq("foo"), Mockito.any(TaskListener.class));
+		assertTrue(stackCounter > 0);
 	}
 
 }

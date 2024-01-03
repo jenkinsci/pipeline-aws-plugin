@@ -28,6 +28,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Map;
 
+import org.yaml.snakeyaml.LoaderOptions;
 import org.yaml.snakeyaml.Yaml;
 import org.yaml.snakeyaml.constructor.SafeConstructor;
 
@@ -39,7 +40,7 @@ public class YAMLParameterFileParser implements ParameterFileParser {
 
 	@Override
 	public Collection<Parameter> parseParams(InputStream fileContent) throws IOException {
-		Yaml yaml = new Yaml(new SafeConstructor());
+		Yaml yaml = new Yaml(new SafeConstructor(new LoaderOptions()));
 		@SuppressWarnings("unchecked")
 		Map<String, Object> parse = yaml.load(new InputStreamReader(fileContent, Charsets.UTF_8));
 

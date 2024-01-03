@@ -16,38 +16,36 @@
 
 package de.taimos.pipeline.aws;
 
-import com.amazonaws.client.builder.AwsSyncClientBuilder;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.transfer.MultipleFileUpload;
 import com.amazonaws.services.s3.transfer.ObjectMetadataProvider;
 import com.amazonaws.services.s3.transfer.ObjectTaggingProvider;
 import com.amazonaws.services.s3.transfer.TransferManager;
-import com.amazonaws.services.s3.transfer.TransferManagerBuilder;
 import hudson.model.Run;
-import org.assertj.core.api.Assertions;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
-import org.jenkinsci.plugins.workflow.steps.StepContext;
-import org.junit.*;
-import org.junit.runner.RunWith;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.ClassRule;
+import org.junit.Rule;
+import org.junit.Test;
 import org.jvnet.hudson.test.BuildWatcher;
 import org.jvnet.hudson.test.For;
 import org.jvnet.hudson.test.JenkinsRule;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
-import org.powermock.api.mockito.PowerMockito;
-import org.powermock.core.classloader.annotations.PowerMockIgnore;
-import org.powermock.core.classloader.annotations.PrepareForTest;
-import org.powermock.modules.junit4.PowerMockRunner;
 
 import java.io.File;
 import java.util.Collections;
 import java.util.List;
 
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.endsWith;
+import static org.hamcrest.Matchers.matchesRegex;
+import static org.hamcrest.Matchers.not;
+
 @For(S3UploadStep.class)
-@RunWith(PowerMockRunner.class)
-@PrepareForTest({AWSClientFactory.class, TransferManagerBuilder.class})
-@PowerMockIgnore("javax.crypto.*")
 public class S3UploadStepTransferManagerIntegrationTest {
 
 	private TransferManager transferManager;
@@ -60,17 +58,10 @@ public class S3UploadStepTransferManagerIntegrationTest {
 
 	@Before
 	public void setupSdk() throws Exception {
-		PowerMockito.mockStatic(AWSClientFactory.class);
-		AmazonS3 amazonS3 = PowerMockito.mock(AmazonS3.class);
-		PowerMockito.when(AWSClientFactory.create(Mockito.any(AwsSyncClientBuilder.class), Mockito.any(StepContext.class)))
-				.thenReturn(amazonS3);
-
-		PowerMockito.mockStatic(TransferManagerBuilder.class);
+		AmazonS3 amazonS3 = Mockito.mock(AmazonS3.class);
 		transferManager = Mockito.mock(TransferManager.class);
-		TransferManagerBuilder transferManagerBuilder = PowerMockito.mock(TransferManagerBuilder.class);
-		PowerMockito.when(TransferManagerBuilder.standard()).thenReturn(transferManagerBuilder);
-		PowerMockito.when(transferManagerBuilder.withS3Client(Mockito.any(AmazonS3.class))).thenReturn(transferManagerBuilder);
-		PowerMockito.when(transferManagerBuilder.build()).thenReturn(transferManager);
+		AWSClientFactory.setFactoryDelegate((x) -> amazonS3);
+		AWSUtilFactory.setTransferManagerSupplier(() -> transferManager);
 	}
 
 	@Test
@@ -107,9 +98,9 @@ public class S3UploadStepTransferManagerIntegrationTest {
 
 		Assert.assertEquals(1, captor.getValue().size());
 		Assert.assertEquals("test.txt", ((File)captor.getValue().get(0)).getName());
-		Assertions.assertThat(((File)captor.getValue().get(0)).getPath()).matches("^.*subdir.test.txt$");
-		Assertions.assertThat(captorDirectory.getValue().getPath()).endsWith("work");
-		Assertions.assertThat(captorDirectory.getValue().getPath()).doesNotContain("subdir");
+		assertThat(((File)captor.getValue().get(0)).getPath(), matchesRegex("^.*subdir.test.txt$"));
+		assertThat(captorDirectory.getValue().getPath(), endsWith("work"));
+		assertThat(captorDirectory.getValue().getPath(), not(containsString("subdir")));
 	}
 
 	@Test
