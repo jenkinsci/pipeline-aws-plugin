@@ -36,7 +36,6 @@ import org.jenkinsci.plugins.workflow.steps.SynchronousNonBlockingStepExecution;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
 
-import javax.inject.Inject;
 import java.time.Duration;
 import java.util.Set;
 
@@ -128,7 +127,6 @@ public class CFNDeleteStep extends Step {
 
 	public static class Execution extends SynchronousNonBlockingStepExecution<Void> {
 
-		@Inject
 		private transient CFNDeleteStep step;
 
 		public Execution(CFNDeleteStep step, StepContext context) {
