@@ -52,12 +52,14 @@ public class S3DownloadStep extends AbstractS3Step {
 	private final String bucket;
 	private String path = "";
 	private boolean force = false;
+	private boolean disableParallelDownloads = false;
 
 	@DataBoundConstructor
-	public S3DownloadStep(String file, String bucket, boolean pathStyleAccessEnabled, boolean payloadSigningEnabled) {
+	public S3DownloadStep(String file, String bucket, boolean pathStyleAccessEnabled, boolean payloadSigningEnabled, boolean disableParallelDownloads) {
 		super(pathStyleAccessEnabled, payloadSigningEnabled);
 		this.file = file;
 		this.bucket = bucket;
+		this.disableParallelDownloads = disableParallelDownloads;
 	}
 
 	public String getFile() {
@@ -76,6 +78,10 @@ public class S3DownloadStep extends AbstractS3Step {
 		return this.force;
 	}
 
+	public boolean isDisableParallelDownloads() {
+		return this.disableParallelDownloads;
+	}
+
 	@DataBoundSetter
 	public void setForce(boolean force) {
 		this.force = force;
@@ -84,6 +90,11 @@ public class S3DownloadStep extends AbstractS3Step {
 	@DataBoundSetter
 	public void setPath(String path) {
 		this.path = path;
+	}
+
+	@DataBoundSetter
+	public void setDisableParallelDownload(boolean disableParallelDownloads) {
+		this.disableParallelDownloads = disableParallelDownloads;
 	}
 
 	@Override
@@ -130,6 +141,7 @@ public class S3DownloadStep extends AbstractS3Step {
 			final String bucket = this.step.getBucket();
 			final String path = this.step.getPath();
 			final boolean force = this.step.isForce();
+			final boolean disableParallelDownloads = this.step.isDisableParallelDownloads();
 
 			Preconditions.checkArgument(bucket != null && !bucket.isEmpty(), "Bucket must not be null or empty");
 
@@ -146,7 +158,7 @@ public class S3DownloadStep extends AbstractS3Step {
 					throw new RuntimeException("Target exists: " + target.toURI().toString());
 				}
 			}
-			target.act(new RemoteDownloader(Execution.this.step.createS3ClientOptions(), envVars, listener, bucket, path));
+			target.act(new RemoteDownloader(Execution.this.step.createS3ClientOptions(), envVars, listener, bucket, path, disableParallelDownloads));
 			listener.getLogger().println("Download complete");
 			return null;
 		}
@@ -162,19 +174,22 @@ public class S3DownloadStep extends AbstractS3Step {
 		private final TaskListener taskListener;
 		private final String bucket;
 		private final String path;
+		private final Boolean disableParallelDownloads;
 
-		RemoteDownloader(S3ClientOptions amazonS3ClientOptions, EnvVars envVars, TaskListener taskListener, String bucket, String path) {
+		RemoteDownloader(S3ClientOptions amazonS3ClientOptions, EnvVars envVars, TaskListener taskListener, String bucket, String path, Boolean disableParallelDownloads) {
 			this.amazonS3ClientOptions = amazonS3ClientOptions;
 			this.envVars = envVars;
 			this.taskListener = taskListener;
 			this.bucket = bucket;
 			this.path = path;
+			this.disableParallelDownloads = disableParallelDownloads;
 		}
 
 		@Override
 		public Void invoke(File localFile, VirtualChannel channel) throws IOException, InterruptedException {
 			TransferManager mgr = TransferManagerBuilder.standard()
 					.withS3Client(AWSClientFactory.create(this.amazonS3ClientOptions.createAmazonS3ClientBuilder(), this.envVars))
+					.withDisableParallelDownloads(this.disableParallelDownloads)
 					.build();
 
 			if (this.path == null || this.path.isEmpty() || this.path.endsWith("/")) {
