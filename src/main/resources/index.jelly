@@ -1,0 +1,4 @@
+<?jelly escape-by-default='true'?>
+<div>
+This plugins adds Jenkins pipeline steps to interact with the AWS API.
+</div>

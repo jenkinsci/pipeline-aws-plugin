@@ -21,10 +21,14 @@
 
 package de.taimos.pipeline.aws.cloudformation;
 
-import java.time.Duration;
-import java.util.Map;
-import java.util.Set;
-
+import com.amazonaws.services.cloudformation.AmazonCloudFormation;
+import com.amazonaws.services.cloudformation.AmazonCloudFormationClientBuilder;
+import com.google.common.base.Preconditions;
+import de.taimos.pipeline.aws.AWSClientFactory;
+import de.taimos.pipeline.aws.AWSUtilFactory;
+import de.taimos.pipeline.aws.utils.StepUtils;
+import hudson.Extension;
+import hudson.model.TaskListener;
 import org.jenkinsci.plugins.workflow.steps.Step;
 import org.jenkinsci.plugins.workflow.steps.StepContext;
 import org.jenkinsci.plugins.workflow.steps.StepDescriptor;
@@ -33,14 +37,9 @@ import org.jenkinsci.plugins.workflow.steps.SynchronousNonBlockingStepExecution;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
 
-import com.amazonaws.services.cloudformation.AmazonCloudFormation;
-import com.amazonaws.services.cloudformation.AmazonCloudFormationClientBuilder;
-import com.google.common.base.Preconditions;
-
-import de.taimos.pipeline.aws.AWSClientFactory;
-import de.taimos.pipeline.aws.utils.StepUtils;
-import hudson.Extension;
-import hudson.model.TaskListener;
+import java.time.Duration;
+import java.util.Map;
+import java.util.Set;
 
 public class CFNExecuteChangeSetStep extends Step {
 
@@ -133,7 +132,7 @@ public class CFNExecuteChangeSetStep extends Step {
 			listener.getLogger().format("Executing CloudFormation change set %s %n", changeSet);
 
 			AmazonCloudFormation client = AWSClientFactory.create(AmazonCloudFormationClientBuilder.standard(), Execution.this.getContext());
-			CloudFormationStack cfnStack = new CloudFormationStack(client, stack, listener);
+			CloudFormationStack cfnStack = AWSUtilFactory.newCFStack(client, stack, listener);
 			Map<String, String> outputs = cfnStack.executeChangeSet(changeSet, Execution.this.step.getPollConfiguration());
 			listener.getLogger().println("Execute change set complete");
 			return outputs;

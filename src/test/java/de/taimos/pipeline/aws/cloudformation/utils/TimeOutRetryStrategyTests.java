@@ -14,9 +14,10 @@ public class TimeOutRetryStrategyTests {
 
 	@Test
 	public void retriesLessThanMaxTime() throws InterruptedException {
+		AmazonWebServiceRequest request = Mockito.mock(AmazonWebServiceRequest.class);
+
 		TimeOutRetryStrategy retryStrategy = new TimeOutRetryStrategy(Duration.ofSeconds(1));
 
-		AmazonWebServiceRequest request = Mockito.mock(AmazonWebServiceRequest.class);
 		Assertions.assertThat(retryStrategy.shouldRetry(pollingStrategyContext(request, 5))).isTrue();
 
 		Thread.sleep(1100);

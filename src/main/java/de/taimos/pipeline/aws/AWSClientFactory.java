@@ -32,17 +32,16 @@ import com.amazonaws.client.builder.AwsSyncClientBuilder;
 import com.amazonaws.regions.Region;
 import com.amazonaws.regions.Regions;
 import com.amazonaws.retry.RetryPolicy;
-
 import hudson.EnvVars;
 import hudson.FilePath;
 import hudson.model.TaskListener;
-
-import java.io.Serializable;
-import java.io.IOException;
-
 import org.apache.commons.lang.StringUtils;
-
 import org.jenkinsci.plugins.workflow.steps.StepContext;
+import org.kohsuke.accmod.Restricted;
+import org.kohsuke.accmod.restrictions.NoExternalUse;
+
+import java.io.IOException;
+import java.io.Serializable;
 
 
 public class AWSClientFactory implements Serializable {
@@ -56,6 +55,7 @@ public class AWSClientFactory implements Serializable {
 	static final String AWS_REGION = "AWS_REGION";
 	static final String AWS_ENDPOINT_URL = "AWS_ENDPOINT_URL";
 	static final String AWS_PIPELINE_STEPS_FROM_NODE = "AWS_PIPELINE_STEPS_FROM_NODE";
+	private static AWSClientFactoryDelegate factoryDelegate;
 
 
 	private AWSClientFactory() {
@@ -63,6 +63,9 @@ public class AWSClientFactory implements Serializable {
 	}
 
 	public static <B extends AwsSyncClientBuilder<?, T>, T> T create(B clientBuilder, StepContext context) {
+		if (factoryDelegate != null) {
+			return (T) factoryDelegate.create(clientBuilder);
+		}
 		try {
 			return configureBuilder(clientBuilder, context, context.get(EnvVars.class)).build();
 		} catch (Exception e) {
@@ -71,6 +74,9 @@ public class AWSClientFactory implements Serializable {
 	}
 
 	public static <B extends AwsSyncClientBuilder<?, T>, T> T create(B clientBuilder, StepContext context, EnvVars vars) {
+		if (factoryDelegate != null) {
+			return (T) factoryDelegate.create(clientBuilder);
+		}
 		return configureBuilder(clientBuilder, context, vars).build();
 	}
 
@@ -175,4 +181,9 @@ public class AWSClientFactory implements Serializable {
 	}
 
 	private static final long serialVersionUID = 1L;
+
+	@Restricted(NoExternalUse.class)
+	public static void setFactoryDelegate(AWSClientFactoryDelegate factoryDelegate) {
+		AWSClientFactory.factoryDelegate = factoryDelegate;
+	}
 }

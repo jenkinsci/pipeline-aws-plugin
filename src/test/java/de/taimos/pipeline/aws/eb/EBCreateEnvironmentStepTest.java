@@ -8,7 +8,6 @@ import com.amazonaws.services.elasticbeanstalk.model.DescribeEnvironmentsResult;
 import com.amazonaws.services.elasticbeanstalk.model.EnvironmentDescription;
 import com.amazonaws.services.elasticbeanstalk.model.UpdateEnvironmentRequest;
 import com.amazonaws.services.elasticbeanstalk.model.UpdateEnvironmentResult;
-import de.taimos.pipeline.aws.AWSClientFactory;
 import org.jenkinsci.plugins.workflow.steps.StepContext;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -17,13 +16,11 @@ import org.junit.runner.RunWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
 import org.mockito.Mockito;
-import org.powermock.core.classloader.annotations.PrepareForTest;
-import org.powermock.modules.junit4.PowerMockRunner;
+import org.mockito.junit.MockitoJUnitRunner;
 
 import java.util.Collections;
 
-@RunWith(PowerMockRunner.class)
-@PrepareForTest(AWSClientFactory.class)
+@RunWith(MockitoJUnitRunner.class)
 public class EBCreateEnvironmentStepTest {
     @Captor
     ArgumentCaptor<CreateEnvironmentRequest> captor;
@@ -57,7 +54,7 @@ public class EBCreateEnvironmentStepTest {
 
         AWSElasticBeanstalk client = EBTestingUtils.setupElasticBeanstalkClient();
         CreateEnvironmentResult result = new CreateEnvironmentResult();
-        Mockito.when(client.createEnvironment(Mockito.any())).thenReturn(result);
+        Mockito.doReturn(result).when(client).createEnvironment(Mockito.any());
 
         execution.run();
 
@@ -86,10 +83,10 @@ public class EBCreateEnvironmentStepTest {
         EnvironmentDescription environment = new EnvironmentDescription();
         environment.setStatus("Ready");
         describeResult.setEnvironments(Collections.singletonList(environment));
-        Mockito.when(client.describeEnvironments(Mockito.any())).thenReturn(describeResult);
+        Mockito.doReturn(describeResult).when(client).describeEnvironments(Mockito.any());
 
         UpdateEnvironmentResult updateResult = new UpdateEnvironmentResult();
-        Mockito.when(client.updateEnvironment(Mockito.any())).thenReturn(updateResult);
+        Mockito.doReturn(updateResult).when(client).updateEnvironment(Mockito.any());
 
         execution.run();
 
@@ -139,7 +136,7 @@ public class EBCreateEnvironmentStepTest {
         EnvironmentDescription environment = new EnvironmentDescription();
         environment.setStatus("Terminated");
         describeResult.setEnvironments(Collections.singletonList(environment));
-        Mockito.when(client.describeEnvironments(Mockito.any())).thenReturn(describeResult);
+        Mockito.doReturn(describeResult).when(client).describeEnvironments(Mockito.any());
 
         CreateEnvironmentResult result = new CreateEnvironmentResult();
         Mockito.when(client.createEnvironment(Mockito.any())).thenReturn(result);
