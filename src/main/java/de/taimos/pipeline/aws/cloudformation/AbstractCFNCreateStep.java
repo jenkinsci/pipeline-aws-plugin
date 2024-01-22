@@ -23,13 +23,13 @@ package de.taimos.pipeline.aws.cloudformation;
 
 import com.amazonaws.services.cloudformation.AmazonCloudFormation;
 import com.amazonaws.services.cloudformation.AmazonCloudFormationClientBuilder;
-import com.amazonaws.services.cloudformation.model.Change;
 import com.amazonaws.services.cloudformation.model.OnFailure;
 import com.amazonaws.services.cloudformation.model.Parameter;
 import com.amazonaws.services.cloudformation.model.RollbackConfiguration;
 import com.amazonaws.services.cloudformation.model.Tag;
 import com.google.common.base.Preconditions;
 import de.taimos.pipeline.aws.AWSClientFactory;
+import de.taimos.pipeline.aws.AWSUtilFactory;
 import de.taimos.pipeline.aws.cloudformation.parser.ParameterParser;
 import de.taimos.pipeline.aws.utils.IamRoleUtils;
 import hudson.EnvVars;
@@ -42,7 +42,6 @@ import org.kohsuke.stapler.DataBoundSetter;
 import javax.annotation.Nonnull;
 import java.io.IOException;
 import java.util.Collection;
-import java.util.List;
 
 abstract class AbstractCFNCreateStep extends TemplateStepBase {
 
@@ -121,7 +120,7 @@ abstract class AbstractCFNCreateStep extends TemplateStepBase {
 			this.checkPreconditions();
 
 			AmazonCloudFormation client = AWSClientFactory.create(AmazonCloudFormationClientBuilder.standard(), Execution.this.getContext(), Execution.this.getEnvVars());
-			CloudFormationStack cfnStack = new CloudFormationStack(client, stack, Execution.this.getListener());
+			CloudFormationStack cfnStack = AWSUtilFactory.newCFStack(client, stack, Execution.this.getListener());
 			if (cfnStack.exists()) {
 				Collection<Parameter> parameters = ParameterParser.parseWithKeepParams(Execution.this.getWorkspace(), Execution.this.getStep());
 				return Execution.this.whenStackExists(parameters, Execution.this.getStep().getAwsTags(Execution.this), Execution.this.getStep().getAwsNotificationARNs(), Execution.this.getStep().getRollbackConfiguration());
@@ -136,7 +135,7 @@ abstract class AbstractCFNCreateStep extends TemplateStepBase {
 
 		protected CloudFormationStack getCfnStack() {
 			AmazonCloudFormation client = AWSClientFactory.create(AmazonCloudFormationClientBuilder.standard(), this.getContext(), this.getEnvVars());
-			return new CloudFormationStack(client, this.getStack(), this.getListener());
+			return AWSUtilFactory.newCFStack(client, this.getStack(), this.getListener());
 		}
 
 		public C getStep() {

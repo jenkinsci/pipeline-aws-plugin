@@ -69,8 +69,8 @@ class ProxyConfiguration {
 				config.setProxyUsername(proxyConfiguration.getUserName());
 				config.setProxyPassword(proxyConfiguration.getPassword());
 
-				if (proxyConfiguration.noProxyHost != null) {
-					String[] noProxyParts = proxyConfiguration.noProxyHost.split("[ \t\n,|]+");
+				if (proxyConfiguration.getNoProxyHost() != null) {
+					String[] noProxyParts = proxyConfiguration.getNoProxyHost().split("[ \t\n,|]+");
 					config.setNonProxyHosts(Joiner.on('|').join(noProxyParts));
 				}
 			}

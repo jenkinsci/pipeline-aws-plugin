@@ -21,40 +21,27 @@
 
 package de.taimos.pipeline.aws;
 
-import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
-import org.jenkinsci.plugins.workflow.job.WorkflowJob;
-import org.jenkinsci.plugins.workflow.steps.StepContext;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.jvnet.hudson.test.JenkinsRule;
-import org.mockito.Mockito;
-import org.powermock.api.mockito.PowerMockito;
-import org.powermock.core.classloader.annotations.PowerMockIgnore;
-import org.powermock.core.classloader.annotations.PrepareForTest;
-import org.powermock.modules.junit4.PowerMockRunner;
-
-import com.amazonaws.client.builder.AwsSyncClientBuilder;
 import com.amazonaws.services.identitymanagement.AmazonIdentityManagement;
 import com.amazonaws.services.identitymanagement.model.UpdateAssumeRolePolicyRequest;
 import com.amazonaws.services.identitymanagement.model.UpdateAssumeRolePolicyResult;
+import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
+import org.jenkinsci.plugins.workflow.job.WorkflowJob;
+import org.junit.Before;
+import org.junit.Rule;
+import org.junit.Test;
+import org.jvnet.hudson.test.JenkinsRule;
+import org.mockito.Mockito;
 
-@RunWith(PowerMockRunner.class)
-@PrepareForTest(AWSClientFactory.class)
-@PowerMockIgnore("javax.crypto.*")
 public class UpdateTrustPolicyStepTests {
 
 	@Rule
-	private JenkinsRule jenkinsRule = new JenkinsRule();
+	public JenkinsRule jenkinsRule = new JenkinsRule();
 	private AmazonIdentityManagement iam;
 
 	@Before
 	public void setupSdk() throws Exception {
-		PowerMockito.mockStatic(AWSClientFactory.class);
 		this.iam = Mockito.mock(AmazonIdentityManagement.class);
-		PowerMockito.when(AWSClientFactory.create(Mockito.any(AwsSyncClientBuilder.class), Mockito.any(StepContext.class)))
-				.thenReturn(this.iam);
+		AWSClientFactory.setFactoryDelegate((x) -> this.iam);
 	}
 
 	@Test

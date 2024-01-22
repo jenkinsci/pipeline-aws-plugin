@@ -2,58 +2,34 @@ package de.taimos.pipeline.aws;
 
 
 import com.amazonaws.HttpMethod;
-import com.amazonaws.client.builder.AwsSyncClientBuilder;
-
 import com.amazonaws.services.s3.AmazonS3;
-
-import hudson.EnvVars;
+import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
+import org.jenkinsci.plugins.workflow.job.WorkflowJob;
+import org.jenkinsci.plugins.workflow.job.WorkflowRun;
+import org.joda.time.DateTime;
+import org.junit.Before;
+import org.junit.Rule;
+import org.junit.Test;
+import org.jvnet.hudson.test.JenkinsRule;
+import org.mockito.ArgumentCaptor;
+import org.mockito.Mockito;
 
 import java.net.URL;
 import java.util.Date;
 
-import org.assertj.core.api.Assertions;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.number.OrderingComparison.greaterThanOrEqualTo;
 
-import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
-
-import org.jenkinsci.plugins.workflow.job.WorkflowJob;
-import org.jenkinsci.plugins.workflow.job.WorkflowRun;
-
-import org.jenkinsci.plugins.workflow.steps.StepContext;
-
-import org.joda.time.DateTime;
-
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-
-import org.jvnet.hudson.test.JenkinsRule;
-
-import org.mockito.ArgumentCaptor;
-import org.mockito.Mockito;
-
-import org.powermock.api.mockito.PowerMockito;
-
-import org.powermock.core.classloader.annotations.PowerMockIgnore;
-import org.powermock.core.classloader.annotations.PrepareForTest;
-
-import org.powermock.modules.junit4.PowerMockRunner;
-
-@RunWith(PowerMockRunner.class)
-@PrepareForTest(AWSClientFactory.class)
-@PowerMockIgnore("javax.crypto.*")
 public class S3PresignUrlStepTests {
 
 	@Rule
-	private JenkinsRule jenkinsRule = new JenkinsRule();
+	public JenkinsRule jenkinsRule = new JenkinsRule();
 	private AmazonS3 s3;
 
 	@Before
 	public void setupSdk() throws Exception {
-		PowerMockito.mockStatic(AWSClientFactory.class);
 		this.s3 = Mockito.mock(AmazonS3.class);
-		PowerMockito.when(AWSClientFactory.create(Mockito.any(AwsSyncClientBuilder.class), Mockito.any(StepContext.class), Mockito.any(EnvVars.class)))
-				.thenReturn(this.s3);
+		AWSClientFactory.setFactoryDelegate((x) -> this.s3);
 	}
 
 	@Test
@@ -79,7 +55,7 @@ public class S3PresignUrlStepTests {
 		ArgumentCaptor<Date> expirationCaptor = ArgumentCaptor.forClass(Date.class);
 		Mockito.verify(s3).generatePresignedUrl(Mockito.eq("foo"), Mockito.eq("bar"), expirationCaptor.capture(), Mockito.eq(HttpMethod.GET));
 
-		Assertions.assertThat(expirationCaptor.getValue()).isAfterOrEqualsTo(expectedDate);
+		assertThat(expirationCaptor.getValue(), greaterThanOrEqualTo(expectedDate));
 	}
 
 	@Test
@@ -124,6 +100,6 @@ public class S3PresignUrlStepTests {
 		ArgumentCaptor<Date> expirationCaptor = ArgumentCaptor.forClass(Date.class);
 		Mockito.verify(s3).generatePresignedUrl(Mockito.eq("foo"), Mockito.eq("bar"), expirationCaptor.capture(), Mockito.eq(HttpMethod.GET));
 
-		Assertions.assertThat(expirationCaptor.getValue()).isAfterOrEqualsTo(expectedDate);
+		assertThat(expirationCaptor.getValue(), greaterThanOrEqualTo(expectedDate));
 	}
 }

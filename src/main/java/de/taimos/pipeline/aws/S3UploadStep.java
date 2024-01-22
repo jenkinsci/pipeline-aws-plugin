@@ -21,28 +21,9 @@
 
 package de.taimos.pipeline.aws;
 
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.io.ByteArrayInputStream;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.stream.Collectors;
-import java.nio.charset.Charset;
-
-import org.jenkinsci.plugins.workflow.steps.StepContext;
-import org.jenkinsci.plugins.workflow.steps.StepDescriptor;
-import org.jenkinsci.plugins.workflow.steps.StepExecution;
-import org.jenkinsci.plugins.workflow.steps.SynchronousNonBlockingStepExecution;
-import org.kohsuke.stapler.DataBoundConstructor;
-import org.kohsuke.stapler.DataBoundSetter;
-
 import com.amazonaws.event.ProgressEventType;
 import com.amazonaws.event.ProgressListener;
+import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.Headers;
 import com.amazonaws.services.s3.model.CannedAccessControlList;
 import com.amazonaws.services.s3.model.ObjectMetadata;
@@ -55,10 +36,8 @@ import com.amazonaws.services.s3.transfer.MultipleFileUpload;
 import com.amazonaws.services.s3.transfer.ObjectMetadataProvider;
 import com.amazonaws.services.s3.transfer.ObjectTaggingProvider;
 import com.amazonaws.services.s3.transfer.TransferManager;
-import com.amazonaws.services.s3.transfer.TransferManagerBuilder;
 import com.amazonaws.services.s3.transfer.Upload;
 import com.google.common.base.Preconditions;
-
 import de.taimos.pipeline.aws.utils.StepUtils;
 import hudson.EnvVars;
 import hudson.Extension;
@@ -66,6 +45,25 @@ import hudson.FilePath;
 import hudson.model.TaskListener;
 import hudson.remoting.VirtualChannel;
 import jenkins.MasterToSlaveFileCallable;
+import org.jenkinsci.plugins.workflow.steps.StepContext;
+import org.jenkinsci.plugins.workflow.steps.StepDescriptor;
+import org.jenkinsci.plugins.workflow.steps.StepExecution;
+import org.jenkinsci.plugins.workflow.steps.SynchronousNonBlockingStepExecution;
+import org.kohsuke.stapler.DataBoundConstructor;
+import org.kohsuke.stapler.DataBoundSetter;
+
+import java.io.ByteArrayInputStream;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.nio.charset.Charset;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 public class S3UploadStep extends AbstractS3Step {
 
@@ -377,9 +375,8 @@ public class S3UploadStep extends AbstractS3Step {
 				S3ClientOptions amazonS3ClientOptions = Execution.this.step.createS3ClientOptions();
 				EnvVars envVars = Execution.this.getContext().get(EnvVars.class);
 
-				TransferManager mgr = TransferManagerBuilder.standard()
-						.withS3Client(AWSClientFactory.create(amazonS3ClientOptions.createAmazonS3ClientBuilder(), Execution.this.getContext(), envVars))
-						.build();
+				AmazonS3 s3Client = AWSClientFactory.create(amazonS3ClientOptions.createAmazonS3ClientBuilder(), Execution.this.getContext(), envVars);
+				TransferManager mgr = AWSUtilFactory.newTransferManager(s3Client);
 
 				byte[] bytes = text.getBytes(Charset.forName("UTF-8"));
 				PutObjectRequest request = null;
@@ -519,9 +516,8 @@ public class S3UploadStep extends AbstractS3Step {
 
 		@Override
 		public Void invoke(File localFile, VirtualChannel channel) throws IOException, InterruptedException {
-			TransferManager mgr = TransferManagerBuilder.standard()
-					.withS3Client(AWSClientFactory.create(this.amazonS3ClientOptions.createAmazonS3ClientBuilder(), this.envVars))
-					.build();
+			AmazonS3 s3Client = AWSClientFactory.create(this.amazonS3ClientOptions.createAmazonS3ClientBuilder(), this.envVars);
+			TransferManager mgr = AWSUtilFactory.newTransferManager(s3Client);
 			if (localFile.isFile()) {
 				String path = this.path;
 				if (path.endsWith("/") || path.isEmpty()) {
@@ -701,9 +697,8 @@ public class S3UploadStep extends AbstractS3Step {
 
 		@Override
 		public Void invoke(File localFile, VirtualChannel channel) throws IOException, InterruptedException {
-			TransferManager mgr = TransferManagerBuilder.standard()
-					.withS3Client(AWSClientFactory.create(this.amazonS3ClientOptions.createAmazonS3ClientBuilder(), this.envVars))
-					.build();
+			AmazonS3 s3Client = AWSClientFactory.create(this.amazonS3ClientOptions.createAmazonS3ClientBuilder(), this.envVars);
+			TransferManager mgr = AWSUtilFactory.newTransferManager(s3Client);
 			final MultipleFileUpload fileUpload;
 			ObjectMetadataProvider metadatasProvider = (file, meta) -> {
 				if (meta != null) {

@@ -1,49 +1,37 @@
 package de.taimos.pipeline.aws.cloudformation;
 
-import com.amazonaws.client.builder.AwsSyncClientBuilder;
 import com.amazonaws.services.cloudformation.AmazonCloudFormation;
-import com.amazonaws.services.cloudformation.model.Parameter;
-import com.amazonaws.services.cloudformation.model.Tag;
 import de.taimos.pipeline.aws.AWSClientFactory;
-import hudson.EnvVars;
+import de.taimos.pipeline.aws.AWSUtilFactory;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
-import org.junit.runner.RunWith;
 import org.jvnet.hudson.test.JenkinsRule;
 import org.mockito.Mockito;
-import org.powermock.api.mockito.PowerMockito;
-import org.powermock.core.classloader.annotations.PowerMockIgnore;
-import org.powermock.core.classloader.annotations.PrepareForTest;
-import org.powermock.modules.junit4.PowerMockRunner;
 
 import java.util.Collections;
 
-@RunWith(PowerMockRunner.class)
-@PrepareForTest(
-		value = AWSClientFactory.class,
-		fullyQualifiedNames = "de.taimos.pipeline.aws.cloudformation.*"
-)
-@PowerMockIgnore("javax.crypto.*")
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.ArgumentMatchers.nullable;
+
 public class CFNUpdateStackTests {
 
 	@Rule
-	private JenkinsRule jenkinsRule = new JenkinsRule();
+	public JenkinsRule jenkinsRule = new JenkinsRule();
 	private CloudFormationStack stack;
 	private AmazonCloudFormation cloudFormation;
 
 	@Before
 	public void setupSdk() throws Exception {
 		this.stack = Mockito.mock(CloudFormationStack.class);
-		PowerMockito.mockStatic(AWSClientFactory.class);
-		PowerMockito.whenNew(CloudFormationStack.class)
-				.withAnyArguments()
-				.thenReturn(this.stack);
 		this.cloudFormation = Mockito.mock(AmazonCloudFormation.class);
-		PowerMockito.when(AWSClientFactory.create(Mockito.any(AwsSyncClientBuilder.class), Mockito.any(EnvVars.class)))
-				.thenReturn(this.cloudFormation);
+		AWSClientFactory.setFactoryDelegate((x) -> this.cloudFormation);
+		AWSUtilFactory.setStackSupplier(s -> {
+			assertEquals("foo", s);
+			return stack;
+		});
 	}
 
 	@Test
@@ -58,7 +46,8 @@ public class CFNUpdateStackTests {
 		);
 		this.jenkinsRule.assertBuildStatusSuccess(job.scheduleBuild2(0));
 
-		Mockito.verify(this.stack).create(Mockito.anyString(), Mockito.anyString(), Mockito.<Parameter>anyCollection(), Mockito.<Tag>anyCollection(), Mockito.<String>anyCollection(), Mockito.any(), Mockito.anyString(), Mockito.anyString(), Mockito.anyBoolean());
+		Mockito.verify(this.stack).create(nullable(String.class), nullable(String.class), Mockito.anyCollection(),
+				Mockito.anyCollection(), Mockito.anyCollection(), Mockito.any(), nullable(String.class), Mockito.anyString(), nullable(Boolean.class));
 	}
 
 	@Test
@@ -73,7 +62,8 @@ public class CFNUpdateStackTests {
 		);
 		this.jenkinsRule.assertBuildStatusSuccess(job.scheduleBuild2(0));
 
-		Mockito.verify(this.stack).update(Mockito.anyString(), Mockito.anyString(), Mockito.anyCollectionOf(Parameter.class), Mockito.anyCollectionOf(Tag.class), Mockito.anyCollectionOf(String.class), Mockito.any(), Mockito.anyString(), Mockito.any());
+		Mockito.verify(this.stack).update(nullable(String.class), nullable(String.class), Mockito.anyCollection(),
+				Mockito.anyCollection(), Mockito.anyCollection(), Mockito.any(), nullable(String.class), Mockito.any());
 	}
 
 	@Test
@@ -88,6 +78,6 @@ public class CFNUpdateStackTests {
 		);
 		this.jenkinsRule.assertBuildStatusSuccess(job.scheduleBuild2(0));
 
-		Mockito.verify(this.stack, Mockito.never()).create(Mockito.anyString(), Mockito.anyString(), Mockito.anyCollectionOf(Parameter.class), Mockito.anyCollectionOf(Tag.class), Mockito.anyCollectionOf(String.class), Mockito.any(), Mockito.anyString(), Mockito.anyString(), Mockito.anyBoolean());
+		Mockito.verify(this.stack, Mockito.never()).create(Mockito.anyString(), Mockito.anyString(), Mockito.anyCollection(), Mockito.anyCollection(), Mockito.anyCollection(), Mockito.any(), Mockito.anyString(), Mockito.anyString(), Mockito.anyBoolean());
 	}
 }

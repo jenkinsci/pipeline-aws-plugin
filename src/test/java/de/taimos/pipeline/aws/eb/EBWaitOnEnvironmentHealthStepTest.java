@@ -4,7 +4,6 @@ import com.amazonaws.services.elasticbeanstalk.AWSElasticBeanstalk;
 import com.amazonaws.services.elasticbeanstalk.model.DescribeEnvironmentsRequest;
 import com.amazonaws.services.elasticbeanstalk.model.DescribeEnvironmentsResult;
 import com.amazonaws.services.elasticbeanstalk.model.EnvironmentDescription;
-import de.taimos.pipeline.aws.AWSClientFactory;
 import org.jenkinsci.plugins.workflow.steps.StepContext;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -13,13 +12,11 @@ import org.junit.runner.RunWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
 import org.mockito.Mockito;
-import org.powermock.core.classloader.annotations.PrepareForTest;
-import org.powermock.modules.junit4.PowerMockRunner;
+import org.mockito.junit.MockitoJUnitRunner;
 
 import java.util.Collections;
 
-@RunWith(PowerMockRunner.class)
-@PrepareForTest(AWSClientFactory.class)
+@RunWith(MockitoJUnitRunner.class)
 public class EBWaitOnEnvironmentHealthStepTest {
     @Captor
     ArgumentCaptor<DescribeEnvironmentsRequest> describeCaptor;
@@ -48,7 +45,7 @@ public class EBWaitOnEnvironmentHealthStepTest {
         EnvironmentDescription environment = new EnvironmentDescription();
         environment.setHealth("Green");
         result.setEnvironments(Collections.singletonList(environment));
-        Mockito.when(client.describeEnvironments(Mockito.any())).thenReturn(result);
+        Mockito.doReturn(result).when(client).describeEnvironments(Mockito.any());
 
         execution.run();
 

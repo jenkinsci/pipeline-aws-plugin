@@ -23,13 +23,13 @@ package de.taimos.pipeline.aws;
 
 import com.amazonaws.event.ProgressEventType;
 import com.amazonaws.event.ProgressListener;
+import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.CannedAccessControlList;
 import com.amazonaws.services.s3.model.CopyObjectRequest;
 import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.SSEAwsKeyManagementParams;
 import com.amazonaws.services.s3.transfer.Copy;
 import com.amazonaws.services.s3.transfer.TransferManager;
-import com.amazonaws.services.s3.transfer.TransferManagerBuilder;
 import com.google.common.base.Preconditions;
 import de.taimos.pipeline.aws.utils.StepUtils;
 import hudson.EnvVars;
@@ -259,9 +259,8 @@ public class S3CopyStep extends AbstractS3Step {
 				request.withSSEAwsKeyManagementParams(new SSEAwsKeyManagementParams(kmsId));
 			}
 
-			TransferManager mgr = TransferManagerBuilder.standard()
-					.withS3Client(AWSClientFactory.create(s3ClientOptions.createAmazonS3ClientBuilder(), this.getContext(), envVars))
-					.build();
+			AmazonS3 s3client = AWSClientFactory.create(s3ClientOptions.createAmazonS3ClientBuilder(), this.getContext(), envVars);
+			TransferManager mgr = AWSUtilFactory.newTransferManager(s3client);
 			try {
 				final Copy copy = mgr.copy(request);
 				copy.addProgressListener((ProgressListener) progressEvent -> {
