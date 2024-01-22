@@ -1,58 +1,43 @@
 package de.taimos.pipeline.aws;
 
-import java.time.ZonedDateTime;
-import java.time.format.DateTimeFormatter;
-
+import com.amazonaws.services.cloudformation.AmazonCloudFormation;
 import com.amazonaws.services.cloudformation.model.ListStackResourcesRequest;
 import com.amazonaws.services.cloudformation.model.ListStackResourcesResult;
 import com.amazonaws.services.cloudformation.model.StackResourceSummary;
-import org.jenkinsci.plugins.workflow.steps.StepContext;
+import com.amazonaws.services.lambda.AWSLambda;
+import com.amazonaws.services.lambda.AWSLambdaClientBuilder;
+import com.amazonaws.services.lambda.model.AliasConfiguration;
+import com.amazonaws.services.lambda.model.DeleteFunctionRequest;
+import com.amazonaws.services.lambda.model.FunctionConfiguration;
+import com.amazonaws.services.lambda.model.ListAliasesRequest;
+import com.amazonaws.services.lambda.model.ListAliasesResult;
+import com.amazonaws.services.lambda.model.ListVersionsByFunctionRequest;
+import com.amazonaws.services.lambda.model.ListVersionsByFunctionResult;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
-import org.junit.runner.RunWith;
 import org.jvnet.hudson.test.JenkinsRule;
 import org.mockito.Mockito;
-import org.powermock.api.mockito.PowerMockito;
-import org.powermock.core.classloader.annotations.PowerMockIgnore;
-import org.powermock.core.classloader.annotations.PrepareForTest;
-import org.powermock.modules.junit4.PowerMockRunner;
 
-import com.amazonaws.client.builder.AwsSyncClientBuilder;
-import com.amazonaws.services.cloudformation.AmazonCloudFormation;
-import com.amazonaws.services.lambda.model.AliasConfiguration;
-import com.amazonaws.services.lambda.model.ListVersionsByFunctionRequest;
-import com.amazonaws.services.lambda.model.ListVersionsByFunctionResult;
-import com.amazonaws.services.lambda.model.DeleteFunctionRequest;
-import com.amazonaws.services.lambda.model.FunctionConfiguration;
-import com.amazonaws.services.lambda.model.ListAliasesRequest;
-import com.amazonaws.services.lambda.model.ListAliasesResult;
-import com.amazonaws.services.lambda.AWSLambdaClientBuilder;
-
-import com.amazonaws.services.lambda.AWSLambda;
-
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
 
-	@RunWith(PowerMockRunner.class)
-	@PrepareForTest(AWSClientFactory.class)
-	@PowerMockIgnore("javax.crypto.*")
-	public class LambdaVersionCleanupStepTest {
+public class LambdaVersionCleanupStepTest {
 
 		@Rule
-		private JenkinsRule jenkinsRule = new JenkinsRule();
+		public JenkinsRule jenkinsRule = new JenkinsRule();
 		private AWSLambda awsLambda;
 		private AmazonCloudFormation cloudformation;
 
 		@Before
 		public void setupSdk() throws Exception {
-			PowerMockito.mockStatic(AWSClientFactory.class);
 			this.awsLambda = Mockito.mock(AWSLambda.class);
 			this.cloudformation = Mockito.mock(AmazonCloudFormation.class);
-			PowerMockito.when(AWSClientFactory.create(Mockito.any(AwsSyncClientBuilder.class), Mockito.any(StepContext.class)))
-				.thenAnswer( (x) -> {
-					if (x.getArgumentAt(0, AwsSyncClientBuilder.class) instanceof AWSLambdaClientBuilder) {
+			AWSClientFactory.setFactoryDelegate( (x) -> {
+					if (x instanceof AWSLambdaClientBuilder) {
 						return awsLambda;
 					} else {
 						return cloudformation;

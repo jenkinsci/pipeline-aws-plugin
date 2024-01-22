@@ -25,6 +25,7 @@ import com.amazonaws.services.cloudformation.AmazonCloudFormation;
 import com.amazonaws.services.cloudformation.AmazonCloudFormationClientBuilder;
 import com.google.common.base.Preconditions;
 import de.taimos.pipeline.aws.AWSClientFactory;
+import de.taimos.pipeline.aws.AWSUtilFactory;
 import de.taimos.pipeline.aws.utils.StepUtils;
 import hudson.Extension;
 import hudson.model.TaskListener;
@@ -144,7 +145,7 @@ public class CFNDeleteStep extends Step {
 			listener.getLogger().format("Removing CloudFormation stack %s %n", stack);
 
 			AmazonCloudFormation client = AWSClientFactory.create(AmazonCloudFormationClientBuilder.standard(), Execution.this.getContext());
-			CloudFormationStack cfnStack = new CloudFormationStack(client, stack, listener);
+			CloudFormationStack cfnStack = AWSUtilFactory.newCFStack(client, stack, listener);
 			cfnStack.delete(Execution.this.step.getPollConfiguration(), this.step.getRetainResources(), this.step.getRoleArn(), this.step.getClientRequestToken());
 			listener.getLogger().println("Stack deletion complete");
 			return null;

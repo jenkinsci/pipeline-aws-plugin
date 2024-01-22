@@ -21,18 +21,6 @@ package de.taimos.pipeline.aws;
  */
 
 
-import java.util.ArrayList;
-import java.util.List;
-
-import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
-import org.jenkinsci.plugins.workflow.job.WorkflowJob;
-import org.jenkinsci.plugins.workflow.job.WorkflowRun;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.jvnet.hudson.test.JenkinsRule;
-
 import com.amazonaws.regions.Regions;
 import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import com.cloudbees.hudson.plugins.folder.AbstractFolder;
@@ -48,10 +36,20 @@ import com.cloudbees.plugins.credentials.SystemCredentialsProvider;
 import com.cloudbees.plugins.credentials.common.StandardUsernamePasswordCredentials;
 import com.cloudbees.plugins.credentials.domains.Domain;
 import com.cloudbees.plugins.credentials.impl.UsernamePasswordCredentialsImpl;
-
 import hudson.EnvVars;
 import hudson.model.Result;
 import hudson.util.ListBoxModel;
+import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
+import org.jenkinsci.plugins.workflow.job.WorkflowJob;
+import org.jenkinsci.plugins.workflow.job.WorkflowRun;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.ClassRule;
+import org.junit.Test;
+import org.jvnet.hudson.test.JenkinsRule;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Test the behavior of the {@link WithAWSStep}
@@ -68,6 +66,7 @@ public class WithAWSStepTest {
 		List<Credentials> credentials = SystemCredentialsProvider.getInstance().getCredentials();
 		SystemCredentialsProvider.getInstance().getCredentials().removeAll(credentials);
 		SystemCredentialsProvider.getInstance().save();
+		AWSClientFactory.setFactoryDelegate(null);
 	}
 
 	@Test

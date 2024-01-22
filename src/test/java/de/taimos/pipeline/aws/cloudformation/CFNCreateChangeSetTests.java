@@ -1,57 +1,43 @@
 package de.taimos.pipeline.aws.cloudformation;
 
-import java.util.Arrays;
-
-import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
-import org.jenkinsci.plugins.workflow.job.WorkflowJob;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.jvnet.hudson.test.JenkinsRule;
-import org.mockito.Mockito;
-import org.powermock.api.mockito.PowerMockito;
-import org.powermock.core.classloader.annotations.PowerMockIgnore;
-import org.powermock.core.classloader.annotations.PrepareForTest;
-import org.powermock.modules.junit4.PowerMockRunner;
-
-import com.amazonaws.client.builder.AwsSyncClientBuilder;
 import com.amazonaws.services.cloudformation.AmazonCloudFormation;
 import com.amazonaws.services.cloudformation.model.Change;
 import com.amazonaws.services.cloudformation.model.ChangeSetStatus;
 import com.amazonaws.services.cloudformation.model.ChangeSetType;
 import com.amazonaws.services.cloudformation.model.DescribeChangeSetResult;
 import com.amazonaws.services.cloudformation.model.Parameter;
-import com.amazonaws.services.cloudformation.model.Tag;
-
 import de.taimos.pipeline.aws.AWSClientFactory;
-import hudson.EnvVars;
+import de.taimos.pipeline.aws.AWSUtilFactory;
 import hudson.model.Result;
 import hudson.model.Run;
-import hudson.model.TaskListener;
+import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
+import org.jenkinsci.plugins.workflow.job.WorkflowJob;
+import org.junit.Before;
+import org.junit.Rule;
+import org.junit.Test;
+import org.jvnet.hudson.test.JenkinsRule;
+import org.mockito.Mockito;
 
-@RunWith(PowerMockRunner.class)
-@PrepareForTest(
-		value = AWSClientFactory.class,
-		fullyQualifiedNames = "de.taimos.pipeline.aws.cloudformation.*"
-)
-@PowerMockIgnore("javax.crypto.*")
+import java.util.Arrays;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.ArgumentMatchers.nullable;
+
 public class CFNCreateChangeSetTests {
 
 	@Rule
-	private JenkinsRule jenkinsRule = new JenkinsRule();
+	public JenkinsRule jenkinsRule = new JenkinsRule();
 	private CloudFormationStack stack;
 
 	@Before
 	public void setupSdk() throws Exception {
 		this.stack = Mockito.mock(CloudFormationStack.class);
-		PowerMockito.mockStatic(AWSClientFactory.class);
-		PowerMockito.whenNew(CloudFormationStack.class)
-				.withAnyArguments()
-				.thenReturn(this.stack);
 		AmazonCloudFormation cloudFormation = Mockito.mock(AmazonCloudFormation.class);
-		PowerMockito.when(AWSClientFactory.create(Mockito.any(AwsSyncClientBuilder.class), Mockito.any(EnvVars.class)))
-				.thenReturn(cloudFormation);
+		AWSClientFactory.setFactoryDelegate((x) -> cloudFormation);
+		AWSUtilFactory.setStackSupplier((s) -> {
+			assertEquals("foo", s);
+			return stack;
+		});
 	}
 
 	@Test
@@ -71,11 +57,11 @@ public class CFNCreateChangeSetTests {
 		Run run = this.jenkinsRule.assertBuildStatusSuccess(job.scheduleBuild2(0));
 		this.jenkinsRule.assertLogContains("changesCount=1", run);
 
-		PowerMockito.verifyNew(CloudFormationStack.class, Mockito.atLeastOnce()).withArguments(Mockito.any(AmazonCloudFormation.class), Mockito.eq("foo"), Mockito.any(TaskListener.class));
-		Mockito.verify(this.stack).createChangeSet(Mockito.eq("bar"), Mockito.anyString(), Mockito.anyString(), Mockito.eq(Arrays.asList(
+		Mockito.verify(this.stack).createChangeSet(Mockito.eq("bar"),
+				nullable(String.class), nullable(String.class), Mockito.eq(Arrays.asList(
 				new Parameter().withParameterKey("foo").withParameterValue("bar"),
 				new Parameter().withParameterKey("baz").withParameterValue("true")
-		)), Mockito.anyCollectionOf(Tag.class), Mockito.anyCollectionOf(String.class), Mockito.any(PollConfiguration.class), Mockito.eq(ChangeSetType.UPDATE), Mockito.anyString(),
+		)), Mockito.anyCollection(), Mockito.anyCollection(), Mockito.any(PollConfiguration.class), Mockito.eq(ChangeSetType.UPDATE), nullable(String.class),
 												   Mockito.any());
 	}
 
@@ -96,9 +82,9 @@ public class CFNCreateChangeSetTests {
 		Run run = this.jenkinsRule.assertBuildStatusSuccess(job.scheduleBuild2(0));
 		this.jenkinsRule.assertLogContains("changesCount=1", run);
 
-		PowerMockito.verifyNew(CloudFormationStack.class, Mockito.atLeastOnce()).withArguments(Mockito.any(AmazonCloudFormation.class), Mockito.eq("foo"), Mockito.any(TaskListener.class));
-		Mockito.verify(this.stack).createChangeSet(Mockito.eq("bar"), Mockito.anyString(), Mockito.anyString(), Mockito.anyCollectionOf(Parameter.class), Mockito.anyCollectionOf(Tag.class),
-												   Mockito.anyCollectionOf(String.class), Mockito.any(PollConfiguration.class), Mockito.eq(ChangeSetType.UPDATE), Mockito.anyString(), Mockito.any());
+		Mockito.verify(this.stack).createChangeSet(Mockito.eq("bar"), nullable(String.class), nullable(String.class),
+				Mockito.anyCollection(), Mockito.anyCollection(), Mockito.anyCollection(),
+				Mockito.any(PollConfiguration.class), Mockito.eq(ChangeSetType.UPDATE), nullable(String.class), Mockito.any());
 	}
 
 	@Test
@@ -118,9 +104,9 @@ public class CFNCreateChangeSetTests {
 		Run run = this.jenkinsRule.assertBuildStatusSuccess(job.scheduleBuild2(0));
 		this.jenkinsRule.assertLogContains("changesCount=1", run);
 
-		PowerMockito.verifyNew(CloudFormationStack.class, Mockito.atLeastOnce()).withArguments(Mockito.any(AmazonCloudFormation.class), Mockito.eq("foo"), Mockito.any(TaskListener.class));
-		Mockito.verify(this.stack).createChangeSet(Mockito.eq("bar"), Mockito.eq("foobaz"), Mockito.anyString(), Mockito.anyCollectionOf(Parameter.class), Mockito.anyCollectionOf(Tag.class),
-												   Mockito.anyCollectionOf(String.class), Mockito.any(PollConfiguration.class), Mockito.eq(ChangeSetType.UPDATE), Mockito.anyString(), Mockito.any());
+		Mockito.verify(this.stack).createChangeSet(Mockito.eq("bar"), Mockito.eq("foobaz"), nullable(String.class),
+				Mockito.anyCollection(), Mockito.anyCollection(), Mockito.anyCollection(),
+				Mockito.any(PollConfiguration.class), Mockito.eq(ChangeSetType.UPDATE), nullable(String.class), Mockito.any());
 	}
 
 	@Test
@@ -140,9 +126,9 @@ public class CFNCreateChangeSetTests {
 		Run run = this.jenkinsRule.assertBuildStatusSuccess(job.scheduleBuild2(0));
 		this.jenkinsRule.assertLogContains("changesCount=1", run);
 
-		PowerMockito.verifyNew(CloudFormationStack.class, Mockito.atLeastOnce()).withArguments(Mockito.any(AmazonCloudFormation.class), Mockito.eq("foo"), Mockito.any(TaskListener.class));
-		Mockito.verify(this.stack).createChangeSet(Mockito.eq("bar"), Mockito.eq("foobaz"), Mockito.anyString(), Mockito.anyCollectionOf(Parameter.class), Mockito.anyCollectionOf(Tag.class),
-												   Mockito.anyCollectionOf(String.class), Mockito.any(PollConfiguration.class), Mockito.eq(ChangeSetType.CREATE), Mockito.anyString(), Mockito.any());
+		Mockito.verify(this.stack).createChangeSet(Mockito.eq("bar"), Mockito.eq("foobaz"), nullable(String.class),
+				Mockito.anyCollection(), Mockito.anyCollection(), Mockito.anyCollection(),
+				Mockito.any(PollConfiguration.class), Mockito.eq(ChangeSetType.CREATE), nullable(String.class), Mockito.any());
 	}
 
 	@Test
@@ -218,9 +204,9 @@ public class CFNCreateChangeSetTests {
 		Run run = this.jenkinsRule.assertBuildStatusSuccess(job.scheduleBuild2(0));
 		this.jenkinsRule.assertLogContains("changesCount=1", run);
 
-		PowerMockito.verifyNew(CloudFormationStack.class, Mockito.atLeastOnce()).withArguments(Mockito.any(AmazonCloudFormation.class), Mockito.eq("foo"), Mockito.any(TaskListener.class));
-		Mockito.verify(this.stack).createChangeSet(Mockito.eq("bar"), Mockito.anyString(), Mockito.anyString(), Mockito.anyCollectionOf(Parameter.class), Mockito.anyCollectionOf(Tag.class),
-												   Mockito.anyCollectionOf(String.class), Mockito.any(PollConfiguration.class), Mockito.eq(ChangeSetType.CREATE), Mockito.anyString(), Mockito.any());
+		Mockito.verify(this.stack).createChangeSet(Mockito.eq("bar"), nullable(String.class),
+				nullable(String.class), Mockito.anyCollection(), Mockito.anyCollection(),
+				Mockito.anyCollection(), Mockito.any(PollConfiguration.class), Mockito.eq(ChangeSetType.CREATE), nullable(String.class), Mockito.any());
 	}
 
 }
