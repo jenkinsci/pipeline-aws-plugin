@@ -5,6 +5,6 @@
 buildPlugin(
   useContainerAgent: true,
   configurations: [
-    [platform: 'linux', jdk: 11], // should be bumped to 21 before Nov 2024
+    [platform: 'linux', jdk: 21],
     [platform: 'windows', jdk: 17],
 ])

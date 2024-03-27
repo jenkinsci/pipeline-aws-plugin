@@ -4,16 +4,16 @@
     <parent>
         <groupId>org.jenkins-ci.plugins</groupId>
         <artifactId>plugin</artifactId>
-        <version>4.72</version>
+        <version>4.80</version>
         <relativePath />
     </parent>
     <groupId>de.taimos</groupId>
     <artifactId>pipeline-aws</artifactId>
-    <version>1.45-SNAPSHOT</version>
+    <version>${revision}${changelist}</version>
     <packaging>hpi</packaging>
     <name>Pipeline: AWS Steps</name>
     <scm>
-        <connection>scm:git:https://github.com/${gitHubRepo}</connection>
+        <connection>scm:git:https://github.com/${gitHubRepo}.git</connection>
         <developerConnection>scm:git:git@github.com:${gitHubRepo}.git</developerConnection>
         <tag>${scmTag}</tag>
         <url>https://github.com/${gitHubRepo}</url>
@@ -22,8 +22,8 @@
         <dependencies>
             <dependency>
                 <groupId>io.jenkins.tools.bom</groupId>
-                <artifactId>bom-2.401.x</artifactId>
-                <version>2675.v1515e14da_7a_6</version>
+                <artifactId>bom-2.414.x</artifactId>
+                <version>2928.ved44ea_84e034</version>
                 <scope>import</scope>
                 <type>pom</type>
             </dependency>
@@ -35,7 +35,7 @@
             <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
             <distribution>repo</distribution></license>
     </licenses>
-    <url>https://github.com/jenkinsci/pipeline-aws-plugin</url>
+    <url>https://github.com/jenkinsci/${project.artifactId}-plugin</url>
     <organization>
         <name>Taimos GmbH</name>
         <url>https://www.taimos.de</url>
@@ -76,30 +76,13 @@
         </pluginRepository>
     </pluginRepositories>
     <properties>
-        <jenkins.version>2.401.3</jenkins.version>
+        <revision>1.45</revision>
+        <changelist>-SNAPSHOT</changelist>
+        <jenkins.version>2.414.3</jenkins.version>
         <gitHubRepo>jenkinsci/${project.artifactId}-plugin</gitHubRepo>
-        <awsSdk.version>1.12.610</awsSdk.version>
-        <awsSdkPlugin.version>1.12.610-428.v849169a_01b_a_5</awsSdkPlugin.version>
     </properties>
     <build>
     <plugins>
-      <plugin>
-        <artifactId>maven-enforcer-plugin</artifactId>
-        <executions>
-          <execution>
-            <id>display-info</id>
-              <configuration>
-                <rules>
-                  <enforceBytecodeVersion>
-                    <excludes combine.children="append">
-                      <exclude>org.projectlombok:lombok</exclude>
-                    </excludes>
-                  </enforceBytecodeVersion>
-                </rules>
-              </configuration>
-            </execution>
-          </executions>
-      </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-checkstyle-plugin</artifactId>
@@ -126,7 +109,7 @@
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
-            <version>1.18.28</version>
+            <version>1.18.32</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
@@ -144,135 +127,54 @@
         <dependency>
             <groupId>org.jenkins-ci.plugins.aws-java-sdk</groupId>
             <artifactId>aws-java-sdk-ec2</artifactId>
-            <version>${awsSdkPlugin.version}</version>
         </dependency>
 
         <dependency>
             <groupId>org.jenkins-ci.plugins.aws-java-sdk</groupId>
             <artifactId>aws-java-sdk-sns</artifactId>
-            <version>${awsSdkPlugin.version}</version>
         </dependency>
 
         <dependency>
-            <groupId>com.amazonaws</groupId>
+            <groupId>org.jenkins-ci.plugins.aws-java-sdk</groupId>
             <artifactId>aws-java-sdk-elasticloadbalancingv2</artifactId>
-            <version>${awsSdk.version}</version>
-
-            <exclusions>
-                <exclusion>
-                    <groupId>com.amazonaws</groupId>
-                    <artifactId>aws-java-sdk-core</artifactId>
-                </exclusion>
-
-                <exclusion>
-                    <groupId>com.amazonaws</groupId>
-                    <artifactId>jmespath-java</artifactId>
-                </exclusion>
-            </exclusions>
         </dependency>
         <dependency>
-            <groupId>com.amazonaws</groupId>
+            <groupId>org.jenkins-ci.plugins.aws-java-sdk</groupId>
             <artifactId>aws-java-sdk-organizations</artifactId>
-            <version>${awsSdk.version}</version>
-
-            <exclusions>
-                <exclusion>
-                    <groupId>com.amazonaws</groupId>
-                    <artifactId>aws-java-sdk-core</artifactId>
-                </exclusion>
-
-                <exclusion>
-                    <groupId>com.amazonaws</groupId>
-                    <artifactId>jmespath-java</artifactId>
-                </exclusion>
-            </exclusions>
         </dependency>
         <dependency>
-            <groupId>com.amazonaws</groupId>
+            <groupId>org.jenkins-ci.plugins.aws-java-sdk</groupId>
             <artifactId>aws-java-sdk-cloudfront</artifactId>
-            <version>${awsSdk.version}</version>
-
-            <exclusions>
-                <exclusion>
-                    <groupId>com.amazonaws</groupId>
-                    <artifactId>aws-java-sdk-core</artifactId>
-                </exclusion>
-
-                <exclusion>
-                    <groupId>com.amazonaws</groupId>
-                    <artifactId>jmespath-java</artifactId>
-                </exclusion>
-            </exclusions>
         </dependency>
         <dependency>
-            <groupId>com.amazonaws</groupId>
+            <groupId>org.jenkins-ci.plugins.aws-java-sdk</groupId>
             <artifactId>aws-java-sdk-codedeploy</artifactId>
-            <version>${awsSdk.version}</version>
-            <exclusions>
-                <exclusion>
-                    <groupId>com.amazonaws</groupId>
-                    <artifactId>aws-java-sdk-core</artifactId>
-                </exclusion>
-
-                <exclusion>
-                    <groupId>com.amazonaws</groupId>
-                    <artifactId>jmespath-java</artifactId>
-                </exclusion>
-            </exclusions>
         </dependency>
 
         <dependency>
-            <groupId>com.amazonaws</groupId>
+            <groupId>org.jenkins-ci.plugins.aws-java-sdk</groupId>
             <artifactId>aws-java-sdk-lambda</artifactId>
-            <version>${awsSdk.version}</version>
-            <exclusions>
-                <exclusion>
-                    <groupId>com.amazonaws</groupId>
-                    <artifactId>aws-java-sdk-core</artifactId>
-                </exclusion>
-
-                <exclusion>
-                    <groupId>com.amazonaws</groupId>
-                    <artifactId>jmespath-java</artifactId>
-                </exclusion>
-            </exclusions>
         </dependency>
         <dependency>
-            <groupId>com.amazonaws</groupId>
+            <groupId>org.jenkins-ci.plugins.aws-java-sdk</groupId>
             <artifactId>aws-java-sdk-api-gateway</artifactId>
-            <version>${awsSdk.version}</version>
-            <exclusions>
-                <exclusion>
-                    <groupId>com.amazonaws</groupId>
-                    <artifactId>aws-java-sdk-core</artifactId>
-                </exclusion>
-
-                <exclusion>
-                    <groupId>com.amazonaws</groupId>
-                    <artifactId>jmespath-java</artifactId>
-                </exclusion>
-            </exclusions>
         </dependency>
         <dependency>
             <groupId>org.jenkins-ci.plugins.aws-java-sdk</groupId>
             <artifactId>aws-java-sdk-ecr</artifactId>
-            <version>${awsSdkPlugin.version}</version>
         </dependency>
 
         <dependency>
             <groupId>org.jenkins-ci.plugins.aws-java-sdk</groupId>
             <artifactId>aws-java-sdk-iam</artifactId>
-            <version>${awsSdkPlugin.version}</version>
         </dependency>
         <dependency>
             <groupId>org.jenkins-ci.plugins.aws-java-sdk</groupId>
             <artifactId>aws-java-sdk-elasticbeanstalk</artifactId>
-            <version>${awsSdkPlugin.version}</version>
         </dependency>
         <dependency>
             <groupId>org.jenkins-ci.plugins.aws-java-sdk</groupId>
             <artifactId>aws-java-sdk-cloudformation</artifactId>
-            <version>${awsSdkPlugin.version}</version>
         </dependency>
         <dependency>
             <groupId>org.jenkins-ci.plugins</groupId>
@@ -285,7 +187,6 @@
         <dependency>
             <groupId>org.jenkins-ci.plugins</groupId>
             <artifactId>aws-credentials</artifactId>
-            <version>218.v1b_e9466ec5da_</version>
         </dependency>
         <dependency>
             <groupId>io.jenkins.plugins</groupId>
@@ -340,14 +241,14 @@
         <dependency>
             <groupId>org.assertj</groupId>
             <artifactId>assertj-core</artifactId>
-            <version>3.9.0</version>
+            <version>3.25.3</version>
             <scope>test</scope>
         </dependency>
         <!-- https://mvnrepository.com/artifact/net.bytebuddy/byte-buddy -->
         <dependency>
             <groupId>net.bytebuddy</groupId>
             <artifactId>byte-buddy</artifactId>
-            <version>1.14.11</version>
+            <version>1.14.12</version>
             <scope>test</scope>
         </dependency>
 
