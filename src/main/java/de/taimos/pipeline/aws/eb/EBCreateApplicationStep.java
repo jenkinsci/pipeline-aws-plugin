@@ -6,6 +6,7 @@ import com.amazonaws.services.elasticbeanstalk.model.CreateApplicationRequest;
 import com.amazonaws.services.elasticbeanstalk.model.CreateApplicationResult;
 import de.taimos.pipeline.aws.AWSClientFactory;
 import de.taimos.pipeline.aws.utils.StepUtils;
+import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.EnvVars;
 import hudson.Extension;
 import hudson.model.TaskListener;
@@ -17,7 +18,6 @@ import org.jenkinsci.plugins.workflow.steps.SynchronousNonBlockingStepExecution;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
 
-import javax.annotation.Nonnull;
 import java.util.Set;
 
 public class EBCreateApplicationStep extends Step {
@@ -52,7 +52,7 @@ public class EBCreateApplicationStep extends Step {
 			return "ebCreateApplication";
 		}
 
-		@Nonnull
+		@NonNull
 		@Override
 		public String getDisplayName() {
 			return "Creates a new Elastic Beanstalk application";
@@ -63,7 +63,7 @@ public class EBCreateApplicationStep extends Step {
 		private static final long serialVersionUID = 1L;
 		private final transient EBCreateApplicationStep step;
 
-		protected Execution(EBCreateApplicationStep step, @Nonnull StepContext context) {
+		protected Execution(EBCreateApplicationStep step, @NonNull StepContext context) {
 			super(context);
 			this.step = step;
 		}

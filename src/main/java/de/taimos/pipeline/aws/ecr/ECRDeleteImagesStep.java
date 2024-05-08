@@ -8,6 +8,7 @@ import com.amazonaws.services.ecr.model.ImageFailure;
 import com.amazonaws.services.ecr.model.ImageIdentifier;
 import de.taimos.pipeline.aws.AWSClientFactory;
 import de.taimos.pipeline.aws.utils.StepUtils;
+import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.Extension;
 import hudson.model.TaskListener;
 import org.jenkinsci.plugins.workflow.steps.Step;
@@ -18,7 +19,6 @@ import org.jenkinsci.plugins.workflow.steps.SynchronousNonBlockingStepExecution;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
 
-import javax.annotation.Nonnull;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
@@ -77,7 +77,7 @@ public class ECRDeleteImagesStep extends Step {
 		}
 
 		@Override
-		@Nonnull
+		@NonNull
 		public String getDisplayName() {
 			return "Delete ecr images";
 		}
@@ -92,7 +92,7 @@ public class ECRDeleteImagesStep extends Step {
 
 		private transient ECRDeleteImagesStep step;
 
-		public Execution(@Nonnull StepContext context, ECRDeleteImagesStep step) {
+		public Execution(@NonNull StepContext context, ECRDeleteImagesStep step) {
 			super(context);
 			this.step = step;
 		}

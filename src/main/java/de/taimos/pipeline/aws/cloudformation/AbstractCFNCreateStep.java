@@ -32,6 +32,7 @@ import de.taimos.pipeline.aws.AWSClientFactory;
 import de.taimos.pipeline.aws.AWSUtilFactory;
 import de.taimos.pipeline.aws.cloudformation.parser.ParameterParser;
 import de.taimos.pipeline.aws.utils.IamRoleUtils;
+import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.EnvVars;
 import hudson.FilePath;
 import hudson.model.TaskListener;
@@ -39,7 +40,6 @@ import org.jenkinsci.plugins.workflow.steps.StepContext;
 import org.jenkinsci.plugins.workflow.steps.SynchronousNonBlockingStepExecution;
 import org.kohsuke.stapler.DataBoundSetter;
 
-import javax.annotation.Nonnull;
 import java.io.IOException;
 import java.util.Collection;
 
@@ -79,7 +79,7 @@ abstract class AbstractCFNCreateStep extends TemplateStepBase {
 
 		private final transient C step;
 
-		protected Execution(C step, @Nonnull StepContext context) {
+		protected Execution(C step, @NonNull StepContext context) {
 			super(context);
 			this.step = step;
 		}

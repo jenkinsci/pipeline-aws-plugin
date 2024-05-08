@@ -6,6 +6,7 @@ import com.amazonaws.services.ecr.model.SetRepositoryPolicyRequest;
 import com.amazonaws.services.ecr.model.SetRepositoryPolicyResult;
 import de.taimos.pipeline.aws.AWSClientFactory;
 import de.taimos.pipeline.aws.utils.StepUtils;
+import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.Extension;
 import org.jenkinsci.plugins.workflow.steps.Step;
 import org.jenkinsci.plugins.workflow.steps.StepContext;
@@ -15,7 +16,6 @@ import org.jenkinsci.plugins.workflow.steps.SynchronousNonBlockingStepExecution;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
 
-import javax.annotation.Nonnull;
 import java.util.Set;
 
 public class ECRSetRepositoryPolicyStep extends Step {
@@ -69,7 +69,7 @@ public class ECRSetRepositoryPolicyStep extends Step {
 		}
 
 		@Override
-		@Nonnull
+		@NonNull
 		public String getDisplayName() {
 			return "Set ECR Repository Policy";
 		}

@@ -8,6 +8,7 @@ import com.amazonaws.services.elasticbeanstalk.model.DescribeEnvironmentsResult;
 import com.amazonaws.services.elasticbeanstalk.model.EnvironmentDescription;
 import de.taimos.pipeline.aws.AWSClientFactory;
 import de.taimos.pipeline.aws.utils.StepUtils;
+import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.EnvVars;
 import hudson.Extension;
 import hudson.model.TaskListener;
@@ -19,7 +20,6 @@ import org.jenkinsci.plugins.workflow.steps.SynchronousNonBlockingStepExecution;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
 
-import javax.annotation.Nonnull;
 import java.util.Collections;
 import java.util.Set;
 
@@ -63,7 +63,7 @@ public class EBWaitOnEnvironmentHealthStep extends Step {
 			return "ebWaitOnEnvironmentHealth";
 		}
 
-		@Nonnull
+		@NonNull
 		@Override
 		public String getDisplayName() {
 			return "Waits until the specified environment application becomes available";
@@ -74,7 +74,7 @@ public class EBWaitOnEnvironmentHealthStep extends Step {
 		private static final long serialVersionUID = 1L;
 		private final transient EBWaitOnEnvironmentHealthStep step;
 
-		protected Execution(EBWaitOnEnvironmentHealthStep step, @Nonnull StepContext context) {
+		protected Execution(EBWaitOnEnvironmentHealthStep step, @NonNull StepContext context) {
 			super(context);
 			this.step = step;
 		}
