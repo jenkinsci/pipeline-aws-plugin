@@ -25,8 +25,6 @@ import java.util.Collection;
 import java.util.Map;
 import java.util.Set;
 
-import javax.annotation.Nonnull;
-
 import org.jenkinsci.plugins.workflow.steps.StepContext;
 import org.jenkinsci.plugins.workflow.steps.StepDescriptor;
 import org.jenkinsci.plugins.workflow.steps.StepExecution;
@@ -38,6 +36,7 @@ import com.amazonaws.services.cloudformation.model.RollbackConfiguration;
 import com.amazonaws.services.cloudformation.model.Tag;
 
 import de.taimos.pipeline.aws.utils.StepUtils;
+import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.EnvVars;
 import hudson.Extension;
 import hudson.FilePath;
@@ -87,7 +86,7 @@ public class CFNUpdateStep extends AbstractCFNCreateStep {
 
 	public static class Execution extends AbstractCFNCreateStep.Execution<CFNUpdateStep, Map<String, String>> {
 
-		protected Execution(CFNUpdateStep step, @Nonnull StepContext context) {
+		protected Execution(CFNUpdateStep step, @NonNull StepContext context) {
 			super(step, context);
 		}
 

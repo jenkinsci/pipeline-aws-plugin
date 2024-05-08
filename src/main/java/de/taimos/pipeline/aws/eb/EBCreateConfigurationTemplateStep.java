@@ -7,6 +7,7 @@ import com.amazonaws.services.elasticbeanstalk.model.CreateConfigurationTemplate
 import com.amazonaws.services.elasticbeanstalk.model.SourceConfiguration;
 import de.taimos.pipeline.aws.AWSClientFactory;
 import de.taimos.pipeline.aws.utils.StepUtils;
+import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.EnvVars;
 import hudson.Extension;
 import hudson.model.TaskListener;
@@ -18,7 +19,6 @@ import org.jenkinsci.plugins.workflow.steps.StepExecution;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
 
-import javax.annotation.Nonnull;
 import java.util.Set;
 
 public class EBCreateConfigurationTemplateStep extends Step {
@@ -79,7 +79,7 @@ public class EBCreateConfigurationTemplateStep extends Step {
 			return "ebCreateConfigurationTemplate";
 		}
 
-		@Nonnull
+		@NonNull
 		@Override
 		public String getDisplayName() {
 			return "Creates a new configuration template for an elastic beanstalk application";
@@ -90,7 +90,7 @@ public class EBCreateConfigurationTemplateStep extends Step {
 		private static final long serialVersionUID = 1L;
 		private final transient EBCreateConfigurationTemplateStep step;
 
-		protected Execution(EBCreateConfigurationTemplateStep step, @Nonnull StepContext context) {
+		protected Execution(EBCreateConfigurationTemplateStep step, @NonNull StepContext context) {
 			super(context);
 			this.step = step;
 		}

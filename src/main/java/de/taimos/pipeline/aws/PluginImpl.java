@@ -20,12 +20,11 @@
  */
 package de.taimos.pipeline.aws;
 
+import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.Extension;
 import hudson.ExtensionList;
 import static hudson.model.Descriptor.FormException;
 import jenkins.model.GlobalConfiguration;
-
-import javax.annotation.Nonnull;
 
 import net.sf.json.JSONObject;
 
@@ -73,7 +72,7 @@ public class PluginImpl extends GlobalConfiguration {
 	 *
 	 * @return the one.
 	 */
-	@Nonnull
+	@NonNull
 	public static PluginImpl getInstance() {
 		return ExtensionList.lookup(PluginImpl.class).get(0);
 	}

@@ -26,8 +26,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
-import javax.annotation.Nonnull;
-
 import org.jenkinsci.plugins.workflow.steps.StepContext;
 import org.jenkinsci.plugins.workflow.steps.StepDescriptor;
 import org.jenkinsci.plugins.workflow.steps.StepExecution;
@@ -40,6 +38,7 @@ import com.amazonaws.services.s3.model.S3ObjectSummary;
 import com.google.common.base.Preconditions;
 
 import de.taimos.pipeline.aws.utils.StepUtils;
+import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.Extension;
 import hudson.model.TaskListener;
 
@@ -216,7 +215,7 @@ public class S3DeleteStep extends AbstractS3Step {
 		}
 
 		@Override
-		public void stop(@Nonnull Throwable cause) throws Exception {
+		public void stop(@NonNull Throwable cause) throws Exception {
 			//
 		}
 
