@@ -121,7 +121,7 @@ public class CFNUpdateStackSetStepTest {
 				);
 		job.setDefinition(new CpsFlowDefinition(""
 				+ "node {\n"
-				+ "  cfnUpdateStackSet(stackSet: 'foo', operationPreferences: [failureToleranceCount: 5, regionOrder: ['us-west-2'], failureTolerancePercentage: 17, maxConcurrentCount: 18, maxConcurrentPercentage: 34])"
+				+ "  cfnUpdateStackSet(stackSet: 'foo', operationPreferences: [failureToleranceCount: 5, regionOrder: ['us-west-2'], failureTolerancePercentage: 17, maxConcurrentCount: 18, maxConcurrentPercentage: 34, regionConcurrencyType: 'PARALLEL'])"
 				+ "}\n", true)
 		);
 		jenkinsRule.assertBuildStatusSuccess(job.scheduleBuild2(0));
@@ -135,6 +135,7 @@ public class CFNUpdateStackSetStepTest {
 				.withFailureTolerancePercentage(17)
 				.withMaxConcurrentCount(18)
 				.withMaxConcurrentPercentage(34)
+				.withRegionConcurrencyType("PARALLEL")
 		);
 
 		Mockito.verify(stackSet).waitForOperationToComplete(operationId, Duration.ofSeconds(1));
