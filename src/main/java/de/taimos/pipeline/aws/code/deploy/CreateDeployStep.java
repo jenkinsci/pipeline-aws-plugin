@@ -175,12 +175,34 @@ public class CreateDeployStep extends Step {
 			return null;
 		}
 
-		private FileExistsBehavior getFileExistsBehavior(String fileExistsBehavior) {
+		private FileExistsBehavior getFileExistsBehavior(String fileExistsBehavior, ) {
+			if (isEcsOrLambdaDeployment()) {
+        			return null;
+    			}
 			if (StringUtils.isEmpty(fileExistsBehavior)) {
 				return FileExistsBehavior.DISALLOW;
 			}
 			return FileExistsBehavior.fromValue(fileExistsBehavior);
 		}
+		private boolean isEcsOrLambdaDeployment() {
+		    AmazonCodeDeploy codeDeploy = AmazonCodeDeployClientBuilder.defaultClient();
+			DescribeDeploymentGroupRequest request = new DescribeDeploymentGroupRequest()
+		        .withApplicationName(applicationName)
+		        .withDeploymentGroupName(deploymentGroupName);
+		
+		    DescribeDeploymentGroupResult response = codeDeploy.describeDeploymentGroup(request);
+		    DeploymentGroupInfo deploymentGroupInfo = response.getDeploymentGroupInfo();
+		
+		    if (deploymentGroupInfo.getServiceRoleArn() != null) {
+		        String serviceRoleArn = deploymentGroupInfo.getServiceRoleArn();
+		        
+		        if (serviceRoleArn.contains("ecs") || serviceRoleArn.contains("lambda")) {
+		            return true; // It's either an ECS or Lambda deployment
+		        }
+		    }
+		    return false;
+		}
+
 
 		private RevisionLocation getRevisionLocation() {
 			if (StringUtils.isNotEmpty(step.getS3Bucket())) {
