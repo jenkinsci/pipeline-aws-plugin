@@ -183,34 +183,10 @@ public class CreateDeployStep extends Step {
 		}
 
 		private FileExistsBehavior getFileExistsBehavior(String fileExistsBehavior) {
-			if (isEcsOrLambdaDeployment()) {
-				return null;
-			}
 			if (StringUtils.isEmpty(fileExistsBehavior)) {
 				return FileExistsBehavior.DISALLOW;
 			}
 			return FileExistsBehavior.fromValue(fileExistsBehavior);
-		}
-
-		private boolean isEcsOrLambdaDeployment() {
-			AmazonCodeDeploy codeDeploy = AWSClientFactory.create(AmazonCodeDeployClientBuilder.standard(), this.getContext());
-			
-			try {
-				GetDeploymentGroupRequest request = 
-					new GetDeploymentGroupRequest()
-						.withApplicationName(step.getApplicationName())
-						.withDeploymentGroupName(step.getDeploymentGroupName());
-				
-				GetDeploymentGroupResult response = 
-					codeDeploy.getDeploymentGroup(request);
-				
-				String computePlatform = response.getDeploymentGroupInfo().getComputePlatform();
-				
-				return "ECS".equalsIgnoreCase(computePlatform) || "Lambda".equalsIgnoreCase(computePlatform);
-			} catch (Exception e) {
-				// Log the exception or handle it as appropriate for your use case
-				return false;
-			}
 		}
 
 		private RevisionLocation getRevisionLocation() {
