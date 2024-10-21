@@ -1099,6 +1099,30 @@ ebWaitOnEnvironmentHealth(
 
 ## current master
 
+## 1.45
+### Enhanced ECS and Lambda Deployment Support
+
+We've improved the `CreateDeployStep` class to better handle ECS and Lambda deployments:
+
+1. Added a new method `isEcsOrLambdaDeployment()` to detect if the deployment is for ECS or Lambda.
+2. Modified the `getFileExistsBehavior()` method to skip setting `FileExistsBehavior` for ECS and Lambda deployments.
+3. These changes ensure that the `fileExistsBehavior` parameter is only set for EC2/On-premises deployments, avoiding potential issues with ECS and Lambda deployments.
+
+### New Dependencies
+
+The following new imports have been added to support these changes:
+
+- `com.amazonaws.services.codedeploy.model.GetDeploymentGroupRequest`
+- `com.amazonaws.services.codedeploy.model.GetDeploymentGroupResult`
+- `com.amazonaws.services.codedeploy.model.DeploymentGroupInfo`
+
+### Improved Error Handling
+
+The `isEcsOrLambdaDeployment()` method includes basic error handling to gracefully handle any exceptions that may occur when querying the deployment group information.
+
+These updates enhance the plugin's compatibility with different AWS CodeDeploy compute platforms while maintaining existing functionality for EC2/On-premises deployments.
+
+
 ## 1.44
 * Fix global configuration naming for JCasC. Please note that this is a breaking change if JCasC is defined. This can be fixed by renaming pluginImpl --> pipelineStepsAWS.
 * Fix Elastic Beanstalk client creation bug that ignored provided configurations in the withAWSStep
