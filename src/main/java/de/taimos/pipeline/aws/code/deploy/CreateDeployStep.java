@@ -9,6 +9,9 @@ import com.amazonaws.services.codedeploy.model.GitHubLocation;
 import com.amazonaws.services.codedeploy.model.RevisionLocation;
 import com.amazonaws.services.codedeploy.model.RevisionLocationType;
 import com.amazonaws.services.codedeploy.model.S3Location;
+import com.amazonaws.services.codedeploy.model.GetDeploymentGroupRequest;
+import com.amazonaws.services.codedeploy.model.GetDeploymentGroupResult;
+import com.amazonaws.services.codedeploy.model.DeploymentGroupInfo;
 import de.taimos.pipeline.aws.AWSClientFactory;
 import de.taimos.pipeline.aws.utils.StepUtils;
 import hudson.Extension;
@@ -160,8 +163,12 @@ public class CreateDeployStep extends Step {
 					.withDeploymentConfigName(step.getDeploymentConfigName())
 					.withDescription(step.getDescription())
 					.withRevision(getRevisionLocation())
-					.withFileExistsBehavior(getFileExistsBehavior(step.getFileExistsBehavior()))
 					.withIgnoreApplicationStopFailures(step.getIgnoreApplicationStopFailures());
+
+			FileExistsBehavior fileExistsBehavior = getFileExistsBehavior(step.getFileExistsBehavior());
+			if (fileExistsBehavior != null) {
+				deploymentRequest.withFileExistsBehavior(fileExistsBehavior);
+			}
 
 			CreateDeploymentResult deployment = client.createDeployment(deploymentRequest);
 
@@ -175,34 +182,36 @@ public class CreateDeployStep extends Step {
 			return null;
 		}
 
-		private FileExistsBehavior getFileExistsBehavior(String fileExistsBehavior, ) {
+		private FileExistsBehavior getFileExistsBehavior(String fileExistsBehavior) {
 			if (isEcsOrLambdaDeployment()) {
-        			return null;
-    			}
+				return null;
+			}
 			if (StringUtils.isEmpty(fileExistsBehavior)) {
 				return FileExistsBehavior.DISALLOW;
 			}
 			return FileExistsBehavior.fromValue(fileExistsBehavior);
 		}
-		private boolean isEcsOrLambdaDeployment() {
-		    AmazonCodeDeploy codeDeploy = AmazonCodeDeployClientBuilder.defaultClient();
-			DescribeDeploymentGroupRequest request = new DescribeDeploymentGroupRequest()
-		        .withApplicationName(applicationName)
-		        .withDeploymentGroupName(deploymentGroupName);
-		
-		    DescribeDeploymentGroupResult response = codeDeploy.describeDeploymentGroup(request);
-		    DeploymentGroupInfo deploymentGroupInfo = response.getDeploymentGroupInfo();
-		
-		    if (deploymentGroupInfo.getServiceRoleArn() != null) {
-		        String serviceRoleArn = deploymentGroupInfo.getServiceRoleArn();
-		        
-		        if (serviceRoleArn.contains("ecs") || serviceRoleArn.contains("lambda")) {
-		            return true; // It's either an ECS or Lambda deployment
-		        }
-		    }
-		    return false;
-		}
 
+		private boolean isEcsOrLambdaDeployment() {
+			AmazonCodeDeploy codeDeploy = AWSClientFactory.create(AmazonCodeDeployClientBuilder.standard(), this.getContext());
+			
+			try {
+				GetDeploymentGroupRequest request = 
+					new GetDeploymentGroupRequest()
+						.withApplicationName(step.getApplicationName())
+						.withDeploymentGroupName(step.getDeploymentGroupName());
+				
+				GetDeploymentGroupResult response = 
+					codeDeploy.getDeploymentGroup(request);
+				
+				String computePlatform = response.getDeploymentGroupInfo().getComputePlatform();
+				
+				return "ECS".equalsIgnoreCase(computePlatform) || "Lambda".equalsIgnoreCase(computePlatform);
+			} catch (Exception e) {
+				// Log the exception or handle it as appropriate for your use case
+				return false;
+			}
+		}
 
 		private RevisionLocation getRevisionLocation() {
 			if (StringUtils.isNotEmpty(step.getS3Bucket())) {
