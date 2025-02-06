@@ -25,8 +25,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
-import javax.annotation.Nonnull;
-
 import org.jenkinsci.plugins.workflow.steps.Step;
 import org.jenkinsci.plugins.workflow.steps.StepContext;
 import org.jenkinsci.plugins.workflow.steps.StepDescriptor;
@@ -40,6 +38,7 @@ import com.amazonaws.services.securitytoken.model.GetCallerIdentityRequest;
 import com.amazonaws.services.securitytoken.model.GetCallerIdentityResult;
 
 import de.taimos.pipeline.aws.utils.StepUtils;
+import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.Extension;
 import hudson.model.TaskListener;
 
@@ -76,7 +75,7 @@ public class AWSIdentityStep extends Step {
 
 	public static class Execution extends SynchronousNonBlockingStepExecution<Map<String, String>> {
 
-		protected Execution(@Nonnull StepContext context) {
+		protected Execution(@NonNull StepContext context) {
 			super(context);
 		}
 

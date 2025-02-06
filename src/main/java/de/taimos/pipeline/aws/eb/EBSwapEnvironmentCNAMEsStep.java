@@ -10,6 +10,7 @@ import com.amazonaws.services.elasticbeanstalk.model.ResourceNotFoundException;
 import com.amazonaws.services.elasticbeanstalk.model.SwapEnvironmentCNAMEsRequest;
 import de.taimos.pipeline.aws.AWSClientFactory;
 import de.taimos.pipeline.aws.utils.StepUtils;
+import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.EnvVars;
 import hudson.Extension;
 import hudson.model.TaskListener;
@@ -21,7 +22,6 @@ import org.jenkinsci.plugins.workflow.steps.SynchronousNonBlockingStepExecution;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
 
-import javax.annotation.Nonnull;
 import java.util.Set;
 
 public class EBSwapEnvironmentCNAMEsStep extends Step {
@@ -84,7 +84,7 @@ public class EBSwapEnvironmentCNAMEsStep extends Step {
 			return "ebSwapEnvironmentCNAMEs";
 		}
 
-		@Nonnull
+		@NonNull
 		@Override
 		public String getDisplayName() {
 			return "Swaps the CNAMEs of two elastic beanstalk environments.";
@@ -95,7 +95,7 @@ public class EBSwapEnvironmentCNAMEsStep extends Step {
 		private static final long serialVersionUID = 1L;
 		private final transient EBSwapEnvironmentCNAMEsStep step;
 
-		protected Execution(EBSwapEnvironmentCNAMEsStep step, @Nonnull StepContext context) {
+		protected Execution(EBSwapEnvironmentCNAMEsStep step, @NonNull StepContext context) {
 			super(context);
 			this.step = step;
 		}

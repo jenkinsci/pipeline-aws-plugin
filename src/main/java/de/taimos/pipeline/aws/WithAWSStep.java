@@ -25,8 +25,6 @@ import java.io.IOException;
 import java.util.Collections;
 import java.util.Set;
 
-import javax.annotation.Nonnull;
-
 import org.jenkinsci.plugins.workflow.steps.BodyExecutionCallback;
 import org.jenkinsci.plugins.workflow.steps.EnvironmentExpander;
 import org.jenkinsci.plugins.workflow.steps.Step;
@@ -56,6 +54,7 @@ import de.taimos.pipeline.aws.utils.AssumedRole;
 import de.taimos.pipeline.aws.utils.AssumedRole.AssumeRole;
 import de.taimos.pipeline.aws.utils.IamRoleUtils;
 import de.taimos.pipeline.aws.utils.StepUtils;
+import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.EnvVars;
 import hudson.Extension;
 import hudson.model.Item;
@@ -308,7 +307,7 @@ public class WithAWSStep extends Step {
 			EnvironmentExpander expander = new EnvironmentExpander() {
 				private static final long serialVersionUID = 1L;
 				@Override
-				public void expand(@Nonnull EnvVars envVars) {
+				public void expand(@NonNull EnvVars envVars) {
 					envVars.overrideAll(awsEnv);
 				}
 			};
@@ -322,7 +321,7 @@ public class WithAWSStep extends Step {
 		private static final String ALLOW_ALL_POLICY = "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Action\":\"*\","
 				+ "\"Effect\":\"Allow\",\"Resource\":\"*\"}]}";
 
-		private void withFederatedUserId(@Nonnull EnvVars localEnv) {
+		private void withFederatedUserId(@NonNull EnvVars localEnv) {
 			if (!StringUtils.isNullOrEmpty(this.step.getFederatedUserId())) {
 				AWSSecurityTokenService sts = AWSClientFactory.create(AWSSecurityTokenServiceClientBuilder.standard(), this.getContext(), this.envVars);
 				GetFederationTokenRequest getFederationTokenRequest = new GetFederationTokenRequest();
@@ -341,7 +340,7 @@ public class WithAWSStep extends Step {
 
 		}
 
-		private void withCredentials(@Nonnull Run<?, ?> run, @Nonnull EnvVars localEnv) throws IOException, InterruptedException {
+		private void withCredentials(@NonNull Run<?, ?> run, @NonNull EnvVars localEnv) throws IOException, InterruptedException {
 			if (!StringUtils.isNullOrEmpty(this.step.getCredentials())) {
 				StandardUsernamePasswordCredentials usernamePasswordCredentials = CredentialsProvider.findCredentialById(this.step.getCredentials(),
 						StandardUsernamePasswordCredentials.class, run, Collections.emptyList());
@@ -378,7 +377,7 @@ public class WithAWSStep extends Step {
 			this.envVars.overrideAll(localEnv);
 		}
 
-		private void withRole(@Nonnull EnvVars localEnv) throws IOException, InterruptedException {
+		private void withRole(@NonNull EnvVars localEnv) throws IOException, InterruptedException {
 			if (!StringUtils.isNullOrEmpty(this.step.getRole())) {
 
 				AWSSecurityTokenService sts = AWSClientFactory.create(AWSSecurityTokenServiceClientBuilder.standard(), this.getContext(), this.envVars);
@@ -403,7 +402,7 @@ public class WithAWSStep extends Step {
 			}
 		}
 
-		private void withRegion(@Nonnull EnvVars localEnv) throws IOException, InterruptedException {
+		private void withRegion(@NonNull EnvVars localEnv) throws IOException, InterruptedException {
 			if (!StringUtils.isNullOrEmpty(this.step.getRegion())) {
 				this.getContext().get(TaskListener.class).getLogger().format("Setting AWS region %s %n ", this.step.getRegion());
 				localEnv.override(AWSClientFactory.AWS_DEFAULT_REGION, this.step.getRegion());
@@ -412,7 +411,7 @@ public class WithAWSStep extends Step {
 			}
 		}
 
-		private void withEndpointUrl(@Nonnull EnvVars localEnv) throws IOException, InterruptedException {
+		private void withEndpointUrl(@NonNull EnvVars localEnv) throws IOException, InterruptedException {
 			if (!StringUtils.isNullOrEmpty(this.step.getEndpointUrl())) {
 				this.getContext().get(TaskListener.class).getLogger().format("Setting AWS endpointUrl %s %n ", this.step.getEndpointUrl());
 				localEnv.override(AWSClientFactory.AWS_ENDPOINT_URL, this.step.getEndpointUrl());
@@ -420,7 +419,7 @@ public class WithAWSStep extends Step {
 			}
 		}
 
-		private void withProfile(@Nonnull EnvVars localEnv) throws IOException, InterruptedException {
+		private void withProfile(@NonNull EnvVars localEnv) throws IOException, InterruptedException {
 			if (!StringUtils.isNullOrEmpty(this.step.getProfile())) {
 				this.getContext().get(TaskListener.class).getLogger().format("Setting AWS profile %s %n ", this.step.getProfile());
 				localEnv.override(AWSClientFactory.AWS_DEFAULT_PROFILE, this.step.getProfile());

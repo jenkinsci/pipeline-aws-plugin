@@ -25,14 +25,13 @@ import java.io.IOException;
 import java.util.Map;
 import java.util.Set;
 
-import javax.annotation.Nonnull;
-
 import com.amazonaws.services.cloudformation.model.ValidateTemplateResult;
 import com.amazonaws.services.cloudformation.model.transform.ValidateTemplateRequestMarshaller;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import de.taimos.pipeline.aws.AwsSdkResponseToJson;
+import edu.umd.cs.findbugs.annotations.NonNull;
 import groovy.json.JsonSlurper;
 import org.jenkinsci.plugins.workflow.steps.Step;
 import org.jenkinsci.plugins.workflow.steps.StepContext;
@@ -109,7 +108,7 @@ public class CFNValidateStep extends Step {
 
 		private final transient CFNValidateStep step;
 
-		public Execution(CFNValidateStep step, @Nonnull StepContext context) {
+		public Execution(CFNValidateStep step, @NonNull StepContext context) {
 			super(context);
 			this.step = step;
 		}
@@ -160,7 +159,7 @@ public class CFNValidateStep extends Step {
 		}
 
 		@Override
-		public void stop(@Nonnull Throwable cause) throws Exception {
+		public void stop(@NonNull Throwable cause) throws Exception {
 			//
 		}
 
