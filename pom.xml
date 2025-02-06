@@ -22,7 +22,7 @@
         <dependencies>
             <dependency>
                 <groupId>io.jenkins.tools.bom</groupId>
-                <artifactId>bom-2.414.x</artifactId>
+                <artifactId>bom-${jenkins.baseline}.x</artifactId>
                 <version>2928.ved44ea_84e034</version>
                 <scope>import</scope>
                 <type>pom</type>
@@ -78,7 +78,9 @@
     <properties>
         <revision>1.46</revision>
         <changelist>-SNAPSHOT</changelist>
-        <jenkins.version>2.414.3</jenkins.version>
+        <!-- https://www.jenkins.io/doc/developer/plugin-development/choosing-jenkins-baseline/ -->
+        <jenkins.baseline>2.414</jenkins.baseline>
+        <jenkins.version>${jenkins.baseline}.3</jenkins.version>
         <gitHubRepo>jenkinsci/${project.artifactId}-plugin</gitHubRepo>
     </properties>
     <build>
