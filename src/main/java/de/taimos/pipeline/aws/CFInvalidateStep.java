@@ -21,6 +21,7 @@
 
 package de.taimos.pipeline.aws;
 
+import java.io.Serial;
 import java.util.Arrays;
 import java.util.Set;
 
@@ -38,7 +39,6 @@ import com.amazonaws.services.cloudfront.model.CreateInvalidationRequest;
 import com.amazonaws.services.cloudfront.model.GetInvalidationRequest;
 import com.amazonaws.services.cloudfront.model.InvalidationBatch;
 import com.amazonaws.services.cloudfront.model.Paths;
-import com.amazonaws.services.cloudfront.waiters.AmazonCloudFrontWaiters;
 import com.amazonaws.waiters.WaiterParameters;
 
 import de.taimos.pipeline.aws.utils.StepUtils;
@@ -127,13 +127,14 @@ public class CFInvalidateStep extends Step {
 
 			if (waitForCompletion) {
 				listener.getLogger().format("Waiting for invalidation %s to be completed...%n", invalidationId);
-				client.waiters().invalidationCompleted().run(new WaiterParameters<GetInvalidationRequest>(new GetInvalidationRequest(distribution, invalidationId)));
+				client.waiters().invalidationCompleted().run(new WaiterParameters<>(new GetInvalidationRequest(distribution, invalidationId)));
 				listener.getLogger().format("Invalidation %s completed%n", invalidationId);
 			}
 
 			return null;
 		}
 
+		@Serial
 		private static final long serialVersionUID = 1L;
 
 	}

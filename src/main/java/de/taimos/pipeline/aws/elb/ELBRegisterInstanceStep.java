@@ -21,6 +21,7 @@
 package de.taimos.pipeline.aws.elb;
 
 import java.io.IOException;
+import java.io.Serial;
 import java.util.ArrayList;
 import java.util.Set;
 
@@ -37,7 +38,6 @@ import com.amazonaws.services.elasticloadbalancingv2.AmazonElasticLoadBalancingC
 import com.amazonaws.services.elasticloadbalancingv2.model.DescribeTargetHealthRequest;
 import com.amazonaws.services.elasticloadbalancingv2.model.DescribeTargetHealthResult;
 import com.amazonaws.services.elasticloadbalancingv2.model.RegisterTargetsRequest;
-import com.amazonaws.services.elasticloadbalancingv2.model.RegisterTargetsResult;
 import com.amazonaws.services.elasticloadbalancingv2.model.TargetDescription;
 
 import de.taimos.pipeline.aws.AWSClientFactory;
@@ -120,7 +120,7 @@ public class ELBRegisterInstanceStep extends Step {
 		protected String run() throws Exception {
 			TaskListener listener = this.getContext().get(TaskListener.class);
 			listener.getLogger().println("elbRegisterInstance instanceID: " + this.step.instanceID + " port: " + this.step.port + " from targetGroupARN: " + this.step.targetGroupARN);
-			ArrayList<TargetDescription> arr = new ArrayList<TargetDescription>();
+			ArrayList<TargetDescription> arr = new ArrayList<>();
 			arr.add(new TargetDescription().withId(this.step.instanceID).withPort(this.step.port));
 			RegisterTargetsRequest request = new RegisterTargetsRequest().withTargetGroupArn(this.step.targetGroupARN).withTargets( arr );
 			AmazonElasticLoadBalancing client = AWSClientFactory.create(AmazonElasticLoadBalancingClientBuilder.standard(), this.getContext(), this.getEnvVars());
@@ -141,6 +141,7 @@ public class ELBRegisterInstanceStep extends Step {
 			}
 		}
 
+		@Serial
 		private static final long serialVersionUID = 1L;
 	}
 }

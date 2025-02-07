@@ -4,13 +4,11 @@ import com.amazonaws.services.cloudformation.model.Parameter;
 import de.taimos.pipeline.aws.cloudformation.ParameterProvider;
 import hudson.FilePath;
 import org.assertj.core.api.Assertions;
-import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 import org.mockito.Mockito;
 
-import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;

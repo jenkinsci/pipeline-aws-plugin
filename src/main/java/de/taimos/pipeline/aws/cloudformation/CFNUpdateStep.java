@@ -21,11 +21,12 @@
 
 package de.taimos.pipeline.aws.cloudformation;
 
+import java.io.Serial;
 import java.util.Collection;
 import java.util.Map;
 import java.util.Set;
 
-import javax.annotation.Nonnull;
+import jakarta.annotation.Nonnull;
 
 import org.jenkinsci.plugins.workflow.steps.StepContext;
 import org.jenkinsci.plugins.workflow.steps.StepDescriptor;
@@ -110,6 +111,7 @@ public class CFNUpdateStep extends AbstractCFNCreateStep {
 			return cfnStack.create(this.getStep().readTemplate(this), url, parameters, tags, notificationARNs, this.getStep().getPollConfiguration(), this.getStep().getRoleArn(), this.getStep().getOnFailure(), this.getStep().getEnableTerminationProtection());
 		}
 
+		@Serial
 		private static final long serialVersionUID = 1L;
 
 	}

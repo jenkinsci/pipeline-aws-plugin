@@ -24,6 +24,7 @@ package de.taimos.pipeline.aws.cloudformation.parser;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Map;
@@ -33,7 +34,6 @@ import org.yaml.snakeyaml.Yaml;
 import org.yaml.snakeyaml.constructor.SafeConstructor;
 
 import com.amazonaws.services.cloudformation.model.Parameter;
-import com.google.common.base.Charsets;
 import com.google.common.base.Joiner;
 
 public class YAMLParameterFileParser implements ParameterFileParser {
@@ -41,14 +41,13 @@ public class YAMLParameterFileParser implements ParameterFileParser {
 	@Override
 	public Collection<Parameter> parseParams(InputStream fileContent) throws IOException {
 		Yaml yaml = new Yaml(new SafeConstructor(new LoaderOptions()));
-		@SuppressWarnings("unchecked")
-		Map<String, Object> parse = yaml.load(new InputStreamReader(fileContent, Charsets.UTF_8));
+		Map<String, Object> parse = yaml.load(new InputStreamReader(fileContent, StandardCharsets.UTF_8));
 
 		Collection<Parameter> parameters = new ArrayList<>();
 		for (Map.Entry<String, Object> entry : parse.entrySet()) {
 			Object value = entry.getValue();
-			if (value instanceof Collection) {
-				String val = Joiner.on(",").join((Collection) value);
+			if (value instanceof Collection<?> collection) {
+				String val = Joiner.on(",").join(collection);
 				parameters.add(new Parameter().withParameterKey(entry.getKey()).withParameterValue(val));
 			} else {
 				parameters.add(new Parameter().withParameterKey(entry.getKey()).withParameterValue(value.toString()));

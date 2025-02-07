@@ -34,6 +34,7 @@ import org.jenkinsci.plugins.workflow.steps.StepExecution;
 import org.jenkinsci.plugins.workflow.steps.SynchronousNonBlockingStepExecution;
 import org.kohsuke.stapler.DataBoundConstructor;
 
+import java.io.Serial;
 import java.util.Set;
 
 /**
@@ -91,6 +92,7 @@ public class S3DoesObjectExistStep extends AbstractS3Step {
 	}
 
 	public static class Execution extends SynchronousNonBlockingStepExecution<Boolean> {
+		@Serial
 		private static final long serialVersionUID = 1L;
 
 		private final transient S3DoesObjectExistStep step;

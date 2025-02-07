@@ -22,10 +22,11 @@
 package de.taimos.pipeline.aws;
 
 import java.io.IOException;
+import java.io.Serial;
 import java.util.Collections;
 import java.util.Set;
 
-import javax.annotation.Nonnull;
+import jakarta.annotation.Nonnull;
 
 import org.jenkinsci.plugins.workflow.steps.BodyExecutionCallback;
 import org.jenkinsci.plugins.workflow.steps.EnvironmentExpander;
@@ -37,7 +38,6 @@ import org.kohsuke.stapler.AncestorInPath;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
 
-import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.auth.BasicSessionCredentials;
 import com.amazonaws.services.securitytoken.AWSSecurityTokenService;
 import com.amazonaws.services.securitytoken.AWSSecurityTokenServiceClientBuilder;
@@ -65,6 +65,7 @@ import hudson.model.TaskListener;
 import hudson.model.queue.Tasks;
 import hudson.security.ACL;
 import hudson.util.ListBoxModel;
+import software.amazon.awssdk.auth.credentials.AwsCredentials;
 
 public class WithAWSStep extends Step {
 
@@ -261,16 +262,16 @@ public class WithAWSStep extends Step {
 			return new StandardListBoxModel()
 					.includeEmptyValue()
 					.includeMatchingAs(
-							context instanceof Queue.Task
-									? Tasks.getAuthenticationOf((Queue.Task) context)
-									: ACL.SYSTEM,
+							context instanceof Queue.Task task
+									? Tasks.getAuthenticationOf2(task)
+									: ACL.SYSTEM2,
 							context,
 							StandardUsernamePasswordCredentials.class,
 							Collections.emptyList(),
 							CredentialsMatchers.instanceOf(StandardUsernamePasswordCredentials.class))
-					.includeMatchingAs(context instanceof Queue.Task
-									? Tasks.getAuthenticationOf((Queue.Task) context)
-									: ACL.SYSTEM,
+					.includeMatchingAs(context instanceof Queue.Task task
+									? Tasks.getAuthenticationOf2(task)
+									: ACL.SYSTEM2,
 							context,
 							AmazonWebServicesCredentials.class,
 							Collections.emptyList(),
@@ -306,6 +307,7 @@ public class WithAWSStep extends Step {
 			this.withFederatedUserId(awsEnv);
 
 			EnvironmentExpander expander = new EnvironmentExpander() {
+				@Serial
 				private static final long serialVersionUID = 1L;
 				@Override
 				public void expand(@Nonnull EnvVars envVars) {
@@ -352,22 +354,22 @@ public class WithAWSStep extends Step {
 					localEnv.override(AWSClientFactory.AWS_ACCESS_KEY_ID, usernamePasswordCredentials.getUsername());
 					localEnv.override(AWSClientFactory.AWS_SECRET_ACCESS_KEY, usernamePasswordCredentials.getPassword().getPlainText());
 				} else if (amazonWebServicesCredentials != null) {
-					AWSCredentials awsCredentials;
+					AwsCredentials awsCredentials;
 
 					if (StringUtils.isNullOrEmpty(this.step.getIamMfaToken())) {
 						this.getContext().get(TaskListener.class).getLogger().format("Constructing AWS Credentials");
-						awsCredentials = amazonWebServicesCredentials.getCredentials();
+						awsCredentials = amazonWebServicesCredentials.resolveCredentials();
 					} else {
 						// Since the getCredentials does its own roleAssumption, this is all it takes to get credentials
 						// with this token.
 						this.getContext().get(TaskListener.class).getLogger().format("Constructing AWS Credentials utilizing MFA Token");
-						awsCredentials = amazonWebServicesCredentials.getCredentials(this.step.getIamMfaToken());
+						awsCredentials = amazonWebServicesCredentials.resolveCredentials(this.step.getIamMfaToken());
 						BasicSessionCredentials basicSessionCredentials = (BasicSessionCredentials) awsCredentials;
 						localEnv.override(AWSClientFactory.AWS_SESSION_TOKEN, basicSessionCredentials.getSessionToken());
 					}
 
-					localEnv.override(AWSClientFactory.AWS_ACCESS_KEY_ID, awsCredentials.getAWSAccessKeyId());
-					localEnv.override(AWSClientFactory.AWS_SECRET_ACCESS_KEY, awsCredentials.getAWSSecretKey());
+					localEnv.override(AWSClientFactory.AWS_ACCESS_KEY_ID, awsCredentials.accessKeyId());
+					localEnv.override(AWSClientFactory.AWS_SECRET_ACCESS_KEY, awsCredentials.secretAccessKey());
 				} else {
 					throw new RuntimeException("Cannot find a Username with password credential with the ID " + this.step.getCredentials());
 				}
@@ -392,7 +394,7 @@ public class WithAWSStep extends Step {
 				assumeRole.withSessionName(this.createRoleSessionName());
 
 				this.getContext().get(TaskListener.class).getLogger().format("Requesting assume role%n");
-				this.getContext().get(TaskListener.class).getLogger().format("Assuming role ARN is %s", assumeRole.toString());
+				this.getContext().get(TaskListener.class).getLogger().format("Assuming role ARN is %s", assumeRole);
 				AssumedRole assumedRole = assumeRole.assumedRole(sts);
 				this.getContext().get(TaskListener.class).getLogger().format("Assumed role %s with id %s %n ", assumedRole.getAssumedRoleUser().getArn(), assumedRole.getAssumedRoleUser().getAssumedRoleId());
 
@@ -448,6 +450,7 @@ public class WithAWSStep extends Step {
 			}
 		}
 
+		@Serial
 		private static final long serialVersionUID = 1L;
 
 	}

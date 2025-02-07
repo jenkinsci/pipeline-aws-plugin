@@ -30,6 +30,7 @@ import jenkins.MasterToSlaveFileCallable;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.Serial;
 
 /*
  * Use the FilePath abstraction to execute code on the remote node
@@ -51,6 +52,7 @@ public class AWSCredentialsProviderCallable extends MasterToSlaveFileCallable<Se
 		return new SerializableAWSCredentialsProvider(provider);
 	}
 
+	@Serial
 	private static final long serialVersionUID = 1L;
 
 }

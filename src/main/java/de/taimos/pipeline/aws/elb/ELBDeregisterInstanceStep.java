@@ -21,6 +21,7 @@
 package de.taimos.pipeline.aws.elb;
 
 import java.io.IOException;
+import java.io.Serial;
 import java.util.ArrayList;
 import java.util.Set;
 
@@ -32,14 +33,9 @@ import org.jenkinsci.plugins.workflow.steps.SynchronousNonBlockingStepExecution;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
 
-import com.amazonaws.services.cloudformation.AmazonCloudFormationClientBuilder;
 import com.amazonaws.services.elasticloadbalancingv2.AmazonElasticLoadBalancing;
-import com.amazonaws.services.elasticloadbalancingv2.AmazonElasticLoadBalancingClient;
 import com.amazonaws.services.elasticloadbalancingv2.AmazonElasticLoadBalancingClientBuilder;
 import com.amazonaws.services.elasticloadbalancingv2.model.DeregisterTargetsRequest;
-import com.amazonaws.services.elasticloadbalancingv2.model.DeregisterTargetsResult;
-import com.amazonaws.services.elasticloadbalancingv2.model.DescribeTargetGroupsRequest;
-import com.amazonaws.services.elasticloadbalancingv2.model.DescribeTargetGroupsResult;
 import com.amazonaws.services.elasticloadbalancingv2.model.DescribeTargetHealthRequest;
 import com.amazonaws.services.elasticloadbalancingv2.model.DescribeTargetHealthResult;
 import com.amazonaws.services.elasticloadbalancingv2.model.TargetDescription;
@@ -124,7 +120,7 @@ public class ELBDeregisterInstanceStep extends Step {
 		protected String run() throws Exception {
 			TaskListener listener = this.getContext().get(TaskListener.class);
 			listener.getLogger().println("elbDeregisterInstance instanceID: " + this.step.instanceID + " port: " + this.step.port + " from targetGroupARN: " + this.step.targetGroupARN);
-			ArrayList<TargetDescription> arr = new ArrayList<TargetDescription>();
+			ArrayList<TargetDescription> arr = new ArrayList<>();
 			arr.add(new TargetDescription().withId(this.step.instanceID).withPort(this.step.port));
 			DeregisterTargetsRequest request = new DeregisterTargetsRequest().withTargetGroupArn(this.step.targetGroupARN).withTargets( arr );
 			AmazonElasticLoadBalancing client = AWSClientFactory.create(AmazonElasticLoadBalancingClientBuilder.standard(), this.getContext(), this.getEnvVars());
@@ -145,6 +141,7 @@ public class ELBDeregisterInstanceStep extends Step {
 			}
 		}
 
+		@Serial
 		private static final long serialVersionUID = 1L;
 	}
 }

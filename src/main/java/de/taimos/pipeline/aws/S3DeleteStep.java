@@ -22,11 +22,12 @@
 package de.taimos.pipeline.aws;
 
 import java.io.IOException;
+import java.io.Serial;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
-import javax.annotation.Nonnull;
+import jakarta.annotation.Nonnull;
 
 import org.jenkinsci.plugins.workflow.steps.StepContext;
 import org.jenkinsci.plugins.workflow.steps.StepDescriptor;
@@ -99,7 +100,8 @@ public class S3DeleteStep extends AbstractS3Step {
 
 	public static class Execution extends StepExecution {
 
-		protected static final long serialVersionUID = 1L;
+		@Serial
+		private static final long serialVersionUID = 1L;
 
 		protected transient S3DeleteStep step;
 

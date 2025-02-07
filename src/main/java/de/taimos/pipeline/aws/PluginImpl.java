@@ -22,18 +22,17 @@ package de.taimos.pipeline.aws;
 
 import hudson.Extension;
 import hudson.ExtensionList;
-import static hudson.model.Descriptor.FormException;
 import jenkins.model.GlobalConfiguration;
 
-import javax.annotation.Nonnull;
+import jakarta.annotation.Nonnull;
 
 import net.sf.json.JSONObject;
 
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
-import org.kohsuke.stapler.StaplerRequest;
 
 import org.jenkinsci.Symbol;
+import org.kohsuke.stapler.StaplerRequest2;
 
 /**
 * Global configuration
@@ -53,7 +52,7 @@ public class PluginImpl extends GlobalConfiguration {
 	}
 
 	@Override
-	public boolean configure(StaplerRequest req, JSONObject json) throws FormException {
+	public boolean configure(StaplerRequest2 req, JSONObject json) throws FormException {
 		json = json.getJSONObject("enableCredentialsFromNode");
 		enableCredentialsFromNode = json.getBoolean("enableCredentialsFromNode");
 		save();

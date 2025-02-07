@@ -21,6 +21,7 @@
 
 package de.taimos.pipeline.aws;
 
+import java.io.Serial;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -122,6 +123,7 @@ public class EC2ShareAmiStep extends Step {
 			return null;
 		}
 
+		@Serial
 		private static final long serialVersionUID = 1L;
 
 	}

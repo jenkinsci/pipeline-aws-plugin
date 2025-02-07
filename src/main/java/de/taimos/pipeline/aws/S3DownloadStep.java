@@ -44,6 +44,7 @@ import org.kohsuke.stapler.DataBoundSetter;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.Serial;
 import java.util.Set;
 
 public class S3DownloadStep extends AbstractS3Step {
@@ -112,7 +113,8 @@ public class S3DownloadStep extends AbstractS3Step {
 
 	public static class Execution extends SynchronousNonBlockingStepExecution<Void> {
 
-		protected static final long serialVersionUID = 1L;
+		@Serial
+		private static final long serialVersionUID = 1L;
 
 		protected transient S3DownloadStep step;
 
@@ -155,7 +157,8 @@ public class S3DownloadStep extends AbstractS3Step {
 
 	private static class RemoteDownloader extends MasterToSlaveFileCallable<Void> {
 
-		protected static final long serialVersionUID = 1L;
+		@Serial
+		private static final long serialVersionUID = 1L;
 
 		private final S3ClientOptions amazonS3ClientOptions;
 		private final EnvVars envVars;

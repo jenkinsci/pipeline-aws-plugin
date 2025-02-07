@@ -210,13 +210,13 @@ public class CFNUpdateStackSetStepTest {
 								.map(accountId -> RegionAccountIdTuple.builder().accountId(accountId).region(region).build())
 						))
 				.collect(Collectors.groupingBy(RegionAccountIdTuple::getRegion, Collectors.mapping(RegionAccountIdTuple::getAccountId, Collectors.toList())));
-		Assertions.assertThat(capturedRegionAccounts).containsAllEntriesOf(new HashMap<String, List<String>>() {
-			{
-				put("r1", asList("a1", "a2"));
-				put("r2", singletonList("a2"));
-				put("r3", singletonList("a3"));
-			}
-		});
+		Assertions.assertThat(capturedRegionAccounts).containsAllEntriesOf(new HashMap<>() {
+            {
+                put("r1", asList("a1", "a2"));
+                put("r2", singletonList("a2"));
+                put("r3", singletonList("a3"));
+            }
+        });
 
 		Mockito.verify(stackSet, Mockito.times(3)).waitForOperationToComplete(Mockito.any(), Mockito.any());
 	}

@@ -37,6 +37,7 @@ import org.jenkinsci.plugins.workflow.steps.SynchronousNonBlockingStepExecution;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
 
+import java.io.Serial;
 import java.time.Duration;
 import java.util.Set;
 
@@ -151,6 +152,7 @@ public class CFNDeleteStep extends Step {
 			return null;
 		}
 
+		@Serial
 		private static final long serialVersionUID = 1L;
 
 	}

@@ -38,8 +38,7 @@ public class JSONParameterFileParser implements ParameterFileParser {
 		ObjectMapper mapper = new ObjectMapper();
 		JsonNode tree = mapper.readTree(fileContent);
 		Collection<Parameter> parameters = new ArrayList<>();
-		if (tree instanceof ArrayNode) {
-			ArrayNode jsonNodes = (ArrayNode) tree;
+		if (tree instanceof ArrayNode jsonNodes) {
 			for (JsonNode node : jsonNodes) {
 				Parameter param = new Parameter();
 				param.withParameterKey(node.get("ParameterKey").asText());

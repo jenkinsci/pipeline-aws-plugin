@@ -22,6 +22,7 @@
 package de.taimos.pipeline.aws;
 
 import java.io.File;
+import java.io.Serial;
 import java.nio.file.FileSystems;
 import java.nio.file.Path;
 import java.nio.file.PathMatcher;
@@ -146,6 +147,7 @@ public class S3FindFilesStep extends AbstractS3Step {
 	}
 
 	public static class Execution extends SynchronousNonBlockingStepExecution<FileWrapper[]> {
+		@Serial
 		private static final long serialVersionUID = 1L;
 
 		private final transient S3FindFilesStep step;
@@ -183,7 +185,7 @@ public class S3FindFilesStep extends AbstractS3Step {
 			// to strip out these parts from the matches later on.
 			//
 			// For exmple, if `path` is "path/to", then this will be "2".
-			final int pathComponentCount = path.length() == 0 ? 0 : Paths.get(path).getNameCount();
+			final int pathComponentCount = path.isEmpty() ? 0 : Paths.get(path).getNameCount();
 
 			// This is the list of S3 file information for all of the matching objects.
 			List<FileWrapper> matchingObjects = new ArrayList<>();
@@ -206,7 +208,7 @@ public class S3FindFilesStep extends AbstractS3Step {
 				request.setBucketName(bucket);
 				request.setPrefix(folder);
 				request.setDelimiter("/");
-				if (folder.length() > 0 && !folder.endsWith("/")) {
+				if (!folder.isEmpty() && !folder.endsWith("/")) {
 					request.setPrefix(folder + "/");
 				}
 
@@ -272,7 +274,7 @@ public class S3FindFilesStep extends AbstractS3Step {
 		 * @return A string that can be used to construct a PathMatcher.
 		 */
 		public static String computeMatcherString(String path, String glob) {
-			return "glob:" + (path.length() == 0 ? "" : path + (path.endsWith("/") ? "" : "/")) + (glob.length() == 0 ? "*" : glob);
+			return "glob:" + (path.isEmpty() ? "" : path + (path.endsWith("/") ? "" : "/")) + (glob.isEmpty() ? "*" : glob);
 		}
 
 		/**

@@ -21,6 +21,7 @@
 
 package de.taimos.pipeline.aws;
 
+import java.io.Serial;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
@@ -144,6 +145,7 @@ public class SNSPublishStep extends Step {
 			return null;
 		}
 
+		@Serial
 		private static final long serialVersionUID = 1L;
 
 	}

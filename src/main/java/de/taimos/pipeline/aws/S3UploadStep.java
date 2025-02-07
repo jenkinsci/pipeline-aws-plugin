@@ -56,7 +56,8 @@ import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.nio.charset.Charset;
+import java.io.Serial;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -292,7 +293,8 @@ public class S3UploadStep extends AbstractS3Step {
 
 	public static class Execution extends SynchronousNonBlockingStepExecution<String> {
 
-		protected static final long serialVersionUID = 1L;
+		@Serial
+		private static final long serialVersionUID = 1L;
 
 		protected final transient S3UploadStep step;
 
@@ -312,7 +314,7 @@ public class S3UploadStep extends AbstractS3Step {
 			final String excludePathPattern = this.step.getExcludePathPattern();
 			final String workingDir = this.step.getWorkingDir();
 			final Map<String, String> metadatas = new HashMap<>();
-			final Map<String, String> tags = new HashMap<String, String>();
+			final Map<String, String> tags = new HashMap<>();
 			final CannedAccessControlList acl = this.step.getAcl();
 			final String cacheControl = this.step.getCacheControl();
 			final String contentEncoding = this.step.getContentEncoding();
@@ -324,7 +326,7 @@ public class S3UploadStep extends AbstractS3Step {
 			boolean omitSourcePath = false;
 			boolean sendingText = false;
 
-			if (this.step.getMetadatas() != null && this.step.getMetadatas().length != 0) {
+			if (this.step.getMetadatas() != null) {
 				for (String metadata : this.step.getMetadatas()) {
 					if (metadata.contains(":")) {
 						metadatas.put(metadata.substring(0, metadata.indexOf(':')), metadata.substring(metadata.indexOf(':') + 1));
@@ -332,7 +334,7 @@ public class S3UploadStep extends AbstractS3Step {
 				}
 			}
 
-			if (this.step.getTags() != null && this.step.getTags().length() != 0) {
+			if (this.step.getTags() != null && !this.step.getTags().isEmpty()) {
 				//[tag1:value1, tag2:value2]
 				String tagsNoBraces = this.step.getTags().substring(1, this.step.getTags().length()-1);
 				String[] pairs= tagsNoBraces.split(", ");
@@ -350,7 +352,7 @@ public class S3UploadStep extends AbstractS3Step {
 
 			final List<FilePath> children = new ArrayList<>();
 			final FilePath dir;
-			if (workingDir != null && !"".equals(workingDir.trim())) {
+			if (workingDir != null && !workingDir.trim().isEmpty()) {
 				dir = this.getContext().get(FilePath.class).child(workingDir);
 			} else {
 				dir = this.getContext().get(FilePath.class);
@@ -378,14 +380,14 @@ public class S3UploadStep extends AbstractS3Step {
 				AmazonS3 s3Client = AWSClientFactory.create(amazonS3ClientOptions.createAmazonS3ClientBuilder(), Execution.this.getContext(), envVars);
 				TransferManager mgr = AWSUtilFactory.newTransferManager(s3Client);
 
-				byte[] bytes = text.getBytes(Charset.forName("UTF-8"));
+				byte[] bytes = text.getBytes(StandardCharsets.UTF_8);
 				PutObjectRequest request = null;
 				ObjectMetadata metas = new ObjectMetadata();
 
 				metas.setContentLength(bytes.length);
 
 				// Add metadata
-				if (metadatas != null && metadatas.size() > 0) {
+				if (metadatas != null && !metadatas.isEmpty()) {
 					metas.setUserMetadata(metadatas);
 				}
 				if (cacheControl != null && !cacheControl.isEmpty()) {
@@ -477,7 +479,8 @@ public class S3UploadStep extends AbstractS3Step {
 
 	private static class RemoteUploader extends MasterToSlaveFileCallable<Void> {
 
-		protected static final long serialVersionUID = 1L;
+		@Serial
+		private static final long serialVersionUID = 1L;
 		private final S3ClientOptions amazonS3ClientOptions;
 		private final EnvVars envVars;
 		private final TaskListener taskListener;
@@ -524,9 +527,9 @@ public class S3UploadStep extends AbstractS3Step {
 				PutObjectRequest request = new PutObjectRequest(this.bucket, path, localFile);
 
 				// Add metadata
-				if ((this.metadatas != null && this.metadatas.size() > 0) || (this.cacheControl != null && !this.cacheControl.isEmpty()) || (this.contentEncoding != null && !this.contentEncoding.isEmpty()) || (this.contentType != null && !this.contentType.isEmpty()) || (this.contentDisposition != null && !this.contentDisposition.isEmpty()) || (this.sseAlgorithm != null && !this.sseAlgorithm.isEmpty())) {
+				if ((this.metadatas != null && !this.metadatas.isEmpty()) || (this.cacheControl != null && !this.cacheControl.isEmpty()) || (this.contentEncoding != null && !this.contentEncoding.isEmpty()) || (this.contentType != null && !this.contentType.isEmpty()) || (this.contentDisposition != null && !this.contentDisposition.isEmpty()) || (this.sseAlgorithm != null && !this.sseAlgorithm.isEmpty())) {
 					ObjectMetadata metas = new ObjectMetadata();
-					if (this.metadatas != null && this.metadatas.size() > 0) {
+					if (this.metadatas != null && !this.metadatas.isEmpty()) {
 						metas.setUserMetadata(this.metadatas);
 					}
 					if (this.cacheControl != null && !this.cacheControl.isEmpty()) {
@@ -587,7 +590,7 @@ public class S3UploadStep extends AbstractS3Step {
 				final MultipleFileUpload fileUpload;
 				final ObjectMetadataProvider metadatasProvider = (file, meta) -> {
 					if (meta != null) {
-						if (RemoteUploader.this.metadatas != null && RemoteUploader.this.metadatas.size() > 0) {
+						if (RemoteUploader.this.metadatas != null && !RemoteUploader.this.metadatas.isEmpty()) {
 							meta.setUserMetadata(RemoteUploader.this.metadatas);
 						}
 						if (RemoteUploader.this.acl != null) {
@@ -617,7 +620,7 @@ public class S3UploadStep extends AbstractS3Step {
 				};
 
 				ObjectTaggingProvider objectTaggingProvider =(uploadContext) -> {
-					List<Tag> tagList = new ArrayList<Tag>();
+					List<Tag> tagList = new ArrayList<>();
 
 					//add tags
 					if(tags != null){
@@ -652,7 +655,8 @@ public class S3UploadStep extends AbstractS3Step {
 
 	private static class RemoteListUploader extends MasterToSlaveFileCallable<Void> {
 
-		protected static final long serialVersionUID = 1L;
+		@Serial
+		private static final long serialVersionUID = 1L;
 		private final S3ClientOptions amazonS3ClientOptions;
 		private final EnvVars envVars;
 		private final TaskListener taskListener;
@@ -694,7 +698,7 @@ public class S3UploadStep extends AbstractS3Step {
 			final MultipleFileUpload fileUpload;
 			ObjectMetadataProvider metadatasProvider = (file, meta) -> {
 				if (meta != null) {
-					if (RemoteListUploader.this.metadatas != null && RemoteListUploader.this.metadatas.size() > 0) {
+					if (RemoteListUploader.this.metadatas != null && !RemoteListUploader.this.metadatas.isEmpty()) {
 						meta.setUserMetadata(RemoteListUploader.this.metadatas);
 					}
 					if (RemoteListUploader.this.acl != null) {
@@ -728,7 +732,7 @@ public class S3UploadStep extends AbstractS3Step {
 			};
 
 			ObjectTaggingProvider objectTaggingProvider =(uploadContext) -> {
-				List<Tag> tagList = new ArrayList<Tag>();
+				List<Tag> tagList = new ArrayList<>();
 
 				//add tags
 				if(tags != null){
@@ -758,7 +762,7 @@ public class S3UploadStep extends AbstractS3Step {
 		}
 	}
 
-	private static MasterToSlaveFileCallable<File> FIND_FILE_ON_SLAVE = new MasterToSlaveFileCallable<File>() {
+	private static MasterToSlaveFileCallable<File> FIND_FILE_ON_SLAVE = new MasterToSlaveFileCallable<>() {
 		@Override
 		public File invoke(File localFile, VirtualChannel channel) throws IOException, InterruptedException {
 			return localFile;

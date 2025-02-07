@@ -36,8 +36,10 @@ import org.jenkinsci.plugins.workflow.steps.SynchronousNonBlockingStepExecution;
 import org.joda.time.DateTime;
 import org.kohsuke.stapler.DataBoundConstructor;
 
+import java.io.Serial;
 import java.net.URL;
 import java.util.Date;
+import java.util.Objects;
 import java.util.Set;
 
 public class S3PresignUrlStep extends AbstractS3Step {
@@ -52,11 +54,8 @@ public class S3PresignUrlStep extends AbstractS3Step {
 		super(pathStyleAccessEnabled, payloadSigningEnabled);
 		this.bucket = bucket;
 		this.key = key;
-		if (durationInSeconds == null) {
-			this.durationInSeconds = 60; //60 seconds
-		} else {
-			this.durationInSeconds = durationInSeconds;
-		}
+		this.durationInSeconds = Objects.requireNonNullElse(durationInSeconds, 60);
+
 		if (httpMethod == null) {
 			this.httpMethod = HttpMethod.GET;
 		} else {
@@ -106,7 +105,8 @@ public class S3PresignUrlStep extends AbstractS3Step {
 
 	public static class Execution extends SynchronousNonBlockingStepExecution {
 
-		protected static final long serialVersionUID = 1L;
+		@Serial
+		private static final long serialVersionUID = 1L;
 
 		protected final transient S3PresignUrlStep step;
 

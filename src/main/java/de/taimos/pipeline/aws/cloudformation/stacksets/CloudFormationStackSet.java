@@ -117,19 +117,22 @@ public class CloudFormationStackSet {
 		this.listener.getLogger().println("Waiting on operationId=" + operationId);
 		DescribeStackSetOperationResult result = describeStackOperation(operationId, 0);
 		this.listener.getLogger().println("operationId=" + operationId + " status=" + result.getStackSetOperation().getStatus());
-		switch (StackSetOperationStatus.fromValue(result.getStackSetOperation().getStatus())) {
-			case RUNNING:
+		return switch (StackSetOperationStatus.fromValue(result.getStackSetOperation().getStatus())) {
+			case RUNNING -> {
 				Thread.sleep(pollInterval.toMillis());
-				return waitForOperationToComplete(operationId, pollInterval);
-			case SUCCEEDED:
+				yield waitForOperationToComplete(operationId, pollInterval);
+			}
+			case SUCCEEDED -> {
 				this.listener.getLogger().println("Stack set operation completed successfully");
-				return result;
-			case FAILED:
+				yield result;
+			}
+			case FAILED -> {
 				this.listener.getLogger().println("Stack set operation completed failed");
 				throw new StackSetOperationFailedException(operationId);
-			default:
-				throw new IllegalStateException("Invalid stack set state=" + result.getStackSetOperation().getStatus());
-		}
+			}
+			default ->
+					throw new IllegalStateException("Invalid stack set state=" + result.getStackSetOperation().getStatus());
+		};
 	}
 
 	public UpdateStackSetResult update(String templateBody, String templateUrl, UpdateStackSetRequest request)  throws InterruptedException {

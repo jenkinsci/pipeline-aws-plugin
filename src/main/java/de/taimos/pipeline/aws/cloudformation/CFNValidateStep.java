@@ -22,18 +22,13 @@
 package de.taimos.pipeline.aws.cloudformation;
 
 import java.io.IOException;
-import java.util.Map;
+import java.io.Serial;
 import java.util.Set;
 
-import javax.annotation.Nonnull;
+import jakarta.annotation.Nonnull;
 
 import com.amazonaws.services.cloudformation.model.ValidateTemplateResult;
-import com.amazonaws.services.cloudformation.model.transform.ValidateTemplateRequestMarshaller;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import de.taimos.pipeline.aws.AwsSdkResponseToJson;
-import groovy.json.JsonSlurper;
 import org.jenkinsci.plugins.workflow.steps.Step;
 import org.jenkinsci.plugins.workflow.steps.StepContext;
 import org.jenkinsci.plugins.workflow.steps.StepDescriptor;
@@ -164,6 +159,7 @@ public class CFNValidateStep extends Step {
 			//
 		}
 
+		@Serial
 		private static final long serialVersionUID = 1L;
 
 	}

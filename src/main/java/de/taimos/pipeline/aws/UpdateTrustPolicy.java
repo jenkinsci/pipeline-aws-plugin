@@ -21,6 +21,7 @@
 
 package de.taimos.pipeline.aws;
 
+import java.io.Serial;
 import java.util.Set;
 
 import org.jenkinsci.plugins.workflow.steps.Step;
@@ -113,6 +114,7 @@ public class UpdateTrustPolicy extends Step {
 			return null;
 		}
 
+		@Serial
 		private static final long serialVersionUID = 1L;
 
 	}

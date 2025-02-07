@@ -21,7 +21,9 @@ import org.jenkinsci.plugins.workflow.steps.SynchronousNonBlockingStepExecution;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
 
-import javax.annotation.Nonnull;
+import jakarta.annotation.Nonnull;
+
+import java.io.Serial;
 import java.util.Set;
 
 public class EBSwapEnvironmentCNAMEsStep extends Step {
@@ -92,6 +94,7 @@ public class EBSwapEnvironmentCNAMEsStep extends Step {
 	}
 
 	public static class Execution extends SynchronousNonBlockingStepExecution<Void> {
+		@Serial
 		private static final long serialVersionUID = 1L;
 		private final transient EBSwapEnvironmentCNAMEsStep step;
 
