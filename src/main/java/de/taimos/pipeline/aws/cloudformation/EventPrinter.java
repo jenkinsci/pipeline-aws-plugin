@@ -21,18 +21,6 @@
 
 package de.taimos.pipeline.aws.cloudformation;
 
-import java.text.SimpleDateFormat;
-import java.time.Duration;
-import java.time.temporal.ChronoUnit;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Date;
-import java.util.List;
-import java.util.concurrent.ExecutionException;
-
-import org.apache.commons.lang.StringUtils;
-import org.apache.http.concurrent.BasicFuture;
-
 import com.amazonaws.AmazonWebServiceRequest;
 import com.amazonaws.services.cloudformation.AmazonCloudFormation;
 import com.amazonaws.services.cloudformation.model.AmazonCloudFormationException;

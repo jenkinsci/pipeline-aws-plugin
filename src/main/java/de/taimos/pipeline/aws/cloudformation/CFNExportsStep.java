@@ -21,6 +21,7 @@
 
 package de.taimos.pipeline.aws.cloudformation;
 
+import java.io.Serial;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
@@ -102,6 +103,7 @@ public class CFNExportsStep extends Step {
 			return map;
 		}
 
+		@Serial
 		private static final long serialVersionUID = 1L;
 
 	}

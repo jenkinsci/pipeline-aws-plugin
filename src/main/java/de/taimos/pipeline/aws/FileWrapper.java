@@ -50,9 +50,10 @@ package de.taimos.pipeline.aws;
  */
 
 import java.io.IOException;
+import java.io.Serial;
 import java.io.Serializable;
 
-import javax.annotation.Nonnull;
+import jakarta.annotation.Nonnull;
 
 import org.jenkinsci.plugins.scriptsecurity.sandbox.whitelists.Whitelisted;
 
@@ -64,6 +65,7 @@ import hudson.FilePath;
  * @author Robert Sandell &lt;rsandell@cloudbees.com&gt;.
  */
 public class FileWrapper implements Serializable {
+	@Serial
 	private static final long serialVersionUID = 1L;
 	private static final String PATH_SUFFIX = "/";
 
@@ -140,11 +142,9 @@ public class FileWrapper implements Serializable {
 		if (this == o) {
 			return true;
 		}
-		if (!(o instanceof FileWrapper)) {
+		if (!(o instanceof FileWrapper that)) {
 			return false;
 		}
-
-		FileWrapper that = (FileWrapper) o;
 
 		return this.getPath().equals(that.getPath());
 

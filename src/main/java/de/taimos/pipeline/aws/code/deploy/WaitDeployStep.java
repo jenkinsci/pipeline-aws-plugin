@@ -21,6 +21,7 @@
 
 package de.taimos.pipeline.aws.code.deploy;
 
+import java.io.Serial;
 import java.util.Set;
 
 import de.taimos.pipeline.aws.AWSClientFactory;
@@ -33,8 +34,6 @@ import org.kohsuke.stapler.DataBoundConstructor;
 
 import com.amazonaws.services.codedeploy.AmazonCodeDeploy;
 import com.amazonaws.services.codedeploy.AmazonCodeDeployClientBuilder;
-import com.amazonaws.services.codedeploy.model.GetDeploymentRequest;
-import com.amazonaws.services.codedeploy.model.GetDeploymentResult;
 
 import de.taimos.pipeline.aws.utils.StepUtils;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
@@ -105,6 +104,7 @@ public class WaitDeployStep extends Step {
 			return new DeployUtils().waitDeployment(this.deploymentId, listener, client);
 		}
 
+		@Serial
 		private static final long serialVersionUID = 1L;
 
 	}

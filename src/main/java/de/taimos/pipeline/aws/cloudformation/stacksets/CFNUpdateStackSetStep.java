@@ -37,7 +37,9 @@ import org.jenkinsci.plugins.workflow.steps.StepExecution;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
 
-import javax.annotation.Nonnull;
+import jakarta.annotation.Nonnull;
+
+import java.io.Serial;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -148,6 +150,7 @@ public class CFNUpdateStackSetStep extends AbstractCFNCreateStackSetStep {
 			return cfnStack.waitForStackState(StackSetStatus.ACTIVE, getStep().getPollConfiguration().getPollInterval());
 		}
 
+		@Serial
 		private static final long serialVersionUID = 1L;
 
 	}

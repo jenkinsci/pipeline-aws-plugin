@@ -21,6 +21,7 @@
 package de.taimos.pipeline.aws.elb;
 
 import java.io.IOException;
+import java.io.Serial;
 import java.util.List;
 import java.util.Set;
 
@@ -119,7 +120,7 @@ public class ELBIsInstanceRegisteredStep extends Step {
 			TaskListener listener = this.getContext().get(TaskListener.class);
 			listener.getLogger().println("elbIsInstanceRegistered instanceID: " + this.step.instanceID + " port: " + this.step.port + " from targetGroupARN: " + this.step.targetGroupARN);
 
-			Boolean rval = false;
+			boolean rval = false;
 			AmazonElasticLoadBalancing client = AWSClientFactory.create(AmazonElasticLoadBalancingClientBuilder.standard(), this.getContext(), this.getEnvVars());
 			DescribeTargetHealthRequest req = new DescribeTargetHealthRequest().withTargetGroupArn(this.step.targetGroupARN);
 			DescribeTargetHealthResult res = client.describeTargetHealth(req);
@@ -130,7 +131,7 @@ public class ELBIsInstanceRegisteredStep extends Step {
 					break;
 				}
 			}
-			listener.getLogger().println(res.toString());
+			listener.getLogger().println(res);
 
 			return rval;
 		}
@@ -143,6 +144,7 @@ public class ELBIsInstanceRegisteredStep extends Step {
 			}
 		}
 
+		@Serial
 		private static final long serialVersionUID = 1L;
 	}
 }

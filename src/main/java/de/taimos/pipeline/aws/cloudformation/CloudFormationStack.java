@@ -162,10 +162,10 @@ public class CloudFormationStack {
 			req.withRollbackConfiguration(rollbackConfig);
 
 			req.withParameters(params);
-			if(tags != null && tags.size() > 0){
+			if(tags != null && !tags.isEmpty()){
 				req.withTags(tags);
 			}
-			if (notificationARNs != null && notificationARNs.size() > 0) {
+			if (notificationARNs != null && !notificationARNs.isEmpty()) {
 				req.withNotificationARNs(notificationARNs);
 			}
 			req.withRoleARN(roleArn);
@@ -298,7 +298,7 @@ public class CloudFormationStack {
 	private boolean isInReview() {
 		if (this.exists()) {
 			DescribeStacksResult result = this.client.describeStacks(new DescribeStacksRequest().withStackName(this.stack));
-			return result.getStacks().size() > 0 && result.getStacks().get(0).getStackStatus().equals("REVIEW_IN_PROGRESS");
+			return !result.getStacks().isEmpty() && result.getStacks().get(0).getStackStatus().equals("REVIEW_IN_PROGRESS");
 		}
 		return false;
 	}

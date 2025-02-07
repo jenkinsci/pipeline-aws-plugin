@@ -11,7 +11,6 @@ import com.amazonaws.services.codedeploy.model.RevisionLocationType;
 import com.amazonaws.services.codedeploy.model.S3Location;
 import com.amazonaws.services.codedeploy.model.GetDeploymentGroupRequest;
 import com.amazonaws.services.codedeploy.model.GetDeploymentGroupResult;
-import com.amazonaws.services.codedeploy.model.DeploymentGroupInfo;
 import de.taimos.pipeline.aws.AWSClientFactory;
 import de.taimos.pipeline.aws.utils.StepUtils;
 import hudson.Extension;
@@ -26,6 +25,7 @@ import org.jenkinsci.plugins.workflow.steps.SynchronousNonBlockingStepExecution;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
 
+import java.io.Serial;
 import java.util.Set;
 
 
@@ -194,18 +194,18 @@ public class CreateDeployStep extends Step {
 
 		private boolean isEcsOrLambdaDeployment() {
 			AmazonCodeDeploy codeDeploy = AWSClientFactory.create(AmazonCodeDeployClientBuilder.standard(), this.getContext());
-			
+
 			try {
-				GetDeploymentGroupRequest request = 
+				GetDeploymentGroupRequest request =
 					new GetDeploymentGroupRequest()
 						.withApplicationName(step.getApplicationName())
 						.withDeploymentGroupName(step.getDeploymentGroupName());
-				
-				GetDeploymentGroupResult response = 
+
+				GetDeploymentGroupResult response =
 					codeDeploy.getDeploymentGroup(request);
-				
+
 				String computePlatform = response.getDeploymentGroupInfo().getComputePlatform();
-				
+
 				return "ECS".equalsIgnoreCase(computePlatform) || "Lambda".equalsIgnoreCase(computePlatform);
 			} catch (Exception e) {
 				// Log the exception or handle it as appropriate for your use case
@@ -229,6 +229,7 @@ public class CreateDeployStep extends Step {
 					.withRevisionType(RevisionLocationType.GitHub);
 		}
 
+		@Serial
 		private static final long serialVersionUID = 1L;
 
 	}

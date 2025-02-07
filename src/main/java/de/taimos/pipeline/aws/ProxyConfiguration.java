@@ -61,13 +61,13 @@ class ProxyConfiguration {
 	}
 
 	private static void useJenkinsProxy(ClientConfiguration config) {
-		if (Jenkins.getInstance() != null) {
-			hudson.ProxyConfiguration proxyConfiguration = Jenkins.getInstance().proxy;
+		if (Jenkins.getInstanceOrNull() != null) {
+			hudson.ProxyConfiguration proxyConfiguration = Jenkins.get().proxy;
 			if (proxyConfiguration != null) {
 				config.setProxyHost(proxyConfiguration.name);
 				config.setProxyPort(proxyConfiguration.port);
 				config.setProxyUsername(proxyConfiguration.getUserName());
-				config.setProxyPassword(proxyConfiguration.getPassword());
+				config.setProxyPassword(proxyConfiguration.getSecretPassword().getPlainText());
 
 				if (proxyConfiguration.getNoProxyHost() != null) {
 					String[] noProxyParts = proxyConfiguration.getNoProxyHost().split("[ \t\n,|]+");

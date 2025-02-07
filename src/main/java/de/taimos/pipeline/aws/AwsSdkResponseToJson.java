@@ -18,7 +18,7 @@ public class AwsSdkResponseToJson {
 		//convert to json so the method calls do not have to be
 		ObjectMapper objectMapper = new ObjectMapper();
 		String jsonResult = objectMapper.writer().writeValueAsString(o);
-		return objectMapper.readValue(jsonResult, new TypeReference<Map<String, Object>>() {
+		return objectMapper.readValue(jsonResult, new TypeReference<>() {
 		});
 	}
 }

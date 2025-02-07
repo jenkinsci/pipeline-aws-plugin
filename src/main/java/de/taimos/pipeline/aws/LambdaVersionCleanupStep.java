@@ -21,6 +21,7 @@
 
 package de.taimos.pipeline.aws;
 
+import java.io.Serial;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
@@ -29,6 +30,7 @@ import java.util.stream.Collectors;
 import com.amazonaws.services.cloudformation.model.ListStackResourcesRequest;
 import com.amazonaws.services.cloudformation.model.ListStackResourcesResult;
 import com.amazonaws.services.cloudformation.model.StackResourceSummary;
+import com.amazonaws.services.lambda.model.AliasConfiguration;
 import org.jenkinsci.plugins.workflow.steps.Step;
 import org.jenkinsci.plugins.workflow.steps.StepContext;
 import org.jenkinsci.plugins.workflow.steps.StepDescriptor;
@@ -103,7 +105,8 @@ public class LambdaVersionCleanupStep extends Step {
 
 	public static class Execution extends SynchronousNonBlockingStepExecution<String> {
 
-		protected static final long serialVersionUID = 1L;
+		@Serial
+		private static final long serialVersionUID = 1L;
 
 		protected final transient LambdaVersionCleanupStep step;
 
@@ -130,7 +133,7 @@ public class LambdaVersionCleanupStep extends Step {
 			listener.getLogger().format("Looking for old versions functionName=%s%n", functionName);
 			List<String> aliasedVersions = client.listAliases(new ListAliasesRequest()
 					.withFunctionName(functionName)).getAliases().stream()
-					.map( (alias) -> alias.getFunctionVersion())
+					.map(AliasConfiguration::getFunctionVersion)
 					.collect(Collectors.toList());
 			listener.getLogger().format("Found alises functionName=%s alias=%s%n", functionName, aliasedVersions);
 			List<FunctionConfiguration> allVersions = findAllVersions(client, functionName);
@@ -142,7 +145,7 @@ public class LambdaVersionCleanupStep extends Step {
 				})
 				.filter( (function) -> !"$LATEST".equals(function.getVersion()))
 				.filter( (function) -> !aliasedVersions.contains(function.getVersion()))
-				.collect(Collectors.toList());
+				.toList();
 			for (FunctionConfiguration functionConfiguration : filteredVersions) {
 				listener.getLogger().format("Deleting old version functionName=%s version=%s lastModified=%s%n", functionName, functionConfiguration.getVersion(), functionConfiguration.getLastModified());
 				client.deleteFunction(new DeleteFunctionRequest()
@@ -174,7 +177,7 @@ public class LambdaVersionCleanupStep extends Step {
 			listener.getLogger().format("Found %d resources in stackName=%s%n", stackResources.size(), stackName);
 			List<StackResourceSummary> lambdaFunctions = stackResources.stream()
 					.filter(resource -> "AWS::Lambda::Function".equals(resource.getResourceType()))
-					.collect(Collectors.toList());
+					.toList();
 			listener.getLogger().format("Found %d lambda resources in stackName=%s%n", lambdaFunctions.size(), stackName);
 			for (StackResourceSummary stackResource : lambdaFunctions) {
 				deleteAllVersions(client, stackResource.getPhysicalResourceId());

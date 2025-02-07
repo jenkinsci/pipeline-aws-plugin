@@ -18,11 +18,9 @@ public class TagsFileParser {
 		JsonNode tree = mapper.readTree(is);
 		ArrayNode jsonNodes = (ArrayNode) tree;
 		return StreamSupport.stream(jsonNodes.spliterator(), false)
-				.map(node -> {
-					return new Tag()
-							.withKey(node.get("Key").asText())
-							.withValue(node.get("Value").asText());
-				})
+				.map(node -> new Tag()
+						.withKey(node.get("Key").asText())
+						.withValue(node.get("Value").asText()))
 				.collect(Collectors.toList());
 	}
 }

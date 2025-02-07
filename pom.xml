@@ -4,7 +4,7 @@
     <parent>
         <groupId>org.jenkins-ci.plugins</groupId>
         <artifactId>plugin</artifactId>
-        <version>4.80</version>
+        <version>5.7</version>
         <relativePath />
     </parent>
     <groupId>de.taimos</groupId>
@@ -23,7 +23,7 @@
             <dependency>
                 <groupId>io.jenkins.tools.bom</groupId>
                 <artifactId>bom-${jenkins.baseline}.x</artifactId>
-                <version>2928.ved44ea_84e034</version>
+                <version>4051.v78dce3ce8b_d6</version>
                 <scope>import</scope>
                 <type>pom</type>
             </dependency>
@@ -32,8 +32,9 @@
     <licenses>
         <license>
             <name>The Apache Software License, Version 2.0</name>
-            <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
-            <distribution>repo</distribution></license>
+            <url>https://www.apache.org/licenses/LICENSE-2.0.txt</url>
+            <distribution>repo</distribution>
+        </license>
     </licenses>
     <url>https://github.com/jenkinsci/${project.artifactId}-plugin</url>
     <organization>
@@ -79,8 +80,8 @@
         <revision>1.46</revision>
         <changelist>-SNAPSHOT</changelist>
         <!-- https://www.jenkins.io/doc/developer/plugin-development/choosing-jenkins-baseline/ -->
-        <jenkins.baseline>2.414</jenkins.baseline>
-        <jenkins.version>${jenkins.baseline}.3</jenkins.version>
+        <jenkins.baseline>2.479</jenkins.baseline>
+        <jenkins.version>${jenkins.baseline}.1</jenkins.version>
         <gitHubRepo>jenkinsci/${project.artifactId}-plugin</gitHubRepo>
     </properties>
     <build>
@@ -88,14 +89,13 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-checkstyle-plugin</artifactId>
-        <version>3.0.0</version>
+        <version>3.6.0</version>
         <executions>
           <execution>
             <id>validate</id>
             <phase>validate</phase>
             <configuration>
               <configLocation>checkstyle.xml</configLocation>
-              <encoding>UTF-8</encoding>
               <consoleOutput>true</consoleOutput>
               <failsOnError>true</failsOnError>
             </configuration>
@@ -246,11 +246,9 @@
             <version>3.25.3</version>
             <scope>test</scope>
         </dependency>
-        <!-- https://mvnrepository.com/artifact/net.bytebuddy/byte-buddy -->
         <dependency>
-            <groupId>net.bytebuddy</groupId>
-            <artifactId>byte-buddy</artifactId>
-            <version>1.14.12</version>
+            <groupId>io.jenkins.plugins</groupId>
+            <artifactId>byte-buddy-api</artifactId>
             <scope>test</scope>
         </dependency>
 

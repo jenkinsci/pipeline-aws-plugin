@@ -20,7 +20,7 @@ package de.taimos.pipeline.aws;
  * #L%
  */
 
-import java.io.UnsupportedEncodingException;
+import java.nio.charset.StandardCharsets;
 
 import com.google.common.base.Joiner;
 
@@ -60,11 +60,7 @@ final class RoleSessionNameBuilder {
 
 	private String sanitizeString(String s) {
 		String stringWithoutEncoding = "";
-		try {
-			stringWithoutEncoding = java.net.URLDecoder.decode(s, "UTF-8");
-		} catch (UnsupportedEncodingException e) {
-			// UTF-8 is always supported
-		}
+		stringWithoutEncoding = java.net.URLDecoder.decode(s, StandardCharsets.UTF_8);
 		return stringWithoutEncoding
 				.replaceAll("[/\\()]", "-")
 				.replaceAll("^-|[ \"']|-$", "");

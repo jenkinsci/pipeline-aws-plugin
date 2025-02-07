@@ -21,6 +21,7 @@
 
 package de.taimos.pipeline.aws;
 
+import java.io.Serial;
 import java.nio.charset.StandardCharsets;
 import java.util.Set;
 
@@ -117,6 +118,7 @@ public class InvokeLambdaStep extends Step {
 
 	public static class Execution extends SynchronousNonBlockingStepExecution<Object> {
 
+		@Serial
 		private static final long serialVersionUID = 1L;
 
 		private final transient InvokeLambdaStep step;

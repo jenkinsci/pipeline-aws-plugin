@@ -39,6 +39,7 @@ import org.jenkinsci.plugins.workflow.steps.StepDescriptor;
 import org.jenkinsci.plugins.workflow.steps.StepExecution;
 import org.kohsuke.stapler.DataBoundConstructor;
 
+import java.io.Serial;
 import java.util.Collection;
 import java.util.List;
 import java.util.Set;
@@ -122,6 +123,7 @@ public class CFNCreateChangeSetStep extends AbstractCFNCreateStep {
 			}
 		}
 
+		@Serial
 		private static final long serialVersionUID = 1L;
 
 	}

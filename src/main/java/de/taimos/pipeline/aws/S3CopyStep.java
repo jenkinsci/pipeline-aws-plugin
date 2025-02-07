@@ -42,7 +42,9 @@ import org.jenkinsci.plugins.workflow.steps.SynchronousNonBlockingStepExecution;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
 
-import javax.annotation.Nonnull;
+import jakarta.annotation.Nonnull;
+
+import java.io.Serial;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
@@ -184,7 +186,8 @@ public class S3CopyStep extends AbstractS3Step {
 
 	public static class Execution extends SynchronousNonBlockingStepExecution<String> {
 
-		protected static final long serialVersionUID = 1L;
+		@Serial
+		private static final long serialVersionUID = 1L;
 
 		protected final transient S3CopyStep step;
 
@@ -209,7 +212,7 @@ public class S3CopyStep extends AbstractS3Step {
 			final S3ClientOptions s3ClientOptions = this.step.createS3ClientOptions();
 			final EnvVars envVars = this.getContext().get(EnvVars.class);
 
-			if (this.step.getMetadatas() != null && this.step.getMetadatas().length != 0) {
+			if (this.step.getMetadatas() != null) {
 				for (String metadata : this.step.getMetadatas()) {
 					if (metadata.split(":").length == 2) {
 						metadatas.put(metadata.split(":")[0], metadata.split(":")[1]);
@@ -228,9 +231,9 @@ public class S3CopyStep extends AbstractS3Step {
 			CopyObjectRequest request = new CopyObjectRequest(fromBucket, fromPath, toBucket, toPath);
 
 			// Add metadata
-			if (metadatas.size() > 0 || (cacheControl != null && !cacheControl.isEmpty()) || (contentType != null && !contentType.isEmpty()) || (contentDisposition != null && !contentDisposition.isEmpty())|| (sseAlgorithm != null && !sseAlgorithm.isEmpty())) {
+			if (!metadatas.isEmpty() || (cacheControl != null && !cacheControl.isEmpty()) || (contentType != null && !contentType.isEmpty()) || (contentDisposition != null && !contentDisposition.isEmpty())|| (sseAlgorithm != null && !sseAlgorithm.isEmpty())) {
 				ObjectMetadata metas = new ObjectMetadata();
-				if (metadatas.size() > 0) {
+				if (!metadatas.isEmpty()) {
 					metas.setUserMetadata(metadatas);
 				}
 				if (cacheControl != null && !cacheControl.isEmpty()) {

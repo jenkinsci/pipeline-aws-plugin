@@ -21,10 +21,11 @@
 
 package de.taimos.pipeline.aws;
 
+import java.io.Serial;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Set;
 
-import org.apache.commons.codec.Charsets;
 import org.jenkinsci.plugins.workflow.steps.Step;
 import org.jenkinsci.plugins.workflow.steps.StepContext;
 import org.jenkinsci.plugins.workflow.steps.StepDescriptor;
@@ -120,7 +121,7 @@ public class ECRLoginStep extends Step {
 
 			AuthorizationData authorizationData = token.getAuthorizationData().get(0);
 			byte[] bytes = org.apache.commons.codec.binary.Base64.decodeBase64(authorizationData.getAuthorizationToken());
-			String data = new String(bytes, Charsets.UTF_8);
+			String data = new String(bytes, StandardCharsets.UTF_8);
 			String[] parts = data.split(":");
 			if (parts.length != 2) {
 				throw new RuntimeException("Got invalid authorizationData from AWS");
@@ -130,6 +131,7 @@ public class ECRLoginStep extends Step {
 			return String.format("docker login -u %s -p %s %s %s", parts[0], parts[1], emailString, authorizationData.getProxyEndpoint());
 		}
 
+		@Serial
 		private static final long serialVersionUID = 1L;
 
 	}

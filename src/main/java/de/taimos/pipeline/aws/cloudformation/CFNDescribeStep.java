@@ -36,6 +36,7 @@ import org.jenkinsci.plugins.workflow.steps.StepExecution;
 import org.jenkinsci.plugins.workflow.steps.SynchronousNonBlockingStepExecution;
 import org.kohsuke.stapler.DataBoundConstructor;
 
+import java.io.Serial;
 import java.util.Map;
 import java.util.Set;
 
@@ -98,6 +99,7 @@ public class CFNDescribeStep extends Step {
 			return cfnStack.describeOutputs();
 		}
 
+		@Serial
 		private static final long serialVersionUID = 1L;
 
 	}

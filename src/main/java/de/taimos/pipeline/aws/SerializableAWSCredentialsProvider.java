@@ -26,6 +26,7 @@ import com.amazonaws.auth.BasicAWSCredentials;
 import com.amazonaws.auth.BasicSessionCredentials;
 import com.amazonaws.auth.STSSessionCredentials;
 
+import java.io.Serial;
 import java.io.Serializable;
 
 /*
@@ -61,5 +62,6 @@ public class SerializableAWSCredentialsProvider implements AWSCredentialsProvide
 
 	public void refresh() {}
 
+	@Serial
 	private static final long serialVersionUID = 1L;
 }

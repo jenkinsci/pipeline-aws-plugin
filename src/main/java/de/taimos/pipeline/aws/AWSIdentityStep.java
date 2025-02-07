@@ -21,11 +21,12 @@
 
 package de.taimos.pipeline.aws;
 
+import java.io.Serial;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
-import javax.annotation.Nonnull;
+import jakarta.annotation.Nonnull;
 
 import org.jenkinsci.plugins.workflow.steps.Step;
 import org.jenkinsci.plugins.workflow.steps.StepContext;
@@ -94,6 +95,7 @@ public class AWSIdentityStep extends Step {
 			return info;
 		}
 
+		@Serial
 		private static final long serialVersionUID = 1L;
 
 	}
