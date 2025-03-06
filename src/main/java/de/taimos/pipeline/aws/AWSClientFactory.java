@@ -54,6 +54,8 @@ public class AWSClientFactory implements Serializable {
 	static final String AWS_DEFAULT_REGION = "AWS_DEFAULT_REGION";
 	static final String AWS_REGION = "AWS_REGION";
 	static final String AWS_ENDPOINT_URL = "AWS_ENDPOINT_URL";
+	static final String AWS_SDK_SOCKET_TIMEOUT = "AWS_SDK_SOCKET_TIMEOUT";
+	static final String AWS_SDK_RETRIES = "AWS_SDK_RETRIES";
 	static final String AWS_PIPELINE_STEPS_FROM_NODE = "AWS_PIPELINE_STEPS_FROM_NODE";
 	private static AWSClientFactoryDelegate factoryDelegate;
 
@@ -102,8 +104,15 @@ public class AWSClientFactory implements Serializable {
 
 	private static ClientConfiguration getClientConfiguration(EnvVars vars) {
 		ClientConfiguration clientConfiguration = new ClientConfiguration();
-		//the default max retry is 3. Increasing this to be more resilient to upstream errors
-		clientConfiguration.setRetryPolicy(new RetryPolicy(null, null, 10, false));
+
+		// The default SDK max retry is 3, increasing this to be more resilient to upstream errors
+		Integer retries = Integer.valueOf(vars.get(AWS_SDK_RETRIES, "10"));
+		clientConfiguration.setRetryPolicy(new RetryPolicy(null, null, retries, false));
+
+		// The default SDK socket timeout is 50000, use as deafult and allow to override via environment variable
+		Integer socketTimeout = Integer.valueOf(vars.get(AWS_SDK_SOCKET_TIMEOUT, "50000"));
+		clientConfiguration.setSocketTimeout(socketTimeout);
+
 		ProxyConfiguration.configure(vars, clientConfiguration);
 		return clientConfiguration;
 	}

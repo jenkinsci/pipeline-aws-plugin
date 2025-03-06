@@ -294,7 +294,7 @@ public class WithAWSStepTest {
 		jenkinsRule.waitForCompletion(workflowRun);
 		jenkinsRule.assertBuildStatus(Result.FAILURE, workflowRun);
 		jenkinsRule.assertLogContains("Requesting assume role", workflowRun);
-		jenkinsRule.assertLogContains("Invalid base64 SAMLResponse", workflowRun);
+		jenkinsRule.assertLogContains("Specified provider doesn't exist", workflowRun);
 	}
 
 	@Test
