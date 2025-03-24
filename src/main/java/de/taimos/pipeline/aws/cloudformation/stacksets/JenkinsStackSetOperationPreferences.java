@@ -42,4 +42,10 @@ public class JenkinsStackSetOperationPreferences extends StackSetOperationPrefer
 	public void setMaxConcurrentPercentage(Integer maxConcurrentPercentage) {
 		super.setMaxConcurrentPercentage(maxConcurrentPercentage);
 	}
+
+	@DataBoundSetter
+	@Override
+	public void setRegionConcurrencyType(String regionConcurrencyType) {
+		super.setRegionConcurrencyType(regionConcurrencyType);
+	}
 }
