@@ -21,6 +21,7 @@
 
 package de.taimos.pipeline.aws.cloudformation;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import com.amazonaws.services.cloudformation.AmazonCloudFormation;
 import com.amazonaws.services.cloudformation.model.AmazonCloudFormationException;
 import com.amazonaws.services.cloudformation.model.Capability;
@@ -121,6 +122,7 @@ public class CloudFormationStack {
 		return map;
 	}
 
+	@SuppressFBWarnings("RCN_REDUNDANT_NULLCHECK_OF_NONNULL_VALUE") // Lombok getTimeout() check
 	public Map<String, String> create(String templateBody, String templateUrl, Collection<Parameter> params, Collection<Tag> tags, Collection<String> notificationARNs, PollConfiguration pollConfiguration, String roleArn, String onFailure, Boolean enableTerminationProtection) throws ExecutionException {
 		if ((templateBody == null || templateBody.isEmpty()) && (templateUrl == null || templateUrl.isEmpty())) {
 			throw new IllegalArgumentException("Either a file or url for the template must be specified");

@@ -30,7 +30,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.http.concurrent.BasicFuture;
 
 import com.amazonaws.AmazonWebServiceRequest;
@@ -50,7 +50,7 @@ import com.amazonaws.waiters.WaiterParameters;
 import de.taimos.pipeline.aws.cloudformation.utils.TimeOutRetryStrategy;
 import hudson.model.TaskListener;
 
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.http.concurrent.BasicFuture;
 
 import java.text.SimpleDateFormat;

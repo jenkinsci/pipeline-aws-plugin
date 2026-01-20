@@ -35,7 +35,7 @@ import com.amazonaws.retry.RetryPolicy;
 import hudson.EnvVars;
 import hudson.FilePath;
 import hudson.model.TaskListener;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.jenkinsci.plugins.workflow.steps.StepContext;
 import org.kohsuke.accmod.Restricted;
 import org.kohsuke.accmod.restrictions.NoExternalUse;
