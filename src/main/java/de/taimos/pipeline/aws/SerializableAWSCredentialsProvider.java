@@ -20,11 +20,11 @@
  */
 package de.taimos.pipeline.aws;
 
-import com.amazonaws.auth.AWSCredentials;
-import com.amazonaws.auth.AWSCredentialsProvider;
-import com.amazonaws.auth.BasicAWSCredentials;
-import com.amazonaws.auth.BasicSessionCredentials;
-import com.amazonaws.auth.STSSessionCredentials;
+import software.amazon.awssdk.auth.credentials.AwsCredentials;
+import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
+import software.amazon.awssdk.auth.credentials.AwsCredentials;
+import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
+import software.amazon.awssdk.auth.credentials.AwsSessionCredentials;
 
 import java.io.Serializable;
 
@@ -32,34 +32,38 @@ import java.io.Serializable;
  * Serialize credentials so that they can be passed back to master
  *
  */
-public class SerializableAWSCredentialsProvider implements AWSCredentialsProvider, Serializable {
+public class SerializableAWSCredentialsProvider implements AwsCredentialsProvider, Serializable {
 	private String accessKey;
 	private String secretAccessKey;
 	private String sessionToken;
 
-	SerializableAWSCredentialsProvider(AWSCredentialsProvider credentialsProvider) {
-		AWSCredentials credentials = credentialsProvider.getCredentials();
-		this.accessKey = credentials.getAWSAccessKeyId();
-		this.secretAccessKey = credentials.getAWSSecretKey();
+	SerializableAWSCredentialsProvider(AwsCredentialsProvider credentialsProvider) {
+		AwsCredentials credentials = credentialsProvider.resolveCredentials();
+		this.accessKey = credentials.accessKeyId();
+		this.secretAccessKey = credentials.secretAccessKey();
 		// A token may be required, so check class
-		if (credentials.getClass() == BasicSessionCredentials.class) {
-			BasicSessionCredentials castedCredentials = (BasicSessionCredentials) credentials;
-			this.sessionToken = castedCredentials.getSessionToken();
+		if (credentials.getClass() == AwsSessionCredentials.class) {
+			AwsSessionCredentials castedCredentials = (AwsSessionCredentials) credentials;
+			this.sessionToken = castedCredentials.sessionToken();
 		}
-		if (credentials.getClass() == STSSessionCredentials.class) {
-			STSSessionCredentials castedCredentials = (STSSessionCredentials) credentials;
-			this.sessionToken = castedCredentials.getSessionToken();
+		if (credentials.getClass() == AwsSessionCredentials.class) {
+			AwsSessionCredentials castedCredentials = (AwsSessionCredentials) credentials;
+			this.sessionToken = castedCredentials.sessionToken();
 		}
 	}
 
-	public AWSCredentials getCredentials() {
+	@Override
+	public AwsCredentials resolveCredentials() {
 		if (this.sessionToken != null) {
-			return new BasicSessionCredentials(this.accessKey, this.secretAccessKey, this.sessionToken);
+			return AwsSessionCredentials.builder().accessKeyId(this.accessKey)
+				.secretAccessKey(this.secretAccessKey).sessionToken(this.sessionToken).build();
 		}
-		return new BasicAWSCredentials(this.accessKey, this.secretAccessKey);
+		return AwsBasicCredentials.builder().accessKeyId(this.accessKey)
+			.secretAccessKey(this.secretAccessKey).build();
 	}
 
 	public void refresh() {}
 
 	private static final long serialVersionUID = 1L;
+
 }

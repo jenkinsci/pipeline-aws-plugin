@@ -21,8 +21,7 @@
 
 package de.taimos.pipeline.aws;
 
-import com.amazonaws.HttpMethod;
-import com.amazonaws.services.s3.AmazonS3;
+
 import com.google.common.base.Preconditions;
 import de.taimos.pipeline.aws.utils.StepUtils;
 import hudson.EnvVars;
@@ -35,9 +34,12 @@ import org.jenkinsci.plugins.workflow.steps.StepExecution;
 import org.jenkinsci.plugins.workflow.steps.SynchronousNonBlockingStepExecution;
 import org.joda.time.DateTime;
 import org.kohsuke.stapler.DataBoundConstructor;
+import software.amazon.awssdk.services.s3.S3AsyncClient;
+import software.amazon.awssdk.services.s3.S3Client;
 
 import java.net.URL;
 import java.util.Date;
+import java.util.Locale;
 import java.util.Set;
 
 public class S3PresignUrlStep extends AbstractS3Step {
@@ -45,7 +47,7 @@ public class S3PresignUrlStep extends AbstractS3Step {
 	private final String bucket;
 	private final String key;
 	private final int durationInSeconds;
-	private final HttpMethod httpMethod;
+	private final String httpMethod;
 
 	@DataBoundConstructor
 	public S3PresignUrlStep(String bucket, String key, String httpMethod, Integer durationInSeconds, boolean pathStyleAccessEnabled, boolean payloadSigningEnabled) {
@@ -58,9 +60,9 @@ public class S3PresignUrlStep extends AbstractS3Step {
 			this.durationInSeconds = durationInSeconds;
 		}
 		if (httpMethod == null) {
-			this.httpMethod = HttpMethod.GET;
+			this.httpMethod = "GET";
 		} else {
-			this.httpMethod = HttpMethod.valueOf(httpMethod);
+			this.httpMethod = httpMethod.toUpperCase(Locale.ROOT);
 		}
 	}
 
@@ -76,7 +78,7 @@ public class S3PresignUrlStep extends AbstractS3Step {
 		return durationInSeconds;
 	}
 
-	public HttpMethod getHttpMethod() {
+	public String getHttpMethod() {
 		return httpMethod;
 	}
 
@@ -124,7 +126,7 @@ public class S3PresignUrlStep extends AbstractS3Step {
 			Preconditions.checkArgument(key != null && !key.isEmpty(), "Key must not be null or empty");
 
 			EnvVars envVars = this.getContext().get(EnvVars.class);
-			AmazonS3 s3 = AWSClientFactory.create(this.step.createS3ClientOptions().createAmazonS3ClientBuilder(), this.getContext(), envVars);
+			S3Client s3 = AWSClientFactory.createAsync(this.step.createS3ClientOptions().createAmazonS3SyncClientBuilder(), this.getContext(), envVars).build();
 			Date expiration = DateTime.now().plusSeconds(this.step.getDurationInSeconds()).toDate();
 			URL url = s3.generatePresignedUrl(bucket, key, expiration, this.step.getHttpMethod());
 			return url.toString();

@@ -1,9 +1,9 @@
 package de.taimos.pipeline.aws.eb;
 
-import com.amazonaws.services.elasticbeanstalk.AWSElasticBeanstalk;
-import com.amazonaws.services.elasticbeanstalk.model.ApplicationDescription;
-import com.amazonaws.services.elasticbeanstalk.model.CreateApplicationRequest;
-import com.amazonaws.services.elasticbeanstalk.model.CreateApplicationResult;
+import software.amazon.awssdk.services.elasticbeanstalk.AWSElasticBeanstalk;
+import software.amazon.awssdk.services.elasticbeanstalk.model.ApplicationDescription;
+import software.amazon.awssdk.services.elasticbeanstalk.model.CreateApplicationRequest;
+import software.amazon.awssdk.services.elasticbeanstalk.model.CreateApplicationResponse;
 import org.jenkinsci.plugins.workflow.steps.StepContext;
 import org.junit.Assert;
 import org.junit.BeforeClass;

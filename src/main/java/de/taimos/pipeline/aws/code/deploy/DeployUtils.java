@@ -1,26 +1,26 @@
 package de.taimos.pipeline.aws.code.deploy;
 
-import com.amazonaws.services.codedeploy.AmazonCodeDeploy;
-import com.amazonaws.services.codedeploy.model.DeploymentStatus;
-import com.amazonaws.services.codedeploy.model.GetDeploymentRequest;
-import com.amazonaws.services.codedeploy.model.GetDeploymentResult;
+import software.amazon.awssdk.services.codedeploy.CodeDeployClient;
+import software.amazon.awssdk.services.codedeploy.model.DeploymentStatus;
+import software.amazon.awssdk.services.codedeploy.model.GetDeploymentRequest;
+import software.amazon.awssdk.services.codedeploy.model.GetDeploymentResponse;
 import hudson.model.TaskListener;
 
 public class DeployUtils {
 
 	private static final Long POLLING_INTERVAL = 10_000L;
 
-	private static final String SUCCEEDED_STATUS = DeploymentStatus.Succeeded.toString();
+	private static final String SUCCEEDED_STATUS = DeploymentStatus.SUCCEEDED.toString();
 
-	private static final String FAILED_STATUS = DeploymentStatus.Failed.toString();
+	private static final String FAILED_STATUS = DeploymentStatus.FAILED.toString();
 
-	private static final String STOPPED_STATUS = DeploymentStatus.Stopped.toString();
+	private static final String STOPPED_STATUS = DeploymentStatus.STOPPED.toString();
 
-	public Void waitDeployment(String deploymentId, TaskListener listener, AmazonCodeDeploy client) throws Exception {
+	public Void waitDeployment(String deploymentId, TaskListener listener, CodeDeployClient client) throws Exception {
 		while (true) {
-			GetDeploymentRequest getDeploymentRequest = new GetDeploymentRequest().withDeploymentId(deploymentId);
-			GetDeploymentResult deployment = client.getDeployment(getDeploymentRequest);
-			String deploymentStatus = deployment.getDeploymentInfo().getStatus();
+			GetDeploymentRequest getDeploymentRequest = GetDeploymentRequest.builder().deploymentId(deploymentId).build();
+			GetDeploymentResponse deployment = client.getDeployment(getDeploymentRequest);
+			DeploymentStatus deploymentStatus = deployment.deploymentInfo().status();
 
 			listener.getLogger().format("DeploymentStatus(%s)", deploymentStatus);
 
@@ -29,7 +29,7 @@ public class DeployUtils {
 				return null;
 			} else if (FAILED_STATUS.equals(deploymentStatus)) {
 				listener.getLogger().println("Deployment completed in error");
-				String errorMessage = deployment.getDeploymentInfo().getErrorInformation().getMessage();
+				String errorMessage = deployment.deploymentInfo().errorInformation().message();
 				throw new Exception("Deployment Failed: " + errorMessage);
 			} else if (STOPPED_STATUS.equals(deploymentStatus)) {
 				listener.getLogger().println("Deployment was stopped");

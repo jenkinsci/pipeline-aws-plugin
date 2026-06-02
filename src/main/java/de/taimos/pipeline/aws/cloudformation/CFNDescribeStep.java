@@ -21,8 +21,8 @@
 
 package de.taimos.pipeline.aws.cloudformation;
 
-import com.amazonaws.services.cloudformation.AmazonCloudFormation;
-import com.amazonaws.services.cloudformation.AmazonCloudFormationClientBuilder;
+import software.amazon.awssdk.services.cloudformation.CloudFormationAsyncClient;
+import software.amazon.awssdk.services.cloudformation.CloudFormationClient;
 import com.google.common.base.Preconditions;
 import de.taimos.pipeline.aws.AWSClientFactory;
 import de.taimos.pipeline.aws.AWSUtilFactory;
@@ -93,8 +93,9 @@ public class CFNDescribeStep extends Step {
 			Preconditions.checkArgument(stack != null && !stack.isEmpty(), "Stack must not be null or empty");
 
 			listener.getLogger().format("Getting outputs of CloudFormation stack %s %n", stack);
-			AmazonCloudFormation client = AWSClientFactory.create(AmazonCloudFormationClientBuilder.standard(), Execution.this.getContext());
-			CloudFormationStack cfnStack = AWSUtilFactory.newCFStack(client, stack, listener);
+			CloudFormationClient client = AWSClientFactory.create(CloudFormationClient.builder(), Execution.this.getContext()).build();
+			CloudFormationAsyncClient asyncClient = AWSClientFactory.create(CloudFormationAsyncClient.builder(), CFNDescribeStep.Execution.this.getContext()).build();
+			CloudFormationStack cfnStack = AWSUtilFactory.newCFStack(client, asyncClient, stack, listener);
 			return cfnStack.describeOutputs();
 		}
 

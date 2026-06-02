@@ -21,15 +21,9 @@
 
 package de.taimos.pipeline.aws;
 
-import com.amazonaws.event.ProgressEventType;
-import com.amazonaws.event.ProgressListener;
-import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.model.CannedAccessControlList;
-import com.amazonaws.services.s3.model.CopyObjectRequest;
-import com.amazonaws.services.s3.model.ObjectMetadata;
-import com.amazonaws.services.s3.model.SSEAwsKeyManagementParams;
-import com.amazonaws.services.s3.transfer.Copy;
-import com.amazonaws.services.s3.transfer.TransferManager;
+import software.amazon.awssdk.services.s3.S3AsyncClient;
+import software.amazon.awssdk.services.s3.model.CopyObjectRequest;
+import software.amazon.awssdk.services.s3.model.ObjectCannedACL;
 import com.google.common.base.Preconditions;
 import de.taimos.pipeline.aws.utils.StepUtils;
 import hudson.EnvVars;
@@ -41,11 +35,17 @@ import org.jenkinsci.plugins.workflow.steps.StepExecution;
 import org.jenkinsci.plugins.workflow.steps.SynchronousNonBlockingStepExecution;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
+import software.amazon.awssdk.transfer.s3.S3TransferManager;
+import software.amazon.awssdk.transfer.s3.model.Copy;
 
-import javax.annotation.Nonnull;
+import edu.umd.cs.findbugs.annotations.NonNull;
+import software.amazon.awssdk.transfer.s3.model.CopyRequest;
+import software.amazon.awssdk.transfer.s3.progress.TransferListener;
+
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ExecutionException;
 
 public class S3CopyStep extends AbstractS3Step {
 
@@ -55,7 +55,7 @@ public class S3CopyStep extends AbstractS3Step {
 	private final String toPath;
 	private String kmsId;
 	private String[] metadatas;
-	private CannedAccessControlList acl;
+	private ObjectCannedACL acl;
 	private String cacheControl;
 	private String contentType;
 	private String contentDisposition;
@@ -112,12 +112,12 @@ public class S3CopyStep extends AbstractS3Step {
 		}
 	}
 
-	public CannedAccessControlList getAcl() {
+	public ObjectCannedACL getAcl() {
 		return this.acl;
 	}
 
 	@DataBoundSetter
-	public void setAcl(CannedAccessControlList acl) {
+	public void setAcl(ObjectCannedACL acl) {
 		this.acl = acl;
 	}
 
@@ -176,7 +176,7 @@ public class S3CopyStep extends AbstractS3Step {
 		}
 
 		@Override
-		@Nonnull
+		@NonNull
 		public String getDisplayName() {
 			return "Copy file between S3 buckets";
 		}
@@ -201,7 +201,7 @@ public class S3CopyStep extends AbstractS3Step {
 			final String toPath = this.step.getToPath();
 			final String kmsId = this.step.getKmsId();
 			final Map<String, String> metadatas = new HashMap<>();
-			final CannedAccessControlList acl = this.step.getAcl();
+			final ObjectCannedACL acl = this.step.getAcl();
 			final String cacheControl = this.step.getCacheControl();
 			final String contentType = this.step.getContentType();
 			final String contentDisposition = this.step.getContentDisposition();
@@ -225,53 +225,53 @@ public class S3CopyStep extends AbstractS3Step {
 			TaskListener listener = Execution.this.getContext().get(TaskListener.class);
 			listener.getLogger().format("Copying s3://%s/%s to s3://%s/%s%n", fromBucket, fromPath, toBucket, toPath);
 
-			CopyObjectRequest request = new CopyObjectRequest(fromBucket, fromPath, toBucket, toPath);
+			CopyObjectRequest.Builder builder = CopyObjectRequest.builder()
+				.sourceBucket(fromBucket)
+				.sourceKey(fromPath).destinationBucket(toBucket).destinationKey(toPath);
 
 			// Add metadata
 			if (metadatas.size() > 0 || (cacheControl != null && !cacheControl.isEmpty()) || (contentType != null && !contentType.isEmpty()) || (contentDisposition != null && !contentDisposition.isEmpty())|| (sseAlgorithm != null && !sseAlgorithm.isEmpty())) {
-				ObjectMetadata metas = new ObjectMetadata();
 				if (metadatas.size() > 0) {
-					metas.setUserMetadata(metadatas);
+					builder.metadata(metadatas);
 				}
 				if (cacheControl != null && !cacheControl.isEmpty()) {
-					metas.setCacheControl(cacheControl);
+					builder.cacheControl(cacheControl);
 				}
 				if (contentType != null && !contentType.isEmpty()) {
-					metas.setContentType(contentType);
+					builder.contentType(contentType);
 				}
 				if (contentDisposition != null && !contentDisposition.isEmpty()) {
-					metas.setContentDisposition(contentDisposition);
+					builder.contentDisposition(contentDisposition);
 				}
 				if (sseAlgorithm != null && !sseAlgorithm.isEmpty()) {
-					metas.setSSEAlgorithm(sseAlgorithm);
+					builder.sseCustomerAlgorithm(sseAlgorithm);
 				}
-				request.withNewObjectMetadata(metas);
 			}
 
 			// Add acl
 			if (acl != null) {
-				request.withCannedAccessControlList(acl);
+				builder.acl(acl);
 			}
 
 			// Add kms
 			if (kmsId != null && !kmsId.isEmpty()) {
 				listener.getLogger().format("Using KMS: %s%n", kmsId);
-				request.withSSEAwsKeyManagementParams(new SSEAwsKeyManagementParams(kmsId));
+				builder.ssekmsKeyId(kmsId);
 			}
-
-			AmazonS3 s3client = AWSClientFactory.create(s3ClientOptions.createAmazonS3ClientBuilder(), this.getContext(), envVars);
-			TransferManager mgr = AWSUtilFactory.newTransferManager(s3client);
+			CopyObjectRequest request = builder.build();
+			S3AsyncClient s3client = AWSClientFactory.createAsync(s3ClientOptions.createAmazonS3ClientBuilder(), this.getContext(), envVars).build();
+			S3TransferManager mgr = AWSUtilFactory.newTransferManager(s3client);
 			try {
-				final Copy copy = mgr.copy(request);
-				copy.addProgressListener((ProgressListener) progressEvent -> {
-					if (progressEvent.getEventType() == ProgressEventType.TRANSFER_COMPLETED_EVENT) {
-						listener.getLogger().println("Finished: " + copy.getDescription());
-					}
-				});
-				copy.waitForCompletion();
-			}
-			finally{
-				mgr.shutdownNow();
+				final Copy copy = mgr.copy(CopyRequest.builder().copyObjectRequest(request)
+					.addTransferListener(new TransferListener() {
+						@Override
+						public void transferComplete(Context.TransferComplete context) {
+							listener.getLogger().println("Finished: " + request.destinationKey());
+						}
+					}).build());
+				copy.completionFuture().get();
+			} catch (ExecutionException ex) {
+				throw new RuntimeException(ex);
 			}
 
 			listener.getLogger().println("Copy complete");

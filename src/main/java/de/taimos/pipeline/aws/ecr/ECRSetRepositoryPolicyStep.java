@@ -1,9 +1,9 @@
 package de.taimos.pipeline.aws.ecr;
 
-import com.amazonaws.services.ecr.AmazonECR;
-import com.amazonaws.services.ecr.AmazonECRClientBuilder;
-import com.amazonaws.services.ecr.model.SetRepositoryPolicyRequest;
-import com.amazonaws.services.ecr.model.SetRepositoryPolicyResult;
+import software.amazon.awssdk.services.ecr.EcrClient;
+import software.amazon.awssdk.services.ecr.EcrClientBuilder;
+import software.amazon.awssdk.services.ecr.model.SetRepositoryPolicyRequest;
+import software.amazon.awssdk.services.ecr.model.SetRepositoryPolicyResponse;
 import de.taimos.pipeline.aws.AWSClientFactory;
 import de.taimos.pipeline.aws.utils.StepUtils;
 import hudson.Extension;
@@ -15,7 +15,7 @@ import org.jenkinsci.plugins.workflow.steps.SynchronousNonBlockingStepExecution;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
 
-import javax.annotation.Nonnull;
+import edu.umd.cs.findbugs.annotations.NonNull;
 import java.util.Set;
 
 public class ECRSetRepositoryPolicyStep extends Step {
@@ -69,7 +69,7 @@ public class ECRSetRepositoryPolicyStep extends Step {
 		}
 
 		@Override
-		@Nonnull
+		@NonNull
 		public String getDisplayName() {
 			return "Set ECR Repository Policy";
 		}
@@ -80,7 +80,7 @@ public class ECRSetRepositoryPolicyStep extends Step {
 		}
 	}
 
-	public static class Execution extends SynchronousNonBlockingStepExecution<SetRepositoryPolicyResult> {
+	public static class Execution extends SynchronousNonBlockingStepExecution<SetRepositoryPolicyResponse> {
 
 		private transient ECRSetRepositoryPolicyStep step;
 
@@ -92,15 +92,15 @@ public class ECRSetRepositoryPolicyStep extends Step {
 		// https://github.com/aws/aws-sdk-java/blob/master/aws-java-sdk-ecr/src/main/java/com/amazonaws/services/ecr/model/SetRepositoryPolicyRequest.java
 		// https://docs.aws.amazon.com/AWSJavaSDK/latest/javadoc/com/amazonaws/services/ecr/model/SetRepositoryPolicyRequest.html
 		@Override
-		protected SetRepositoryPolicyResult run() throws Exception {
-			AmazonECR ecr = AWSClientFactory.create(AmazonECRClientBuilder.standard(), this.getContext());
+		protected SetRepositoryPolicyResponse run() throws Exception {
+			EcrClient ecr = AWSClientFactory.create(EcrClient.builder(), this.getContext()).build();
 
-			SetRepositoryPolicyRequest request = new SetRepositoryPolicyRequest()
-					.withRegistryId(this.step.getRegistryId())
-					.withRepositoryName(this.step.getRepositoryName())
-					.withPolicyText(this.step.getPolicyText());
+			SetRepositoryPolicyRequest request = SetRepositoryPolicyRequest.builder()
+					.registryId(this.step.getRegistryId())
+					.repositoryName(this.step.getRepositoryName())
+					.policyText(this.step.getPolicyText()).build();
 			// https://docs.aws.amazon.com/AWSJavaSDK/latest/javadoc/com/amazonaws/services/ecr/model/SetRepositoryPolicyResult.html
-			SetRepositoryPolicyResult result = ecr.setRepositoryPolicy(request);
+			SetRepositoryPolicyResponse result = ecr.setRepositoryPolicy(request);
 			return result;
 		}
 

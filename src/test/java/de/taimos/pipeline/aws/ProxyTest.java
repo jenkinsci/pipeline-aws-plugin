@@ -24,8 +24,8 @@ package de.taimos.pipeline.aws;
 import org.junit.Assert;
 import org.junit.Test;
 
-import com.amazonaws.ClientConfiguration;
-import com.amazonaws.Protocol;
+import software.amazon.awssdk.ClientConfiguration;
+import software.amazon.awssdk.Protocol;
 
 import hudson.EnvVars;
 

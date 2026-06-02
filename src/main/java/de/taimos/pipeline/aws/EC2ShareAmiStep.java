@@ -33,11 +33,10 @@ import org.jenkinsci.plugins.workflow.steps.SynchronousNonBlockingStepExecution;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
 
-import com.amazonaws.services.ec2.AmazonEC2;
-import com.amazonaws.services.ec2.AmazonEC2ClientBuilder;
-import com.amazonaws.services.ec2.model.LaunchPermission;
-import com.amazonaws.services.ec2.model.LaunchPermissionModifications;
-import com.amazonaws.services.ec2.model.ModifyImageAttributeRequest;
+import software.amazon.awssdk.services.ec2.Ec2Client;
+import software.amazon.awssdk.services.ec2.model.LaunchPermission;
+import software.amazon.awssdk.services.ec2.model.LaunchPermissionModifications;
+import software.amazon.awssdk.services.ec2.model.ModifyImageAttributeRequest;
 
 import de.taimos.pipeline.aws.utils.StepUtils;
 import hudson.Extension;
@@ -111,12 +110,12 @@ public class EC2ShareAmiStep extends Step {
 
 			listener.getLogger().println("Sharing amiId=" + this.step.amiId + " to accounts: " + this.step.accountIds);
 
-			AmazonEC2 ec2 = AWSClientFactory.create(AmazonEC2ClientBuilder.standard(), this.getContext());
-			ec2.modifyImageAttribute(new ModifyImageAttributeRequest()
-					.withImageId(this.step.amiId)
-					.withLaunchPermission(new LaunchPermissionModifications()
-							.withAdd(this.step.accountIds.stream().map(accountId -> new LaunchPermission().withUserId(accountId)).collect(Collectors.toList()))
-					)
+			Ec2Client ec2 = AWSClientFactory.create(Ec2Client.builder(), this.getContext()).build();
+			List<LaunchPermission> permissions = this.step.accountIds.stream().map(accountId -> LaunchPermission.builder().userId(accountId).build()).toList();
+			ec2.modifyImageAttribute(ModifyImageAttributeRequest.builder()
+					.imageId(this.step.amiId)
+					.launchPermission(builder -> builder.add(permissions))
+					.build()
 			);
 			listener.getLogger().println("Shared amiId=" + this.step.amiId + " to accounts: " + this.step.accountIds);
 			return null;

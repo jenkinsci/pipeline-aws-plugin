@@ -1,8 +1,8 @@
 package de.taimos.pipeline.aws.ecr;
 
-import com.amazonaws.services.ecr.AmazonECR;
-import com.amazonaws.services.ecr.model.ImageIdentifier;
-import com.amazonaws.services.ecr.model.ListImagesResult;
+import software.amazon.awssdk.services.ecr.AmazonECR;
+import software.amazon.awssdk.services.ecr.model.ImageIdentifier;
+import software.amazon.awssdk.services.ecr.model.ListImagesResponse;
 import de.taimos.pipeline.aws.AWSClientFactory;
 import hudson.model.Run;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;

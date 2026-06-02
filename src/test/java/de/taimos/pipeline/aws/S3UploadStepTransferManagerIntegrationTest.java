@@ -16,11 +16,11 @@
 
 package de.taimos.pipeline.aws;
 
-import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.transfer.MultipleFileUpload;
-import com.amazonaws.services.s3.transfer.ObjectMetadataProvider;
-import com.amazonaws.services.s3.transfer.ObjectTaggingProvider;
-import com.amazonaws.services.s3.transfer.TransferManager;
+import software.amazon.awssdk.services.s3.AmazonS3;
+import software.amazon.awssdk.services.s3.transfer.MultipleFileUpload;
+import software.amazon.awssdk.services.s3.transfer.ObjectMetadataProvider;
+import software.amazon.awssdk.services.s3.transfer.ObjectTaggingProvider;
+import software.amazon.awssdk.services.s3.transfer.TransferManager;
 import hudson.model.Run;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;

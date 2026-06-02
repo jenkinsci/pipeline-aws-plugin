@@ -1,10 +1,10 @@
 package de.taimos.pipeline.aws.cloudformation;
 
-import com.amazonaws.services.cloudformation.AmazonCloudFormation;
-import com.amazonaws.services.cloudformation.model.AmazonCloudFormationException;
-import com.amazonaws.services.cloudformation.model.TemplateParameter;
-import com.amazonaws.services.cloudformation.model.ValidateTemplateRequest;
-import com.amazonaws.services.cloudformation.model.ValidateTemplateResult;
+import software.amazon.awssdk.services.cloudformation.AmazonCloudFormation;
+import software.amazon.awssdk.services.cloudformation.model.AmazonCloudFormationException;
+import software.amazon.awssdk.services.cloudformation.model.TemplateParameter;
+import software.amazon.awssdk.services.cloudformation.model.ValidateTemplateRequest;
+import software.amazon.awssdk.services.cloudformation.model.ValidateTemplateResponse;
 import de.taimos.pipeline.aws.AWSClientFactory;
 import hudson.model.Result;
 import org.assertj.core.api.Assertions;

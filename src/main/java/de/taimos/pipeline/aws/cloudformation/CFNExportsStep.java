@@ -32,16 +32,16 @@ import org.jenkinsci.plugins.workflow.steps.StepExecution;
 import org.jenkinsci.plugins.workflow.steps.SynchronousNonBlockingStepExecution;
 import org.kohsuke.stapler.DataBoundConstructor;
 
-import com.amazonaws.services.cloudformation.AmazonCloudFormation;
-import com.amazonaws.services.cloudformation.AmazonCloudFormationClientBuilder;
-import com.amazonaws.services.cloudformation.model.Export;
-import com.amazonaws.services.cloudformation.model.ListExportsRequest;
-import com.amazonaws.services.cloudformation.model.ListExportsResult;
+import software.amazon.awssdk.services.cloudformation.CloudFormationClient;
+import software.amazon.awssdk.services.cloudformation.model.Export;
+import software.amazon.awssdk.services.cloudformation.model.ListExportsRequest;
+import software.amazon.awssdk.services.cloudformation.model.ListChangeSetsResponse;
 
 import de.taimos.pipeline.aws.AWSClientFactory;
 import de.taimos.pipeline.aws.utils.StepUtils;
 import hudson.Extension;
 import hudson.model.TaskListener;
+import software.amazon.awssdk.services.cloudformation.model.ListExportsResponse;
 
 public class CFNExportsStep extends Step {
 
@@ -85,19 +85,19 @@ public class CFNExportsStep extends Step {
 		@Override
 		protected Map<String, String> run() throws Exception {
 			this.getContext().get(TaskListener.class).getLogger().format("Getting global exports of CloudFormation %n");
-			AmazonCloudFormation client = AWSClientFactory.create(AmazonCloudFormationClientBuilder.standard(), Execution.this.getContext());
+			CloudFormationClient client = AWSClientFactory.create(CloudFormationClient.builder(), Execution.this.getContext()).build();
 			return Execution.this.getExports(client, null);
 		}
 
-		private Map<String, String> getExports(AmazonCloudFormation client, String nextToken) {
-			ListExportsResult exports = client.listExports(new ListExportsRequest().withNextToken(nextToken));
+		private Map<String, String> getExports(CloudFormationClient client, String nextToken) {
+			ListExportsResponse exports = client.listExports(ListExportsRequest.builder().nextToken(nextToken).build());
 
 			Map<String, String> map = new HashMap<>();
-			for (Export export : exports.getExports()) {
-				map.put(export.getName(), export.getValue());
+			for (Export export : exports.exports()) {
+				map.put(export.name(), export.value());
 			}
-			if (exports.getNextToken() != null) {
-				map.putAll(this.getExports(client, exports.getNextToken()));
+			if (exports.nextToken() != null) {
+				map.putAll(this.getExports(client, exports.nextToken()));
 			}
 			return map;
 		}

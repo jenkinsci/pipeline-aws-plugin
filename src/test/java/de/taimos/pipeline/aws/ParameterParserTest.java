@@ -26,7 +26,7 @@ import java.util.Collection;
 import org.junit.Assert;
 import org.junit.Test;
 
-import com.amazonaws.services.cloudformation.model.Parameter;
+import software.amazon.awssdk.services.cloudformation.model.Parameter;
 
 import de.taimos.pipeline.aws.cloudformation.parser.JSONParameterFileParser;
 import de.taimos.pipeline.aws.cloudformation.parser.YAMLParameterFileParser;

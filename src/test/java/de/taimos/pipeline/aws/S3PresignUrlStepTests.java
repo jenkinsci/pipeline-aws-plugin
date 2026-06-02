@@ -1,8 +1,8 @@
 package de.taimos.pipeline.aws;
 
 
-import com.amazonaws.HttpMethod;
-import com.amazonaws.services.s3.AmazonS3;
+import software.amazon.awssdk.HttpMethod;
+import software.amazon.awssdk.services.s3.AmazonS3;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
 import org.jenkinsci.plugins.workflow.job.WorkflowRun;

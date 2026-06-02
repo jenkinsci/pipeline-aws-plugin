@@ -1,9 +1,9 @@
 package de.taimos.pipeline.aws;
 
-import com.amazonaws.services.ec2.AmazonEC2;
-import com.amazonaws.services.ec2.model.LaunchPermission;
-import com.amazonaws.services.ec2.model.LaunchPermissionModifications;
-import com.amazonaws.services.ec2.model.ModifyImageAttributeRequest;
+import software.amazon.awssdk.services.ec2.AmazonEC2;
+import software.amazon.awssdk.services.ec2.model.LaunchPermission;
+import software.amazon.awssdk.services.ec2.model.LaunchPermissionModifications;
+import software.amazon.awssdk.services.ec2.model.ModifyImageAttributeRequest;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
 import org.junit.Before;

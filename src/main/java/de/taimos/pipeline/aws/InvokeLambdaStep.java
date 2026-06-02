@@ -34,11 +34,11 @@ import org.jenkinsci.plugins.workflow.steps.SynchronousNonBlockingStepExecution;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
 
-import com.amazonaws.services.lambda.AWSLambda;
-import com.amazonaws.services.lambda.AWSLambdaClientBuilder;
-import com.amazonaws.services.lambda.model.InvokeRequest;
-import com.amazonaws.services.lambda.model.InvokeResult;
-import com.amazonaws.services.lambda.model.LogType;
+import software.amazon.awssdk.core.SdkBytes;
+import software.amazon.awssdk.services.lambda.LambdaClient;
+import software.amazon.awssdk.services.lambda.model.InvokeRequest;
+import software.amazon.awssdk.services.lambda.model.InvokeResponse;
+import software.amazon.awssdk.services.lambda.model.LogType;
 
 import de.taimos.pipeline.aws.utils.JsonUtils;
 import de.taimos.pipeline.aws.utils.StepUtils;
@@ -129,21 +129,21 @@ public class InvokeLambdaStep extends Step {
 		@Override
 		protected Object run() throws Exception {
 			TaskListener listener = this.getContext().get(TaskListener.class);
-			AWSLambda client = AWSClientFactory.create(AWSLambdaClientBuilder.standard(), this.getContext());
+			LambdaClient client = AWSClientFactory.create(LambdaClient.builder(), this.getContext()).build();
 
 			String functionName = this.step.getFunctionName();
 
 			listener.getLogger().format("Invoke Lambda function %s%n", functionName);
 
-			InvokeRequest request = new InvokeRequest();
-			request.withFunctionName(functionName);
-			request.withPayload(this.step.getPayloadAsString());
-			request.withLogType(LogType.Tail);
+			InvokeRequest.Builder request = InvokeRequest.builder();
+			request.functionName(functionName);
+			request.payload(SdkBytes.fromString(this.step.getPayloadAsString(), StandardCharsets.UTF_8));
+			request.logType(LogType.TAIL);
 
-			InvokeResult result = client.invoke(request);
+			InvokeResponse result = client.invoke(request.build());
 
 			listener.getLogger().append(this.getLogResult(result));
-			String functionError = result.getFunctionError();
+			String functionError = result.functionError();
 			if (functionError != null) {
 				throw new RuntimeException("Invoke lambda failed! " + this.getPayloadAsString(result));
 			}
@@ -154,12 +154,12 @@ public class InvokeLambdaStep extends Step {
 			}
 		}
 
-		private String getPayloadAsString(InvokeResult result) {
-			return new String(result.getPayload().array(), StandardCharsets.UTF_8);
+		private String getPayloadAsString(InvokeResponse result) {
+			return result.payload().asUtf8String();
 		}
 
-		private String getLogResult(InvokeResult result) {
-			return new String(Base64.getDecoder().decode(result.getLogResult()), StandardCharsets.UTF_8);
+		private String getLogResult(InvokeResponse result) {
+			return new String(Base64.getDecoder().decode(result.logResult()), StandardCharsets.UTF_8);
 		}
 
 	}

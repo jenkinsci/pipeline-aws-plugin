@@ -8,7 +8,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import com.amazonaws.services.cloudformation.model.Parameter;
+import software.amazon.awssdk.services.cloudformation.model.Parameter;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 
@@ -57,9 +57,9 @@ public class ParameterParser {
 			if (entry.getValue() == null) {
 				throw new IllegalStateException(entry.getKey() + " has a null value");
 			}
-			parameters.add(new Parameter()
-					.withParameterKey((String) entry.getKey())
-					.withParameterValue(entry.getValue().toString())
+			parameters.add(Parameter.builder()
+					.parameterKey((String) entry.getKey())
+					.parameterValue(entry.getValue().toString()).build()
 			);
 		}
 		return parameters;

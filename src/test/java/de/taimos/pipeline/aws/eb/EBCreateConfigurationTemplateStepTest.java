@@ -1,8 +1,8 @@
 package de.taimos.pipeline.aws.eb;
 
-import com.amazonaws.services.elasticbeanstalk.AWSElasticBeanstalk;
-import com.amazonaws.services.elasticbeanstalk.model.CreateConfigurationTemplateRequest;
-import com.amazonaws.services.elasticbeanstalk.model.CreateConfigurationTemplateResult;
+import software.amazon.awssdk.services.elasticbeanstalk.AWSElasticBeanstalk;
+import software.amazon.awssdk.services.elasticbeanstalk.model.CreateConfigurationTemplateRequest;
+import software.amazon.awssdk.services.elasticbeanstalk.model.CreateConfigurationTemplateResponse;
 import org.jenkinsci.plugins.workflow.steps.StepContext;
 import org.junit.Assert;
 import org.junit.BeforeClass;

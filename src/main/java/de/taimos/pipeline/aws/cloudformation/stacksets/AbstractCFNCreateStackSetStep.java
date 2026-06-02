@@ -22,12 +22,12 @@
 package de.taimos.pipeline.aws.cloudformation.stacksets;
 
 
-import com.amazonaws.services.cloudformation.AmazonCloudFormation;
-import com.amazonaws.services.cloudformation.AmazonCloudFormationClientBuilder;
-import com.amazonaws.services.cloudformation.model.DescribeStackSetResult;
-import com.amazonaws.services.cloudformation.model.OnFailure;
-import com.amazonaws.services.cloudformation.model.Parameter;
-import com.amazonaws.services.cloudformation.model.Tag;
+import software.amazon.awssdk.services.cloudformation.CloudFormationClient;
+import software.amazon.awssdk.services.cloudformation.model.DescribeStackSetResponse;
+import software.amazon.awssdk.services.cloudformation.model.DescribeStackSetResponse;
+import software.amazon.awssdk.services.cloudformation.model.OnFailure;
+import software.amazon.awssdk.services.cloudformation.model.Parameter;
+import software.amazon.awssdk.services.cloudformation.model.Tag;
 import com.google.common.base.Preconditions;
 import de.taimos.pipeline.aws.AWSClientFactory;
 import de.taimos.pipeline.aws.AWSUtilFactory;
@@ -40,7 +40,7 @@ import org.jenkinsci.plugins.workflow.steps.StepContext;
 import org.jenkinsci.plugins.workflow.steps.SynchronousNonBlockingStepExecution;
 import org.kohsuke.stapler.DataBoundSetter;
 
-import javax.annotation.Nonnull;
+import edu.umd.cs.findbugs.annotations.NonNull;
 import java.io.IOException;
 import java.util.Collection;
 
@@ -86,7 +86,7 @@ abstract class AbstractCFNCreateStackSetStep extends TemplateStepBase {
 		this.executionRoleName = executionRoleName;
 	}
 
-	abstract static class Execution<C extends AbstractCFNCreateStackSetStep> extends SynchronousNonBlockingStepExecution<DescribeStackSetResult> {
+	abstract static class Execution<C extends AbstractCFNCreateStackSetStep> extends SynchronousNonBlockingStepExecution<DescribeStackSetResponse> {
 
 		private final transient C step;
 
@@ -94,11 +94,11 @@ abstract class AbstractCFNCreateStackSetStep extends TemplateStepBase {
 
 		protected abstract String getThreadName();
 
-		protected abstract DescribeStackSetResult whenStackSetExists(Collection<Parameter> parameters, Collection<Tag> tags) throws Exception;
+		protected abstract DescribeStackSetResponse whenStackSetExists(Collection<Parameter> parameters, Collection<Tag> tags) throws Exception;
 
-		protected abstract DescribeStackSetResult whenStackSetMissing(Collection<Parameter> parameters, Collection<Tag> tags) throws Exception;
+		protected abstract DescribeStackSetResponse whenStackSetMissing(Collection<Parameter> parameters, Collection<Tag> tags) throws Exception;
 
-		protected Execution(C step, @Nonnull StepContext context) {
+		protected Execution(C step, @NonNull StepContext context) {
 			super(context);
 			this.step = step;
 		}
@@ -112,7 +112,7 @@ abstract class AbstractCFNCreateStackSetStep extends TemplateStepBase {
 		}
 
 		@Override
-		public DescribeStackSetResult run() throws Exception {
+		public DescribeStackSetResponse run() throws Exception {
 
 			final String stackSet = this.getStackSet();
 			final Boolean create = this.getCreate();
@@ -121,7 +121,7 @@ abstract class AbstractCFNCreateStackSetStep extends TemplateStepBase {
 
 			this.checkPreconditions();
 
-			AmazonCloudFormation client = AWSClientFactory.create(AmazonCloudFormationClientBuilder.standard(), Execution.this.getContext(), Execution.this.getEnvVars());
+			CloudFormationClient client = AWSClientFactory.create(CloudFormationClient.builder(), Execution.this.getContext(), Execution.this.getEnvVars()).build();
 			CloudFormationStackSet cfnStackSet = AWSUtilFactory.newCFStackSet(client, stackSet, Execution.this.getListener(), SleepStrategy.EXPONENTIAL_BACKOFF_STRATEGY);
 			if (cfnStackSet.exists()) {
 				Collection<Parameter> parameters = ParameterParser.parseWithKeepParams(getWorkspace(), getStep());
@@ -136,7 +136,7 @@ abstract class AbstractCFNCreateStackSetStep extends TemplateStepBase {
 		}
 
 		protected CloudFormationStackSet getCfnStackSet() {
-			AmazonCloudFormation client = AWSClientFactory.create(AmazonCloudFormationClientBuilder.standard(), this.getContext(), this.getEnvVars());
+			CloudFormationClient client = AWSClientFactory.create(CloudFormationClient.builder(), this.getContext(), this.getEnvVars()).build();
 			return AWSUtilFactory.newCFStackSet(client, this.getStackSet(), this.getListener(), SleepStrategy.EXPONENTIAL_BACKOFF_STRATEGY);
 		}
 

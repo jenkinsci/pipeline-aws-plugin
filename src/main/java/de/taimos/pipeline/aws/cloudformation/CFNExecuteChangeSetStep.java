@@ -21,8 +21,8 @@
 
 package de.taimos.pipeline.aws.cloudformation;
 
-import com.amazonaws.services.cloudformation.AmazonCloudFormation;
-import com.amazonaws.services.cloudformation.AmazonCloudFormationClientBuilder;
+import software.amazon.awssdk.services.cloudformation.CloudFormationAsyncClient;
+import software.amazon.awssdk.services.cloudformation.CloudFormationClient;
 import com.google.common.base.Preconditions;
 import de.taimos.pipeline.aws.AWSClientFactory;
 import de.taimos.pipeline.aws.AWSUtilFactory;
@@ -131,8 +131,9 @@ public class CFNExecuteChangeSetStep extends Step {
 
 			listener.getLogger().format("Executing CloudFormation change set %s %n", changeSet);
 
-			AmazonCloudFormation client = AWSClientFactory.create(AmazonCloudFormationClientBuilder.standard(), Execution.this.getContext());
-			CloudFormationStack cfnStack = AWSUtilFactory.newCFStack(client, stack, listener);
+			CloudFormationClient client = AWSClientFactory.create(CloudFormationClient.builder(), Execution.this.getContext()).build();
+			CloudFormationAsyncClient asyncClient = AWSClientFactory.create(CloudFormationAsyncClient.builder(), CFNExecuteChangeSetStep.Execution.this.getContext()).build();
+			CloudFormationStack cfnStack = AWSUtilFactory.newCFStack(client, asyncClient, stack, listener);
 			Map<String, String> outputs = cfnStack.executeChangeSet(changeSet, Execution.this.step.getPollConfiguration());
 			listener.getLogger().println("Execute change set complete");
 			return outputs;

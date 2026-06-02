@@ -21,8 +21,8 @@ package de.taimos.pipeline.aws;
  */
 
 
-import com.amazonaws.regions.Regions;
-import com.amazonaws.services.s3.AmazonS3ClientBuilder;
+import software.amazon.awssdk.regions.Regions;
+import software.amazon.awssdk.services.s3.AmazonS3ClientBuilder;
 import com.cloudbees.hudson.plugins.folder.AbstractFolder;
 import com.cloudbees.hudson.plugins.folder.Folder;
 import com.cloudbees.hudson.plugins.folder.properties.FolderCredentialsProvider;
@@ -180,7 +180,7 @@ public class WithAWSStepTest {
 		final EnvVars envVars = new EnvVars();
 		envVars.put(AWSClientFactory.AWS_ENDPOINT_URL, "https://minio.mycompany.com");
 		envVars.put(AWSClientFactory.AWS_REGION, Regions.DEFAULT_REGION.getName());
-		final AmazonS3ClientBuilder amazonS3ClientBuilder = AWSClientFactory.configureBuilder(AmazonS3ClientBuilder.standard(), null, envVars);
+		final AmazonS3ClientBuilder amazonS3ClientBuilder = AWSClientFactory.configureBuilder(AmazonS3Client.builder(), null, envVars);
 		Assert.assertEquals("https://minio.mycompany.com", amazonS3ClientBuilder.getEndpoint().getServiceEndpoint());
 
 	}

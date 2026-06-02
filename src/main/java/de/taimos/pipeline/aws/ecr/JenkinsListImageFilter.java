@@ -1,17 +1,23 @@
 package de.taimos.pipeline.aws.ecr;
 
-import com.amazonaws.services.ecr.model.ListImagesFilter;
+import software.amazon.awssdk.services.ecr.model.ListImagesFilter;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
 
-public class JenkinsListImageFilter extends ListImagesFilter {
+public class JenkinsListImageFilter {
+
+	private ListImagesFilter wrappedFilter;
+
 	@DataBoundConstructor
 	public JenkinsListImageFilter() {
 	}
 
-	@Override
 	@DataBoundSetter
 	public void setTagStatus(String tagStatus) {
-		super.setTagStatus(tagStatus);
+		wrappedFilter = ListImagesFilter.builder().tagStatus(tagStatus).build();
+	}
+
+	public ListImagesFilter getWrappedFilter() {
+		return wrappedFilter;
 	}
 }

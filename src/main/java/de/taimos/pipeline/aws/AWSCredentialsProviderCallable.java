@@ -20,13 +20,13 @@
  */
 package de.taimos.pipeline.aws;
 
-import com.amazonaws.auth.AWSCredentialsProvider;
-import com.amazonaws.auth.DefaultAWSCredentialsProviderChain;
+import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
 
 import hudson.model.TaskListener;
 import hudson.remoting.VirtualChannel;
 
 import jenkins.MasterToSlaveFileCallable;
+import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider;
 
 import java.io.File;
 import java.io.IOException;
@@ -46,7 +46,7 @@ public class AWSCredentialsProviderCallable extends MasterToSlaveFileCallable<Se
 
 	@Override
 	public SerializableAWSCredentialsProvider invoke(File f, VirtualChannel vc) throws IOException, InterruptedException {
-		AWSCredentialsProvider provider = new DefaultAWSCredentialsProviderChain();
+		AwsCredentialsProvider provider = DefaultCredentialsProvider.builder().build();
 		listener.getLogger().println("Retrieving credentials from node.");
 		return new SerializableAWSCredentialsProvider(provider);
 	}

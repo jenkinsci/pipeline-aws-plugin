@@ -21,12 +21,7 @@
 
 package de.taimos.pipeline.aws;
 
-import com.amazonaws.event.ProgressEventType;
-import com.amazonaws.event.ProgressListener;
-import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.transfer.Download;
-import com.amazonaws.services.s3.transfer.MultipleFileDownload;
-import com.amazonaws.services.s3.transfer.TransferManager;
+
 import com.google.common.base.Preconditions;
 import de.taimos.pipeline.aws.utils.StepUtils;
 import hudson.EnvVars;
@@ -41,10 +36,22 @@ import org.jenkinsci.plugins.workflow.steps.StepExecution;
 import org.jenkinsci.plugins.workflow.steps.SynchronousNonBlockingStepExecution;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
+import software.amazon.awssdk.core.internal.async.FileAsyncResponseTransformer;
+import software.amazon.awssdk.services.s3.S3AsyncClient;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.GetObjectRequest;
+import software.amazon.awssdk.services.s3.model.GetObjectResponse;
+import software.amazon.awssdk.transfer.s3.S3TransferManager;
+import software.amazon.awssdk.transfer.s3.model.DirectoryDownload;
+import software.amazon.awssdk.transfer.s3.model.Download;
+import software.amazon.awssdk.transfer.s3.model.DownloadDirectoryRequest;
+import software.amazon.awssdk.transfer.s3.model.DownloadRequest;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.util.Set;
+import java.util.concurrent.ExecutionException;
 
 public class S3DownloadStep extends AbstractS3Step {
 
@@ -173,31 +180,35 @@ public class S3DownloadStep extends AbstractS3Step {
 
 		@Override
 		public Void invoke(File localFile, VirtualChannel channel) throws IOException, InterruptedException {
-			AmazonS3 s3Client = AWSClientFactory.create(this.amazonS3ClientOptions.createAmazonS3ClientBuilder(), this.envVars);
-			TransferManager mgr = AWSUtilFactory.newTransferManager(s3Client);
+			S3AsyncClient s3Client = AWSClientFactory.createAsync(this.amazonS3ClientOptions.createAmazonS3ClientBuilder(), null, this.envVars).build();
+			S3TransferManager mgr = AWSUtilFactory.newTransferManager(s3Client);
 
 			if (this.path == null || this.path.isEmpty() || this.path.endsWith("/")) {
 				try {
-					final MultipleFileDownload fileDownload = mgr.downloadDirectory(this.bucket, this.path, localFile);
-					fileDownload.waitForCompletion();
+					// todo path
+					DownloadDirectoryRequest request = DownloadDirectoryRequest.builder().bucket(bucket).destination(localFile.toPath()).build();
+					final DirectoryDownload fileDownload = mgr.downloadDirectory(request);
+					fileDownload.completionFuture().get();
 					RemoteDownloader.this.taskListener.getLogger().println("Finished: " + fileDownload.getDescription());
 				}
-				finally {
-					mgr.shutdownNow();
+				catch (ExecutionException ex) {
+					throw new RuntimeException(ex);
 				}
 				return null;
 			} else {
 				try {
-					final Download download = mgr.download(this.bucket, this.path, localFile);
-					download.addProgressListener((ProgressListener) progressEvent -> {
+					GetObjectRequest getObjectRequest = GetObjectRequest.builder().bucket(this.bucket).key(this.path).build();
+					DownloadRequest<GetObjectResponse> downloadRequest = DownloadRequest.builder().getObjectRequest(getObjectRequest)
+						.responseTransformer(new FileAsyncResponseTransformer<>(localFile.toPath())).build();
+					final Download<GetObjectResponse> download = mgr.download(downloadRequest);
+					download.addProgressListener(progressEvent -> {
 						if (progressEvent.getEventType() == ProgressEventType.TRANSFER_COMPLETED_EVENT) {
 							RemoteDownloader.this.taskListener.getLogger().println("Finished: " + download.getDescription());
 						}
 					});
-					download.waitForCompletion();
-				}
-				finally {
-					mgr.shutdownNow();
+					download.completionFuture().get();
+				} catch (ExecutionException e) {
+					throw new RuntimeException(e);
 				}
 				return null;
 			}

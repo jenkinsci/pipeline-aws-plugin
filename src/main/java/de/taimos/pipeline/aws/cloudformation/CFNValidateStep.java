@@ -25,15 +25,12 @@ import java.io.IOException;
 import java.util.Map;
 import java.util.Set;
 
-import javax.annotation.Nonnull;
+import edu.umd.cs.findbugs.annotations.NonNull;
 
-import com.amazonaws.services.cloudformation.model.ValidateTemplateResult;
-import com.amazonaws.services.cloudformation.model.transform.ValidateTemplateRequestMarshaller;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import software.amazon.awssdk.services.cloudformation.CloudFormationClient;
+import software.amazon.awssdk.services.cloudformation.model.CloudFormationException;
+import software.amazon.awssdk.services.cloudformation.model.ValidateTemplateResponse;
 import de.taimos.pipeline.aws.AwsSdkResponseToJson;
-import groovy.json.JsonSlurper;
 import org.jenkinsci.plugins.workflow.steps.Step;
 import org.jenkinsci.plugins.workflow.steps.StepContext;
 import org.jenkinsci.plugins.workflow.steps.StepDescriptor;
@@ -41,10 +38,7 @@ import org.jenkinsci.plugins.workflow.steps.StepExecution;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
 
-import com.amazonaws.services.cloudformation.AmazonCloudFormation;
-import com.amazonaws.services.cloudformation.AmazonCloudFormationClientBuilder;
-import com.amazonaws.services.cloudformation.model.AmazonCloudFormationException;
-import com.amazonaws.services.cloudformation.model.ValidateTemplateRequest;
+import software.amazon.awssdk.services.cloudformation.model.ValidateTemplateRequest;
 
 import de.taimos.pipeline.aws.AWSClientFactory;
 import de.taimos.pipeline.aws.utils.StepUtils;
@@ -109,7 +103,7 @@ public class CFNValidateStep extends Step {
 
 		private final transient CFNValidateStep step;
 
-		public Execution(CFNValidateStep step, @Nonnull StepContext context) {
+		public Execution(CFNValidateStep step, @NonNull StepContext context) {
 			super(context);
 			this.step = step;
 		}
@@ -130,17 +124,17 @@ public class CFNValidateStep extends Step {
 			new Thread("cfnValidate-" + file) {
 				@Override
 				public void run() {
-					AmazonCloudFormation client = AWSClientFactory.create(AmazonCloudFormationClientBuilder.standard(), Execution.this.getContext());
+					CloudFormationClient client = AWSClientFactory.create(CloudFormationClient.builder(), Execution.this.getContext()).build();
 					try {
-						ValidateTemplateRequest request = new ValidateTemplateRequest();
+						ValidateTemplateRequest.Builder request = ValidateTemplateRequest.builder();
 						if (template != null) {
-							request.withTemplateBody(template);
+							request.templateBody(template);
 						} else {
-							request.withTemplateURL(url);
+							request.templateURL(url);
 						}
-						ValidateTemplateResult result = client.validateTemplate(request);
+						ValidateTemplateResponse result = client.validateTemplate(request.build());
 						Execution.this.getContext().onSuccess(AwsSdkResponseToJson.convertToMap(result));
-					} catch (AmazonCloudFormationException | IOException e) {
+					} catch (CloudFormationException | IOException e) {
 						Execution.this.getContext().onFailure(e);
 					}
 				}
@@ -160,7 +154,7 @@ public class CFNValidateStep extends Step {
 		}
 
 		@Override
-		public void stop(@Nonnull Throwable cause) throws Exception {
+		public void stop(@NonNull Throwable cause) throws Exception {
 			//
 		}
 

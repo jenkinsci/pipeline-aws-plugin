@@ -1,7 +1,7 @@
 package de.taimos.pipeline.aws.cloudformation.parser;
 
-import com.amazonaws.services.cloudformation.model.Parameter;
-import com.amazonaws.util.StringInputStream;
+import software.amazon.awssdk.services.cloudformation.model.Parameter;
+import software.amazon.awssdk.util.StringInputStream;
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
 

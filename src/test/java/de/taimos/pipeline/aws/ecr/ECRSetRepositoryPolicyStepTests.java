@@ -1,7 +1,7 @@
 package de.taimos.pipeline.aws.ecr;
 
-import com.amazonaws.services.ecr.AmazonECR;
-import com.amazonaws.services.ecr.model.SetRepositoryPolicyResult;
+import software.amazon.awssdk.services.ecr.AmazonECR;
+import software.amazon.awssdk.services.ecr.model.SetRepositoryPolicyResponse;
 import de.taimos.pipeline.aws.AWSClientFactory;
 import hudson.model.Run;
 import org.jenkinsci.plugins.scriptsecurity.sandbox.whitelists.Whitelisted;

@@ -1,7 +1,7 @@
 package de.taimos.pipeline.aws.cloudformation.stacksets;
 
-import com.amazonaws.services.cloudformation.AmazonCloudFormation;
-import com.amazonaws.services.cloudformation.model.*;
+import software.amazon.awssdk.services.cloudformation.AmazonCloudFormation;
+import software.amazon.awssdk.services.cloudformation.model.*;
 import hudson.model.TaskListener;
 import org.assertj.core.api.Assertions;
 import org.junit.Before;

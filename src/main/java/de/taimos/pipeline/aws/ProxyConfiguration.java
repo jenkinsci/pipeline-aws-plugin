@@ -21,15 +21,16 @@
 
 package de.taimos.pipeline.aws;
 
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import com.amazonaws.ClientConfiguration;
-import com.amazonaws.Protocol;
-import com.google.common.base.Joiner;
-
 import hudson.EnvVars;
 import jenkins.model.Jenkins;
+import software.amazon.awssdk.core.client.builder.SdkSyncClientBuilder;
+import software.amazon.awssdk.http.apache.ApacheHttpClient;
 
 class ProxyConfiguration {
 
@@ -49,70 +50,76 @@ class ProxyConfiguration {
 		// hidden constructor
 	}
 
-	static void configure(EnvVars vars, ClientConfiguration config) {
-		useJenkinsProxy(config);
+	static void configure(EnvVars vars, SdkSyncClientBuilder<?, ?> config) {
+		software.amazon.awssdk.http.apache.ProxyConfiguration.Builder builder = software.amazon.awssdk.http.apache.ProxyConfiguration.builder();
 
-		if (config.getProtocol() == Protocol.HTTP) {
-			configureHTTP(vars, config);
-		} else {
-			configureHTTPS(vars, config);
-		}
-		configureNonProxyHosts(vars, config);
+        try {
+            useJenkinsProxy(builder);
+			if (config.httpClient() == Protocol.HTTP) {
+				configureHTTP(vars, builder);
+			} else {
+				configureHTTPS(vars, builder);
+			}
+        } catch (URISyntaxException e) {
+            throw new RuntimeException(e);
+        }
+
+		configureNonProxyHosts(vars, builder);
+		ApacheHttpClient httpClient = ApacheHttpClient.builder().proxyConfiguration(builder.build()).build();
+		config.httpClient(httpClient);
 	}
 
-	private static void useJenkinsProxy(ClientConfiguration config) {
+	private static void useJenkinsProxy(software.amazon.awssdk.http.apache.ProxyConfiguration.Builder config) throws URISyntaxException {
 		if (Jenkins.getInstance() != null) {
 			hudson.ProxyConfiguration proxyConfiguration = Jenkins.getInstance().proxy;
 			if (proxyConfiguration != null) {
-				config.setProxyHost(proxyConfiguration.name);
-				config.setProxyPort(proxyConfiguration.port);
-				config.setProxyUsername(proxyConfiguration.getUserName());
-				config.setProxyPassword(proxyConfiguration.getPassword());
+				config.endpoint(new URI(proxyConfiguration.name +":" + proxyConfiguration.port));
+				config.username(proxyConfiguration.getUserName());
+				config.password(proxyConfiguration.getPassword());
 
 				if (proxyConfiguration.getNoProxyHost() != null) {
 					String[] noProxyParts = proxyConfiguration.getNoProxyHost().split("[ \t\n,|]+");
-					config.setNonProxyHosts(Joiner.on('|').join(noProxyParts));
+					config.nonProxyHosts(Set.of(noProxyParts));
 				}
 			}
 		}
 	}
 
-	private static void configureNonProxyHosts(EnvVars vars, ClientConfiguration config) {
+	private static void configureNonProxyHosts(EnvVars vars, software.amazon.awssdk.http.apache.ProxyConfiguration.Builder config) {
 		String noProxy = vars.get(NO_PROXY, vars.get(NO_PROXY_LC));
 		if (noProxy != null) {
-			config.setNonProxyHosts(Joiner.on('|').join(noProxy.split(",")));
+			config.nonProxyHosts(Set.of(noProxy.split(",")));
 		}
 	}
 
-	private static void configureHTTP(EnvVars vars, ClientConfiguration config) {
+	private static void configureHTTP(EnvVars vars, software.amazon.awssdk.http.apache.ProxyConfiguration.Builder config) throws URISyntaxException {
 		String env = vars.get(HTTP_PROXY, vars.get(HTTP_PROXY_LC));
 		if (env != null) {
 			configureProxy(config, env, HTTP_PORT);
 		}
 	}
 
-	private static void configureHTTPS(EnvVars vars, ClientConfiguration config) {
+	private static void configureHTTPS(EnvVars vars, software.amazon.awssdk.http.apache.ProxyConfiguration.Builder config) throws URISyntaxException {
 		String env = vars.get(HTTPS_PROXY, vars.get(HTTPS_PROXY_LC));
 		if (env != null) {
 			configureProxy(config, env, HTTPS_PORT);
 		}
 	}
 
-	private static void configureProxy(ClientConfiguration config, String env, int defaultPort) {
+	private static void configureProxy(software.amazon.awssdk.http.apache.ProxyConfiguration.Builder config, String env, int defaultPort) throws URISyntaxException {
 		Pattern pattern = Pattern.compile(PROXY_PATTERN);
 		Matcher matcher = pattern.matcher(env);
 		if (matcher.matches()) {
 			if (matcher.group(3) != null) {
-				config.setProxyUsername(matcher.group(3));
+				config.username(matcher.group(3));
 			}
 			if (matcher.group(5) != null) {
-				config.setProxyPassword(matcher.group(5));
+				config.password(matcher.group(5));
 			}
-			config.setProxyHost(matcher.group(6));
 			if (matcher.group(8) != null) {
-				config.setProxyPort(Integer.parseInt(matcher.group(8)));
+				config.endpoint(new URI(matcher.group(6) + ":" + Integer.parseInt(matcher.group(8))));
 			} else {
-				config.setProxyPort(defaultPort);
+				config.endpoint(new URI(matcher.group(6) + ":" +defaultPort));
 			}
 		}
 	}

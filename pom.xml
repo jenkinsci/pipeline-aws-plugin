@@ -23,7 +23,7 @@
             <dependency>
                 <groupId>io.jenkins.tools.bom</groupId>
                 <artifactId>bom-${jenkins.baseline}.x</artifactId>
-                <version>2928.ved44ea_84e034</version>
+                <version>6166.va_a_8b_5eda_8ef5</version>
                 <scope>import</scope>
                 <type>pom</type>
             </dependency>
@@ -79,8 +79,8 @@
         <revision>1.46</revision>
         <changelist>-SNAPSHOT</changelist>
         <!-- https://www.jenkins.io/doc/developer/plugin-development/choosing-jenkins-baseline/ -->
-        <jenkins.baseline>2.414</jenkins.baseline>
-        <jenkins.version>${jenkins.baseline}.3</jenkins.version>
+        <jenkins.baseline>2.516</jenkins.baseline>
+        <jenkins.version>${jenkins.baseline}.1</jenkins.version>
         <gitHubRepo>jenkinsci/${project.artifactId}-plugin</gitHubRepo>
     </properties>
     <build>
@@ -105,9 +105,17 @@
           </execution>
         </executions>
       </plugin>
+
     </plugins>
   </build>
     <dependencies>
+        <!-- Source: https://mvnrepository.com/artifact/com.github.spotbugs/spotbugs-annotations -->
+        <dependency>
+            <groupId>com.github.spotbugs</groupId>
+            <artifactId>spotbugs-annotations</artifactId>
+            <version>4.9.8</version>
+            <scope>compile</scope>
+        </dependency>
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
@@ -127,56 +135,64 @@
             <artifactId>structs</artifactId>
         </dependency>
         <dependency>
-            <groupId>org.jenkins-ci.plugins.aws-java-sdk</groupId>
-            <artifactId>aws-java-sdk-ec2</artifactId>
+            <groupId>io.jenkins.plugins.aws-java-sdk2</groupId>
+            <artifactId>aws-java-sdk2-ec2</artifactId>
         </dependency>
 
         <dependency>
-            <groupId>org.jenkins-ci.plugins.aws-java-sdk</groupId>
-            <artifactId>aws-java-sdk-sns</artifactId>
+            <groupId>io.jenkins.plugins.aws-java-sdk2</groupId>
+            <artifactId>aws-java-sdk2-sns</artifactId>
         </dependency>
 
         <dependency>
-            <groupId>org.jenkins-ci.plugins.aws-java-sdk</groupId>
-            <artifactId>aws-java-sdk-elasticloadbalancingv2</artifactId>
+            <groupId>io.jenkins.plugins.aws-java-sdk2</groupId>
+            <artifactId>aws-java-sdk2-elasticloadbalancingv2</artifactId>
         </dependency>
         <dependency>
-            <groupId>org.jenkins-ci.plugins.aws-java-sdk</groupId>
-            <artifactId>aws-java-sdk-organizations</artifactId>
+            <groupId>io.jenkins.plugins.aws-java-sdk2</groupId>
+            <artifactId>aws-java-sdk2-apigateway</artifactId>
         </dependency>
         <dependency>
-            <groupId>org.jenkins-ci.plugins.aws-java-sdk</groupId>
-            <artifactId>aws-java-sdk-cloudfront</artifactId>
+            <groupId>io.jenkins.plugins.aws-java-sdk2</groupId>
+            <artifactId>aws-java-sdk2-organizations</artifactId>
         </dependency>
         <dependency>
-            <groupId>org.jenkins-ci.plugins.aws-java-sdk</groupId>
-            <artifactId>aws-java-sdk-codedeploy</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>org.jenkins-ci.plugins.aws-java-sdk</groupId>
-            <artifactId>aws-java-sdk-lambda</artifactId>
+            <groupId>io.jenkins.plugins.aws-java-sdk2</groupId>
+            <artifactId>aws-java-sdk2-cloudfront</artifactId>
         </dependency>
         <dependency>
-            <groupId>org.jenkins-ci.plugins.aws-java-sdk</groupId>
-            <artifactId>aws-java-sdk-api-gateway</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.jenkins-ci.plugins.aws-java-sdk</groupId>
-            <artifactId>aws-java-sdk-ecr</artifactId>
+            <groupId>io.jenkins.plugins.aws-java-sdk2</groupId>
+            <artifactId>aws-java-sdk2-codedeploy</artifactId>
         </dependency>
 
         <dependency>
-            <groupId>org.jenkins-ci.plugins.aws-java-sdk</groupId>
-            <artifactId>aws-java-sdk-iam</artifactId>
+            <groupId>io.jenkins.plugins.aws-java-sdk2</groupId>
+            <artifactId>aws-java-sdk2-lambda</artifactId>
+        </dependency>
+      <!--  <dependency>
+            <groupId>io.jenkins.plugins.aws-java-sdk2</groupId>
+            <artifactId>aws-java-sdk2-api-gateway</artifactId>
+        </dependency> -->
+        <dependency>
+            <groupId>io.jenkins.plugins.aws-java-sdk2</groupId>
+            <artifactId>aws-java-sdk2-ecr</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>io.jenkins.plugins.aws-java-sdk2</groupId>
+            <artifactId>aws-java-sdk2-iam</artifactId>
         </dependency>
         <dependency>
-            <groupId>org.jenkins-ci.plugins.aws-java-sdk</groupId>
-            <artifactId>aws-java-sdk-elasticbeanstalk</artifactId>
+            <groupId>io.jenkins.plugins.aws-java-sdk2</groupId>
+            <artifactId>aws-java-sdk2-elasticbeanstalk</artifactId>
         </dependency>
         <dependency>
-            <groupId>org.jenkins-ci.plugins.aws-java-sdk</groupId>
-            <artifactId>aws-java-sdk-cloudformation</artifactId>
+            <groupId>io.jenkins.plugins.aws-java-sdk2</groupId>
+            <artifactId>aws-java-sdk2-cloudformation</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.jenkins.plugins.aws-java-sdk2</groupId>
+            <artifactId>aws-java-sdk2-s3</artifactId>
         </dependency>
         <dependency>
             <groupId>org.jenkins-ci.plugins</groupId>
@@ -189,6 +205,12 @@
         <dependency>
             <groupId>org.jenkins-ci.plugins</groupId>
             <artifactId>aws-credentials</artifactId>
+            <exclusions>
+                <exclusion>
+                    <groupId>io.jenkins.plugins</groupId>
+                    <artifactId>jaxb</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
         <dependency>
             <groupId>io.jenkins.plugins</groupId>

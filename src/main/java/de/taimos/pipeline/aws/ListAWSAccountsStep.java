@@ -35,13 +35,12 @@ import org.jenkinsci.plugins.workflow.steps.SynchronousNonBlockingStepExecution;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
 
-import com.amazonaws.services.organizations.AWSOrganizations;
-import com.amazonaws.services.organizations.AWSOrganizationsClientBuilder;
-import com.amazonaws.services.organizations.model.Account;
-import com.amazonaws.services.organizations.model.ListAccountsForParentRequest;
-import com.amazonaws.services.organizations.model.ListAccountsForParentResult;
-import com.amazonaws.services.organizations.model.ListAccountsRequest;
-import com.amazonaws.services.organizations.model.ListAccountsResult;
+import software.amazon.awssdk.services.organizations.OrganizationsClient;
+import software.amazon.awssdk.services.organizations.model.Account;
+import software.amazon.awssdk.services.organizations.model.ListAccountsForParentRequest;
+import software.amazon.awssdk.services.organizations.model.ListAccountsForParentResponse;
+import software.amazon.awssdk.services.organizations.model.ListAccountsRequest;
+import software.amazon.awssdk.services.organizations.model.ListAccountsResponse;
 
 import de.taimos.pipeline.aws.utils.StepUtils;
 import hudson.Extension;
@@ -98,31 +97,31 @@ public class ListAWSAccountsStep extends Step {
 		protected List run() throws Exception {
 			this.getContext().get(TaskListener.class).getLogger().format("Getting AWS accounts %n");
 
-			AWSOrganizations client = AWSClientFactory.create(AWSOrganizationsClientBuilder.standard(), Execution.this.getContext());
+			OrganizationsClient client = AWSClientFactory.create(OrganizationsClient.builder().credentialsProvider(), Execution.this.getContext()).build();
 			List<Account> accounts = this.getAccounts(client, this.step.parent, null);
 
 			return accounts.stream().map(account -> {
 				Map<String, String> awsAccount = new HashMap<>();
-				awsAccount.put("id", account.getId());
-				awsAccount.put("arn", account.getArn());
-				awsAccount.put("name", account.getName());
-				awsAccount.put("safeName", SafeNameCreator.createSafeName(account.getName()));
-				awsAccount.put("status", account.getStatus());
+				awsAccount.put("id", account.id());
+				awsAccount.put("arn", account.arn());
+				awsAccount.put("name", account.name());
+				awsAccount.put("safeName", SafeNameCreator.createSafeName(account.name()));
+				awsAccount.put("status", account.status().name());
 				return awsAccount;
 			}).collect(Collectors.toList());
 		}
 
-		private List<Account> getAccounts(AWSOrganizations client, String parent, String startToken) {
+		private List<Account> getAccounts(OrganizationsClient client, String parent, String startToken) {
 			final List<Account> accounts;
 			final String nextToken;
 			if (parent != null) {
-				ListAccountsForParentResult result = client.listAccountsForParent(new ListAccountsForParentRequest().withParentId(parent).withNextToken(startToken));
-				accounts = result.getAccounts();
-				nextToken = result.getNextToken();
+				ListAccountsForParentResponse result = client.listAccountsForParent(ListAccountsForParentRequest.builder().parentId(parent).nextToken(startToken).build());
+				accounts = result.accounts();
+				nextToken = result.nextToken();
 			} else {
-				ListAccountsResult result = client.listAccounts(new ListAccountsRequest().withNextToken(startToken));
-				accounts = result.getAccounts();
-				nextToken = result.getNextToken();
+				ListAccountsResponse result = client.listAccounts(ListAccountsRequest.builder().nextToken(startToken).build());
+				accounts = result.accounts();
+				nextToken = result.nextToken();
 			}
 			if (nextToken != null) {
 				accounts.addAll(this.getAccounts(client, parent, nextToken));

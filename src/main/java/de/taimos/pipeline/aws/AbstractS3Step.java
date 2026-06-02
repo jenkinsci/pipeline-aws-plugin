@@ -26,7 +26,12 @@ import java.io.Serializable;
 import org.jenkinsci.plugins.workflow.steps.Step;
 import org.kohsuke.stapler.DataBoundSetter;
 
-import com.amazonaws.services.s3.AmazonS3ClientBuilder;
+import software.amazon.awssdk.services.s3.S3AsyncClient;
+import software.amazon.awssdk.services.s3.S3AsyncClientBuilder;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.S3ClientBuilder;
+import software.amazon.awssdk.services.s3.model.PutBucketAclRequest;
+import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 
 public abstract class AbstractS3Step extends Step {
 
@@ -83,10 +88,16 @@ public abstract class AbstractS3Step extends Step {
 			this.payloadSigningEnabled = payloadSigningEnabled;
 		}
 
-		protected AmazonS3ClientBuilder createAmazonS3ClientBuilder() {
-			return AmazonS3ClientBuilder.standard()
-					.withPathStyleAccessEnabled(this.isPathStyleAccessEnabled())
-					.withPayloadSigningEnabled(this.isPayloadSigningEnabled());
+		protected S3AsyncClientBuilder createAmazonS3ClientBuilder() {
+			return S3AsyncClient.builder();
+					//.withPathStyleAccessEnabled(this.isPathStyleAccessEnabled())
+					//.withPayloadSigningEnabled(this.isPayloadSigningEnabled());
+		}
+
+		protected S3ClientBuilder createAmazonS3SyncClientBuilder() {
+			return S3Client.builder();
+			//TODO .withPathStyleAccessEnabled(this.isPathStyleAccessEnabled())
+			//.withPayloadSigningEnabled(this.isPayloadSigningEnabled());
 		}
 	}
 

@@ -1,7 +1,7 @@
 package de.taimos.pipeline.aws;
 
-import com.amazonaws.client.builder.AwsSyncClientBuilder;
+import software.amazon.awssdk.awscore.client.builder.AwsClientBuilder;
 
 public interface AWSClientFactoryDelegate {
-	Object create(AwsSyncClientBuilder<?, ?> clientBuilder);
+	Object create(AwsClientBuilder<?, ?> clientBuilder);
 }

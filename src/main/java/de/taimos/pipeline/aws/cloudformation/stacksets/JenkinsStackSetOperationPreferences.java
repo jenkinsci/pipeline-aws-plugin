@@ -1,12 +1,13 @@
 package de.taimos.pipeline.aws.cloudformation.stacksets;
 
-import com.amazonaws.services.cloudformation.model.StackSetOperationPreferences;
+import software.amazon.awssdk.services.cloudformation.model.StackSetOperationPreferences;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
 
 import java.util.Collection;
 
-public class JenkinsStackSetOperationPreferences extends StackSetOperationPreferences {
+public class JenkinsStackSetOperationPreferences  {
+	StackSetOperationPreferences wrappedPrefs;
 
 	@DataBoundConstructor
 	public JenkinsStackSetOperationPreferences() {
@@ -14,32 +15,31 @@ public class JenkinsStackSetOperationPreferences extends StackSetOperationPrefer
 	}
 
 	@DataBoundSetter
-	@Override
 	public void setRegionOrder(Collection<String> regionOrder) {
-		super.setRegionOrder(regionOrder);
+		wrappedPrefs = toBuilder().regionOrder(regionOrder).build();
 	}
 
 	@DataBoundSetter
-	@Override
 	public void setFailureToleranceCount(Integer failureToleranceCount) {
-		super.setFailureToleranceCount(failureToleranceCount);
+		wrappedPrefs = toBuilder().failureToleranceCount(failureToleranceCount).build();
 	}
 
 	@DataBoundSetter
-	@Override
 	public void setFailureTolerancePercentage(Integer failureTolerancePercentage) {
-		super.setFailureTolerancePercentage(failureTolerancePercentage);
+		wrappedPrefs = toBuilder().failureTolerancePercentage(failureTolerancePercentage).build();
 	}
 
 	@DataBoundSetter
-	@Override
 	public void setMaxConcurrentCount(Integer maxConcurrentCount) {
-		super.setMaxConcurrentCount(maxConcurrentCount);
+		wrappedPrefs = toBuilder().maxConcurrentCount(maxConcurrentCount).build();
 	}
 
 	@DataBoundSetter
-	@Override
 	public void setMaxConcurrentPercentage(Integer maxConcurrentPercentage) {
-		super.setMaxConcurrentPercentage(maxConcurrentPercentage);
+		wrappedPrefs = toBuilder().maxConcurrentPercentage(maxConcurrentPercentage).build();
+	}
+
+	private StackSetOperationPreferences.Builder toBuilder() {
+		return wrappedPrefs ==  null ? StackSetOperationPreferences.builder() : wrappedPrefs.toBuilder();
 	}
 }

@@ -1,6 +1,6 @@
 package de.taimos.pipeline.aws.eb;
 
-import com.amazonaws.services.elasticbeanstalk.AWSElasticBeanstalk;
+import software.amazon.awssdk.services.elasticbeanstalk.AWSElasticBeanstalk;
 import de.taimos.pipeline.aws.AWSClientFactory;
 import hudson.EnvVars;
 import hudson.model.TaskListener;

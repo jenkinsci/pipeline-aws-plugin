@@ -22,101 +22,74 @@
 package de.taimos.pipeline.aws.cloudformation;
 
 import java.text.SimpleDateFormat;
-import java.time.Duration;
-import java.time.temporal.ChronoUnit;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Date;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
+import java.util.function.Function;
 
 import org.apache.commons.lang.StringUtils;
-import org.apache.http.concurrent.BasicFuture;
 
-import com.amazonaws.AmazonWebServiceRequest;
-import com.amazonaws.services.cloudformation.AmazonCloudFormation;
-import com.amazonaws.services.cloudformation.model.AmazonCloudFormationException;
-import com.amazonaws.services.cloudformation.model.DescribeChangeSetRequest;
-import com.amazonaws.services.cloudformation.model.DescribeStackEventsRequest;
-import com.amazonaws.services.cloudformation.model.DescribeStackEventsResult;
-import com.amazonaws.services.cloudformation.model.DescribeStacksRequest;
-import com.amazonaws.services.cloudformation.model.StackEvent;
-import com.amazonaws.waiters.FixedDelayStrategy;
-import com.amazonaws.waiters.PollingStrategy;
-import com.amazonaws.waiters.Waiter;
-import com.amazonaws.waiters.WaiterHandler;
-import com.amazonaws.waiters.WaiterParameters;
+import software.amazon.awssdk.core.internal.waiters.ResponseOrException;
+import software.amazon.awssdk.core.waiters.WaiterResponse;
+import software.amazon.awssdk.services.cloudformation.CloudFormationClient;
+import software.amazon.awssdk.services.cloudformation.model.CloudFormationException;
+import software.amazon.awssdk.services.cloudformation.model.DescribeChangeSetRequest;
+import software.amazon.awssdk.services.cloudformation.model.DescribeChangeSetResponse;
+import software.amazon.awssdk.services.cloudformation.model.DescribeStackEventsRequest;
+import software.amazon.awssdk.services.cloudformation.model.DescribeStackEventsResponse;
+import software.amazon.awssdk.services.cloudformation.model.DescribeStacksRequest;
+import software.amazon.awssdk.services.cloudformation.model.DescribeStacksResponse;
+import software.amazon.awssdk.services.cloudformation.model.StackEvent;
 
 import de.taimos.pipeline.aws.cloudformation.utils.TimeOutRetryStrategy;
 import hudson.model.TaskListener;
 
-import org.apache.commons.lang.StringUtils;
-import org.apache.http.concurrent.BasicFuture;
-
-import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Date;
-import java.util.List;
-import java.util.concurrent.ExecutionException;
+import software.amazon.awssdk.services.cloudformation.waiters.CloudFormationAsyncWaiter;
 
 class EventPrinter {
 
 	private static final int DEFAULT_TIMEOUT_IN_MINUTES = 60;
 
-	private final AmazonCloudFormation client;
+	private final CloudFormationClient client;
 	private final TaskListener listener;
 
-	EventPrinter(AmazonCloudFormation client, TaskListener listener) {
+	EventPrinter(CloudFormationClient client, TaskListener listener) {
 		this.client = client;
 		this.listener = listener;
 	}
 
-	void waitAndPrintChangeSetEvents(String stack, String changeSet, Waiter<DescribeChangeSetRequest> waiter, PollConfiguration pollConfiguration) throws ExecutionException {
+	void waitAndPrintChangeSetEvents(String stack, String changeSet, CloudFormationAsyncWaiter waiter,
+									 PollConfiguration pollConfiguration) throws ExecutionException {
 
-		final BasicFuture<AmazonWebServiceRequest> waitResult = new BasicFuture<>(null);
+		final CompletableFuture<DescribeChangeSetResponse> waitResult =
 
-		waiter.runAsync(new WaiterParameters<>(new DescribeChangeSetRequest().withStackName(stack).withChangeSetName(changeSet)).withPollingStrategy(this.pollingStrategy(pollConfiguration)), new WaiterHandler() {
-			@Override
-			public void onWaitSuccess(AmazonWebServiceRequest request) {
-				waitResult.completed(request);
-			}
-
-			@Override
-			public void onWaitFailure(Exception e) {
-				waitResult.failed(e);
+		waiter.waitUntilChangeSetCreateComplete(DescribeChangeSetRequest.builder().stackName(stack).changeSetName(changeSet).build())
+			.handle((res, ex) -> {
+			ResponseOrException<DescribeChangeSetResponse> matched = res.matched();
+			if (matched.response().isPresent()) {
+				return matched.response().orElseThrow();
+			} else {
+				throw toException(ex);
 			}
 		});
 
 		this.waitAndPrintEvents(stack, pollConfiguration, waitResult);
 	}
 
-	void waitAndPrintStackEvents(String stack, Waiter<DescribeStacksRequest> waiter, PollConfiguration pollConfiguration) throws ExecutionException {
-
-		final BasicFuture<AmazonWebServiceRequest> waitResult = new BasicFuture<>(null);
-
-		waiter.runAsync(new WaiterParameters<>(new DescribeStacksRequest().withStackName(stack)).withPollingStrategy(this.pollingStrategy(pollConfiguration)), new WaiterHandler() {
-			@Override
-			public void onWaitSuccess(AmazonWebServiceRequest request) {
-				waitResult.completed(request);
-			}
-
-			@Override
-			public void onWaitFailure(Exception e) {
-				waitResult.failed(e);
-			}
-		});
-		this.waitAndPrintEvents(stack, pollConfiguration, waitResult);
+	RuntimeException toException(Throwable throwable) {
+		return throwable instanceof RuntimeException || throwable == null ? (RuntimeException) throwable : new RuntimeException(throwable);
 	}
 
-	private PollingStrategy pollingStrategy(PollConfiguration pollConfiguration) {
-		int pollIntervalSeconds = (int) (pollConfiguration.getPollInterval().toMillis() / 1000L);
-		this.listener.getLogger().println("Setting up a polling strategy to poll every " + pollConfiguration.getPollInterval() + " for a maximum of " + pollConfiguration.getTimeout());
-		return new PollingStrategy(new TimeOutRetryStrategy(pollConfiguration.getTimeout()), new FixedDelayStrategy(pollIntervalSeconds));
+	<T> void waitAndPrintStackEvents(String stack, Function<DescribeStacksRequest, CompletableFuture<WaiterResponse<DescribeStacksResponse>>> waiter, PollConfiguration pollConfiguration) throws ExecutionException {
+		CompletableFuture<?> res = waiter.apply(DescribeStacksRequest.builder().stackName(stack).build());
+		this.waitAndPrintEvents(stack, pollConfiguration, res);
 	}
 
-	private void waitAndPrintEvents(String stack, PollConfiguration pollConfiguration, BasicFuture<AmazonWebServiceRequest> waitResult) throws ExecutionException {
-		Date startDate = new Date();
+	private void waitAndPrintEvents(String stack, PollConfiguration pollConfiguration, CompletableFuture<?> waitResult) throws ExecutionException {
+		Instant startDate = Instant.now();
 		String lastEventId = null;
 		this.printLine();
 		this.printStackName(stack);
@@ -128,10 +101,10 @@ class EventPrinter {
 		if (pollConfiguration.getPollInterval().toMillis() > 0) {
 			while (run && !waitResult.isDone()) {
 				try {
-					DescribeStackEventsResult result = this.client.describeStackEvents(new DescribeStackEventsRequest().withStackName(stack));
+					DescribeStackEventsResponse result = this.client.describeStackEvents(DescribeStackEventsRequest.builder().stackName(stack).build());
 					List<StackEvent> stackEvents = new ArrayList<>();
-					for (StackEvent event : result.getStackEvents()) {
-						if (event.getEventId().equals(lastEventId) || event.getTimestamp().before(startDate)) {
+					for (StackEvent event : result.stackEvents()) {
+						if (event.eventId().equals(lastEventId) || event.timestamp().compareTo(startDate) < 0) {
 							break;
 						}
 						stackEvents.add(event);
@@ -142,9 +115,9 @@ class EventPrinter {
 							this.printEvent(sdf, event);
 							this.printLine();
 						}
-						lastEventId = stackEvents.get(stackEvents.size() - 1).getEventId();
+						lastEventId = stackEvents.get(stackEvents.size() - 1).eventId();
 					}
-				} catch (AmazonCloudFormationException e) {
+				} catch (CloudFormationException e) {
 					// suppress and continue
 				}
 				try {
@@ -165,10 +138,10 @@ class EventPrinter {
 	}
 
 	private void printEvent(SimpleDateFormat sdf, StackEvent event) {
-		String time = this.padRight(sdf.format(event.getTimestamp()), 25);
-		String logicalResourceId = this.padRight(event.getLogicalResourceId(), 20);
-		String resourceStatus = this.padRight(event.getResourceStatus(), 36);
-		String resourceStatusReason = this.padRight(event.getResourceStatusReason(), 140);
+		String time = this.padRight(sdf.format(event.timestamp()), 25);
+		String logicalResourceId = this.padRight(event.logicalResourceId(), 20);
+		String resourceStatus = this.padRight(event.resourceStatus().name(), 36);
+		String resourceStatusReason = this.padRight(event.resourceStatusReason(), 140);
 		this.listener.getLogger().format("| %s | %s | %s | %s |%n", time, logicalResourceId, resourceStatus, resourceStatusReason);
 	}
 

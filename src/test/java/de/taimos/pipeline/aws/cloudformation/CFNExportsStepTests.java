@@ -1,9 +1,9 @@
 package de.taimos.pipeline.aws.cloudformation;
 
-import com.amazonaws.services.cloudformation.AmazonCloudFormation;
-import com.amazonaws.services.cloudformation.model.Export;
-import com.amazonaws.services.cloudformation.model.ListExportsRequest;
-import com.amazonaws.services.cloudformation.model.ListExportsResult;
+import software.amazon.awssdk.services.cloudformation.AmazonCloudFormation;
+import software.amazon.awssdk.services.cloudformation.model.Export;
+import software.amazon.awssdk.services.cloudformation.model.ListExportsRequest;
+import software.amazon.awssdk.services.cloudformation.model.ListExportsResponse;
 import de.taimos.pipeline.aws.AWSClientFactory;
 import hudson.model.Run;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;

@@ -1,9 +1,9 @@
 package de.taimos.pipeline.aws.ecr;
 
-import com.amazonaws.services.ecr.AmazonECR;
-import com.amazonaws.services.ecr.model.BatchDeleteImageRequest;
-import com.amazonaws.services.ecr.model.BatchDeleteImageResult;
-import com.amazonaws.services.ecr.model.ImageIdentifier;
+import software.amazon.awssdk.services.ecr.AmazonECR;
+import software.amazon.awssdk.services.ecr.model.BatchDeleteImageRequest;
+import software.amazon.awssdk.services.ecr.model.BatchDeleteImageResponse;
+import software.amazon.awssdk.services.ecr.model.ImageIdentifier;
 import de.taimos.pipeline.aws.AWSClientFactory;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;

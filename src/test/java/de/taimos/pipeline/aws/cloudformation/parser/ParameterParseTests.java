@@ -1,6 +1,6 @@
 package de.taimos.pipeline.aws.cloudformation.parser;
 
-import com.amazonaws.services.cloudformation.model.Parameter;
+import software.amazon.awssdk.services.cloudformation.model.Parameter;
 import de.taimos.pipeline.aws.cloudformation.ParameterProvider;
 import hudson.FilePath;
 import org.assertj.core.api.Assertions;

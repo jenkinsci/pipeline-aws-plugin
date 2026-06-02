@@ -1,11 +1,11 @@
 package de.taimos.pipeline.aws.cloudformation;
 
-import com.amazonaws.services.cloudformation.AmazonCloudFormation;
-import com.amazonaws.services.cloudformation.model.Change;
-import com.amazonaws.services.cloudformation.model.ChangeSetStatus;
-import com.amazonaws.services.cloudformation.model.ChangeSetType;
-import com.amazonaws.services.cloudformation.model.DescribeChangeSetResult;
-import com.amazonaws.services.cloudformation.model.Parameter;
+import software.amazon.awssdk.services.cloudformation.AmazonCloudFormation;
+import software.amazon.awssdk.services.cloudformation.model.Change;
+import software.amazon.awssdk.services.cloudformation.model.ChangeSetStatus;
+import software.amazon.awssdk.services.cloudformation.model.ChangeSetType;
+import software.amazon.awssdk.services.cloudformation.model.DescribeChangeSetResponse;
+import software.amazon.awssdk.services.cloudformation.model.Parameter;
 import de.taimos.pipeline.aws.AWSClientFactory;
 import de.taimos.pipeline.aws.AWSUtilFactory;
 import hudson.model.Result;

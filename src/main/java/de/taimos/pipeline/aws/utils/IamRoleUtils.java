@@ -22,7 +22,7 @@ package de.taimos.pipeline.aws.utils;
 
 import java.util.regex.Pattern;
 
-import com.amazonaws.regions.RegionUtils;
+import software.amazon.awssdk.regions.Region;
 
 public final class IamRoleUtils {
 
@@ -34,11 +34,11 @@ public final class IamRoleUtils {
 	}
 
 	public static String selectPartitionName(String region) {
-		return (RegionUtils.getRegion(region).getPartition());
+		return Region.of(region).metadata().partition().name();
 	}
 
 	public static boolean validRoleArn(String role) {
-		return (IAM_ROLE_PATTERN.matcher(role).matches());
+		return IAM_ROLE_PATTERN.matcher(role).matches();
 	}
 
 }

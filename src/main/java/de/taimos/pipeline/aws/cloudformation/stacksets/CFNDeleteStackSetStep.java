@@ -21,8 +21,7 @@
 
 package de.taimos.pipeline.aws.cloudformation.stacksets;
 
-import com.amazonaws.services.cloudformation.AmazonCloudFormation;
-import com.amazonaws.services.cloudformation.AmazonCloudFormationClientBuilder;
+import software.amazon.awssdk.services.cloudformation.CloudFormationClient;
 import com.google.common.base.Preconditions;
 import de.taimos.pipeline.aws.AWSClientFactory;
 import de.taimos.pipeline.aws.AWSUtilFactory;
@@ -37,7 +36,7 @@ import org.jenkinsci.plugins.workflow.steps.SynchronousNonBlockingStepExecution;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
 
-import javax.annotation.Nonnull;
+import edu.umd.cs.findbugs.annotations.NonNull;
 import java.util.Set;
 
 public class CFNDeleteStackSetStep extends Step {
@@ -77,7 +76,7 @@ public class CFNDeleteStackSetStep extends Step {
 		}
 
 		@Override
-		@Nonnull
+		@NonNull
 		public String getDisplayName() {
 			return "Delete CloudFormation Stack Set";
 		}
@@ -92,7 +91,7 @@ public class CFNDeleteStackSetStep extends Step {
 
 		private transient CFNDeleteStackSetStep step;
 
-		public Execution(CFNDeleteStackSetStep step, @Nonnull StepContext context) {
+		public Execution(CFNDeleteStackSetStep step, @NonNull StepContext context) {
 			super(context);
 			this.step = step;
 		}
@@ -106,7 +105,7 @@ public class CFNDeleteStackSetStep extends Step {
 
 			listener.getLogger().format("Removing CloudFormation stack set %s %n", stackSet);
 
-			AmazonCloudFormation client = AWSClientFactory.create(AmazonCloudFormationClientBuilder.standard(), Execution.this.getContext());
+			CloudFormationClient client = AWSClientFactory.create(CloudFormationClient.builder(), Execution.this.getContext()).build();
 			CloudFormationStackSet cfnStackSet = AWSUtilFactory.newCFStackSet(client, stackSet, listener, SleepStrategy.EXPONENTIAL_BACKOFF_STRATEGY);
 			cfnStackSet.delete();
 			listener.getLogger().println("Stack Set deletion complete");

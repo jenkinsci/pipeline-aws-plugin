@@ -24,7 +24,7 @@ package de.taimos.pipeline.aws;
 import org.junit.Assert;
 import org.junit.Test;
 
-import com.amazonaws.services.s3.AmazonS3ClientBuilder;
+import software.amazon.awssdk.services.s3.AmazonS3ClientBuilder;
 
 public class AbstractS3StepTest {
 	@Test

@@ -1,11 +1,10 @@
 package de.taimos.pipeline.aws.ecr;
 
-import com.amazonaws.services.ecr.AmazonECR;
-import com.amazonaws.services.ecr.AmazonECRClientBuilder;
-import com.amazonaws.services.ecr.model.BatchDeleteImageRequest;
-import com.amazonaws.services.ecr.model.BatchDeleteImageResult;
-import com.amazonaws.services.ecr.model.ImageFailure;
-import com.amazonaws.services.ecr.model.ImageIdentifier;
+import software.amazon.awssdk.services.ecr.EcrClient;
+import software.amazon.awssdk.services.ecr.model.BatchDeleteImageRequest;
+import software.amazon.awssdk.services.ecr.model.BatchDeleteImageResponse;
+import software.amazon.awssdk.services.ecr.model.ImageFailure;
+import software.amazon.awssdk.services.ecr.model.ImageIdentifier;
 import de.taimos.pipeline.aws.AWSClientFactory;
 import de.taimos.pipeline.aws.utils.StepUtils;
 import hudson.Extension;
@@ -18,7 +17,7 @@ import org.jenkinsci.plugins.workflow.steps.SynchronousNonBlockingStepExecution;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
 
-import javax.annotation.Nonnull;
+import edu.umd.cs.findbugs.annotations.NonNull;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
@@ -77,7 +76,7 @@ public class ECRDeleteImagesStep extends Step {
 		}
 
 		@Override
-		@Nonnull
+		@NonNull
 		public String getDisplayName() {
 			return "Delete ecr images";
 		}
@@ -92,29 +91,30 @@ public class ECRDeleteImagesStep extends Step {
 
 		private transient ECRDeleteImagesStep step;
 
-		public Execution(@Nonnull StepContext context, ECRDeleteImagesStep step) {
+		public Execution(@NonNull StepContext context, ECRDeleteImagesStep step) {
 			super(context);
 			this.step = step;
 		}
 
 		@Override
 		protected List<ImageIdentifier> run() throws Exception {
-			AmazonECR ecr = AWSClientFactory.create(AmazonECRClientBuilder.standard(), this.getContext());
+			EcrClient ecr = AWSClientFactory.create(EcrClient.builder(), this.getContext()).build();
 
-			BatchDeleteImageResult result = ecr.batchDeleteImage(new BatchDeleteImageRequest()
-					.withImageIds(new ArrayList<>(this.step.getImageIds()))
-					.withRegistryId(this.step.getRegistryId())
-					.withRepositoryName(this.step.getRepositoryName())
+			BatchDeleteImageResponse result = ecr.batchDeleteImage(BatchDeleteImageRequest.builder()
+					.imageIds(new ArrayList<>(this.step.getImageIds().stream()
+							.map(JenkinsImageIdentifier::getWrappedIdentifier).toList()))
+					.registryId(this.step.getRegistryId())
+					.repositoryName(this.step.getRepositoryName()).build()
 			);
-			if (!result.getFailures().isEmpty()) {
+			if (!result.failures().isEmpty()) {
 				TaskListener listener = this.getContext().get(TaskListener.class);
 				listener.error("Unable to delete images:");
-				for (ImageFailure failure : result.getFailures()) {
-					listener.error("%s %s %s", failure.getFailureCode(), failure.getFailureReason(), failure.getImageId());
+				for (ImageFailure failure : result.failures()) {
+					listener.error("%s %s %s", failure.failureCode(), failure.failureReason(), failure.imageId());
 				}
 			}
 
-			return result.getImageIds();
+			return result.imageIds();
 		}
 
 		private static final long serialVersionUID = 1L;

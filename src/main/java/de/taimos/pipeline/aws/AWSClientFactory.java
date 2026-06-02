@@ -20,18 +20,17 @@
  */
 package de.taimos.pipeline.aws;
 
-import com.amazonaws.ClientConfiguration;
-import com.amazonaws.auth.AWSCredentialsProvider;
-import com.amazonaws.auth.AWSStaticCredentialsProvider;
-import com.amazonaws.auth.BasicAWSCredentials;
-import com.amazonaws.auth.BasicSessionCredentials;
-import com.amazonaws.auth.DefaultAWSCredentialsProviderChain;
-import com.amazonaws.auth.profile.ProfileCredentialsProvider;
-import com.amazonaws.client.builder.AwsClientBuilder;
-import com.amazonaws.client.builder.AwsSyncClientBuilder;
-import com.amazonaws.regions.Region;
 import com.amazonaws.regions.Regions;
-import com.amazonaws.retry.RetryPolicy;
+import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
+import software.amazon.awssdk.auth.credentials.AwsCredentials;
+import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
+import software.amazon.awssdk.auth.credentials.AwsCredentialsProviderChain;
+import software.amazon.awssdk.auth.credentials.AwsSessionCredentials;
+import software.amazon.awssdk.auth.credentials.ProfileCredentialsProvider;
+import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
+import software.amazon.awssdk.awscore.client.builder.AwsClientBuilder;
+import software.amazon.awssdk.core.client.config.ClientOverrideConfiguration;
+import software.amazon.awssdk.regions.Region;
 import hudson.EnvVars;
 import hudson.FilePath;
 import hudson.model.TaskListener;
@@ -39,9 +38,14 @@ import org.apache.commons.lang.StringUtils;
 import org.jenkinsci.plugins.workflow.steps.StepContext;
 import org.kohsuke.accmod.Restricted;
 import org.kohsuke.accmod.restrictions.NoExternalUse;
+import software.amazon.awssdk.retries.StandardRetryStrategy;
 
 import java.io.IOException;
 import java.io.Serializable;
+import java.net.URI;
+import java.time.Duration;
+import java.time.temporal.ChronoUnit;
+import java.time.temporal.TemporalUnit;
 
 
 public class AWSClientFactory implements Serializable {
@@ -64,61 +68,73 @@ public class AWSClientFactory implements Serializable {
 		//
 	}
 
-	public static <B extends AwsSyncClientBuilder<?, T>, T> T create(B clientBuilder, StepContext context) {
+	public static <B extends AwsClientBuilder<?, T>, T> B create(B clientBuilder, StepContext context) {
 		if (factoryDelegate != null) {
-			return (T) factoryDelegate.create(clientBuilder);
+			return (B) factoryDelegate.create(clientBuilder);
 		}
 		try {
-			return configureBuilder(clientBuilder, context, context.get(EnvVars.class)).build();
+			return configureBuilder(clientBuilder, context, context.get(EnvVars.class));
 		} catch (Exception e) {
 			throw new IllegalArgumentException(e);
 		}
 	}
 
-	public static <B extends AwsSyncClientBuilder<?, T>, T> T create(B clientBuilder, StepContext context, EnvVars vars) {
+	public static <B extends AwsClientBuilder<?, T>, T> B create(B clientBuilder, StepContext context, EnvVars vars) {
 		if (factoryDelegate != null) {
-			return (T) factoryDelegate.create(clientBuilder);
+			return (B) factoryDelegate.create(clientBuilder);
 		}
-		return configureBuilder(clientBuilder, context, vars).build();
+		return configureBuilder(clientBuilder, context, vars);
 	}
 
-	public static <B extends AwsSyncClientBuilder<?, T>, T> T create(B clientBuilder, EnvVars vars) {
-		return configureBuilder(clientBuilder, null, vars).build();
+	public static <B extends AwsClientBuilder<?, T>, T> B createAsync(B clientBuilder, StepContext context, EnvVars vars) {
+		if (factoryDelegate != null) {
+			return (B) factoryDelegate.create(clientBuilder);
+		}
+		return configureBuilder(clientBuilder, context, vars);
 	}
 
-	public static <B extends AwsSyncClientBuilder<?, ?>> B configureBuilder(final B clientBuilder, StepContext context, final EnvVars vars) {
+	public static <B extends AwsClientBuilder<?, T>, T> B create(B clientBuilder, EnvVars vars) {
+		return configureBuilder(clientBuilder, null, vars);
+	}
+
+	public static <B extends AwsClientBuilder<?, ?>> B configureBuilder(final B clientBuilder, StepContext context, final EnvVars vars) {
 		if (clientBuilder == null) {
 			throw new IllegalArgumentException("ClientBuilder must not be null");
 		}
-		if (StringUtils.isNotBlank(vars.get(AWS_ENDPOINT_URL))) {
-			clientBuilder.setEndpointConfiguration(new AwsClientBuilder.EndpointConfiguration(vars.get(AWS_ENDPOINT_URL), vars.get(AWS_REGION)));
+		if (vars != null && StringUtils.isNotBlank(vars.get(AWS_ENDPOINT_URL))) {
+			try {
+				clientBuilder.endpointOverride(new URI(vars.get(AWS_ENDPOINT_URL)));
+				clientBuilder.region(Region.of(vars.get(AWS_REGION)));
+			} catch (Exception e) {
+				throw new IllegalArgumentException(vars.get(AWS_ENDPOINT_URL));
+			}
 		} else {
-			clientBuilder.setRegion(AWSClientFactory.getRegion(vars).getName());
+			clientBuilder.region(AWSClientFactory.getRegion(vars));
 		}
 
-		clientBuilder.setCredentials(AWSClientFactory.getCredentials(vars, context));
+		clientBuilder.credentialsProvider(AWSClientFactory.getCredentials(vars, context));
 
-		clientBuilder.setClientConfiguration(AWSClientFactory.getClientConfiguration(vars));
+		clientBuilder.overrideConfiguration(builder -> AWSClientFactory.getClientConfiguration(builder, vars));
+
+		ProxyConfiguration.configure(vars, clientBuilder);
+
 		return clientBuilder;
 	}
 
-	private static ClientConfiguration getClientConfiguration(EnvVars vars) {
-		ClientConfiguration clientConfiguration = new ClientConfiguration();
+	private static void getClientConfiguration(ClientOverrideConfiguration.Builder builder, EnvVars vars) {
 
 		// The default SDK max retry is 3, increasing this to be more resilient to upstream errors
-		Integer retries = Integer.valueOf(vars.get(AWS_SDK_RETRIES, "10"));
-		clientConfiguration.setRetryPolicy(new RetryPolicy(null, null, retries, false));
+		int retries = Integer.parseInt(vars.get(AWS_SDK_RETRIES, "10"));
+		builder.retryStrategy(StandardRetryStrategy.builder().maxAttempts(retries).build());
 
-		// The default SDK socket timeout is 50000, use as deafult and allow to override via environment variable
-		Integer socketTimeout = Integer.valueOf(vars.get(AWS_SDK_SOCKET_TIMEOUT, "50000"));
-		clientConfiguration.setSocketTimeout(socketTimeout);
+		// The default SDK socket timeout is 50000, use as default and allow to override via environment variable
+		int socketTimeout = Integer.parseInt(vars.get(AWS_SDK_SOCKET_TIMEOUT, "50000"));
+		builder.apiCallTimeout(Duration.of(socketTimeout, ChronoUnit.MILLIS));
 
-		ProxyConfiguration.configure(vars, clientConfiguration);
-		return clientConfiguration;
 	}
 
-	private static AWSCredentialsProvider getCredentials(EnvVars vars, StepContext context) {
-		AWSCredentialsProvider provider = handleStaticCredentials(vars);
+	private static AwsCredentialsProvider getCredentials(EnvVars vars, StepContext context) {
+		AwsCredentialsProvider provider = handleStaticCredentials(vars);
 		if (provider != null) {
 			return provider;
 		}
@@ -138,55 +154,51 @@ public class AWSClientFactory implements Serializable {
 			}
 		}
 
-		return new DefaultAWSCredentialsProviderChain();
+		return AwsCredentialsProviderChain.builder().build();
 	}
 
-	private static AWSCredentialsProvider getCredentialsFromNode(StepContext context, EnvVars envVars) throws IOException, InterruptedException {
+	private static AwsCredentialsProvider getCredentialsFromNode(StepContext context, EnvVars envVars) throws IOException, InterruptedException {
 		FilePath ws = context.get(FilePath.class);
 		TaskListener listener = context.get(TaskListener.class);
 		SerializableAWSCredentialsProvider serializableAWSCredentialsProvider = ws.act(new AWSCredentialsProviderCallable(listener));
 		return serializableAWSCredentialsProvider;
 	}
 
-	private static AWSCredentialsProvider handleProfile(EnvVars vars) {
+	private static AwsCredentialsProvider handleProfile(EnvVars vars) {
 		String profile = vars.get(AWS_PROFILE, vars.get(AWS_DEFAULT_PROFILE));
 		if (profile != null) {
-			return new ProfileCredentialsProvider(profile);
+			return ProfileCredentialsProvider.create(profile);
 		}
 		return null;
 	}
 
-	private static AWSCredentialsProvider handleStaticCredentials(EnvVars vars) {
+	private static AwsCredentialsProvider handleStaticCredentials(EnvVars vars) {
 		String accessKey = vars.get(AWS_ACCESS_KEY_ID);
 		String secretAccessKey = vars.get(AWS_SECRET_ACCESS_KEY);
 		if (accessKey != null && secretAccessKey != null) {
 			String sessionToken = vars.get(AWS_SESSION_TOKEN);
 			if (sessionToken != null) {
-				return new AWSStaticCredentialsProvider(new BasicSessionCredentials(accessKey, secretAccessKey, sessionToken));
+				return StaticCredentialsProvider.create(AwsSessionCredentials.builder().accessKeyId(accessKey).secretAccessKey(secretAccessKey).sessionToken(sessionToken).build());
 			}
-			return new AWSStaticCredentialsProvider(new BasicAWSCredentials(accessKey, secretAccessKey));
+			return StaticCredentialsProvider.create(AwsBasicCredentials.builder().accessKeyId(accessKey).secretAccessKey(secretAccessKey).build());
 		}
 		return null;
 	}
 
 	private static Region getRegion(EnvVars vars) {
 		if (vars.get(AWS_DEFAULT_REGION) != null) {
-			return Region.getRegion(Regions.fromName(vars.get(AWS_DEFAULT_REGION)));
+			return Region.of(vars.get(AWS_DEFAULT_REGION));
 		}
 		if (vars.get(AWS_REGION) != null) {
-			return Region.getRegion(Regions.fromName(vars.get(AWS_REGION)));
+			return Region.of(vars.get(AWS_REGION));
 		}
 		if (System.getenv(AWS_DEFAULT_REGION) != null) {
-			return Region.getRegion(Regions.fromName(System.getenv(AWS_DEFAULT_REGION)));
+			return Region.of(System.getenv(AWS_DEFAULT_REGION));
 		}
 		if (System.getenv(AWS_REGION) != null) {
-			return Region.getRegion(Regions.fromName(System.getenv(AWS_REGION)));
+			return Region.of(System.getenv(AWS_REGION));
 		}
-		Region currentRegion = Regions.getCurrentRegion();
-		if (currentRegion != null) {
-			return currentRegion;
-		}
-		return Region.getRegion(Regions.DEFAULT_REGION);
+		return Region.US_WEST_2; // in SDK 1, this was the default region
 	}
 
 	private static final long serialVersionUID = 1L;

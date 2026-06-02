@@ -1,13 +1,13 @@
 package de.taimos.pipeline.aws.eb;
 
-import com.amazonaws.services.elasticbeanstalk.AWSElasticBeanstalk;
-import com.amazonaws.services.elasticbeanstalk.model.CreateEnvironmentRequest;
-import com.amazonaws.services.elasticbeanstalk.model.CreateEnvironmentResult;
-import com.amazonaws.services.elasticbeanstalk.model.DescribeEnvironmentsRequest;
-import com.amazonaws.services.elasticbeanstalk.model.DescribeEnvironmentsResult;
-import com.amazonaws.services.elasticbeanstalk.model.EnvironmentDescription;
-import com.amazonaws.services.elasticbeanstalk.model.UpdateEnvironmentRequest;
-import com.amazonaws.services.elasticbeanstalk.model.UpdateEnvironmentResult;
+import software.amazon.awssdk.services.elasticbeanstalk.AWSElasticBeanstalk;
+import software.amazon.awssdk.services.elasticbeanstalk.model.CreateEnvironmentRequest;
+import software.amazon.awssdk.services.elasticbeanstalk.model.CreateEnvironmentResponse;
+import software.amazon.awssdk.services.elasticbeanstalk.model.DescribeEnvironmentsRequest;
+import software.amazon.awssdk.services.elasticbeanstalk.model.DescribeEnvironmentsResponse;
+import software.amazon.awssdk.services.elasticbeanstalk.model.EnvironmentDescription;
+import software.amazon.awssdk.services.elasticbeanstalk.model.UpdateEnvironmentRequest;
+import software.amazon.awssdk.services.elasticbeanstalk.model.UpdateEnvironmentResponse;
 import org.jenkinsci.plugins.workflow.steps.StepContext;
 import org.junit.Assert;
 import org.junit.BeforeClass;

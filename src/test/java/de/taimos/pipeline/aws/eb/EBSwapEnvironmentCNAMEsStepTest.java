@@ -1,9 +1,9 @@
 package de.taimos.pipeline.aws.eb;
 
-import com.amazonaws.services.elasticbeanstalk.AWSElasticBeanstalk;
-import com.amazonaws.services.elasticbeanstalk.model.DescribeEnvironmentsResult;
-import com.amazonaws.services.elasticbeanstalk.model.EnvironmentDescription;
-import com.amazonaws.services.elasticbeanstalk.model.SwapEnvironmentCNAMEsRequest;
+import software.amazon.awssdk.services.elasticbeanstalk.AWSElasticBeanstalk;
+import software.amazon.awssdk.services.elasticbeanstalk.model.DescribeEnvironmentsResponse;
+import software.amazon.awssdk.services.elasticbeanstalk.model.EnvironmentDescription;
+import software.amazon.awssdk.services.elasticbeanstalk.model.SwapEnvironmentCNAMEsRequest;
 import org.jenkinsci.plugins.workflow.steps.StepContext;
 import org.junit.Assert;
 import org.junit.BeforeClass;

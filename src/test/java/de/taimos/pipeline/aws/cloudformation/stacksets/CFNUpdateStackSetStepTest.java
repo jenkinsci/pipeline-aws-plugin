@@ -1,11 +1,11 @@
 package de.taimos.pipeline.aws.cloudformation.stacksets;
 
-import com.amazonaws.services.cloudformation.AmazonCloudFormation;
-import com.amazonaws.services.cloudformation.model.Parameter;
-import com.amazonaws.services.cloudformation.model.StackInstanceSummary;
-import com.amazonaws.services.cloudformation.model.StackSetOperationPreferences;
-import com.amazonaws.services.cloudformation.model.UpdateStackSetRequest;
-import com.amazonaws.services.cloudformation.model.UpdateStackSetResult;
+import software.amazon.awssdk.services.cloudformation.AmazonCloudFormation;
+import software.amazon.awssdk.services.cloudformation.model.Parameter;
+import software.amazon.awssdk.services.cloudformation.model.StackInstanceSummary;
+import software.amazon.awssdk.services.cloudformation.model.StackSetOperationPreferences;
+import software.amazon.awssdk.services.cloudformation.model.UpdateStackSetRequest;
+import software.amazon.awssdk.services.cloudformation.model.UpdateStackSetResponse;
 import de.taimos.pipeline.aws.AWSClientFactory;
 import de.taimos.pipeline.aws.AWSUtilFactory;
 import lombok.Builder;

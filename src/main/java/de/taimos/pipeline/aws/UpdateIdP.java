@@ -30,14 +30,11 @@ import org.jenkinsci.plugins.workflow.steps.StepExecution;
 import org.jenkinsci.plugins.workflow.steps.SynchronousNonBlockingStepExecution;
 import org.kohsuke.stapler.DataBoundConstructor;
 
-import com.amazonaws.services.identitymanagement.AmazonIdentityManagement;
-import com.amazonaws.services.identitymanagement.AmazonIdentityManagementClientBuilder;
-import com.amazonaws.services.identitymanagement.model.CreateSAMLProviderRequest;
-import com.amazonaws.services.identitymanagement.model.CreateSAMLProviderResult;
-import com.amazonaws.services.identitymanagement.model.ListSAMLProvidersResult;
-import com.amazonaws.services.identitymanagement.model.SAMLProviderListEntry;
-import com.amazonaws.services.identitymanagement.model.UpdateSAMLProviderRequest;
-import com.amazonaws.services.identitymanagement.model.UpdateSAMLProviderResult;
+import software.amazon.awssdk.services.iam.IamClient;
+import software.amazon.awssdk.services.iam.model.CreateSamlProviderRequest;
+import software.amazon.awssdk.services.iam.model.CreateSamlProviderResponse;
+import software.amazon.awssdk.services.iam.model.ListSamlProvidersResponse;
+import software.amazon.awssdk.services.iam.model.SAMLProviderListEntry;
 import com.google.common.base.Preconditions;
 
 import de.taimos.pipeline.aws.utils.StepUtils;
@@ -45,6 +42,8 @@ import hudson.EnvVars;
 import hudson.Extension;
 import hudson.FilePath;
 import hudson.model.TaskListener;
+import software.amazon.awssdk.services.iam.model.UpdateSamlProviderRequest;
+import software.amazon.awssdk.services.iam.model.UpdateSamlProviderResponse;
 
 public class UpdateIdP extends Step {
 
@@ -107,14 +106,14 @@ public class UpdateIdP extends Step {
 			Preconditions.checkArgument(metadata != null && !metadata.isEmpty(), "metadata must not be null or empty");
 
 			TaskListener listener = Execution.this.getContext().get(TaskListener.class);
-			AmazonIdentityManagement iamClient = AWSClientFactory.create(AmazonIdentityManagementClientBuilder.standard(), Execution.this.getContext());
+			IamClient iamClient = AWSClientFactory.create(IamClient.builder(), Execution.this.getContext()).build();
 
 			listener.getLogger().format("Checking for identity provider %s %n", name);
-			ListSAMLProvidersResult listResult = iamClient.listSAMLProviders();
+			ListSamlProvidersResponse listResult = iamClient.listSAMLProviders();
 
 			String providerARN = null;
-			for (SAMLProviderListEntry entry : listResult.getSAMLProviderList()) {
-				String entryArn = entry.getArn();
+			for (SAMLProviderListEntry entry : listResult.samlProviderList()) {
+				String entryArn = entry.arn();
 				String entryName = entryArn.substring(entryArn.lastIndexOf('/') + 1);
 				if (entryName.equals(name)) {
 					providerARN = entryArn;
@@ -126,18 +125,18 @@ public class UpdateIdP extends Step {
 
 			if (providerARN != null) {
 				// Update IdP
-				UpdateSAMLProviderRequest request = new UpdateSAMLProviderRequest();
-				request.withSAMLProviderArn(providerARN);
-				request.withSAMLMetadataDocument(metadataDocument);
-				UpdateSAMLProviderResult result = iamClient.updateSAMLProvider(request);
-				listener.getLogger().format("Updated identity provider %s %n", result.getSAMLProviderArn());
+				UpdateSamlProviderRequest.Builder request = UpdateSamlProviderRequest.builder();
+				request.samlProviderArn(providerARN);
+				request.samlMetadataDocument(metadataDocument);
+				UpdateSamlProviderResponse result = iamClient.updateSAMLProvider(request.build());
+				listener.getLogger().format("Updated identity provider %s %n", result.samlProviderArn());
 			} else {
 				// Create IdP
-				CreateSAMLProviderRequest request = new CreateSAMLProviderRequest();
-				request.withName(name);
-				request.withSAMLMetadataDocument(metadataDocument);
-				CreateSAMLProviderResult result = iamClient.createSAMLProvider(request);
-				providerARN = result.getSAMLProviderArn();
+				CreateSamlProviderRequest.Builder request = CreateSamlProviderRequest.builder();
+				request.name(name);
+				request.samlMetadataDocument(metadataDocument);
+				CreateSamlProviderResponse result = iamClient.createSAMLProvider(request.build());
+				providerARN = result.samlProviderArn();
 				listener.getLogger().format("Created identity provider %s %n", providerARN);
 			}
 			return providerARN;

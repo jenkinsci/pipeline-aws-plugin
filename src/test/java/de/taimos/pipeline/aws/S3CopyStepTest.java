@@ -24,7 +24,7 @@ package de.taimos.pipeline.aws;
 import org.junit.Assert;
 import org.junit.Test;
 
-import com.amazonaws.services.s3.model.CannedAccessControlList;
+import software.amazon.awssdk.services.s3.model.CannedAccessControlList;
 
 public class S3CopyStepTest
 {

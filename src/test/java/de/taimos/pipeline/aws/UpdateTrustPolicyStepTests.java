@@ -21,9 +21,9 @@
 
 package de.taimos.pipeline.aws;
 
-import com.amazonaws.services.identitymanagement.AmazonIdentityManagement;
-import com.amazonaws.services.identitymanagement.model.UpdateAssumeRolePolicyRequest;
-import com.amazonaws.services.identitymanagement.model.UpdateAssumeRolePolicyResult;
+import software.amazon.awssdk.services.identitymanagement.AmazonIdentityManagement;
+import software.amazon.awssdk.services.identitymanagement.model.UpdateAssumeRolePolicyRequest;
+import software.amazon.awssdk.services.identitymanagement.model.UpdateAssumeRolePolicyResponse;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
 import org.junit.Before;
