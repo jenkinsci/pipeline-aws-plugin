@@ -17,7 +17,6 @@ import de.taimos.pipeline.aws.utils.StepUtils;
 import hudson.Extension;
 import hudson.model.TaskListener;
 import lombok.Getter;
-import org.apache.commons.lang3.StringUtils;
 import org.jenkinsci.plugins.workflow.steps.Step;
 import org.jenkinsci.plugins.workflow.steps.StepContext;
 import org.jenkinsci.plugins.workflow.steps.StepDescriptor;
@@ -186,7 +185,7 @@ public class CreateDeployStep extends Step {
 			if (isEcsOrLambdaDeployment()) {
 				return null;
 			}
-			if (StringUtils.isEmpty(fileExistsBehavior)) {
+			if (fileExistsBehavior == null || fileExistsBehavior.isEmpty()) {
 				return FileExistsBehavior.DISALLOW;
 			}
 			return FileExistsBehavior.fromValue(fileExistsBehavior);
@@ -214,7 +213,7 @@ public class CreateDeployStep extends Step {
 		}
 
 		private RevisionLocation getRevisionLocation() {
-			if (StringUtils.isNotEmpty(step.getS3Bucket())) {
+			if (step.getS3Bucket() != null && !step.getS3Bucket().isEmpty()) {
 				final S3Location s3Location = new S3Location().withBucket(step.getS3Bucket())
 						.withKey(step.getS3Key())
 						.withBundleType(step.getS3BundleType());
