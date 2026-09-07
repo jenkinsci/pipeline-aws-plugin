@@ -35,7 +35,6 @@ import com.amazonaws.retry.RetryPolicy;
 import hudson.EnvVars;
 import hudson.FilePath;
 import hudson.model.TaskListener;
-import org.apache.commons.lang.StringUtils;
 import org.jenkinsci.plugins.workflow.steps.StepContext;
 import org.kohsuke.accmod.Restricted;
 import org.kohsuke.accmod.restrictions.NoExternalUse;
@@ -90,8 +89,9 @@ public class AWSClientFactory implements Serializable {
 		if (clientBuilder == null) {
 			throw new IllegalArgumentException("ClientBuilder must not be null");
 		}
-		if (StringUtils.isNotBlank(vars.get(AWS_ENDPOINT_URL))) {
-			clientBuilder.setEndpointConfiguration(new AwsClientBuilder.EndpointConfiguration(vars.get(AWS_ENDPOINT_URL), vars.get(AWS_REGION)));
+		String endpointUrl = vars.get(AWS_ENDPOINT_URL);
+		if (endpointUrl != null && !endpointUrl.isBlank()) {
+			clientBuilder.setEndpointConfiguration(new AwsClientBuilder.EndpointConfiguration(endpointUrl, vars.get(AWS_REGION)));
 		} else {
 			clientBuilder.setRegion(AWSClientFactory.getRegion(vars).getName());
 		}

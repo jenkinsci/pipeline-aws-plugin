@@ -30,7 +30,6 @@ import java.util.Date;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 
-import org.apache.commons.lang.StringUtils;
 import org.apache.http.concurrent.BasicFuture;
 
 import com.amazonaws.AmazonWebServiceRequest;
@@ -49,16 +48,6 @@ import com.amazonaws.waiters.WaiterParameters;
 
 import de.taimos.pipeline.aws.cloudformation.utils.TimeOutRetryStrategy;
 import hudson.model.TaskListener;
-
-import org.apache.commons.lang.StringUtils;
-import org.apache.http.concurrent.BasicFuture;
-
-import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Date;
-import java.util.List;
-import java.util.concurrent.ExecutionException;
 
 class EventPrinter {
 
@@ -173,7 +162,7 @@ class EventPrinter {
 	}
 
 	private void printLine() {
-		this.listener.getLogger().println(StringUtils.repeat("-", 231));
+		this.listener.getLogger().println("-".repeat(231));
 	}
 
 	private void printStackName(String stackName) {

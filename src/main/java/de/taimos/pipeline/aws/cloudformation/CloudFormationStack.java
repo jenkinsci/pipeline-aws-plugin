@@ -129,7 +129,7 @@ public class CloudFormationStack {
 		CreateStackRequest req = new CreateStackRequest();
 		req.withStackName(this.stack).withCapabilities(Capability.CAPABILITY_IAM, Capability.CAPABILITY_NAMED_IAM, Capability.CAPABILITY_AUTO_EXPAND).withEnableTerminationProtection(enableTerminationProtection);
 		req.withTemplateBody(templateBody).withTemplateURL(templateUrl).withParameters(params).withTags(tags).withNotificationARNs(notificationARNs)
-				.withTimeoutInMinutes(pollConfiguration.getTimeout() == null ? null : (int) pollConfiguration.getTimeout().toMinutes())
+				.withTimeoutInMinutes((int) pollConfiguration.getTimeout().toMinutes())
 				.withRoleARN(roleArn)
 				.withOnFailure(OnFailure.valueOf(onFailure));
 		this.client.createStack(req);

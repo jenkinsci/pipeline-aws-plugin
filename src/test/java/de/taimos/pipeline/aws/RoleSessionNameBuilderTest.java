@@ -39,7 +39,7 @@ public class RoleSessionNameBuilderTest {
 
 	@Test
 	public void nameLongerThanAWSLimitAreStripped() {
-		String jobName = org.apache.commons.lang.StringUtils.repeat("s", 64);
+		String jobName = "s".repeat(64);
 		String buildNumber = "123";
 		final RoleSessionNameBuilder roleSessionNameBuilder = RoleSessionNameBuilder.withJobName(jobName)
 				.withBuildNumber(buildNumber);
@@ -49,7 +49,7 @@ public class RoleSessionNameBuilderTest {
 
 	@Test
 	public void nameEqualToAWSLimitAreStripped() {
-		String jobName = org.apache.commons.lang.StringUtils.repeat("s", 52);
+		String jobName = "s".repeat(52);
 		String buildNumber = "123";
 		final RoleSessionNameBuilder roleSessionNameBuilder = RoleSessionNameBuilder.withJobName(jobName)
 				.withBuildNumber(buildNumber);
