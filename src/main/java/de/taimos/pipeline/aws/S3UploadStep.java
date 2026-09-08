@@ -457,7 +457,7 @@ public class S3UploadStep extends AbstractS3Step {
 					throw new FileNotFoundException(child.toURI().toString());
 				}
 
-				child.act(new RemoteUploader(Execution.this.step.createS3ClientOptions(), Execution.this.getContext().get(EnvVars.class), listener, bucket, path, metadatas, tags, acl, cacheControl, contentEncoding, contentType, contentDisposition, kmsId, sseAlgorithm, redirectLocation));
+				child.act(new RemoteUploader(Execution.this.step.createS3ClientOptions(), Execution.this.getContext().get(EnvVars.class), listener, bucket, path, metadatas, tags, acl, cacheControl, contentEncoding, contentType, contentDisposition, kmsId, sseAlgorithm, redirectLocation, verbose));
 
 				listener.getLogger().println("Upload complete");
 				return String.format("s3://%s/%s", bucket, path);
@@ -467,7 +467,7 @@ public class S3UploadStep extends AbstractS3Step {
 				for (FilePath child : children) {
 					fileList.add(child.act(FIND_FILE_ON_SLAVE));
 				}
-				dir.act(new RemoteListUploader(Execution.this.step.createS3ClientOptions(), Execution.this.getContext().get(EnvVars.class), listener, fileList, bucket, path, metadatas, tags, acl, cacheControl, contentEncoding, contentType, contentDisposition, kmsId, sseAlgorithm));
+				dir.act(new RemoteListUploader(Execution.this.step.createS3ClientOptions(), Execution.this.getContext().get(EnvVars.class), listener, fileList, bucket, path, metadatas, tags, acl, cacheControl, contentEncoding, contentType, contentDisposition, kmsId, sseAlgorithm, verbose));
 				listener.getLogger().println("Upload complete");
 				return String.format("s3://%s/%s", bucket, path);
 			}
@@ -493,8 +493,9 @@ public class S3UploadStep extends AbstractS3Step {
 		private final String kmsId;
 		private final String sseAlgorithm;
 		private final String redirectLocation;
+		private final boolean verbose;
 
-		RemoteUploader(S3ClientOptions amazonS3ClientOptions, EnvVars envVars, TaskListener taskListener, String bucket, String path, Map<String, String> metadatas, Map<String, String> tags, CannedAccessControlList acl, String cacheControl, String contentEncoding, String contentType, String contentDisposition, String kmsId, String sseAlgorithm, String redirectLocation) {
+		RemoteUploader(S3ClientOptions amazonS3ClientOptions, EnvVars envVars, TaskListener taskListener, String bucket, String path, Map<String, String> metadatas, Map<String, String> tags, CannedAccessControlList acl, String cacheControl, String contentEncoding, String contentType, String contentDisposition, String kmsId, String sseAlgorithm, String redirectLocation, boolean verbose) {
 			this.amazonS3ClientOptions = amazonS3ClientOptions;
 			this.envVars = envVars;
 			this.taskListener = taskListener;
@@ -510,6 +511,7 @@ public class S3UploadStep extends AbstractS3Step {
 			this.kmsId = kmsId;
 			this.sseAlgorithm = sseAlgorithm;
 			this.redirectLocation = redirectLocation;
+			this.verbose = verbose;
 		}
 
 		@Override
@@ -573,7 +575,9 @@ public class S3UploadStep extends AbstractS3Step {
 					final Upload upload = mgr.upload(request);
 					upload.addProgressListener((ProgressListener) progressEvent -> {
 						if (progressEvent.getEventType() == ProgressEventType.TRANSFER_COMPLETED_EVENT) {
-							RemoteUploader.this.taskListener.getLogger().println("Finished: " + upload.getDescription());
+							if (this.verbose) {
+								RemoteUploader.this.taskListener.getLogger().println("Finished: " + upload.getDescription());
+							}
 						}
 					});
 					upload.waitForCompletion();
@@ -634,7 +638,9 @@ public class S3UploadStep extends AbstractS3Step {
 					for (final Upload upload : fileUpload.getSubTransfers()) {
 						upload.addProgressListener((ProgressListener) progressEvent -> {
 							if (progressEvent.getEventType() == ProgressEventType.TRANSFER_COMPLETED_EVENT) {
-								RemoteUploader.this.taskListener.getLogger().println("Finished: " + upload.getDescription());
+								if (this.verbose) {
+									RemoteUploader.this.taskListener.getLogger().println("Finished: " + upload.getDescription());
+								}
 							}
 						});
 					}
@@ -668,8 +674,9 @@ public class S3UploadStep extends AbstractS3Step {
 		private final String contentDisposition;
 		private final String kmsId;
 		private final String sseAlgorithm;
+		private final boolean verbose;
 
-		RemoteListUploader(S3ClientOptions amazonS3ClientOptions, EnvVars envVars, TaskListener taskListener, List<File> fileList, String bucket, String path, Map<String, String> metadatas, Map<String, String> tags, CannedAccessControlList acl, final String cacheControl, final String contentEncoding, final String contentType, final String contentDisposition, String kmsId, String sseAlgorithm) {
+		RemoteListUploader(S3ClientOptions amazonS3ClientOptions, EnvVars envVars, TaskListener taskListener, List<File> fileList, String bucket, String path, Map<String, String> metadatas, Map<String, String> tags, CannedAccessControlList acl, final String cacheControl, final String contentEncoding, final String contentType, final String contentDisposition, String kmsId, String sseAlgorithm, boolean verbose) {
 			this.amazonS3ClientOptions = amazonS3ClientOptions;
 			this.envVars = envVars;
 			this.taskListener = taskListener;
@@ -685,6 +692,7 @@ public class S3UploadStep extends AbstractS3Step {
 			this.contentDisposition = contentDisposition;
 			this.kmsId = kmsId;
 			this.sseAlgorithm = sseAlgorithm;
+			this.verbose = verbose;
 		}
 
 		@Override
@@ -745,7 +753,9 @@ public class S3UploadStep extends AbstractS3Step {
 				for (final Upload upload : fileUpload.getSubTransfers()) {
 					upload.addProgressListener((ProgressListener) progressEvent -> {
 						if (progressEvent.getEventType() == ProgressEventType.TRANSFER_COMPLETED_EVENT) {
-							RemoteListUploader.this.taskListener.getLogger().println("Finished: " + upload.getDescription());
+							if (this.verbose) {
+								RemoteListUploader.this.taskListener.getLogger().println("Finished: " + upload.getDescription());
+							}
 						}
 					});
 				}
