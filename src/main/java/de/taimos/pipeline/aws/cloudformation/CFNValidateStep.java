@@ -21,14 +21,12 @@
 
 package de.taimos.pipeline.aws.cloudformation;
 
-import java.io.IOException;
 import java.util.Map;
 import java.util.Set;
 
-import javax.annotation.Nonnull;
+import edu.umd.cs.findbugs.annotations.NonNull;
 
-import com.amazonaws.services.cloudformation.model.ValidateTemplateResult;
-import com.amazonaws.services.cloudformation.model.transform.ValidateTemplateRequestMarshaller;
+import software.amazon.awssdk.services.cloudformation.model.ValidateTemplateResponse;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -41,10 +39,8 @@ import org.jenkinsci.plugins.workflow.steps.StepExecution;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
 
-import com.amazonaws.services.cloudformation.AmazonCloudFormation;
-import com.amazonaws.services.cloudformation.AmazonCloudFormationClientBuilder;
-import com.amazonaws.services.cloudformation.model.AmazonCloudFormationException;
-import com.amazonaws.services.cloudformation.model.ValidateTemplateRequest;
+import software.amazon.awssdk.services.cloudformation.CloudFormationClient;
+import software.amazon.awssdk.services.cloudformation.model.ValidateTemplateRequest;
 
 import de.taimos.pipeline.aws.AWSClientFactory;
 import de.taimos.pipeline.aws.utils.StepUtils;
@@ -109,7 +105,7 @@ public class CFNValidateStep extends Step {
 
 		private final transient CFNValidateStep step;
 
-		public Execution(CFNValidateStep step, @Nonnull StepContext context) {
+		public Execution(CFNValidateStep step, @NonNull StepContext context) {
 			super(context);
 			this.step = step;
 		}
@@ -130,17 +126,20 @@ public class CFNValidateStep extends Step {
 			new Thread("cfnValidate-" + file) {
 				@Override
 				public void run() {
-					AmazonCloudFormation client = AWSClientFactory.create(AmazonCloudFormationClientBuilder.standard(), Execution.this.getContext());
 					try {
-						ValidateTemplateRequest request = new ValidateTemplateRequest();
+						CloudFormationClient client = AWSClientFactory.create(CloudFormationClient.builder(), Execution.this.getContext());
+						ValidateTemplateRequest.Builder request = ValidateTemplateRequest.builder();
 						if (template != null) {
-							request.withTemplateBody(template);
+							request.templateBody(template);
 						} else {
-							request.withTemplateURL(url);
+							request.templateURL(url);
 						}
-						ValidateTemplateResult result = client.validateTemplate(request);
+						ValidateTemplateResponse result = client.validateTemplate(request.build());
 						Execution.this.getContext().onSuccess(AwsSdkResponseToJson.convertToMap(result));
-					} catch (AmazonCloudFormationException | IOException e) {
+					} catch (Throwable e) {
+						// Everything has to reach onFailure: this runs on its own thread, so anything that
+						// escapes here (client construction failing on an unresolvable region, a bug in the
+						// response conversion) would leave the step never completing and the build hanging.
 						Execution.this.getContext().onFailure(e);
 					}
 				}
@@ -160,7 +159,7 @@ public class CFNValidateStep extends Step {
 		}
 
 		@Override
-		public void stop(@Nonnull Throwable cause) throws Exception {
+		public void stop(@NonNull Throwable cause) throws Exception {
 			//
 		}
 

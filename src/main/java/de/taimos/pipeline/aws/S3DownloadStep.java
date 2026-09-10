@@ -21,13 +21,14 @@
 
 package de.taimos.pipeline.aws;
 
-import com.amazonaws.event.ProgressEventType;
-import com.amazonaws.event.ProgressListener;
-import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.transfer.Download;
-import com.amazonaws.services.s3.transfer.MultipleFileDownload;
-import com.amazonaws.services.s3.transfer.TransferManager;
+import software.amazon.awssdk.services.s3.S3AsyncClient;
+import software.amazon.awssdk.transfer.s3.S3TransferManager;
+import software.amazon.awssdk.transfer.s3.model.CompletedDirectoryDownload;
+import software.amazon.awssdk.transfer.s3.model.DownloadDirectoryRequest;
+import software.amazon.awssdk.transfer.s3.model.DownloadFileRequest;
+import software.amazon.awssdk.transfer.s3.model.FailedFileDownload;
 import com.google.common.base.Preconditions;
+import de.taimos.pipeline.aws.utils.S3Utils;
 import de.taimos.pipeline.aws.utils.StepUtils;
 import hudson.EnvVars;
 import hudson.Extension;
@@ -44,6 +45,7 @@ import org.kohsuke.stapler.DataBoundSetter;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.util.Set;
 
 public class S3DownloadStep extends AbstractS3Step {
@@ -110,6 +112,48 @@ public class S3DownloadStep extends AbstractS3Step {
 		}
 	}
 
+	/**
+	 * v1 recreated each object's whole key under the destination directory, so downloading the
+	 * prefix a/b/ into out produced out/a/b/x.txt. v2 resolves keys relative to the listing prefix
+	 * instead, which would put the same object at out/x.txt - and silently: the download succeeds,
+	 * and only a later step reading the file by its full key path notices. Pushing the prefix into
+	 * the destination restores v1's layout, because v2 then strips it back off each key.
+	 *
+	 * Resolved segment by segment rather than by handing the whole prefix to resolve, so that the
+	 * shapes a user-supplied path can take - a leading slash, a trailing one, a doubled separator in
+	 * a//b/ - are absorbed by the empty-segment check rather than producing empty path elements.
+	 */
+	static Path destinationFor(File localFile, String prefix) {
+		Path destination = localFile.toPath();
+		for (String segment : prefix.split("/")) {
+			if (!segment.isEmpty()) {
+				destination = destination.resolve(segment);
+			}
+		}
+		return destination;
+	}
+
+	/**
+	 * Built here rather than inline so the layout test can issue exactly the request the step issues:
+	 * the resulting on-disk layout depends on the destination and the listing prefix together, and a
+	 * test that rebuilds the request itself can silently stop matching.
+	 *
+	 * The filter widens the SDK's own exclusion. DownloadFilter.allObjects, the default, already skips
+	 * a delimiter-terminated key whose size is zero - the "folder marker" the S3 console creates - so
+	 * those were never a problem. It does accept a delimiter-terminated key with content, which v2
+	 * normalises to an empty relative path: that resolves to the destination directory itself, cannot
+	 * be written as a file, and would become a failed transfer and so a failed build. v1 skipped every
+	 * key ending in the delimiter regardless of size, and this restores that.
+	 */
+	static DownloadDirectoryRequest downloadDirectoryRequest(String bucket, File localFile, String prefix) {
+		return DownloadDirectoryRequest.builder()
+				.bucket(bucket)
+				.destination(destinationFor(localFile, prefix))
+				.listObjectsV2RequestTransformer(list -> list.prefix(prefix))
+				.filter(s3Object -> !s3Object.key().endsWith("/"))
+				.build();
+	}
+
 	public static class Execution extends SynchronousNonBlockingStepExecution<Void> {
 
 		protected static final long serialVersionUID = 1L;
@@ -173,34 +217,47 @@ public class S3DownloadStep extends AbstractS3Step {
 
 		@Override
 		public Void invoke(File localFile, VirtualChannel channel) throws IOException, InterruptedException {
-			AmazonS3 s3Client = AWSClientFactory.create(this.amazonS3ClientOptions.createAmazonS3ClientBuilder(), this.envVars);
-			TransferManager mgr = AWSUtilFactory.newTransferManager(s3Client);
-
-			if (this.path == null || this.path.isEmpty() || this.path.endsWith("/")) {
-				try {
-					final MultipleFileDownload fileDownload = mgr.downloadDirectory(this.bucket, this.path, localFile);
-					fileDownload.waitForCompletion();
-					RemoteDownloader.this.taskListener.getLogger().println("Finished: " + fileDownload.getDescription());
+			// S3TransferManager only closes an async client it created itself, so a client passed to it
+			// has to be closed here - on an agent that runs many builds, leaking a netty event loop per
+			// download adds up.
+			try (S3AsyncClient s3Client = AWSClientFactory.create(this.amazonS3ClientOptions.createS3AsyncClientBuilderForDownload(), this.envVars);
+					S3TransferManager mgr = AWSUtilFactory.newV2TransferManager(s3Client)) {
+				if (this.path == null || this.path.isEmpty() || this.path.endsWith("/")) {
+					this.downloadDirectory(mgr, localFile);
+				} else {
+					this.downloadFile(mgr, localFile);
 				}
-				finally {
-					mgr.shutdownNow();
-				}
-				return null;
-			} else {
-				try {
-					final Download download = mgr.download(this.bucket, this.path, localFile);
-					download.addProgressListener((ProgressListener) progressEvent -> {
-						if (progressEvent.getEventType() == ProgressEventType.TRANSFER_COMPLETED_EVENT) {
-							RemoteDownloader.this.taskListener.getLogger().println("Finished: " + download.getDescription());
-						}
-					});
-					download.waitForCompletion();
-				}
-				finally {
-					mgr.shutdownNow();
-				}
-				return null;
 			}
+			return null;
+		}
+
+		private void downloadFile(S3TransferManager mgr, File localFile) throws InterruptedException {
+			S3Utils.joinTransfer(mgr.downloadFile(DownloadFileRequest.builder()
+					.getObjectRequest(get -> get.bucket(this.bucket).key(this.path))
+					.destination(localFile)
+					.build()).completionFuture());
+			this.taskListener.getLogger().println("Finished: download of s3://" + this.bucket + "/" + this.path);
+		}
+
+		/**
+		 * v1's MultipleFileDownload.waitForCompletion threw if any file in the directory failed. v2
+		 * completes successfully and reports the failures in failedTransfers(), so without this check
+		 * a partly-downloaded directory would look like a clean download and the build would carry on
+		 * with missing files.
+		 */
+		private void downloadDirectory(S3TransferManager mgr, File localFile) throws InterruptedException {
+			String prefix = this.path == null ? "" : this.path;
+			CompletedDirectoryDownload completed = S3Utils.joinTransfer(mgr.downloadDirectory(
+					S3DownloadStep.downloadDirectoryRequest(this.bucket, localFile, prefix)).completionFuture());
+
+			if (!completed.failedTransfers().isEmpty()) {
+				for (FailedFileDownload failure : completed.failedTransfers()) {
+					this.taskListener.getLogger().println("Failed: " + failure);
+				}
+				throw new RuntimeException("Download of s3://" + this.bucket + "/" + prefix + " failed for "
+						+ completed.failedTransfers().size() + " object(s); see the log above");
+			}
+			this.taskListener.getLogger().println("Finished: download of s3://" + this.bucket + "/" + prefix);
 		}
 
 	}

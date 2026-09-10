@@ -26,7 +26,7 @@ import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Collection;
 
-import com.amazonaws.services.cloudformation.model.Parameter;
+import software.amazon.awssdk.services.cloudformation.model.Parameter;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
@@ -41,15 +41,15 @@ public class JSONParameterFileParser implements ParameterFileParser {
 		if (tree instanceof ArrayNode) {
 			ArrayNode jsonNodes = (ArrayNode) tree;
 			for (JsonNode node : jsonNodes) {
-				Parameter param = new Parameter();
-				param.withParameterKey(node.get("ParameterKey").asText());
+				Parameter.Builder param = Parameter.builder();
+				param.parameterKey(node.get("ParameterKey").asText());
 				if (node.has("ParameterValue")) {
-					param.withParameterValue(node.get("ParameterValue").asText());
+					param.parameterValue(node.get("ParameterValue").asText());
 				}
 				if (node.has("UsePreviousValue")) {
-					param.withUsePreviousValue(node.get("UsePreviousValue").booleanValue());
+					param.usePreviousValue(node.get("UsePreviousValue").booleanValue());
 				}
-				parameters.add(param);
+				parameters.add(param.build());
 			}
 		}
 		return parameters;

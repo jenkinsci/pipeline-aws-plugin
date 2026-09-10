@@ -36,7 +36,6 @@
             <option value="PublicRead">PublicRead</option>
             <option value="PublicReadWrite">PublicReadWrite</option>
             <option value="AuthenticatedRead">AuthenticatedRead</option>
-            <option value="LogDeliveryWrite">LogDeliveryWrite</option>
             <option value="BucketOwnerRead">BucketOwnerRead</option>
             <option value="BucketOwnerFullControl">BucketOwnerFullControl</option>
             <option value="AwsExecRead">AwsExecRead</option>

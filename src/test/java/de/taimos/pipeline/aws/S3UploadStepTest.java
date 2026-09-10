@@ -26,7 +26,7 @@ import org.junit.Assert;
 import org.junit.Test;
 import org.mockito.Mockito;
 
-import com.amazonaws.services.s3.model.CannedAccessControlList;
+import de.taimos.pipeline.aws.utils.CannedAcl;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
@@ -37,14 +37,14 @@ public class S3UploadStepTest {
 		step.setFile("my-file");
 		step.setText("my content text");
 		step.setKmsId("alias/foo");
-		step.setAcl(CannedAccessControlList.PublicRead);
+		step.setAcl(CannedAcl.PublicRead);
 		step.setCacheControl("my-cachecontrol");
 		step.setSseAlgorithm("AES256");
 		step.setRedirectLocation("/redirect");
 		Assert.assertEquals("my-file", step.getFile());
 		Assert.assertEquals("my content text", step.getText());
 		Assert.assertEquals("my-bucket", step.getBucket());
-		Assert.assertEquals(CannedAccessControlList.PublicRead, step.getAcl());
+		Assert.assertEquals(CannedAcl.PublicRead, step.getAcl());
 		Assert.assertEquals("my-cachecontrol", step.getCacheControl());
 		Assert.assertEquals("AES256", step.getSseAlgorithm());
 		Assert.assertEquals("alias/foo", step.getKmsId());

@@ -1,11 +1,12 @@
 package de.taimos.pipeline.aws.eb;
 
-import com.amazonaws.services.elasticbeanstalk.AWSElasticBeanstalk;
-import com.amazonaws.services.elasticbeanstalk.model.ApplicationVersionDescription;
-import com.amazonaws.services.elasticbeanstalk.model.CreateApplicationVersionRequest;
-import com.amazonaws.services.elasticbeanstalk.model.CreateApplicationVersionResult;
+import software.amazon.awssdk.services.elasticbeanstalk.ElasticBeanstalkClient;
+import software.amazon.awssdk.services.elasticbeanstalk.model.ApplicationVersionDescription;
+import software.amazon.awssdk.services.elasticbeanstalk.model.CreateApplicationVersionRequest;
+import software.amazon.awssdk.services.elasticbeanstalk.model.CreateApplicationVersionResponse;
 import org.jenkinsci.plugins.workflow.steps.StepContext;
 import org.junit.Assert;
+import org.junit.After;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -26,6 +27,13 @@ public class EBCreateApplicationVersionStepTest {
         context = EBTestingUtils.setupStepContext();
     }
 
+    @After
+    public void resetClient() {
+        // the factory delegate is static and would otherwise stay installed for whichever test
+        // class runs next in the same JVM, handing it a mocked ElasticBeanstalkClient
+        EBTestingUtils.resetElasticBeanstalkClient();
+    }
+
     @Test
     public void stepDescriptorNameIsAsExpected() {
         EBCreateApplicationVersionStep.DescriptorImpl stepDescriptor = new EBCreateApplicationVersionStep.DescriptorImpl();
@@ -42,17 +50,18 @@ public class EBCreateApplicationVersionStepTest {
         );
         EBCreateApplicationVersionStep.Execution execution = new EBCreateApplicationVersionStep.Execution(step, context);
 
-        AWSElasticBeanstalk client = EBTestingUtils.setupElasticBeanstalkClient();
-        CreateApplicationVersionResult result = new CreateApplicationVersionResult();
-        result.setApplicationVersion(new ApplicationVersionDescription());
-        Mockito.when(client.createApplicationVersion(Mockito.any())).thenReturn(result);
+        ElasticBeanstalkClient client = EBTestingUtils.setupElasticBeanstalkClient();
+        CreateApplicationVersionResponse result = CreateApplicationVersionResponse.builder()
+                .applicationVersion(ApplicationVersionDescription.builder().build())
+                .build();
+        Mockito.when(client.createApplicationVersion(Mockito.any(CreateApplicationVersionRequest.class))).thenReturn(result);
 
         execution.run();
 
         Mockito.verify(client, Mockito.times(1)).createApplicationVersion(captor.capture());
-        Assert.assertEquals("my application", captor.getValue().getApplicationName());
-        Assert.assertEquals("my version", captor.getValue().getVersionLabel());
-        Assert.assertEquals("s3-bucket", captor.getValue().getSourceBundle().getS3Bucket());
-        Assert.assertEquals("s3-key", captor.getValue().getSourceBundle().getS3Key());
+        Assert.assertEquals("my application", captor.getValue().applicationName());
+        Assert.assertEquals("my version", captor.getValue().versionLabel());
+        Assert.assertEquals("s3-bucket", captor.getValue().sourceBundle().s3Bucket());
+        Assert.assertEquals("s3-key", captor.getValue().sourceBundle().s3Key());
     }
 }

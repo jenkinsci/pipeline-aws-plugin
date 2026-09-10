@@ -32,7 +32,7 @@ import org.yaml.snakeyaml.LoaderOptions;
 import org.yaml.snakeyaml.Yaml;
 import org.yaml.snakeyaml.constructor.SafeConstructor;
 
-import com.amazonaws.services.cloudformation.model.Parameter;
+import software.amazon.awssdk.services.cloudformation.model.Parameter;
 import com.google.common.base.Charsets;
 import com.google.common.base.Joiner;
 
@@ -49,9 +49,9 @@ public class YAMLParameterFileParser implements ParameterFileParser {
 			Object value = entry.getValue();
 			if (value instanceof Collection) {
 				String val = Joiner.on(",").join((Collection) value);
-				parameters.add(new Parameter().withParameterKey(entry.getKey()).withParameterValue(val));
+				parameters.add(Parameter.builder().parameterKey(entry.getKey()).parameterValue(val).build());
 			} else {
-				parameters.add(new Parameter().withParameterKey(entry.getKey()).withParameterValue(value.toString()));
+				parameters.add(Parameter.builder().parameterKey(entry.getKey()).parameterValue(value.toString()).build());
 			}
 		}
 		return parameters;

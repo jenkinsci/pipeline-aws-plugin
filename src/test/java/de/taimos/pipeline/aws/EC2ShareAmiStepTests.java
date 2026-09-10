@@ -1,11 +1,12 @@
 package de.taimos.pipeline.aws;
 
-import com.amazonaws.services.ec2.AmazonEC2;
-import com.amazonaws.services.ec2.model.LaunchPermission;
-import com.amazonaws.services.ec2.model.LaunchPermissionModifications;
-import com.amazonaws.services.ec2.model.ModifyImageAttributeRequest;
+import software.amazon.awssdk.services.ec2.Ec2Client;
+import software.amazon.awssdk.services.ec2.model.LaunchPermission;
+import software.amazon.awssdk.services.ec2.model.LaunchPermissionModifications;
+import software.amazon.awssdk.services.ec2.model.ModifyImageAttributeRequest;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -20,12 +21,17 @@ public class EC2ShareAmiStepTests {
 
 	@Rule
 	public JenkinsRule jenkinsRule = new JenkinsRule();
-	private AmazonEC2 ec2;
+	private Ec2Client ec2;
 
 	@Before
 	public void setupSdk() throws Exception {
-		this.ec2 = Mockito.mock(AmazonEC2.class);
+		this.ec2 = Mockito.mock(Ec2Client.class);
 		AWSClientFactory.setFactoryDelegate((x) -> this.ec2);
+	}
+
+	@After
+	public void tearDownSdk() throws Exception {
+		AWSClientFactory.setFactoryDelegate(null);
 	}
 
 	@Test
@@ -41,16 +47,16 @@ public class EC2ShareAmiStepTests {
 
 		ArgumentCaptor<ModifyImageAttributeRequest> captor = ArgumentCaptor.forClass(ModifyImageAttributeRequest.class);
 		Mockito.verify(this.ec2).modifyImageAttribute(captor.capture());
-		assertThat(captor.getValue(), equalTo(new ModifyImageAttributeRequest()
-				.withImageId("foo")
-				.withLaunchPermission(new LaunchPermissionModifications()
-						.withAdd(new LaunchPermission()
-								.withUserId("a1")
+		assertThat(captor.getValue(), equalTo(ModifyImageAttributeRequest.builder()
+				.imageId("foo")
+				.launchPermission(LaunchPermissionModifications.builder()
+						.add(
+								LaunchPermission.builder().userId("a1").build(),
+								LaunchPermission.builder().userId("a2").build()
 						)
-						.withAdd(new LaunchPermission()
-								.withUserId("a2")
-						)
+						.build()
 				)
+				.build()
 		));
 	}
 

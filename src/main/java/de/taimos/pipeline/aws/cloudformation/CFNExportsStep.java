@@ -32,11 +32,10 @@ import org.jenkinsci.plugins.workflow.steps.StepExecution;
 import org.jenkinsci.plugins.workflow.steps.SynchronousNonBlockingStepExecution;
 import org.kohsuke.stapler.DataBoundConstructor;
 
-import com.amazonaws.services.cloudformation.AmazonCloudFormation;
-import com.amazonaws.services.cloudformation.AmazonCloudFormationClientBuilder;
-import com.amazonaws.services.cloudformation.model.Export;
-import com.amazonaws.services.cloudformation.model.ListExportsRequest;
-import com.amazonaws.services.cloudformation.model.ListExportsResult;
+import software.amazon.awssdk.services.cloudformation.CloudFormationClient;
+import software.amazon.awssdk.services.cloudformation.model.Export;
+import software.amazon.awssdk.services.cloudformation.model.ListExportsRequest;
+import software.amazon.awssdk.services.cloudformation.model.ListExportsResponse;
 
 import de.taimos.pipeline.aws.AWSClientFactory;
 import de.taimos.pipeline.aws.utils.StepUtils;
@@ -85,19 +84,19 @@ public class CFNExportsStep extends Step {
 		@Override
 		protected Map<String, String> run() throws Exception {
 			this.getContext().get(TaskListener.class).getLogger().format("Getting global exports of CloudFormation %n");
-			AmazonCloudFormation client = AWSClientFactory.create(AmazonCloudFormationClientBuilder.standard(), Execution.this.getContext());
-			return Execution.this.getExports(client, null);
+			CloudFormationClient client = AWSClientFactory.create(CloudFormationClient.builder(), Execution.this.getContext());
+			return Execution.this.getExports(client);
 		}
 
-		private Map<String, String> getExports(AmazonCloudFormation client, String nextToken) {
-			ListExportsResult exports = client.listExports(new ListExportsRequest().withNextToken(nextToken));
-
+		/**
+		 * v1 walked nextToken by hand and recursed; the paginator issues the same sequence.
+		 */
+		private Map<String, String> getExports(CloudFormationClient client) {
 			Map<String, String> map = new HashMap<>();
-			for (Export export : exports.getExports()) {
-				map.put(export.getName(), export.getValue());
-			}
-			if (exports.getNextToken() != null) {
-				map.putAll(this.getExports(client, exports.getNextToken()));
+			for (ListExportsResponse page : client.listExportsPaginator(ListExportsRequest.builder().build())) {
+				for (Export export : page.exports()) {
+					map.put(export.name(), export.value());
+				}
 			}
 			return map;
 		}

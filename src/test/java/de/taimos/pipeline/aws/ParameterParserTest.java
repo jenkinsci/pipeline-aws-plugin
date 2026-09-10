@@ -26,7 +26,7 @@ import java.util.Collection;
 import org.junit.Assert;
 import org.junit.Test;
 
-import com.amazonaws.services.cloudformation.model.Parameter;
+import software.amazon.awssdk.services.cloudformation.model.Parameter;
 
 import de.taimos.pipeline.aws.cloudformation.parser.JSONParameterFileParser;
 import de.taimos.pipeline.aws.cloudformation.parser.YAMLParameterFileParser;
@@ -41,12 +41,12 @@ public class ParameterParserTest {
 		Assert.assertEquals(2, array.length);
 
 		Parameter param1 = array[0];
-		Assert.assertEquals("Param1", param1.getParameterKey());
-		Assert.assertEquals("Value1", param1.getParameterValue());
+		Assert.assertEquals("Param1", param1.parameterKey());
+		Assert.assertEquals("Value1", param1.parameterValue());
 
 		Parameter param2 = array[1];
-		Assert.assertEquals("Param2", param2.getParameterKey());
-		Assert.assertEquals("Val2a,Val2b", param2.getParameterValue());
+		Assert.assertEquals("Param2", param2.parameterKey());
+		Assert.assertEquals("Val2a,Val2b", param2.parameterValue());
 	}
 
 	@Test
@@ -57,11 +57,11 @@ public class ParameterParserTest {
 		Assert.assertEquals(2, array.length);
 
 		Parameter param1 = array[0];
-		Assert.assertEquals("Param1", param1.getParameterKey());
-		Assert.assertEquals("Value1", param1.getParameterValue());
+		Assert.assertEquals("Param1", param1.parameterKey());
+		Assert.assertEquals("Value1", param1.parameterValue());
 
 		Parameter param2 = array[1];
-		Assert.assertEquals("Param2", param2.getParameterKey());
-		Assert.assertEquals("Value2", param2.getParameterValue());
+		Assert.assertEquals("Param2", param2.parameterKey());
+		Assert.assertEquals("Value2", param2.parameterValue());
 	}
 }

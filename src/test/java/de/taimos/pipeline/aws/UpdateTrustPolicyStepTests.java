@@ -21,11 +21,12 @@
 
 package de.taimos.pipeline.aws;
 
-import com.amazonaws.services.identitymanagement.AmazonIdentityManagement;
-import com.amazonaws.services.identitymanagement.model.UpdateAssumeRolePolicyRequest;
-import com.amazonaws.services.identitymanagement.model.UpdateAssumeRolePolicyResult;
+import software.amazon.awssdk.services.iam.IamClient;
+import software.amazon.awssdk.services.iam.model.UpdateAssumeRolePolicyRequest;
+import software.amazon.awssdk.services.iam.model.UpdateAssumeRolePolicyResponse;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -36,18 +37,23 @@ public class UpdateTrustPolicyStepTests {
 
 	@Rule
 	public JenkinsRule jenkinsRule = new JenkinsRule();
-	private AmazonIdentityManagement iam;
+	private IamClient iam;
 
 	@Before
 	public void setupSdk() throws Exception {
-		this.iam = Mockito.mock(AmazonIdentityManagement.class);
+		this.iam = Mockito.mock(IamClient.class);
 		AWSClientFactory.setFactoryDelegate((x) -> this.iam);
+	}
+
+	@After
+	public void tearDownSdk() throws Exception {
+		AWSClientFactory.setFactoryDelegate(null);
 	}
 
 	@Test
 	public void updateTrustPolicy() throws Exception {
 		WorkflowJob job = this.jenkinsRule.jenkins.createProject(WorkflowJob.class, "updateTest");
-		Mockito.when(this.iam.updateAssumeRolePolicy(Mockito.any(UpdateAssumeRolePolicyRequest.class))).thenReturn(new UpdateAssumeRolePolicyResult());
+		Mockito.when(this.iam.updateAssumeRolePolicy(Mockito.any(UpdateAssumeRolePolicyRequest.class))).thenReturn(UpdateAssumeRolePolicyResponse.builder().build());
 		job.setDefinition(new CpsFlowDefinition(""
 														+ "node {\n"
 														+ "  writeFile(file: 'testfile', text: '{}')\n"
@@ -57,7 +63,7 @@ public class UpdateTrustPolicyStepTests {
 
 		this.jenkinsRule.assertBuildStatusSuccess(job.scheduleBuild2(0));
 
-		Mockito.verify(this.iam).updateAssumeRolePolicy(new UpdateAssumeRolePolicyRequest().withRoleName("testRole").withPolicyDocument("{}"));
+		Mockito.verify(this.iam).updateAssumeRolePolicy(UpdateAssumeRolePolicyRequest.builder().roleName("testRole").policyDocument("{}").build());
 	}
 
 }

@@ -1,7 +1,8 @@
 package de.taimos.pipeline.aws.cloudformation.parser;
 
-import com.amazonaws.services.cloudformation.model.Parameter;
-import com.amazonaws.util.StringInputStream;
+import software.amazon.awssdk.services.cloudformation.model.Parameter;
+import java.io.ByteArrayInputStream;
+import java.nio.charset.StandardCharsets;
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
 
@@ -14,11 +15,9 @@ public class YAMLParameterFileParserTests {
 	public void parseParameters() throws IOException {
 		YAMLParameterFileParser parser = new YAMLParameterFileParser();
 		String json = "bar: foo";
-		Collection<Parameter> parameters = parser.parseParams(new StringInputStream(json));
+		Collection<Parameter> parameters = parser.parseParams(new ByteArrayInputStream(json.getBytes(StandardCharsets.UTF_8)));
 		Assertions.assertThat(parameters).containsExactlyInAnyOrder(
-				new Parameter()
-				.withParameterKey("bar")
-				.withParameterValue("foo")
+				Parameter.builder().parameterKey("bar").parameterValue("foo").build()
 		);
 	}
 
@@ -26,11 +25,9 @@ public class YAMLParameterFileParserTests {
 	public void parseParameterCollection() throws IOException {
 		YAMLParameterFileParser parser = new YAMLParameterFileParser();
 		String json = "bar:\n  - foo1\n  - foo2";
-		Collection<Parameter> parameters = parser.parseParams(new StringInputStream(json));
+		Collection<Parameter> parameters = parser.parseParams(new ByteArrayInputStream(json.getBytes(StandardCharsets.UTF_8)));
 		Assertions.assertThat(parameters).containsExactlyInAnyOrder(
-				new Parameter()
-						.withParameterKey("bar")
-						.withParameterValue("foo1,foo2")
+				Parameter.builder().parameterKey("bar").parameterValue("foo1,foo2").build()
 		);
 	}
 

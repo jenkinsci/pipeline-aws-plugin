@@ -31,10 +31,7 @@ import org.jenkinsci.plugins.workflow.steps.StepExecution;
 import org.jenkinsci.plugins.workflow.steps.SynchronousNonBlockingStepExecution;
 import org.kohsuke.stapler.DataBoundConstructor;
 
-import com.amazonaws.services.codedeploy.AmazonCodeDeploy;
-import com.amazonaws.services.codedeploy.AmazonCodeDeployClientBuilder;
-import com.amazonaws.services.codedeploy.model.GetDeploymentRequest;
-import com.amazonaws.services.codedeploy.model.GetDeploymentResult;
+import software.amazon.awssdk.services.codedeploy.CodeDeployClient;
 
 import de.taimos.pipeline.aws.utils.StepUtils;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
@@ -98,7 +95,7 @@ public class WaitDeployStep extends Step {
 		@Override
 		protected Void run() throws Exception {
 			TaskListener listener = this.getContext().get(TaskListener.class);
-			AmazonCodeDeploy client = AWSClientFactory.create(AmazonCodeDeployClientBuilder.standard(), this.getContext());
+			CodeDeployClient client = AWSClientFactory.create(CodeDeployClient.builder(), this.getContext());
 
 			listener.getLogger().format("Checking Deployment(%s) status", this.deploymentId);
 

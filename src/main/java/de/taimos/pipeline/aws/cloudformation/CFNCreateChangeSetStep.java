@@ -21,13 +21,13 @@
 
 package de.taimos.pipeline.aws.cloudformation;
 
-import com.amazonaws.services.cloudformation.model.Change;
-import com.amazonaws.services.cloudformation.model.ChangeSetStatus;
-import com.amazonaws.services.cloudformation.model.ChangeSetType;
-import com.amazonaws.services.cloudformation.model.DescribeChangeSetResult;
-import com.amazonaws.services.cloudformation.model.Parameter;
-import com.amazonaws.services.cloudformation.model.RollbackConfiguration;
-import com.amazonaws.services.cloudformation.model.Tag;
+import software.amazon.awssdk.services.cloudformation.model.Change;
+import software.amazon.awssdk.services.cloudformation.model.ChangeSetStatus;
+import software.amazon.awssdk.services.cloudformation.model.ChangeSetType;
+import software.amazon.awssdk.services.cloudformation.model.DescribeChangeSetResponse;
+import software.amazon.awssdk.services.cloudformation.model.Parameter;
+import software.amazon.awssdk.services.cloudformation.model.RollbackConfiguration;
+import software.amazon.awssdk.services.cloudformation.model.Tag;
 import com.google.common.base.Preconditions;
 import de.taimos.pipeline.aws.utils.StepUtils;
 import hudson.EnvVars;
@@ -110,15 +110,17 @@ public class CFNCreateChangeSetStep extends AbstractCFNCreateStep {
 		}
 
 		private List<Change> validateChangeSet(String changeSet) {
-			DescribeChangeSetResult result = this.getCfnStack().describeChangeSet(changeSet);
-			if (ChangeSetStatus.CREATE_COMPLETE.name().equals(result.getStatus())) {
-				return result.getChanges();
-			} else if (ChangeSetStatus.FAILED.name().equals(result.getStatus()) && result.getStatusReason().toLowerCase().contains("the submitted information didn't contain changes")) {
-				return result.getChanges();
-			} else if (ChangeSetStatus.FAILED.name().equals(result.getStatus()) && result.getStatusReason().toLowerCase().contains("no updates are to be performed")) {
-				return result.getChanges();
+			DescribeChangeSetResponse result = this.getCfnStack().describeChangeSet(changeSet);
+			// statusAsString: v2 models the status as an enum, and these comparisons are against the
+			// wire values the enum constants render
+			if (ChangeSetStatus.CREATE_COMPLETE.toString().equals(result.statusAsString())) {
+				return result.changes();
+			} else if (ChangeSetStatus.FAILED.toString().equals(result.statusAsString()) && result.statusReason().toLowerCase().contains("the submitted information didn't contain changes")) {
+				return result.changes();
+			} else if (ChangeSetStatus.FAILED.toString().equals(result.statusAsString()) && result.statusReason().toLowerCase().contains("no updates are to be performed")) {
+				return result.changes();
 			} else {
-				throw new IllegalStateException("Change set did not create successfully. status=" + result.getStatus() + " reason=" + result.getStatusReason());
+				throw new IllegalStateException("Change set did not create successfully. status=" + result.statusAsString() + " reason=" + result.statusReason());
 			}
 		}
 

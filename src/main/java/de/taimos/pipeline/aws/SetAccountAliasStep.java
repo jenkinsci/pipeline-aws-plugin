@@ -30,10 +30,9 @@ import org.jenkinsci.plugins.workflow.steps.StepExecution;
 import org.jenkinsci.plugins.workflow.steps.SynchronousNonBlockingStepExecution;
 import org.kohsuke.stapler.DataBoundConstructor;
 
-import com.amazonaws.services.identitymanagement.AmazonIdentityManagement;
-import com.amazonaws.services.identitymanagement.AmazonIdentityManagementClientBuilder;
-import com.amazonaws.services.identitymanagement.model.CreateAccountAliasRequest;
-import com.amazonaws.services.identitymanagement.model.ListAccountAliasesResult;
+import software.amazon.awssdk.services.iam.IamClient;
+import software.amazon.awssdk.services.iam.model.CreateAccountAliasRequest;
+import software.amazon.awssdk.services.iam.model.ListAccountAliasesResponse;
 
 import de.taimos.pipeline.aws.utils.StepUtils;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
@@ -90,15 +89,15 @@ public class SetAccountAliasStep extends Step {
 		@Override
 		protected Void run() throws Exception {
 			TaskListener listener = this.getContext().get(TaskListener.class);
-			AmazonIdentityManagement iamClient = AWSClientFactory.create(AmazonIdentityManagementClientBuilder.standard(), Execution.this.getContext());
+			IamClient iamClient = AWSClientFactory.create(IamClient.builder(), Execution.this.getContext());
 
 			listener.getLogger().format("Checking for account alias %s %n", this.name);
-			ListAccountAliasesResult listResult = iamClient.listAccountAliases();
+			ListAccountAliasesResponse listResult = iamClient.listAccountAliases();
 
-			// no or different alias set
-			if (listResult.getAccountAliases() == null || listResult.getAccountAliases().isEmpty() || !listResult.getAccountAliases().contains(this.name)) {
+			// no or different alias set; v2 returns an empty auto-construct list rather than null
+			if (!listResult.accountAliases().contains(this.name)) {
 				// Update alias
-				iamClient.createAccountAlias(new CreateAccountAliasRequest().withAccountAlias(this.name));
+				iamClient.createAccountAlias(CreateAccountAliasRequest.builder().accountAlias(this.name).build());
 				listener.getLogger().format("Created account alias %s %n", this.name);
 			} else {
 				// Nothing to do

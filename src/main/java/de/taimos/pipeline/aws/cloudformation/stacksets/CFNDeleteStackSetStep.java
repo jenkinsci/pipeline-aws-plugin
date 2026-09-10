@@ -21,8 +21,7 @@
 
 package de.taimos.pipeline.aws.cloudformation.stacksets;
 
-import com.amazonaws.services.cloudformation.AmazonCloudFormation;
-import com.amazonaws.services.cloudformation.AmazonCloudFormationClientBuilder;
+import software.amazon.awssdk.services.cloudformation.CloudFormationClient;
 import com.google.common.base.Preconditions;
 import de.taimos.pipeline.aws.AWSClientFactory;
 import de.taimos.pipeline.aws.AWSUtilFactory;
@@ -37,13 +36,14 @@ import org.jenkinsci.plugins.workflow.steps.SynchronousNonBlockingStepExecution;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
 
-import javax.annotation.Nonnull;
+import edu.umd.cs.findbugs.annotations.NonNull;
 import java.util.Set;
 
 public class CFNDeleteStackSetStep extends Step {
 
 	private final String stackSet;
-	private Long pollInterval = 1000L;
+	@Deprecated
+	private Long pollInterval;
 
 	@DataBoundConstructor
 	public CFNDeleteStackSetStep(String stackSet) {
@@ -54,10 +54,19 @@ public class CFNDeleteStackSetStep extends Step {
 		return this.stackSet;
 	}
 
+	/**
+	 * Never read: this step submits deleteStackSet and returns without waiting, so there is nothing
+	 * to poll. Kept so that existing pipelines passing pollInterval keep binding instead of failing
+	 * with a "no such property" error, and deprecated to flag it as dead to anyone reading the class.
+	 * Dropping the 1000 ms default also stops uninstantiate from writing pollInterval: 1000 into every
+	 * snippet the generator produces for this step.
+	 */
+	@Deprecated
 	public Long getPollInterval() {
 		return this.pollInterval;
 	}
 
+	@Deprecated
 	@DataBoundSetter
 	public void setPollInterval(Long pollInterval) {
 		this.pollInterval = pollInterval;
@@ -77,7 +86,7 @@ public class CFNDeleteStackSetStep extends Step {
 		}
 
 		@Override
-		@Nonnull
+		@NonNull
 		public String getDisplayName() {
 			return "Delete CloudFormation Stack Set";
 		}
@@ -92,7 +101,7 @@ public class CFNDeleteStackSetStep extends Step {
 
 		private transient CFNDeleteStackSetStep step;
 
-		public Execution(CFNDeleteStackSetStep step, @Nonnull StepContext context) {
+		public Execution(CFNDeleteStackSetStep step, @NonNull StepContext context) {
 			super(context);
 			this.step = step;
 		}
@@ -106,7 +115,7 @@ public class CFNDeleteStackSetStep extends Step {
 
 			listener.getLogger().format("Removing CloudFormation stack set %s %n", stackSet);
 
-			AmazonCloudFormation client = AWSClientFactory.create(AmazonCloudFormationClientBuilder.standard(), Execution.this.getContext());
+			CloudFormationClient client = AWSClientFactory.create(CloudFormationClient.builder(), Execution.this.getContext());
 			CloudFormationStackSet cfnStackSet = AWSUtilFactory.newCFStackSet(client, stackSet, listener, SleepStrategy.EXPONENTIAL_BACKOFF_STRATEGY);
 			cfnStackSet.delete();
 			listener.getLogger().println("Stack Set deletion complete");

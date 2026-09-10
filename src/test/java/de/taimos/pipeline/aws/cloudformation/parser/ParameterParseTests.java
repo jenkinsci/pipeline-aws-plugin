@@ -1,6 +1,6 @@
 package de.taimos.pipeline.aws.cloudformation.parser;
 
-import com.amazonaws.services.cloudformation.model.Parameter;
+import software.amazon.awssdk.services.cloudformation.model.Parameter;
 import de.taimos.pipeline.aws.cloudformation.ParameterProvider;
 import hudson.FilePath;
 import org.assertj.core.api.Assertions;
@@ -28,8 +28,8 @@ public class ParameterParseTests {
 		Collection<Parameter> parameters = ParameterParser.parse(new FilePath(temporaryFolder.newFolder()), parameterProvider);
 
 		Assertions.assertThat(parameters).containsExactlyInAnyOrder(
-				new Parameter().withParameterKey("foo").withParameterValue("bar"),
-				new Parameter().withParameterKey("baz").withParameterValue("true")
+				Parameter.builder().parameterKey("foo").parameterValue("bar").build(),
+				Parameter.builder().parameterKey("baz").parameterValue("true").build()
 		);
 	}
 
@@ -40,8 +40,8 @@ public class ParameterParseTests {
 		Collection<Parameter> parameters = ParameterParser.parse(new FilePath(temporaryFolder.newFolder()), parameterProvider);
 
 		Assertions.assertThat(parameters).containsExactlyInAnyOrder(
-				new Parameter().withParameterKey("foo").withParameterValue("bar"),
-				new Parameter().withParameterKey("baz").withParameterValue("true")
+				Parameter.builder().parameterKey("foo").parameterValue("bar").build(),
+				Parameter.builder().parameterKey("baz").parameterValue("true").build()
 		);
 	}
 
@@ -58,9 +58,9 @@ public class ParameterParseTests {
 		Collection<Parameter> parameters = ParameterParser.parse(new FilePath(temporaryFolder.newFolder()), parameterProvider);
 
 		Assertions.assertThat(parameters).containsExactlyInAnyOrder(
-				new Parameter().withParameterKey("foo").withParameterValue("true"),
-				new Parameter().withParameterKey("baz").withParameterValue("false"),
-				new Parameter().withParameterKey("bar").withParameterValue("25")
+				Parameter.builder().parameterKey("foo").parameterValue("true").build(),
+				Parameter.builder().parameterKey("baz").parameterValue("false").build(),
+				Parameter.builder().parameterKey("bar").parameterValue("25").build()
 		);
 	}
 }

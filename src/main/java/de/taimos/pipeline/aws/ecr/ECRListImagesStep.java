@@ -1,10 +1,8 @@
 package de.taimos.pipeline.aws.ecr;
 
-import com.amazonaws.services.ecr.AmazonECR;
-import com.amazonaws.services.ecr.AmazonECRClientBuilder;
-import com.amazonaws.services.ecr.model.ImageIdentifier;
-import com.amazonaws.services.ecr.model.ListImagesRequest;
-import com.amazonaws.services.ecr.model.ListImagesResult;
+import software.amazon.awssdk.services.ecr.EcrClient;
+import software.amazon.awssdk.services.ecr.model.ImageIdentifier;
+import software.amazon.awssdk.services.ecr.model.ListImagesRequest;
 import de.taimos.pipeline.aws.AWSClientFactory;
 import de.taimos.pipeline.aws.utils.StepUtils;
 import hudson.Extension;
@@ -16,9 +14,8 @@ import org.jenkinsci.plugins.workflow.steps.SynchronousNonBlockingStepExecution;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
 
-import javax.annotation.Nonnull;
+import edu.umd.cs.findbugs.annotations.NonNull;
 import java.util.HashMap;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -78,7 +75,7 @@ public class ECRListImagesStep extends Step {
 		}
 
 		@Override
-		@Nonnull
+		@NonNull
 		public String getDisplayName() {
 			return "List ECR Images";
 		}
@@ -100,23 +97,22 @@ public class ECRListImagesStep extends Step {
 
 		@Override
 		protected List<Map<String, String>> run() throws Exception {
-			AmazonECR ecr = AWSClientFactory.create(AmazonECRClientBuilder.standard(), this.getContext());
+			EcrClient ecr = AWSClientFactory.create(EcrClient.builder(), this.getContext());
 
-			ListImagesRequest request = new ListImagesRequest()
-					.withRegistryId(this.step.getRegistryId())
-					.withRepositoryName(this.step.getRepositoryName())
-					.withFilter(this.step.getFilter());
-			List<ImageIdentifier> images = new LinkedList<>();
-			ListImagesResult result;
-			do {
-				result = ecr.listImages(request);
-				images.addAll(result.getImageIds());
-				request.setNextToken(result.getNextToken());
-			} while (result.getNextToken() != null);
+			ListImagesRequest.Builder request = ListImagesRequest.builder()
+					.registryId(this.step.getRegistryId())
+					.repositoryName(this.step.getRepositoryName());
+			if (this.step.getFilter() != null) {
+				request.filter(this.step.getFilter().toListImagesFilter());
+			}
+			List<ImageIdentifier> images = ecr.listImagesPaginator(request.build())
+					.stream()
+					.flatMap(page -> page.imageIds().stream())
+					.collect(Collectors.toList());
 			return images.stream().map(image -> new HashMap<String, String>() {
 				{
-					put("imageTag", image.getImageTag());
-					put("imageDigest", image.getImageDigest());
+					put("imageTag", image.imageTag());
+					put("imageDigest", image.imageDigest());
 				}
 			}).collect(Collectors.toList());
 		}

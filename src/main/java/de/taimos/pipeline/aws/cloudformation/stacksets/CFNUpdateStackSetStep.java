@@ -21,14 +21,13 @@
 
 package de.taimos.pipeline.aws.cloudformation.stacksets;
 
-import com.amazonaws.services.cloudformation.model.DescribeStackSetResult;
-import com.amazonaws.services.cloudformation.model.Parameter;
-import com.amazonaws.services.cloudformation.model.StackInstanceSummary;
-import com.amazonaws.services.cloudformation.model.StackSetOperationPreferences;
-import com.amazonaws.services.cloudformation.model.StackSetStatus;
-import com.amazonaws.services.cloudformation.model.Tag;
-import com.amazonaws.services.cloudformation.model.UpdateStackSetRequest;
-import com.amazonaws.services.cloudformation.model.UpdateStackSetResult;
+import software.amazon.awssdk.services.cloudformation.model.DescribeStackSetResponse;
+import software.amazon.awssdk.services.cloudformation.model.Parameter;
+import software.amazon.awssdk.services.cloudformation.model.StackInstanceSummary;
+import software.amazon.awssdk.services.cloudformation.model.StackSetStatus;
+import software.amazon.awssdk.services.cloudformation.model.Tag;
+import software.amazon.awssdk.services.cloudformation.model.UpdateStackSetRequest;
+import software.amazon.awssdk.services.cloudformation.model.UpdateStackSetResponse;
 import de.taimos.pipeline.aws.utils.StepUtils;
 import hudson.Extension;
 import org.jenkinsci.plugins.workflow.steps.StepContext;
@@ -37,7 +36,7 @@ import org.jenkinsci.plugins.workflow.steps.StepExecution;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
 
-import javax.annotation.Nonnull;
+import edu.umd.cs.findbugs.annotations.NonNull;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -51,10 +50,10 @@ public class CFNUpdateStackSetStep extends AbstractCFNCreateStackSetStep {
 		super(stackSet);
 	}
 
-	private StackSetOperationPreferences operationPreferences;
+	private JenkinsStackSetOperationPreferences operationPreferences;
 	private BatchingOptions batchingOptions;
 
-	public StackSetOperationPreferences getOperationPreferences() {
+	public JenkinsStackSetOperationPreferences getOperationPreferences() {
 		return operationPreferences;
 	}
 
@@ -94,7 +93,7 @@ public class CFNUpdateStackSetStep extends AbstractCFNCreateStackSetStep {
 
 	public static class Execution extends AbstractCFNCreateStackSetStep.Execution<CFNUpdateStackSetStep> {
 
-		protected Execution(CFNUpdateStackSetStep step, @Nonnull StepContext context) {
+		protected Execution(CFNUpdateStackSetStep step, @NonNull StepContext context) {
 			super(step, context);
 		}
 
@@ -109,38 +108,43 @@ public class CFNUpdateStackSetStep extends AbstractCFNCreateStackSetStep {
 		}
 
 		@Override
-		public DescribeStackSetResult whenStackSetExists(Collection<Parameter> parameters, Collection<Tag> tags) throws Exception {
+		public DescribeStackSetResponse whenStackSetExists(Collection<Parameter> parameters, Collection<Tag> tags) throws Exception {
 			final String url = this.getStep().getUrl();
 			CloudFormationStackSet cfnStackSet = this.getCfnStackSet();
-			UpdateStackSetRequest req = new UpdateStackSetRequest()
-				.withParameters(parameters)
-				.withAdministrationRoleARN(this.getStep().getAdministratorRoleArn())
-				.withExecutionRoleName(this.getStep().getExecutionRoleName())
-				.withOperationPreferences(this.getStep().getOperationPreferences())
-				.withTags(tags);
+			JenkinsStackSetOperationPreferences preferences = this.getStep().getOperationPreferences();
+			UpdateStackSetRequest req = UpdateStackSetRequest.builder()
+				.parameters(parameters)
+				.administrationRoleARN(this.getStep().getAdministratorRoleArn())
+				.executionRoleName(this.getStep().getExecutionRoleName())
+				.operationPreferences(preferences == null ? null : preferences.toStackSetOperationPreferences())
+				.tags(tags)
+				.build();
 			if (this.getStep().batchingOptions != null && this.getStep().batchingOptions.isRegions()) {
 				this.getListener().getLogger().println("Batching updates by region");
 				List<StackInstanceSummary> summaries = cfnStackSet.findStackSetInstances();
-				Map<String, List<StackInstanceSummary>> batches = summaries.stream().collect(Collectors.groupingBy(StackInstanceSummary::getRegion));
+				Map<String, List<StackInstanceSummary>> batches = summaries.stream().collect(Collectors.groupingBy(StackInstanceSummary::region));
 				for (Map.Entry<String, List<StackInstanceSummary>> entry : batches.entrySet()) {
 					this.getListener().getLogger().format("Updating stack set update batch for region=%s %n", entry.getKey());
-					UpdateStackSetResult operation = cfnStackSet.update(this.getStep().readTemplate(this), url, req.clone()
-							.withRegions(entry.getKey())
-							.withAccounts(entry.getValue().stream().map(StackInstanceSummary::getAccount).collect(Collectors.toList()))
+					// v1 cloned the request per batch; v2 requests are immutable, so each batch derives
+					// its own from the shared builder instead
+					UpdateStackSetResponse operation = cfnStackSet.update(this.getStep().readTemplate(this), url, req.toBuilder()
+							.regions(entry.getKey())
+							.accounts(entry.getValue().stream().map(StackInstanceSummary::account).collect(Collectors.toList()))
+							.build()
 					);
-					cfnStackSet.waitForOperationToComplete(operation.getOperationId(), getStep().getPollConfiguration().getPollInterval());
+					cfnStackSet.waitForOperationToComplete(operation.operationId(), getStep().getPollConfiguration().getPollInterval());
 					this.getListener().getLogger().format("Updated stack set update batch for region=%s %n", entry.getKey());
 				}
 			} else {
-				UpdateStackSetResult operation = cfnStackSet.update(this.getStep().readTemplate(this), url, req);
-				cfnStackSet.waitForOperationToComplete(operation.getOperationId(), getStep().getPollConfiguration().getPollInterval());
+				UpdateStackSetResponse operation = cfnStackSet.update(this.getStep().readTemplate(this), url, req);
+				cfnStackSet.waitForOperationToComplete(operation.operationId(), getStep().getPollConfiguration().getPollInterval());
 			}
 			return cfnStackSet.describe();
 		}
 
 
 		@Override
-		public DescribeStackSetResult whenStackSetMissing(Collection<Parameter> parameters, Collection<Tag> tags) throws Exception {
+		public DescribeStackSetResponse whenStackSetMissing(Collection<Parameter> parameters, Collection<Tag> tags) throws Exception {
 			final String url = getStep().getUrl();
 			CloudFormationStackSet cfnStack = this.getCfnStackSet();
 			cfnStack.create(this.getStep().readTemplate(this), url, parameters, tags,

@@ -35,13 +35,10 @@ import org.jenkinsci.plugins.workflow.steps.SynchronousNonBlockingStepExecution;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
 
-import com.amazonaws.services.organizations.AWSOrganizations;
-import com.amazonaws.services.organizations.AWSOrganizationsClientBuilder;
-import com.amazonaws.services.organizations.model.Account;
-import com.amazonaws.services.organizations.model.ListAccountsForParentRequest;
-import com.amazonaws.services.organizations.model.ListAccountsForParentResult;
-import com.amazonaws.services.organizations.model.ListAccountsRequest;
-import com.amazonaws.services.organizations.model.ListAccountsResult;
+import software.amazon.awssdk.services.organizations.OrganizationsClient;
+import software.amazon.awssdk.services.organizations.model.Account;
+import software.amazon.awssdk.services.organizations.model.ListAccountsForParentRequest;
+import software.amazon.awssdk.services.organizations.model.ListAccountsRequest;
 
 import de.taimos.pipeline.aws.utils.StepUtils;
 import hudson.Extension;
@@ -98,36 +95,51 @@ public class ListAWSAccountsStep extends Step {
 		protected List run() throws Exception {
 			this.getContext().get(TaskListener.class).getLogger().format("Getting AWS accounts %n");
 
-			AWSOrganizations client = AWSClientFactory.create(AWSOrganizationsClientBuilder.standard(), Execution.this.getContext());
-			List<Account> accounts = this.getAccounts(client, this.step.parent, null);
+			OrganizationsClient client = AWSClientFactory.create(OrganizationsClient.builder(), Execution.this.getContext());
+			List<Account> accounts = this.getAccounts(client, this.step.parent);
 
 			return accounts.stream().map(account -> {
 				Map<String, String> awsAccount = new HashMap<>();
-				awsAccount.put("id", account.getId());
-				awsAccount.put("arn", account.getArn());
-				awsAccount.put("name", account.getName());
-				awsAccount.put("safeName", SafeNameCreator.createSafeName(account.getName()));
-				awsAccount.put("status", account.getStatus());
+				awsAccount.put("id", account.id());
+				awsAccount.put("arn", account.arn());
+				awsAccount.put("name", account.name());
+				awsAccount.put("safeName", SafeNameCreator.createSafeName(account.name()));
+				// AWS retires Account.Status on 9 September 2026 in favour of Account.State; the SDK
+				// documents both as currently available. Each key falls back to the other so that
+				// neither goes null for a response that carries only one.
+				//
+				// Status's values are a subset of State's, so a state filled from status is always a
+				// legal state, while a status filled from state can carry PENDING_ACTIVATION or CLOSED.
+				//
+				// AsString rather than the enum accessors: the pipeline-visible value is the raw string
+				// such as ACTIVE, which is what status has always reported. For a value this SDK models
+				// the enum stringifies to the same thing, so the difference only shows on one it does
+				// not - there the enum accessor yields UNKNOWN_TO_SDK_VERSION, rendering as the literal
+				// "null", while AsString still returns what the service sent. Same trap as
+				// S3UploadOptions describes and EBWaitOnEnvironmentStatusStepTest pins.
+				String state = account.stateAsString();
+				String status = account.statusAsString();
+				awsAccount.put("state", state != null ? state : status);
+				awsAccount.put("status", status != null ? status : state);
 				return awsAccount;
 			}).collect(Collectors.toList());
 		}
 
-		private List<Account> getAccounts(AWSOrganizations client, String parent, String startToken) {
-			final List<Account> accounts;
-			final String nextToken;
+		/**
+		 * The v1 implementation walked nextToken by hand and recursed; v2 supplies paginators that
+		 * issue the same sequence of calls.
+		 */
+		private List<Account> getAccounts(OrganizationsClient client, String parent) {
 			if (parent != null) {
-				ListAccountsForParentResult result = client.listAccountsForParent(new ListAccountsForParentRequest().withParentId(parent).withNextToken(startToken));
-				accounts = result.getAccounts();
-				nextToken = result.getNextToken();
-			} else {
-				ListAccountsResult result = client.listAccounts(new ListAccountsRequest().withNextToken(startToken));
-				accounts = result.getAccounts();
-				nextToken = result.getNextToken();
+				return client.listAccountsForParentPaginator(ListAccountsForParentRequest.builder().parentId(parent).build())
+						.stream()
+						.flatMap(page -> page.accounts().stream())
+						.collect(Collectors.toList());
 			}
-			if (nextToken != null) {
-				accounts.addAll(this.getAccounts(client, parent, nextToken));
-			}
-			return accounts;
+			return client.listAccountsPaginator(ListAccountsRequest.builder().build())
+					.stream()
+					.flatMap(page -> page.accounts().stream())
+					.collect(Collectors.toList());
 		}
 
 		private static final long serialVersionUID = 1L;

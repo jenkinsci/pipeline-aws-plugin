@@ -1,9 +1,8 @@
 package de.taimos.pipeline.aws.eb;
 
-import com.amazonaws.services.elasticbeanstalk.AWSElasticBeanstalk;
-import com.amazonaws.services.elasticbeanstalk.AWSElasticBeanstalkClientBuilder;
-import com.amazonaws.services.elasticbeanstalk.model.CreateApplicationRequest;
-import com.amazonaws.services.elasticbeanstalk.model.CreateApplicationResult;
+import software.amazon.awssdk.services.elasticbeanstalk.ElasticBeanstalkClient;
+import software.amazon.awssdk.services.elasticbeanstalk.model.CreateApplicationRequest;
+import software.amazon.awssdk.services.elasticbeanstalk.model.CreateApplicationResponse;
 import de.taimos.pipeline.aws.AWSClientFactory;
 import de.taimos.pipeline.aws.utils.StepUtils;
 import hudson.EnvVars;
@@ -17,7 +16,7 @@ import org.jenkinsci.plugins.workflow.steps.SynchronousNonBlockingStepExecution;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
 
-import javax.annotation.Nonnull;
+import edu.umd.cs.findbugs.annotations.NonNull;
 import java.util.Set;
 
 public class EBCreateApplicationStep extends Step {
@@ -52,7 +51,7 @@ public class EBCreateApplicationStep extends Step {
 			return "ebCreateApplication";
 		}
 
-		@Nonnull
+		@NonNull
 		@Override
 		public String getDisplayName() {
 			return "Creates a new Elastic Beanstalk application";
@@ -63,7 +62,7 @@ public class EBCreateApplicationStep extends Step {
 		private static final long serialVersionUID = 1L;
 		private final transient EBCreateApplicationStep step;
 
-		protected Execution(EBCreateApplicationStep step, @Nonnull StepContext context) {
+		protected Execution(EBCreateApplicationStep step, @NonNull StepContext context) {
 			super(context);
 			this.step = step;
 		}
@@ -71,20 +70,21 @@ public class EBCreateApplicationStep extends Step {
 		@Override
 		protected Void run() throws Exception {
 			TaskListener listener = this.getContext().get(TaskListener.class);
-			AWSElasticBeanstalk client = AWSClientFactory.create(
-					AWSElasticBeanstalkClientBuilder.standard(),
+			ElasticBeanstalkClient client = AWSClientFactory.create(
+					ElasticBeanstalkClient.builder(),
 					this.getContext(),
 					this.getContext().get(EnvVars.class)
 			);
 
 			listener.getLogger().format("Creating application (%s) %n", step.applicationName);
 
-			CreateApplicationRequest request = new CreateApplicationRequest();
-			request.setApplicationName(step.applicationName);
-			request.setDescription(step.description);
+			CreateApplicationRequest request = CreateApplicationRequest.builder()
+					.applicationName(step.applicationName)
+					.description(step.description)
+					.build();
 
-			CreateApplicationResult result = client.createApplication(request);
-			listener.getLogger().format("Created application (%s) with arn (%s) %n", step.applicationName, result.getApplication().getApplicationArn());
+			CreateApplicationResponse result = client.createApplication(request);
+			listener.getLogger().format("Created application (%s) with arn (%s) %n", step.applicationName, result.application().applicationArn());
 
 			return null;
 		}

@@ -4,7 +4,7 @@
     <parent>
         <groupId>org.jenkins-ci.plugins</groupId>
         <artifactId>plugin</artifactId>
-        <version>6.2116.v7501b_67dc517</version>
+        <version>6.2221.va_045130417c9</version>
         <relativePath />
     </parent>
     <groupId>de.taimos</groupId>
@@ -23,7 +23,7 @@
             <dependency>
                 <groupId>io.jenkins.tools.bom</groupId>
                 <artifactId>bom-${jenkins.baseline}.x</artifactId>
-                <version>5054.v620b_5d2b_d5e6</version>
+                <version>6908.vb_4265a_9607c9</version>
                 <scope>import</scope>
                 <type>pom</type>
             </dependency>
@@ -78,8 +78,8 @@
     <properties>
         <changelist>999999-SNAPSHOT</changelist>
         <!-- https://www.jenkins.io/doc/developer/plugin-development/choosing-jenkins-baseline/ -->
-        <jenkins.baseline>2.479</jenkins.baseline>
-        <jenkins.version>${jenkins.baseline}.3</jenkins.version>
+        <jenkins.baseline>2.541</jenkins.baseline>
+        <jenkins.version>${jenkins.baseline}.1</jenkins.version>
         <gitHubRepo>jenkinsci/${project.artifactId}-plugin</gitHubRepo>
         <ban-commons-lang-2.skip>false</ban-commons-lang-2.skip>
     </properties>
@@ -126,57 +126,79 @@
             <groupId>org.jenkins-ci.plugins</groupId>
             <artifactId>structs</artifactId>
         </dependency>
-        <dependency>
-            <groupId>org.jenkins-ci.plugins.aws-java-sdk</groupId>
-            <artifactId>aws-java-sdk-ec2</artifactId>
-        </dependency>
 
+        <!--
+            AWS SDK for Java 2.x, one module per service the steps talk to. aws-java-sdk2-core
+            bundles auth, regions, retries, profiles, sts and the Apache sync HTTP client, so the
+            client plumbing in AWSClientFactory needs nothing beyond it.
+        -->
         <dependency>
-            <groupId>org.jenkins-ci.plugins.aws-java-sdk</groupId>
-            <artifactId>aws-java-sdk-sns</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>org.jenkins-ci.plugins.aws-java-sdk</groupId>
-            <artifactId>aws-java-sdk-elasticloadbalancingv2</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.jenkins-ci.plugins.aws-java-sdk</groupId>
-            <artifactId>aws-java-sdk-organizations</artifactId>
+            <groupId>io.jenkins.plugins.aws-java-sdk2</groupId>
+            <artifactId>aws-java-sdk2-core</artifactId>
         </dependency>
         <dependency>
-            <groupId>org.jenkins-ci.plugins.aws-java-sdk</groupId>
-            <artifactId>aws-java-sdk-cloudfront</artifactId>
+            <groupId>io.jenkins.plugins.aws-java-sdk2</groupId>
+            <artifactId>aws-java-sdk2-sns</artifactId>
         </dependency>
         <dependency>
-            <groupId>org.jenkins-ci.plugins.aws-java-sdk</groupId>
-            <artifactId>aws-java-sdk-codedeploy</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>org.jenkins-ci.plugins.aws-java-sdk</groupId>
-            <artifactId>aws-java-sdk-lambda</artifactId>
+            <groupId>io.jenkins.plugins.aws-java-sdk2</groupId>
+            <artifactId>aws-java-sdk2-ec2</artifactId>
         </dependency>
         <dependency>
-            <groupId>org.jenkins-ci.plugins.aws-java-sdk</groupId>
-            <artifactId>aws-java-sdk-api-gateway</artifactId>
+            <groupId>io.jenkins.plugins.aws-java-sdk2</groupId>
+            <artifactId>aws-java-sdk2-iam</artifactId>
         </dependency>
         <dependency>
-            <groupId>org.jenkins-ci.plugins.aws-java-sdk</groupId>
-            <artifactId>aws-java-sdk-ecr</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>org.jenkins-ci.plugins.aws-java-sdk</groupId>
-            <artifactId>aws-java-sdk-iam</artifactId>
+            <groupId>io.jenkins.plugins.aws-java-sdk2</groupId>
+            <artifactId>aws-java-sdk2-organizations</artifactId>
         </dependency>
         <dependency>
-            <groupId>org.jenkins-ci.plugins.aws-java-sdk</groupId>
-            <artifactId>aws-java-sdk-elasticbeanstalk</artifactId>
+            <groupId>io.jenkins.plugins.aws-java-sdk2</groupId>
+            <artifactId>aws-java-sdk2-elasticloadbalancingv2</artifactId>
         </dependency>
         <dependency>
-            <groupId>org.jenkins-ci.plugins.aws-java-sdk</groupId>
-            <artifactId>aws-java-sdk-cloudformation</artifactId>
+            <groupId>io.jenkins.plugins.aws-java-sdk2</groupId>
+            <artifactId>aws-java-sdk2-codedeploy</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.jenkins.plugins.aws-java-sdk2</groupId>
+            <artifactId>aws-java-sdk2-apigateway</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.jenkins.plugins.aws-java-sdk2</groupId>
+            <artifactId>aws-java-sdk2-elasticbeanstalk</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.jenkins.plugins.aws-java-sdk2</groupId>
+            <artifactId>aws-java-sdk2-lambda</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.jenkins.plugins.aws-java-sdk2</groupId>
+            <artifactId>aws-java-sdk2-cloudfront</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.jenkins.plugins.aws-java-sdk2</groupId>
+            <artifactId>aws-java-sdk2-ecr</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.jenkins.plugins.aws-java-sdk2</groupId>
+            <artifactId>aws-java-sdk2-cloudformation</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.jenkins.plugins.aws-java-sdk2</groupId>
+            <artifactId>aws-java-sdk2-s3</artifactId>
+        </dependency>
+        <!--
+            S3TransferManager needs an S3AsyncClient, which needs an asynchronous HTTP client, and
+            neither aws-java-sdk2-core nor aws-java-sdk2-s3 brings one - only the Apache sync client.
+            The CRT-based client is not published as an API plugin at all, so netty is the option that
+            exists. It arrives as a plugin dependency (io.jenkins.plugins:netty-api) rather than a
+            bundled jar, and it is the one SDK module that has to reach agents, because s3Upload and
+            s3Download build their own clients there.
+        -->
+        <dependency>
+            <groupId>io.jenkins.plugins.aws-java-sdk2</groupId>
+            <artifactId>aws-java-sdk2-netty-nio-client</artifactId>
         </dependency>
         <dependency>
             <groupId>org.jenkins-ci.plugins</groupId>
@@ -186,9 +208,32 @@
             <groupId>org.jenkins-ci.plugins</groupId>
             <artifactId>plain-credentials</artifactId>
         </dependency>
+        <!--
+            aws-credentials depends on the AWS SDK v1 plugins as well as the v2 ones, because its
+            AmazonWebServicesCredentials implements both SDKs' provider interfaces. That is now the
+            only thing putting SDK v1 on this plugin's classpath: nothing in src/main references
+            com.amazonaws any more, and the one place src/test does is a stub implementing that
+            interface, which cannot compile without the v1 method it declares. It also brings two
+            versions of com.sun.xml.bind:jaxb-impl into range of RequireUpperBoundDeps: 2.3.9
+            through io.jenkins.plugins:jaxb, and 4.0.9 through io.jenkins.plugins:jakarta-xml-bind-api.
+
+            Only the library is excluded; the jaxb plugin itself has to stay, because jackson2-api
+            needs it at runtime. Excluding the plugin instead compiles and passes the functional
+            tests while leaving the plugin unloadable, which InjectedTest catches.
+
+            This exclusion goes when aws-credentials drops SDK v1 (jenkinsci/aws-credentials-plugin#284,
+            open since 2025 and deliberately held back for plugins that have not migrated). This
+            plugin migrating is one fewer reason to hold it back.
+        -->
         <dependency>
             <groupId>org.jenkins-ci.plugins</groupId>
             <artifactId>aws-credentials</artifactId>
+            <exclusions>
+                <exclusion>
+                    <groupId>com.sun.xml.bind</groupId>
+                    <artifactId>jaxb-impl</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
         <dependency>
             <groupId>io.jenkins.plugins</groupId>

@@ -1,6 +1,6 @@
 package de.taimos.pipeline.aws.cloudformation.parser;
 
-import com.amazonaws.services.cloudformation.model.Tag;
+import software.amazon.awssdk.services.cloudformation.model.Tag;
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
 
@@ -13,8 +13,8 @@ public class TagsFileParserTests {
     public void parseJson() throws IOException {
         Collection<Tag> tags = TagsFileParser.parseTags(getClass().getResourceAsStream("tags.json"));
         Assertions.assertThat(tags).containsExactlyInAnyOrder(
-                new Tag().withKey("foo1").withValue("bar1"),
-                new Tag().withKey("foo2").withValue("bar2")
+                Tag.builder().key("foo1").value("bar1").build(),
+                Tag.builder().key("foo2").value("bar2").build()
         );
     }
 }

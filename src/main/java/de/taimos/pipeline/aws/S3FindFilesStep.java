@@ -37,10 +37,11 @@ import org.jenkinsci.plugins.workflow.steps.SynchronousNonBlockingStepExecution;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
 
-import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.model.ListObjectsRequest;
-import com.amazonaws.services.s3.model.ObjectListing;
-import com.amazonaws.services.s3.model.S3ObjectSummary;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.CommonPrefix;
+import software.amazon.awssdk.services.s3.model.ListObjectsV2Request;
+import software.amazon.awssdk.services.s3.model.ListObjectsV2Response;
+import software.amazon.awssdk.services.s3.model.S3Object;
 import com.google.common.base.Preconditions;
 
 import de.taimos.pipeline.aws.utils.StepUtils;
@@ -166,7 +167,7 @@ public class S3FindFilesStep extends AbstractS3Step {
 
 			this.getContext().get(TaskListener.class).getLogger().format("Searching s3://%s/%s for glob:'%s' %s%n", bucket, path, glob, onlyFiles ? "(only files)" : "");
 
-			AmazonS3 s3Client = AWSClientFactory.create(Execution.this.step.createS3ClientOptions().createAmazonS3ClientBuilder(), Execution.this.getContext());
+			S3Client s3Client = AWSClientFactory.create(Execution.this.step.createS3ClientOptions().createS3ClientBuilder(), Execution.this.getContext());
 
 			// Construct a PatternMatcher to match the files.
 			// Essentially, we're going to match against "${path}/${glob}".  Obviously,
@@ -202,57 +203,50 @@ public class S3FindFilesStep extends AbstractS3Step {
 				String folder = folders.remove(0);
 
 				// Create the request to list the objects within it.
-				ListObjectsRequest request = new ListObjectsRequest();
-				request.setBucketName(bucket);
-				request.setPrefix(folder);
-				request.setDelimiter("/");
+				ListObjectsV2Request.Builder request = ListObjectsV2Request.builder()
+						.bucket(bucket)
+						.prefix(folder)
+						.delimiter("/");
 				if (folder.length() > 0 && !folder.endsWith("/")) {
-					request.setPrefix(folder + "/");
+					request.prefix(folder + "/");
 				}
 
-				// Get the list of objects within the folder.  Because AWS
-				// might paginate this, we're going to continue dealing with
-				// the "objectListing" object until it claims that it's done.
-				ObjectListing objectListing = s3Client.listObjects(request);
-				while (true) {
+				// The paginator issues the same sequence of calls the hand-rolled
+				// listNextBatchOfObjects loop did.
+				for (ListObjectsV2Response objectListing : s3Client.listObjectsV2Paginator(request.build())) {
 					// Add any real objects to the list of objects to delete.
-					for (S3ObjectSummary entry : objectListing.getObjectSummaries()) {
+					for (S3Object entry : objectListing.contents()) {
 						// S3 does this sneaky thing with folders created in the management console:
 						// It *actually* creates a zero-length file whose name ends in "/".
 						//
 						// Here, we're going to quietly skip those entries; they'll be handled normally
 						// by the folder pathway below, anyway.  (Yes, they are returned as actual s3
 						// entities as well as prefixes).
-						if (entry.getKey().endsWith("/")) {
+						if (entry.key().endsWith("/")) {
 							continue;
 						}
 
-						Path javaPath = Paths.get(entry.getKey());
+						Path javaPath = Paths.get(entry.key());
 						if (matcher.matches(javaPath)) {
 							FileWrapper file = createFileWrapperFromFile(pathComponentCount, javaPath, entry);
 							matchingObjects.add(file);
 						}
 					}
 					// Add any folders to the list of folders that we need to investigate.
-					folders.addAll(objectListing.getCommonPrefixes());
+					for (CommonPrefix commonPrefix : objectListing.commonPrefixes()) {
+						folders.add(commonPrefix.prefix());
+					}
 					// In addition, if we are allowed to add folders to the list, then
 					// go through the folders and add any matching ones.
 					if (!onlyFiles) {
-						for (String prefix : objectListing.getCommonPrefixes()) {
-							Path javaPath = Paths.get(prefix);
+						for (CommonPrefix commonPrefix : objectListing.commonPrefixes()) {
+							Path javaPath = Paths.get(commonPrefix.prefix());
 							if (matcher.matches(javaPath)) {
 								FileWrapper file = createFileWrapperFromFolder(pathComponentCount, javaPath);
 								matchingObjects.add(file);
 							}
 						}
 					}
-
-					// If this listing is complete, then we can stop.
-					if (!objectListing.isTruncated()) {
-						break;
-					}
-					// Otherwise, we need to get the next batch and repeat.
-					objectListing = s3Client.listNextBatchOfObjects(objectListing);
 				}
 			}
 
@@ -276,14 +270,14 @@ public class S3FindFilesStep extends AbstractS3Step {
 		}
 
 		/**
-		 * This creates a new FileWrapper instance based on the S3ObjectSummary information.
+		 * This creates a new FileWrapper instance based on the S3Object information.
 		 *
 		 * @param pathComponentCount The root path component count.
 		 * @param javaPath           The Path instance for the file.
-		 * @param entry              The S3ObjectSummary for the file.
+		 * @param entry              The S3Object for the file.
 		 * @return A new FileWrapper instance.
 		 */
-		public static FileWrapper createFileWrapperFromFile(int pathComponentCount, Path javaPath, S3ObjectSummary entry) {
+		public static FileWrapper createFileWrapperFromFile(int pathComponentCount, Path javaPath, S3Object entry) {
 			Path pathFileName = javaPath.getFileName();
 			if (pathFileName == null) {
 				return null;
@@ -296,9 +290,9 @@ public class S3FindFilesStep extends AbstractS3Step {
 					// Directory?
 					false,
 					// Size:
-					entry.getSize(),
+					entry.size(),
 					// Last modified (milliseconds):
-					entry.getLastModified().getTime()
+					entry.lastModified().toEpochMilli()
 			);
 		}
 

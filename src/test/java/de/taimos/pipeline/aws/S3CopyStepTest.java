@@ -24,7 +24,7 @@ package de.taimos.pipeline.aws;
 import org.junit.Assert;
 import org.junit.Test;
 
-import com.amazonaws.services.s3.model.CannedAccessControlList;
+import de.taimos.pipeline.aws.utils.CannedAcl;
 
 public class S3CopyStepTest
 {
@@ -35,7 +35,7 @@ public class S3CopyStepTest
 		S3CopyStep step = new S3CopyStep("my-bucket", "my-path", "other-bucket", "other-path", false, false);
 		step.setKmsId("alias/foo");
 		step.setMetadatas(metas);
-		step.setAcl(CannedAccessControlList.PublicRead);
+		step.setAcl(CannedAcl.PublicRead);
 		step.setCacheControl("my-cachecontrol");
 		step.setContentType("text/plain");
 		step.setContentDisposition("attachment");
@@ -46,7 +46,7 @@ public class S3CopyStepTest
 		Assert.assertEquals("other-path", step.getToPath());
 		Assert.assertEquals("alias/foo", step.getKmsId());
 		Assert.assertArrayEquals(metas, step.getMetadatas());
-		Assert.assertEquals(CannedAccessControlList.PublicRead, step.getAcl());
+		Assert.assertEquals(CannedAcl.PublicRead, step.getAcl());
 		Assert.assertEquals("my-cachecontrol", step.getCacheControl());
 		Assert.assertEquals("text/plain", step.getContentType());
 		Assert.assertEquals("AES256", step.getSseAlgorithm());

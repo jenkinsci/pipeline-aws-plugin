@@ -21,22 +21,18 @@
 
 package de.taimos.pipeline.aws;
 
-import com.amazonaws.event.ProgressEventType;
-import com.amazonaws.event.ProgressListener;
-import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.Headers;
-import com.amazonaws.services.s3.model.CannedAccessControlList;
-import com.amazonaws.services.s3.model.ObjectMetadata;
-import com.amazonaws.services.s3.model.ObjectTagging;
-import com.amazonaws.services.s3.model.PutObjectRequest;
-import com.amazonaws.services.s3.model.SSEAlgorithm;
-import com.amazonaws.services.s3.model.SSEAwsKeyManagementParams;
-import com.amazonaws.services.s3.model.Tag;
-import com.amazonaws.services.s3.transfer.MultipleFileUpload;
-import com.amazonaws.services.s3.transfer.ObjectMetadataProvider;
-import com.amazonaws.services.s3.transfer.ObjectTaggingProvider;
-import com.amazonaws.services.s3.transfer.TransferManager;
-import com.amazonaws.services.s3.transfer.Upload;
+import de.taimos.pipeline.aws.utils.CannedAcl;
+import de.taimos.pipeline.aws.utils.S3Utils;
+import software.amazon.awssdk.core.async.AsyncRequestBody;
+import software.amazon.awssdk.services.s3.S3AsyncClient;
+import software.amazon.awssdk.services.s3.model.PutObjectRequest;
+import software.amazon.awssdk.transfer.s3.S3TransferManager;
+import software.amazon.awssdk.transfer.s3.model.CompletedDirectoryUpload;
+import software.amazon.awssdk.transfer.s3.model.CompletedFileUpload;
+import software.amazon.awssdk.transfer.s3.model.FailedFileUpload;
+import software.amazon.awssdk.transfer.s3.model.UploadDirectoryRequest;
+import software.amazon.awssdk.transfer.s3.model.UploadFileRequest;
+import software.amazon.awssdk.transfer.s3.model.UploadRequest;
 import com.google.common.base.Preconditions;
 import de.taimos.pipeline.aws.utils.StepUtils;
 import hudson.EnvVars;
@@ -52,17 +48,20 @@ import org.jenkinsci.plugins.workflow.steps.SynchronousNonBlockingStepExecution;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
 
-import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.nio.file.Path;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 
 public class S3UploadStep extends AbstractS3Step {
@@ -77,7 +76,7 @@ public class S3UploadStep extends AbstractS3Step {
 	private String workingDir;
 	private String[] metadatas;
 	private String tags;
-	private CannedAccessControlList acl;
+	private CannedAcl acl;
 	private String cacheControl;
 	private String contentEncoding;
 	private String contentType;
@@ -203,12 +202,12 @@ public class S3UploadStep extends AbstractS3Step {
 		}
 	}
 
-	public CannedAccessControlList getAcl() {
+	public CannedAcl getAcl() {
 		return this.acl;
 	}
 
 	@DataBoundSetter
-	public void setAcl(CannedAccessControlList acl) {
+	public void setAcl(CannedAcl acl) {
 		this.acl = acl;
 	}
 
@@ -313,7 +312,7 @@ public class S3UploadStep extends AbstractS3Step {
 			final String workingDir = this.step.getWorkingDir();
 			final Map<String, String> metadatas = new HashMap<>();
 			final Map<String, String> tags = new HashMap<String, String>();
-			final CannedAccessControlList acl = this.step.getAcl();
+			final CannedAcl acl = this.step.getAcl();
 			final String cacheControl = this.step.getCacheControl();
 			final String contentEncoding = this.step.getContentEncoding();
 			final String contentType = this.step.getContentType();
@@ -375,73 +374,27 @@ public class S3UploadStep extends AbstractS3Step {
 				S3ClientOptions amazonS3ClientOptions = Execution.this.step.createS3ClientOptions();
 				EnvVars envVars = Execution.this.getContext().get(EnvVars.class);
 
-				AmazonS3 s3Client = AWSClientFactory.create(amazonS3ClientOptions.createAmazonS3ClientBuilder(), Execution.this.getContext(), envVars);
-				TransferManager mgr = AWSUtilFactory.newTransferManager(s3Client);
-
-				byte[] bytes = text.getBytes(Charset.forName("UTF-8"));
-				PutObjectRequest request = null;
-				ObjectMetadata metas = new ObjectMetadata();
-
-				metas.setContentLength(bytes.length);
-
-				// Add metadata
-				if (metadatas != null && metadatas.size() > 0) {
-					metas.setUserMetadata(metadatas);
-				}
-				if (cacheControl != null && !cacheControl.isEmpty()) {
-					metas.setCacheControl(cacheControl);
-				}
-				if (contentEncoding != null && !contentEncoding.isEmpty()) {
-					metas.setContentEncoding(contentEncoding);
-				}
-				if (contentType != null && !contentType.isEmpty()) {
-					metas.setContentType(contentType);
-				}
-				if (contentDisposition != null && !contentDisposition.isEmpty()) {
-					metas.setContentDisposition(contentDisposition);
-				}
-				if (sseAlgorithm != null && !sseAlgorithm.isEmpty()) {
-					metas.setSSEAlgorithm(sseAlgorithm);
-				}
-
-				request = new PutObjectRequest(bucket, path, new ByteArrayInputStream(bytes), metas);
-
-				// Add acl
-				if (acl != null) {
-					request.withCannedAcl(acl);
-				}
-
-				//add tags
-				if(!tags.isEmpty()){
-					request.withTagging(new ObjectTagging(
-						tags.entrySet().stream().map(tag-> new Tag(tag.getKey(), tag.getValue())).collect(Collectors.toList())
-					));
-				}
-
-
-				// Add kms
+				byte[] bytes = text.getBytes(StandardCharsets.UTF_8);
+				S3UploadOptions options = new S3UploadOptions(metadatas, tags, acl, cacheControl, contentEncoding, contentType, contentDisposition, kmsId, sseAlgorithm, redirectLocation);
 				if (kmsId != null && !kmsId.isEmpty()) {
 					listener.getLogger().format("Using KMS: %s%n", kmsId);
-					request.withSSEAwsKeyManagementParams(new SSEAwsKeyManagementParams(kmsId));
 				}
+				PutObjectRequest request = options.applyTo(PutObjectRequest.builder()
+						.bucket(bucket)
+						.key(path)
+						.contentLength((long) bytes.length)).build();
 
-				if (redirectLocation != null && !redirectLocation.isEmpty()) {
-					request.withRedirectLocation(redirectLocation);
+				// S3TransferManager only closes an async client it created itself, so a client passed to
+				// it has to be closed here or its netty event loop outlives the step.
+				try (S3AsyncClient s3Client = AWSClientFactory.create(amazonS3ClientOptions.createS3AsyncClientBuilderForUpload(), Execution.this.getContext(), envVars);
+						S3TransferManager mgr = AWSUtilFactory.newV2TransferManager(s3Client)) {
+					S3Utils.joinTransfer(mgr.upload(UploadRequest.builder()
+							.putObjectRequest(request)
+							.requestBody(AsyncRequestBody.fromBytes(bytes))
+							.build()).completionFuture());
 				}
-
-				try {
-					final Upload upload = mgr.upload(request);
-					upload.addProgressListener((ProgressListener) progressEvent -> {
-						if (progressEvent.getEventType() == ProgressEventType.TRANSFER_COMPLETED_EVENT) {
-							if (verbose) {
-								listener.getLogger().println("Finished: " + upload.getDescription());
-							}
-						}
-					});
-					upload.waitForCompletion();
-				}
-				finally{
-					mgr.shutdownNow();
+				if (verbose) {
+					listener.getLogger().println("Finished: upload of text to s3://" + bucket + "/" + path);
 				}
 
 				listener.getLogger().println("Upload complete");
@@ -457,7 +410,8 @@ public class S3UploadStep extends AbstractS3Step {
 					throw new FileNotFoundException(child.toURI().toString());
 				}
 
-				child.act(new RemoteUploader(Execution.this.step.createS3ClientOptions(), Execution.this.getContext().get(EnvVars.class), listener, bucket, path, metadatas, tags, acl, cacheControl, contentEncoding, contentType, contentDisposition, kmsId, sseAlgorithm, redirectLocation));
+				child.act(new RemoteUploader(Execution.this.step.createS3ClientOptions(), Execution.this.getContext().get(EnvVars.class), listener, bucket, path,
+						new S3UploadOptions(metadatas, tags, acl, cacheControl, contentEncoding, contentType, contentDisposition, kmsId, sseAlgorithm, redirectLocation)));
 
 				listener.getLogger().println("Upload complete");
 				return String.format("s3://%s/%s", bucket, path);
@@ -467,7 +421,8 @@ public class S3UploadStep extends AbstractS3Step {
 				for (FilePath child : children) {
 					fileList.add(child.act(FIND_FILE_ON_SLAVE));
 				}
-				dir.act(new RemoteListUploader(Execution.this.step.createS3ClientOptions(), Execution.this.getContext().get(EnvVars.class), listener, fileList, bucket, path, metadatas, tags, acl, cacheControl, contentEncoding, contentType, contentDisposition, kmsId, sseAlgorithm));
+				dir.act(new RemoteListUploader(Execution.this.step.createS3ClientOptions(), Execution.this.getContext().get(EnvVars.class), listener, fileList, bucket, path,
+						new S3UploadOptions(metadatas, tags, acl, cacheControl, contentEncoding, contentType, contentDisposition, kmsId, sseAlgorithm, null)));
 				listener.getLogger().println("Upload complete");
 				return String.format("s3://%s/%s", bucket, path);
 			}
@@ -475,284 +430,188 @@ public class S3UploadStep extends AbstractS3Step {
 
 	}
 
+	/**
+	 * Uploads one file, or one directory tree, from the agent.
+	 *
+	 * The four separate metadata blocks v1 carried are now a single S3UploadOptions, applied to a
+	 * PutObjectRequest in one place. For a directory that goes through uploadFileRequestTransformer,
+	 * which is v2's replacement for ObjectMetadataProvider and ObjectTaggingProvider together.
+	 */
 	private static class RemoteUploader extends MasterToSlaveFileCallable<Void> {
 
 		protected static final long serialVersionUID = 1L;
+
 		private final S3ClientOptions amazonS3ClientOptions;
 		private final EnvVars envVars;
 		private final TaskListener taskListener;
 		private final String bucket;
 		private final String path;
-		private final Map<String, String> metadatas;
-		private final Map<String, String> tags;
-		private final CannedAccessControlList acl;
-		private final String cacheControl;
-		private final String contentEncoding;
-		private final String contentType;
-		private final String contentDisposition;
-		private final String kmsId;
-		private final String sseAlgorithm;
-		private final String redirectLocation;
+		private final S3UploadOptions options;
 
-		RemoteUploader(S3ClientOptions amazonS3ClientOptions, EnvVars envVars, TaskListener taskListener, String bucket, String path, Map<String, String> metadatas, Map<String, String> tags, CannedAccessControlList acl, String cacheControl, String contentEncoding, String contentType, String contentDisposition, String kmsId, String sseAlgorithm, String redirectLocation) {
+		RemoteUploader(S3ClientOptions amazonS3ClientOptions, EnvVars envVars, TaskListener taskListener, String bucket, String path, S3UploadOptions options) {
 			this.amazonS3ClientOptions = amazonS3ClientOptions;
 			this.envVars = envVars;
 			this.taskListener = taskListener;
 			this.bucket = bucket;
 			this.path = path;
-			this.metadatas = metadatas;
-			this.tags=tags;
-			this.acl = acl;
-			this.cacheControl = cacheControl;
-			this.contentEncoding = contentEncoding;
-			this.contentType = contentType;
-			this.contentDisposition = contentDisposition;
-			this.kmsId = kmsId;
-			this.sseAlgorithm = sseAlgorithm;
-			this.redirectLocation = redirectLocation;
+			this.options = options;
 		}
 
 		@Override
 		public Void invoke(File localFile, VirtualChannel channel) throws IOException, InterruptedException {
-			AmazonS3 s3Client = AWSClientFactory.create(this.amazonS3ClientOptions.createAmazonS3ClientBuilder(), this.envVars);
-			TransferManager mgr = AWSUtilFactory.newTransferManager(s3Client);
-			if (localFile.isFile()) {
-				String path = this.path;
-				if (path.endsWith("/") || path.isEmpty()) {
-					path += localFile.getName();
-				}
-				PutObjectRequest request = new PutObjectRequest(this.bucket, path, localFile);
-
-				// Add metadata
-				if ((this.metadatas != null && this.metadatas.size() > 0) || (this.cacheControl != null && !this.cacheControl.isEmpty()) || (this.contentEncoding != null && !this.contentEncoding.isEmpty()) || (this.contentType != null && !this.contentType.isEmpty()) || (this.contentDisposition != null && !this.contentDisposition.isEmpty()) || (this.sseAlgorithm != null && !this.sseAlgorithm.isEmpty())) {
-					ObjectMetadata metas = new ObjectMetadata();
-					if (this.metadatas != null && this.metadatas.size() > 0) {
-						metas.setUserMetadata(this.metadatas);
+			// S3TransferManager only closes an async client it created itself, so a client passed to it
+			// has to be closed here - these run on agents, which stay up across many builds.
+			try (S3AsyncClient s3Client = AWSClientFactory.create(this.amazonS3ClientOptions.createS3AsyncClientBuilderForUpload(), this.envVars);
+					S3TransferManager mgr = AWSUtilFactory.newV2TransferManager(s3Client)) {
+				if (localFile.isFile()) {
+					String key = this.path;
+					if (key.endsWith("/") || key.isEmpty()) {
+						key += localFile.getName();
 					}
-					if (this.cacheControl != null && !this.cacheControl.isEmpty()) {
-						metas.setCacheControl(this.cacheControl);
+					if (this.options.getKmsId() != null && !this.options.getKmsId().isEmpty()) {
+						this.taskListener.getLogger().format("Using KMS: %s%n", this.options.getKmsId());
 					}
-					if (this.contentEncoding != null && !this.contentEncoding.isEmpty()) {
-						metas.setContentEncoding(this.contentEncoding);
-					}
-					if (this.contentType != null && !this.contentType.isEmpty()) {
-						metas.setContentType(this.contentType);
-					}
-					if (this.contentDisposition != null && !this.contentDisposition.isEmpty()) {
-						metas.setContentDisposition(this.contentDisposition);
-					}
-					if (this.sseAlgorithm != null && !this.sseAlgorithm.isEmpty()) {
-						metas.setSSEAlgorithm(this.sseAlgorithm);
-					}
-					request.withMetadata(metas);
+					S3Utils.joinTransfer(mgr.uploadFile(UploadFileRequest.builder()
+							.putObjectRequest(this.options.applyTo(
+									PutObjectRequest.builder().bucket(this.bucket).key(key)).build())
+							.source(localFile)
+							.build()).completionFuture());
+					this.taskListener.getLogger().println("Finished: upload of s3://" + this.bucket + "/" + key);
+				} else if (localFile.isDirectory()) {
+					uploadDirectory(mgr, this.bucket, this.path, localFile, this.options, this.taskListener);
 				}
-
-				//add tags
-				if(!tags.isEmpty()){
-					request.withTagging(new ObjectTagging(
-						tags.entrySet().stream().map(tag-> new Tag(tag.getKey(), tag.getValue())).collect(Collectors.toList())
-					));
-				}
-
-				// Add acl
-				if (this.acl != null) {
-					request.withCannedAcl(this.acl);
-				}
-
-				// Add kms
-				if (this.kmsId != null && !this.kmsId.isEmpty()) {
-					RemoteUploader.this.taskListener.getLogger().format("Using KMS: %s%n", this.kmsId);
-					request.withSSEAwsKeyManagementParams(new SSEAwsKeyManagementParams(this.kmsId));
-				}
-
-				if (this.redirectLocation != null && !this.redirectLocation.isEmpty()) {
-					request.withRedirectLocation(this.redirectLocation);
-				}
-
-				try {
-					final Upload upload = mgr.upload(request);
-					upload.addProgressListener((ProgressListener) progressEvent -> {
-						if (progressEvent.getEventType() == ProgressEventType.TRANSFER_COMPLETED_EVENT) {
-							RemoteUploader.this.taskListener.getLogger().println("Finished: " + upload.getDescription());
-						}
-					});
-					upload.waitForCompletion();
-				}
-				finally {
-					mgr.shutdownNow();
-				}
-				return null;
-			}
-			if (localFile.isDirectory()) {
-				final MultipleFileUpload fileUpload;
-				final ObjectMetadataProvider metadatasProvider = (file, meta) -> {
-					if (meta != null) {
-						if (RemoteUploader.this.metadatas != null && RemoteUploader.this.metadatas.size() > 0) {
-							meta.setUserMetadata(RemoteUploader.this.metadatas);
-						}
-						if (RemoteUploader.this.acl != null) {
-							meta.setHeader(Headers.S3_CANNED_ACL, RemoteUploader.this.acl);
-						}
-						if (RemoteUploader.this.cacheControl != null && !RemoteUploader.this.cacheControl.isEmpty()) {
-							meta.setCacheControl(RemoteUploader.this.cacheControl);
-						}
-						if (RemoteUploader.this.contentEncoding != null && !RemoteUploader.this.contentEncoding.isEmpty()) {
-							meta.setContentEncoding(RemoteUploader.this.contentEncoding);
-						}
-						if (RemoteUploader.this.contentType != null && !RemoteUploader.this.contentType.isEmpty()) {
-							meta.setContentType(RemoteUploader.this.contentType);
-						}
-						if (RemoteUploader.this.contentDisposition != null && !RemoteUploader.this.contentDisposition.isEmpty()) {
-							meta.setContentDisposition(RemoteUploader.this.contentDisposition);
-						}
-						if (RemoteUploader.this.kmsId != null && !RemoteUploader.this.kmsId.isEmpty()) {
-							final SSEAwsKeyManagementParams sseAwsKeyManagementParams = new SSEAwsKeyManagementParams(RemoteUploader.this.kmsId);
-							meta.setSSEAlgorithm(SSEAlgorithm.KMS.getAlgorithm());
-							meta.setHeader(
-									Headers.SERVER_SIDE_ENCRYPTION_AWS_KMS_KEYID,
-									sseAwsKeyManagementParams.getAwsKmsKeyId()
-							);
-						}
-					}
-				};
-
-				ObjectTaggingProvider objectTaggingProvider =(uploadContext) -> {
-					List<Tag> tagList = new ArrayList<Tag>();
-
-					//add tags
-					if(tags != null){
-						for (Map.Entry<String, String> entry : tags.entrySet()) {
-							Tag tag = new Tag(entry.getKey(), entry.getValue());
-							tagList.add(tag);
-						}
-					}
-					return new ObjectTagging(tagList);
-				};
-
-				try {
-					fileUpload = mgr.uploadDirectory(this.bucket, this.path, localFile, true, metadatasProvider, objectTaggingProvider);
-					for (final Upload upload : fileUpload.getSubTransfers()) {
-						upload.addProgressListener((ProgressListener) progressEvent -> {
-							if (progressEvent.getEventType() == ProgressEventType.TRANSFER_COMPLETED_EVENT) {
-								RemoteUploader.this.taskListener.getLogger().println("Finished: " + upload.getDescription());
-							}
-						});
-					}
-					fileUpload.waitForCompletion();
-				}
-				finally {
-					mgr.shutdownNow();
-				}
-				return null;
 			}
 			return null;
 		}
 
 	}
 
+	/**
+	 * v1's MultipleFileUpload.waitForCompletion threw if any file failed. v2 completes normally and
+	 * reports them in failedTransfers(), so without this check a partial upload would look like a
+	 * successful one.
+	 */
+	private static void uploadDirectory(S3TransferManager mgr, String bucket, String path, File localDirectory,
+			S3UploadOptions options, TaskListener taskListener) throws IOException, InterruptedException {
+		logKms(options, taskListener);
+		UploadDirectoryRequest.Builder request = UploadDirectoryRequest.builder()
+				.bucket(bucket)
+				.source(localDirectory.toPath())
+				// v2's replacement for ObjectMetadataProvider and ObjectTaggingProvider together.
+				// The request has to be mutated rather than rebuilt: the Consumer overload of
+				// putObjectRequest constructs a fresh builder, which would throw away the bucket and
+				// key the transfer manager has already computed for this file and submit every upload
+				// with both null.
+				.uploadFileRequestTransformer(upload -> upload.putObjectRequest(
+						options.applyTo(upload.build().putObjectRequest().toBuilder()).build()));
+		// v1 normalised the prefix before joining it to each relative key; v2 joins with a delimiter
+		// unconditionally, so passing 'artifacts/' through verbatim would name every object
+		// 'artifacts//x.txt'. Shared with uploadFileList so the two paths agree.
+		String prefix = trimTrailingSlash(path);
+		if (!prefix.isEmpty()) {
+			request.s3Prefix(prefix);
+		}
+
+		CompletedDirectoryUpload completed = S3Utils.joinTransfer(mgr.uploadDirectory(request.build()).completionFuture());
+		if (!completed.failedTransfers().isEmpty()) {
+			for (FailedFileUpload failure : completed.failedTransfers()) {
+				taskListener.getLogger().println("Failed: " + failure);
+			}
+			throw new IOException("Upload to s3://" + bucket + "/" + path + " failed for "
+					+ completed.failedTransfers().size() + " file(s); see the log above");
+		}
+		taskListener.getLogger().println("Finished: upload to s3://" + bucket + "/" + path);
+	}
+
+	/**
+	 * v1 had uploadFileList for the include/exclude-pattern case. v2 has no equivalent -
+	 * UploadDirectoryRequest has no filter, that is download-only - so the files are submitted
+	 * individually and awaited together. Submitting before joining is what keeps them concurrent, as
+	 * uploadFileList was; joining one at a time would serialise the whole upload.
+	 */
+	private static void uploadFileList(S3TransferManager mgr, String bucket, String path, File baseDirectory,
+			List<File> fileList, S3UploadOptions options, TaskListener taskListener) throws IOException, InterruptedException {
+		logKms(options, taskListener);
+		Path base = baseDirectory.toPath().toAbsolutePath().normalize();
+		String trimmed = trimTrailingSlash(path);
+		String prefix = trimmed.isEmpty() ? "" : trimmed + "/";
+
+		Map<String, CompletableFuture<CompletedFileUpload>> uploads = new LinkedHashMap<>();
+		for (File file : fileList) {
+			String key = prefix + base.relativize(file.toPath().toAbsolutePath().normalize()).toString().replace(File.separatorChar, '/');
+			uploads.put(key, mgr.uploadFile(UploadFileRequest.builder()
+					.putObjectRequest(options.applyTo(PutObjectRequest.builder().bucket(bucket).key(key)).build())
+					.source(file)
+					.build()).completionFuture());
+		}
+
+		List<String> failures = new ArrayList<>();
+		for (Map.Entry<String, CompletableFuture<CompletedFileUpload>> upload : uploads.entrySet()) {
+			try {
+				// get() rather than join(): this is the path with the most transfers in flight, and
+				// join() would swallow an abort's interrupt and keep uploading against a workspace
+				// Jenkins believes is free.
+				upload.getValue().get();
+			} catch (ExecutionException e) {
+				taskListener.getLogger().println("Failed: " + upload.getKey() + " - " + e.getCause());
+				failures.add(upload.getKey());
+			}
+		}
+		if (!failures.isEmpty()) {
+			throw new IOException("Upload to s3://" + bucket + "/" + path + " failed for "
+					+ failures.size() + " file(s); see the log above");
+		}
+		taskListener.getLogger().println("Finished: upload to s3://" + bucket + "/" + path);
+	}
+
+	private static String trimTrailingSlash(String path) {
+		if (path == null || path.isEmpty()) {
+			return "";
+		}
+		String trimmed = path;
+		while (trimmed.endsWith("/")) {
+			trimmed = trimmed.substring(0, trimmed.length() - 1);
+		}
+		return trimmed;
+	}
+
+	private static void logKms(S3UploadOptions options, TaskListener taskListener) {
+		if (options.getKmsId() != null && !options.getKmsId().isEmpty()) {
+			taskListener.getLogger().format("Using KMS: %s%n", options.getKmsId());
+		}
+	}
+
+	/**
+	 * The include/exclude-pattern case: the controller resolves the matching files and this uploads
+	 * exactly those, as a filtered directory upload.
+	 */
 	private static class RemoteListUploader extends MasterToSlaveFileCallable<Void> {
 
 		protected static final long serialVersionUID = 1L;
+
 		private final S3ClientOptions amazonS3ClientOptions;
 		private final EnvVars envVars;
 		private final TaskListener taskListener;
+		private final List<File> fileList;
 		private final String bucket;
 		private final String path;
-		private final List<File> fileList;
-		private final Map<String, String> metadatas;
-		private final Map<String, String> tags;
-		private final CannedAccessControlList acl;
-		private final String cacheControl;
-		private final String contentEncoding;
-		private final String contentType;
-		private final String contentDisposition;
-		private final String kmsId;
-		private final String sseAlgorithm;
+		private final S3UploadOptions options;
 
-		RemoteListUploader(S3ClientOptions amazonS3ClientOptions, EnvVars envVars, TaskListener taskListener, List<File> fileList, String bucket, String path, Map<String, String> metadatas, Map<String, String> tags, CannedAccessControlList acl, final String cacheControl, final String contentEncoding, final String contentType, final String contentDisposition, String kmsId, String sseAlgorithm) {
+		RemoteListUploader(S3ClientOptions amazonS3ClientOptions, EnvVars envVars, TaskListener taskListener, List<File> fileList, String bucket, String path, S3UploadOptions options) {
 			this.amazonS3ClientOptions = amazonS3ClientOptions;
 			this.envVars = envVars;
 			this.taskListener = taskListener;
 			this.fileList = fileList;
 			this.bucket = bucket;
 			this.path = path;
-			this.metadatas = metadatas;
-			this.tags = tags;
-			this.acl = acl;
-			this.cacheControl = cacheControl;
-			this.contentEncoding = contentEncoding;
-			this.contentType = contentType;
-			this.contentDisposition = contentDisposition;
-			this.kmsId = kmsId;
-			this.sseAlgorithm = sseAlgorithm;
+			this.options = options;
 		}
 
 		@Override
 		public Void invoke(File localFile, VirtualChannel channel) throws IOException, InterruptedException {
-			AmazonS3 s3Client = AWSClientFactory.create(this.amazonS3ClientOptions.createAmazonS3ClientBuilder(), this.envVars);
-			TransferManager mgr = AWSUtilFactory.newTransferManager(s3Client);
-			final MultipleFileUpload fileUpload;
-			ObjectMetadataProvider metadatasProvider = (file, meta) -> {
-				if (meta != null) {
-					if (RemoteListUploader.this.metadatas != null && RemoteListUploader.this.metadatas.size() > 0) {
-						meta.setUserMetadata(RemoteListUploader.this.metadatas);
-					}
-					if (RemoteListUploader.this.acl != null) {
-						meta.setHeader(Headers.S3_CANNED_ACL, RemoteListUploader.this.acl);
-					}
-					if (RemoteListUploader.this.cacheControl != null && !RemoteListUploader.this.cacheControl.isEmpty()) {
-						meta.setCacheControl(RemoteListUploader.this.cacheControl);
-					}
-					if (RemoteListUploader.this.contentEncoding != null && !RemoteListUploader.this.contentEncoding.isEmpty()) {
-						meta.setContentEncoding(RemoteListUploader.this.contentEncoding);
-					}
-					if (RemoteListUploader.this.contentType != null && !RemoteListUploader.this.contentType.isEmpty()) {
-						meta.setContentType(RemoteListUploader.this.contentType);
-					}
-					if (RemoteListUploader.this.contentDisposition != null && !RemoteListUploader.this.contentDisposition.isEmpty()) {
-						meta.setContentDisposition(RemoteListUploader.this.contentDisposition);
-					}
-					if (RemoteListUploader.this.sseAlgorithm != null && !RemoteListUploader.this.sseAlgorithm.isEmpty()) {
-						meta.setSSEAlgorithm(RemoteListUploader.this.sseAlgorithm);
-					}
-					if (RemoteListUploader.this.kmsId != null && !RemoteListUploader.this.kmsId.isEmpty()) {
-						final SSEAwsKeyManagementParams sseAwsKeyManagementParams = new SSEAwsKeyManagementParams(RemoteListUploader.this.kmsId);
-						meta.setSSEAlgorithm(sseAwsKeyManagementParams.getAwsKmsKeyId());
-						meta.setHeader(
-								Headers.SERVER_SIDE_ENCRYPTION_AWS_KMS_KEYID,
-								sseAwsKeyManagementParams.getAwsKmsKeyId()
-						);
-					}
-
-				}
-			};
-
-			ObjectTaggingProvider objectTaggingProvider =(uploadContext) -> {
-				List<Tag> tagList = new ArrayList<Tag>();
-
-				//add tags
-				if(tags != null){
-					for (Map.Entry<String, String> entry : tags.entrySet()) {
-						Tag tag = new Tag(entry.getKey(), entry.getValue());
-						tagList.add(tag);
-					}
-				}
-				return new ObjectTagging(tagList);
-			};
-
-			try {
-				fileUpload = mgr.uploadFileList(this.bucket, this.path, localFile, this.fileList, metadatasProvider, objectTaggingProvider);
-				for (final Upload upload : fileUpload.getSubTransfers()) {
-					upload.addProgressListener((ProgressListener) progressEvent -> {
-						if (progressEvent.getEventType() == ProgressEventType.TRANSFER_COMPLETED_EVENT) {
-							RemoteListUploader.this.taskListener.getLogger().println("Finished: " + upload.getDescription());
-						}
-					});
-				}
-				fileUpload.waitForCompletion();
-			}
-			finally {
-				mgr.shutdownNow();
+			try (S3AsyncClient s3Client = AWSClientFactory.create(this.amazonS3ClientOptions.createS3AsyncClientBuilderForUpload(), this.envVars);
+					S3TransferManager mgr = AWSUtilFactory.newV2TransferManager(s3Client)) {
+				uploadFileList(mgr, this.bucket, this.path, localFile, this.fileList, this.options, this.taskListener);
 			}
 			return null;
 		}

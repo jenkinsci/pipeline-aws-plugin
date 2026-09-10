@@ -31,7 +31,7 @@ This plugins adds Jenkins pipeline steps to interact with the AWS API.
 * [listAWSAccounts](#listawsaccounts)
 * [updateIdP](#updateidp)
 * [setAccountAlias](#setaccountalias)
-* [ecrDeleteImages](#ecrdeleteimages)
+* [ecrDeleteImage](#ecrdeleteimage)
 * [ecrListImages](#ecrlistimages)
 * [ecrLogin](#ecrlogin)
 * [ecrSetRepositoryPolicy](#ecrsetrepositorypolicy)
@@ -52,12 +52,75 @@ This plugins adds Jenkins pipeline steps to interact with the AWS API.
 
 [**see the changelog for release information**](#changelog)
 
+# Upgrading from 1.45
+
+The next release replaces the AWS SDK for Java 1.x - which reached end of life on 31 December 2025 -
+with the AWS SDK for Java 2.x throughout the plugin
+([#341](https://github.com/jenkinsci/pipeline-aws-plugin/issues/341),
+[JENKINS-73650](https://issues.jenkins.io/browse/JENKINS-73650)). Step names and parameters are
+unchanged, and the legacy v1 spellings of parameter values (`acl: 'PublicRead'`, CloudFormation
+capabilities, Elastic Beanstalk health and status strings, ECR filters) are still accepted, so most
+pipelines need no edit at all.
+
+What you do need to check before upgrading:
+
+* **Your controller must run Jenkins 2.541.1 or newer**, and `aws-credentials` 265 or newer (the
+  version the plugin BOM supplies; the credentials API this plugin needs first shipped in
+  238.v8fb_588a_2b_e67). 1.45 is the last release usable on older controllers.
+* **`s3PresignURL`** now presigns a specific S3 operation rather than signing an arbitrary URL, so
+  `httpMethod` must be one of `GET`, `PUT`, `DELETE`, `HEAD` - `POST` and `PATCH` are rejected - and
+  `durationInSeconds` must be within 1..604800 (7 days).
+* **`acl: 'LogDeliveryWrite'`** is rejected by `s3Upload` and `s3Copy`. It is a bucket ACL with no
+  object-level counterpart; S3 rejected it on an object before, too.
+* **Steps that returned raw AWS response objects now return maps**: `cfnUpdateStackSet`,
+  `ecrDeleteImage` and `ecrSetRepositoryPolicy`. Read `result.stackSet.stackSetId` rather than
+  `result.getStackSet().getStackSetId()`. Sandboxed pipelines could never read those fields at all,
+  so only scripts running outside the sandbox are affected.
+* **`cfnValidate`** no longer returns the undocumented `sdkResponseMetadata` and `sdkHttpMetadata`
+  keys. The documented fields are unchanged.
+* **Catching AWS exceptions by type no longer works.** Errors from every migrated step now surface
+  as `software.amazon.awssdk...` exceptions rather than `com.amazonaws...AmazonServiceException`, and
+  around an agent-side `s3Upload`/`s3Download` they arrive as `hudson.remoting.ProxyException`. The
+  v1 classes are still on the classpath, so a `catch (com.amazonaws...)` still compiles and simply
+  stops matching - the build fails where it used to recover. Catch `Exception` and inspect the
+  message.
+* **`withAWS(credentials: ...)` and `withAWS(samlAssertion: ...)` now clear any inherited
+  `AWS_SESSION_TOKEN`**, so that a credential carrying no token cannot be paired with a stale one. An
+  `AWS_SESSION_TOKEN` you set deliberately - from `withEnv`, a global environment variable, or a
+  credentials binding - is dropped too, because the step cannot tell the two apart; set it inside the
+  block rather than around it. The drop is logged, unless `role` or `federatedUserId` is also set:
+  those mint a fresh session from STS and export its token, so the block has a valid one and nothing
+  is missing.
+
+The `current master` section of the changelog below - this release, until it is tagged - lists these
+and the smaller behaviour changes, including several long-standing bugs fixed along the way, in full.
+
+Note that the AWS SDK v1 jar is still on the runtime classpath, because `aws-credentials` continues
+to declare it ([aws-credentials-plugin#284](https://github.com/jenkinsci/aws-credentials-plugin/pull/284)).
+No code in this plugin uses it.
+
 # Primary/Agent setups
 
 This plugin is not optimized to setups with a primary and multiple agents.
 Only steps that touch the workspace are executed on the agents while the rest is executed on the master.
 
 For the best experience make sure that primary and agents have the same IAM permission and networking capabilities.
+
+## Tuning
+
+These environment variables adjust how the plugin's AWS clients behave. Set them the way you would
+any other environment variable - `environment { }`, `withEnv`, or the controller's global
+configuration - and they apply to the steps that run inside that scope.
+
+| Variable | Default | Effect |
+| --- | --- | --- |
+| `AWS_SDK_RETRIES` | `10` | Retries per request, on top of the initial attempt. |
+| `AWS_SDK_SOCKET_TIMEOUT` | `50000` | Socket timeout in milliseconds. |
+| `AWS_SDK_MAX_CONNECTIONS` | `500` | Maximum concurrent connections across all synchronous AWS requests in the controller. |
+
+`AWS_SDK_MAX_CONNECTIONS` is worth raising only if a very wide `parallel` block fails with
+`ConnectionPoolTimeoutException`; the limit is process-wide because the underlying connection pool is
+shared, and it is a ceiling rather than a preallocation, so raising it costs nothing while idle.
 
 ## Retrieve credentials from node
 
@@ -299,6 +362,11 @@ s3Download(file:'file.txt', bucket:'my-bucket', path:'path/to/source/file.txt', 
 s3Download(file:'targetFolder/', bucket:'my-bucket', path:'path/to/sourceFolder/', force:true)
 ```
 
+Each object is written under the target folder at its full key path, not flattened: the second
+example above puts `path/to/sourceFolder/a/b.txt` at `targetFolder/path/to/sourceFolder/a/b.txt`.
+Zero-byte "folder marker" objects - the ones the S3 console creates for an empty folder - are
+skipped. The build fails if any object under the prefix could not be downloaded.
+
 ### s3Copy
 
 Copy file between S3 buckets.
@@ -371,14 +439,15 @@ Will presign the bucket/key and return a url. Defaults to 1 minute duration, usi
 def url = s3PresignURL(bucket: 'mybucket', key: 'mykey')
 ```
 
-The duration can be overridden:
+The duration can be overridden, from 1 second up to 604800 (7 days, the maximum a SigV4
+query-parameter signature can express). Anything outside that range fails the step:
 ```groovy
 def url = s3PresignURL(bucket: 'mybucket', key: 'mykey', durationInSeconds: 300) //5 minutes
 ```
 
-The method can also be overridden:
+The method can also be overridden. `GET` (the default), `PUT`, `DELETE` and `HEAD` are supported:
 ```groovy
-def url = s3PresignURL(bucket: 'mybucket', key: 'mykey', httpMethod: 'POST')
+def url = s3PresignURL(bucket: 'mybucket', key: 'mykey', httpMethod: 'PUT')
 ```
 
 ## cfnValidate
@@ -410,7 +479,7 @@ The step returns the outputs of the stack as a map. It also contains special val
 
 When cfnUpdate creates a stack and the creation fails, the stack is deleted instead of being left in a broken state.
 
-To prevent running into rate limiting on the AWS API you can change the default polling interval of 1000 ms using the parameter `pollIntervall`. Using the value `0` disables event printing.
+To prevent running into rate limiting on the AWS API you can change the default polling interval of 1000 ms using the parameter `pollInterval`. Using the value `0` disables event printing.
 
 ```groovy
 def outputs = cfnUpdate(stack:'my-stack', file:'template.yaml', params:['InstanceType=t2.nano'], keepParams:['Version'], timeoutInMinutes:10, tags:['TagName=Value'], notificationARNs:['arn:aws:sns:us-east-1:993852309656:topic'], pollInterval:1000)
@@ -462,7 +531,7 @@ Note: When creating a stack, either `file` or `url` are required. When updating 
 
 Remove the given stack from CloudFormation.
 
-To prevent running into rate limiting on the AWS API you can change the default polling interval of 1000 ms using the parameter `pollIntervall`. Using the value `0` disables event printing.  
+To prevent running into rate limiting on the AWS API you can change the default polling interval of 1000 ms using the parameter `pollInterval`. Using the value `0` disables event printing.  
 
 Note: When deleting a stack only 'stack' parameter is required.
 
@@ -502,7 +571,7 @@ The step returns the outputs of the stack as a map. It also contains special val
 * `jenkinsStackUpdateStatus` - "true"/"false" whether the stack was modified or not
 
 
-To prevent running into rate limiting on the AWS API you can change the default polling interval of 1000 ms using the parameter `pollIntervall`. Using the value `0` disables event printing.
+To prevent running into rate limiting on the AWS API you can change the default polling interval of 1000 ms using the parameter `pollInterval`. Using the value `0` disables event printing.
 
 ```groovy
 cfnCreateChangeSet(stack:'my-stack', changeSet:'my-change-set', file:'template.yaml', params:['InstanceType=t2.nano'], keepParams:['Version'], tags:['TagName=Value'], notificationARNs:['arn:aws:sns:us-east-1:993852309656:topic'], pollInterval:1000)
@@ -546,7 +615,7 @@ Note: When creating a change set for a non-existing stack, either `file` or `url
 
 Execute a previously created change set to create or update a CloudFormation stack. All the necessary information, like parameters and tags, were provided earlier when the change set was created.
 
-To prevent running into rate limiting on the AWS API you can change the default polling interval of 1000 ms using the parameter `pollIntervall`. Using the value `0` disables event printing.
+To prevent running into rate limiting on the AWS API you can change the default polling interval of 1000 ms using the parameter `pollInterval`. Using the value `0` disables event printing.
 
 ```groovy
 def outputs = cfnExecuteChangeSet(stack:'my-stack', changeSet:'my-change-set', pollInterval:1000)
@@ -556,7 +625,20 @@ def outputs = cfnExecuteChangeSet(stack:'my-stack', changeSet:'my-change-set', p
 
 Create a stack set. Similar options to cfnUpdate. Will monitor the resulting StackSet operation and will fail the build step if the operation does not complete successfully.
 
-To prevent running into rate limiting on the AWS API you can change the default polling interval of 1000 ms using the parameter `pollIntervall`. Using the value `0` disables event printing.
+`pollInterval` (default 1000 ms) is the delay between the `DescribeStackSetOperation` calls this step
+makes while waiting for an update to finish; raise it to stay clear of AWS API rate limits. This step
+prints no stack events, so unlike `cfnUpdate` the value `0` does not disable anything; it is treated
+as one second, so that it cannot become a tight loop against the AWS API. (On the `create` path the
+step checks the new stack set's status instead, and since the API reports a stack set as only
+`ACTIVE` or `DELETED` that check settles on the first call rather than polling.)
+
+Two things to know about the wait:
+
+* It has no timeout - it waits for as long as the operation takes. `timeoutInMinutes` and
+  `timeoutInSeconds` are accepted for consistency with `cfnUpdate` but do not apply here.
+* It fails, reporting the status it saw, if the stack set reaches a state other than the one being
+  waited for - `DELETED` while waiting for `ACTIVE`, for instance - rather than waiting for a state
+  that can no longer arrive.
 
 ```groovy
   cfnUpdateStackSet(stackSet:'myStackSet', url:'https://s3.amazonaws.com/my-templates-bucket/template.yaml')
@@ -578,11 +660,29 @@ To automatically batch via region (find all stack instances, group them by regio
   cfnUpdateStackSet(stackSet:'myStackSet', url:'https://s3.amazonaws.com/my-templates-bucket/template.yaml', batchingOptions: [regions: true])
 ```
 
+The step returns the stack set's description as a map, so its fields are readable from a sandboxed
+pipeline:
+
+```groovy
+  def result = cfnUpdateStackSet(stackSet:'myStackSet', url:'https://s3.amazonaws.com/my-templates-bucket/template.yaml')
+  echo "stack set id: ${result.stackSet.stackSetId}"
+```
+
+`create` defaults to `true`, so a missing stack set is created. Passing `create: false` skips
+creation instead, and in that case the step returns `null` rather than a map - guard the return
+value if you use it:
+
+```groovy
+  def result = cfnUpdateStackSet(stackSet:'myStackSet', url:'...', create: false)
+  if (result != null) {
+    echo "stack set id: ${result.stackSet.stackSetId}"
+  }
+```
+
 ## cfnDeleteStackSet
 
-Deletes a stack set.
-
-To prevent running into rate limiting on the AWS API you can change the default polling interval of 1000 ms using the parameter `pollIntervall`. Using the value `0` disables event printing.
+Deletes a stack set. The step submits the deletion and returns; it does not wait for AWS to finish,
+so the `pollInterval` parameter it accepts has no effect.
 
 ```groovy
   cfnDeleteStackSet(stackSet:'myStackSet')
@@ -675,7 +775,17 @@ The step returns an array of Account objects with the following fields:
 * arn - the organizations ARN
 * name - the account name
 * safeName - the name converted to only contain lower-case, numbers and hyphens
-* status - the account status
+* state - the account state: `PENDING_ACTIVATION`, `ACTIVE`, `SUSPENDED`, `PENDING_CLOSURE` or `CLOSED`
+* status - the account status, kept for compatibility; prefer `state`
+
+AWS retires the Organizations `Status` field on **9 September 2026** in favour of `State`; both are
+returned at present. Both keys are provided and each falls back to the other, so neither is `null`
+for a response that carries only one - whichever one that is. A response can carry only `Status`
+today, since `endpointUrl` can point at a service that does not return `State`.
+
+`state` is the one to use going forward. Note it has two values `status` never had -
+`PENDING_ACTIVATION` and `CLOSED` - so a pipeline that enumerates the possible values should handle
+them. Wherever a response still carries `Status`, `status` reports exactly what it always did.
 
 ```groovy
 def accounts = listAWSAccounts()
@@ -713,20 +823,32 @@ Create or update the AWS account alias.
 setAccountAlias(name: 'awsAlias')
 ```
 
-## ecrDeleteImages
+## ecrDeleteImage
 
 Delete images in a repository.
 
 ```groovy
-ecrDeleteImages(repositoryName: 'foo', imageIds: ['imageDigest': 'digest', 'imageTag': 'tag'])
+ecrDeleteImage(repositoryName: 'foo', imageIds: [['imageDigest': 'digest', 'imageTag': 'tag']])
 ```
+
+The step returns a list of maps, each with `imageTag` and `imageDigest`, for the images that were
+deleted.
 
 ## ecrListImages
 
-List images in a repository.
+List images in a repository. The step returns a list of maps, each with `imageTag` and
+`imageDigest`.
 
 ```groovy
 def images = ecrListImages(repositoryName: 'foo')
+```
+
+Pass `filter` to restrict the result by tag status. `tagStatus` accepts `TAGGED`, `UNTAGGED` or
+`ANY` (the default):
+
+```groovy
+def untagged = ecrListImages(repositoryName: 'foo', filter: [tagStatus: 'UNTAGGED'])
+ecrDeleteImage(repositoryName: 'foo', imageIds: untagged)
 ```
 
 ## ecrLogin
@@ -759,7 +881,7 @@ Sets the json policy document containing ECR permissions.
 * repositoryName - The name of the repository to receive the policy.
 * policyText - The JSON repository policy text to apply to the repository. For more information, see [Amazon ECR Repository Policy Examples](https://docs.aws.amazon.com/AmazonECR/latest/userguide/RepositoryPolicyExamples.html) in the _Amazon Elastic Container Registry User Guide_. 
 
-The step returns the object returned by the command.
+The step returns a map with `registryId`, `repositoryName` and `policyText`.
 * Note - make sure you set the correct region in the credentials in order to find the repository
 
 ```groovy
@@ -1098,6 +1220,194 @@ ebWaitOnEnvironmentHealth(
 # Changelog
 
 ## current master
+
+* **Breaking**: requires Jenkins 2.541.1 or newer. The plugin's parent POM and plugin BOM were
+  updated to the 2.541 baseline in preparation for the migration to the AWS SDK for Java 2.x
+  ([#341](https://github.com/jenkinsci/pipeline-aws-plugin/issues/341),
+  [JENKINS-73650](https://issues.jenkins.io/browse/JENKINS-73650)). 1.45 is the last release usable
+  on controllers older than 2.541.1.
+* Migrated to the AWS SDK for Java 2.x: `snsPublish`, `ec2ShareAmi`, `setAccountAlias`, `updateIdP`,
+  `updateTrustPolicy`, `listAWSAccounts`, `elbRegisterInstance`, `elbDeregisterInstance`,
+  `elbIsInstanceRegistered`, `elbIsInstanceDeregistered`, `createDeployment`,
+  `awaitDeploymentCompletion`, `deployAPI`, `ebCreateApplication`,
+  `ebCreateApplicationVersion`, `ebCreateConfigurationTemplate`, `ebCreateEnvironment`,
+  `ebSwapEnvironmentCNAMEs`, `ebWaitOnEnvironmentStatus`, `ebWaitOnEnvironmentHealth`,
+  `invokeLambda`, `cfInvalidate`, `ecrDeleteImage`, `ecrListImages`, `ecrSetRepositoryPolicy`,
+  `ecrLogin`, `lambdaVersionCleanup`, `cfnValidate`, `cfnUpdate`, `cfnDelete`, `cfnDescribe`,
+  `cfnExports`, `cfnCreateChangeSet`, `cfnExecuteChangeSet`, `cfnUpdateStackSet`,
+  `cfnDeleteStackSet`, `s3Delete`, `s3FindFiles`, `s3DoesObjectExist`, `s3PresignURL`, `s3Copy`,
+  `s3Upload`, `s3Download`, `withAWS` and `awsIdentity`. Behaviour and step parameters are unchanged, but AWS
+  errors from these steps now surface as SDK v2 exceptions
+  (`software.amazon.awssdk.services...Exception`) rather than `com.amazonaws...AmazonServiceException`,
+  so build logs and anything scraping them will show different exception names and wording. The ELB
+  steps also log the raw AWS response, whose rendering differs between the two SDKs. A
+  `cfInvalidate(waitForCompletion: true)` that times out now fails with
+  `software.amazon.awssdk.core.exception.SdkClientException` - a core-package exception, not a
+  service one, so it does not match the prefix above - rather than
+  `com.amazonaws.waiters.WaiterTimedOutException`.
+* **Breaking**: `cfnValidate` no longer returns the undocumented `sdkResponseMetadata` and
+  `sdkHttpMetadata` keys. They were an artifact of serialising the AWS response object, which
+  exposed inherited HTTP plumbing; the documented fields (`description`, `parameters`,
+  `capabilities`, `capabilitiesReason`, `declaredTransforms`) are unchanged.
+* **Breaking**: `ecrDeleteImage` and `ecrSetRepositoryPolicy` now return maps rather than AWS SDK
+  objects - `[[imageTag: ..., imageDigest: ...]]` and
+  `[registryId: ..., repositoryName: ..., policyText: ...]` respectively. Reading fields off the
+  previous return value was not possible from a *sandboxed* pipeline - Jenkins script security
+  rejects field and getter access on SDK model classes - so for sandboxed scripts only `echo`
+  output changes, and those values are now readable. Scripts running outside the sandbox (approved
+  scripts, shared libraries) read those objects at different levels and must switch to the map keys:
+  `result.getRegistryId()` for `ecrSetRepositoryPolicy`'s single object becomes
+  `result.registryId`, and `result[0].getImageTag()` for an element of `ecrDeleteImage`'s list
+  becomes `result[0].imageTag`. `ecrListImages` already returned maps and is unchanged.
+* **Breaking**: `s3PresignURL` no longer accepts `httpMethod: 'POST'` or `'PATCH'`, and fails with
+  `httpMethod must be one of [GET, PUT, DELETE, HEAD]` instead. SDK v1 signed a URL for whatever HTTP
+  method it was handed; v2 presigns a specific S3 operation, and there is no presigner for either of
+  those. Note that a presigned POST URL was never how browser form uploads to S3 work - those use a
+  separate policy-document mechanism this step has never implemented - so a `POST` URL from this step
+  was unlikely to have been usable in the first place. The README previously used `POST` in its own
+  example; it now uses `PUT`.
+* **Breaking**: `s3PresignURL` now rejects a `durationInSeconds` outside 1..604800 (7 days) instead of
+  accepting it. SigV4 query-parameter presigning cannot express a longer expiry: v1 signed the URL
+  anyway and left S3 to reject it on use, while v2's signer throws, so the value is now checked up
+  front with a message naming the parameter.
+* `s3PresignURL` now honours `pathStyleAccessEnabled`, which reaches the presigner alongside the
+  other S3 options.
+* `s3Upload` now uses the AWS SDK v2 transfer manager, and fails the build if any file in a
+  directory or pattern upload could not be uploaded - SDK v1 threw in that case, while v2 reports
+  per-file failures on an otherwise successful transfer.
+* Fixed: `s3Upload` with `includePathPattern` and `kmsId` sent the KMS key id as the server-side
+  encryption *algorithm*. The single-file path set it correctly, so the two disagreed; both now go
+  through one translation.
+* `listAWSAccounts` now also returns a `state` field for each account. AWS retires the Organizations
+  `Status` field on 9 September 2026 in favour of `State`; each key falls back to the other, so
+  neither is `null` for a response that carries only one - whichever one that is. `state` carries
+  two values `status` never did, `PENDING_ACTIVATION` and `CLOSED`; `status` reports those only
+  where a response omits `Status`.
+* Fixed: an `sseAlgorithm` the SDK does not model - a typo such as `'AES-256'`, or an algorithm this
+  SDK version predates - was sent to S3 as the literal string `null` by `s3Upload` and `s3Copy`, so
+  the resulting error never named what was typed. SDK v2 maps an unrecognised value to a sentinel
+  whose string form is `"null"`; the value is now passed through verbatim as SDK v1 did, so a
+  genuinely new algorithm keeps working and a typo is reported by S3 against the value itself.
+* Synchronous AWS clients now share one HTTP connection pool per distinct socket-timeout, proxy and
+  connection-limit configuration, instead of creating one per step invocation. The SDK v2 Apache
+  client registers its connection manager with a process-static reaper and only deregisters it on
+  close, which nothing in this plugin does, so a long-running controller accumulated a pool per
+  `snsPublish`, `cfnUpdate`, `s3Delete`, `ecrLogin` or `withAWS(role: ...)`. SDK v1 leaked in the same
+  way; this is the point at which it stops.
+  Because the pool is now shared, its size is a process-wide limit on concurrent synchronous AWS
+  requests rather than a per-invocation one, so it is set to 500 rather than left at the SDK's
+  default of 50. Set `AWS_SDK_MAX_CONNECTIONS` to override it if a very wide `parallel` block still
+  exhausts it; the value forms part of the sharing key, so raising it takes effect rather than
+  reusing a pool built at the old size. See [Tuning](#tuning).
+* **Breaking**: a pipeline that wraps an agent-side `s3Upload` or `s3Download` in
+  `try`/`catch (com.amazonaws...AmazonS3Exception)` can no longer catch the AWS exception by type.
+  The v1 exception crossed the remoting channel intact; the v2 one does not, and arrives as
+  `hudson.remoting.ProxyException`. The AWS error message is preserved, so catching `Exception` and
+  inspecting the message still works.
+* `withAWS(credentials: ...)` now exports `AWS_SESSION_TOKEN` whenever the resolved credential
+  carries one, not only when `iamMfaToken` is supplied. SDK v1 read the token on the MFA path alone,
+  so a credential that resolved to a session credential without MFA was exported as a key and secret
+  with no token - a pair that cannot sign. Pipelines relying on that partial credential set will now
+  authenticate as the session was intended to.
+* Fixed: `withAWS(credentials: ...)` with a credential that carries no session token now clears any
+  inherited `AWS_SESSION_TOKEN` for the block, whether the credential is a Jenkins username/password
+  pair or an AWS credential. Nesting it inside `withAWS(role: ...)` previously signed the inner block
+  with the new key and secret and the outer block's token, which AWS rejects.
+  `withAWS(samlAssertion: ...)` clears it too.
+  Note the flip side: an `AWS_SESSION_TOKEN` set deliberately out of band - from `withEnv`, a global
+  environment variable, or a credentials binding - is no longer visible inside the block either,
+  since the step cannot distinguish it from a stale one. The drop is logged, unless `role` or
+  `federatedUserId` is also set, in which case those supply a token of their own.
+* `s3Download` of a directory keeps putting files where SDK v1 put them. SDK v2 resolves object keys
+  relative to the listing prefix, so `s3Download(bucket: 'b', path: 'a/b/', file: 'out')` would have
+  written `out/x.txt` where v1 wrote `out/a/b/x.txt` - a silent change, since the download itself
+  succeeds and only a later step reading the file by its full key path fails. The prefix is folded
+  into the destination so the v1 layout is preserved.
+* `s3Download` of a directory (a `path` ending in `/`, or no `path`) now fails the build if any
+  individual object could not be downloaded, listing each failure. SDK v1 threw in that case; SDK v2
+  reports per-file failures on an otherwise successful transfer, so without an explicit check a
+  partly-downloaded directory would have looked like a clean download.
+* `s3Copy` now uses the AWS SDK v2 transfer manager. The `acl` parameter keeps its v1 spellings
+  (`acl: 'PublicRead'`, not `'PUBLIC_READ'`) so existing Jenkinsfiles are unaffected.
+* Fixed: `s3Upload` of a directory sent every file with no bucket and no key, so the upload failed
+  for all of them. Fixed before release; it never shipped.
+* Fixed: `s3Upload` of a directory with a `path` ending in `/` named every object `prefix//name`.
+  Fixed before release; it never shipped.
+* Fixed: the first `s3Upload`, `s3Copy`, `s3Download` or `s3PresignURL` in a build no longer breaks
+  AWS credential resolution for everything after it. Those steps close their client when done, and an
+  SDK v2 client closes the credentials provider it was given - which, without explicit credentials or
+  a profile, is a process-wide shared instance. It is now wrapped so that closing a client leaves it
+  intact. Fixed before release; it never shipped - both the client-closing and the shared provider
+  arrived with the SDK v2 migration.
+* `s3Copy` and `s3Upload` again use a multipart transfer for large objects, at v1's settings: an
+  upload becomes multipart above 16 MiB with 5 MiB parts, a copy above 5 GiB with 100 MiB parts. SDK
+  v2's asynchronous client does no multipart transfer at all unless asked, and its own defaults are
+  8 MiB for everything.
+  Both halves are observable. The threshold decides whether an object gets a multipart ETag - a
+  digest of the part digests with a `-N` suffix, rather than the content MD5 - and the part size
+  decides that ETag's value and its `N`. A pipeline comparing an ETag against a locally computed
+  digest, or against one recorded from a previous run, depends on both.
+  `s3Download` does not use a multipart transfer. SDK v2 can fetch an object part by part - one
+  request per part it was uploaded with - but v1 had no such thing, a download was one request
+  however large the object, and unlike an upload or a copy there is no size at which a
+  single-request download is rejected. Leaving it off keeps v1's request count.
+* **Breaking**: `acl: 'LogDeliveryWrite'` is no longer accepted by `s3Copy` or `s3Upload`. It is a
+  bucket ACL, and SDK v2 models object and bucket canned ACLs separately, so it has no object-level
+  counterpart. S3 rejected it on an object under v1 too - what changes is that the build now fails
+  when the value is bound rather than when the request is sent.
+* This release adds the netty asynchronous HTTP client, which the v2 transfer manager requires. It is
+  the one AWS SDK module that ships to agents, since `s3Upload` and `s3Download` build their own
+  clients there.
+* `s3Delete`, `s3FindFiles` and `s3DoesObjectExist` now use the AWS SDK v2 S3 client. The
+  `pathStyleAccessEnabled` and `payloadSigningEnabled` parameters still work; v2 has no direct
+  equivalent of the latter, so it is expressed as disabling `aws-chunked` encoding, which is the
+  closest thing to v1's "sign the body in one piece".
+* When `withAWS(endpointUrl: ...)` points at a host outside `amazonaws.com`, S3 requests no longer add
+  the CRC32 checksum trailer that SDK 2.30 turned on by default. Several S3-compatible stores (MinIO
+  among them) reject it. An `endpointUrl` naming a real AWS endpoint - a documented way to pin a
+  regional endpoint - keeps the trailer, as does the no-override case.
+* A long `cfnUpdateStackSet` wait no longer fails with `StackOverflowError`. Both of its waits - the
+  operation wait on update, and the wait for a newly created stack set to become `ACTIVE` - were
+  implemented as one level of recursion per poll, so an operation that polled more times than the JVM
+  stack could hold died instead of returning. They are loops now. (`cfnDeleteStackSet` does not wait
+  at all, so it was never affected.)
+* `cfnUpdateStackSet` now fails with the observed status if the stack set reaches a state it is not
+  waiting for - `DELETED` while waiting for `ACTIVE`, or a status this SDK does not model - instead of
+  polling for a state that can no longer arrive.
+* `pollInterval: 0` on `cfnUpdateStackSet` now polls once a second rather than continuously, matching
+  the treatment the `cfnUpdate`/`cfnDelete` waiters already had. Positive values, including sub-second
+  ones, are unchanged.
+* The `cfnUpdateStackSet` documentation now states that its waits have no timeout and that
+  `timeoutInMinutes`/`timeoutInSeconds`, while accepted, do not apply to them. This has always been
+  the behaviour - nothing under the stack-set steps reads the timeout - it was simply undocumented.
+* With `pollInterval: 0`, the waiters behind `cfnUpdate`, `cfnDelete` and the change-set steps now
+  poll once a second rather than continuously. That value is documented as disabling event printing,
+  which it still does; previously it also reached the waiter's backoff, and with no attempt cap that
+  meant calling `DescribeStacks` in a tight loop for the whole timeout. Every positive interval,
+  including sub-second ones, is still passed through exactly. `cfnUpdateStackSet` polls through its
+  own loop rather than an SDK waiter, and gets the same one-second floor (see above);
+  `cfnDeleteStackSet` accepts `pollInterval` but never waits, so the parameter has no effect at all.
+* **Breaking**: `cfnUpdateStackSet` (including its `create: true` path) now returns a map instead of
+  the AWS `DescribeStackSet` response object - for example `result.stackSet.stackSetId`. The v2 response
+  types are not `Serializable`, so holding the old value across a step boundary
+  (`def r = cfnUpdateStackSet(...); echo "${r}"`) would have failed the build with
+  `NotSerializableException`. As with the ECR steps, sandboxed pipelines could not read fields off
+  the previous value at all; non-sandboxed scripts calling `getStackSet()` must switch to the map
+  keys.
+* The `ecrDeleteImage` documentation previously named the step `ecrDeleteImages`, which does not
+  exist; copying that example failed with `No such DSL method`. The docs now match the step.
+* `createDeployment` no longer fails with a `NullPointerException` when `waitForCompletion` is
+  omitted; the parameter is optional and now defaults to not waiting.
+* `createDeployment` again rejects an unrecognised `fileExistsBehavior` before calling AWS, with
+  the same `Cannot create enum from ... value!` message as before. The AWS SDK v2 does not fail on
+  unknown enum values, so without this the typo would have reached AWS as an empty value.
+* `createDeployment` (with `waitForCompletion`) and `awaitDeploymentCompletion` can now be
+  interrupted: aborting a build while either was waiting left the step polling CodeDeploy until
+  the deployment itself reached a terminal state, so the build did not stop when it was aborted.
+  This is a long-standing bug, present in 1.45 and earlier, not a regression introduced by the
+  SDK v2 migration.
+* `ebCreateConfigurationTemplate` now logs the application name in its completion message, which
+  previously repeated the template name.
 
 ## 1.45
 ### Enhanced ECS and Lambda Deployment Support
