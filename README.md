@@ -52,10 +52,10 @@ This plugins adds Jenkins pipeline steps to interact with the AWS API.
 
 [**see the changelog for release information**](#changelog)
 
-# Upgrading to 2.0
+# Upgrading from 1.45
 
-2.0 replaces the AWS SDK for Java 1.x - which reached end of life on 31 December 2025 - with the
-AWS SDK for Java 2.x throughout the plugin
+The next release replaces the AWS SDK for Java 1.x - which reached end of life on 31 December 2025 -
+with the AWS SDK for Java 2.x throughout the plugin
 ([#341](https://github.com/jenkinsci/pipeline-aws-plugin/issues/341),
 [JENKINS-73650](https://issues.jenkins.io/browse/JENKINS-73650)). Step names and parameters are
 unchanged, and the legacy v1 spellings of parameter values (`acl: 'PublicRead'`, CloudFormation

@@ -43,7 +43,6 @@ import com.cloudbees.plugins.credentials.CredentialsProvider;
 import com.cloudbees.plugins.credentials.common.StandardListBoxModel;
 import com.cloudbees.plugins.credentials.common.StandardUsernamePasswordCredentials;
 
-import org.apache.commons.lang.StringUtils;
 import software.amazon.awssdk.auth.credentials.AwsCredentials;
 import software.amazon.awssdk.identity.spi.AwsSessionCredentialsIdentity;
 import software.amazon.awssdk.services.sts.StsClient;
@@ -323,7 +322,7 @@ public class WithAWSStep extends Step {
 				+ "\"Effect\":\"Allow\",\"Resource\":\"*\"}]}";
 
 		private void withFederatedUserId(@NonNull EnvVars localEnv) {
-			if (!StringUtils.isEmpty(this.step.getFederatedUserId())) {
+			if (this.step.getFederatedUserId() != null && !this.step.getFederatedUserId().isEmpty()) {
 				StsClient sts = AWSClientFactory.create(StsClient.builder(), this.getContext(), this.envVars);
 				GetFederationTokenRequest getFederationTokenRequest = GetFederationTokenRequest.builder()
 						.durationSeconds(this.step.getDuration())
@@ -362,9 +361,10 @@ public class WithAWSStep extends Step {
 		 * assertion with a role.
 		 */
 		private void clearInheritedSessionToken(@NonNull EnvVars localEnv) throws IOException, InterruptedException {
-			boolean aLaterStageSuppliesOne = !StringUtils.isEmpty(this.step.getRole())
-					|| !StringUtils.isEmpty(this.step.getFederatedUserId());
-			if (!aLaterStageSuppliesOne && !StringUtils.isEmpty(this.envVars.get(AWSClientFactory.AWS_SESSION_TOKEN))) {
+			boolean aLaterStageSuppliesOne = (this.step.getRole() != null && !this.step.getRole().isEmpty())
+					|| (this.step.getFederatedUserId() != null && !this.step.getFederatedUserId().isEmpty());
+			String inheritedToken = this.envVars.get(AWSClientFactory.AWS_SESSION_TOKEN);
+			if (!aLaterStageSuppliesOne && inheritedToken != null && !inheritedToken.isEmpty()) {
 				this.getContext().get(TaskListener.class).getLogger().println(
 						"Dropping the inherited AWS_SESSION_TOKEN: these credentials do not carry one");
 			}
@@ -372,7 +372,7 @@ public class WithAWSStep extends Step {
 		}
 
 		private void withCredentials(@NonNull Run<?, ?> run, @NonNull EnvVars localEnv) throws IOException, InterruptedException {
-			if (!StringUtils.isEmpty(this.step.getCredentials())) {
+			if (this.step.getCredentials() != null && !this.step.getCredentials().isEmpty()) {
 				StandardUsernamePasswordCredentials usernamePasswordCredentials = CredentialsProvider.findCredentialById(this.step.getCredentials(),
 						StandardUsernamePasswordCredentials.class, run, Collections.emptyList());
 
@@ -385,7 +385,7 @@ public class WithAWSStep extends Step {
 				} else if (amazonWebServicesCredentials != null) {
 					AwsCredentials awsCredentials;
 
-					if (StringUtils.isEmpty(this.step.getIamMfaToken())) {
+					if (this.step.getIamMfaToken() == null || this.step.getIamMfaToken().isEmpty()) {
 						this.getContext().get(TaskListener.class).getLogger().format("Constructing AWS Credentials");
 						awsCredentials = amazonWebServicesCredentials.resolveCredentials();
 					} else {
@@ -413,7 +413,7 @@ public class WithAWSStep extends Step {
 				} else {
 					throw new RuntimeException("Cannot find a Username with password credential with the ID " + this.step.getCredentials());
 				}
-			} else if (!StringUtils.isEmpty(this.step.getSamlAssertion())) {
+			} else if (this.step.getSamlAssertion() != null && !this.step.getSamlAssertion().isEmpty()) {
 				localEnv.override(AWSClientFactory.AWS_ACCESS_KEY_ID, "access_key_not_used_will_pass_through_SAML_assertion");
 				localEnv.override(AWSClientFactory.AWS_SECRET_ACCESS_KEY, "secret_access_key_not_used_will_pass_through_SAML_assertion");
 				// Placeholders rather than real keys, so a stale token alongside them is no more valid.
@@ -425,7 +425,7 @@ public class WithAWSStep extends Step {
 		}
 
 		private void withRole(@NonNull EnvVars localEnv) throws IOException, InterruptedException {
-			if (!StringUtils.isEmpty(this.step.getRole())) {
+			if (this.step.getRole() != null && !this.step.getRole().isEmpty()) {
 
 				StsClient sts = AWSClientFactory.create(StsClient.builder(), this.getContext(), this.envVars);
 
@@ -450,7 +450,7 @@ public class WithAWSStep extends Step {
 		}
 
 		private void withRegion(@NonNull EnvVars localEnv) throws IOException, InterruptedException {
-			if (!StringUtils.isEmpty(this.step.getRegion())) {
+			if (this.step.getRegion() != null && !this.step.getRegion().isEmpty()) {
 				this.getContext().get(TaskListener.class).getLogger().format("Setting AWS region %s %n ", this.step.getRegion());
 				localEnv.override(AWSClientFactory.AWS_DEFAULT_REGION, this.step.getRegion());
 				localEnv.override(AWSClientFactory.AWS_REGION, this.step.getRegion());
@@ -459,7 +459,7 @@ public class WithAWSStep extends Step {
 		}
 
 		private void withEndpointUrl(@NonNull EnvVars localEnv) throws IOException, InterruptedException {
-			if (!StringUtils.isEmpty(this.step.getEndpointUrl())) {
+			if (this.step.getEndpointUrl() != null && !this.step.getEndpointUrl().isEmpty()) {
 				this.getContext().get(TaskListener.class).getLogger().format("Setting AWS endpointUrl %s %n ", this.step.getEndpointUrl());
 				localEnv.override(AWSClientFactory.AWS_ENDPOINT_URL, this.step.getEndpointUrl());
 				this.envVars.overrideAll(localEnv);
@@ -467,7 +467,7 @@ public class WithAWSStep extends Step {
 		}
 
 		private void withProfile(@NonNull EnvVars localEnv) throws IOException, InterruptedException {
-			if (!StringUtils.isEmpty(this.step.getProfile())) {
+			if (this.step.getProfile() != null && !this.step.getProfile().isEmpty()) {
 				this.getContext().get(TaskListener.class).getLogger().format("Setting AWS profile %s %n ", this.step.getProfile());
 				localEnv.override(AWSClientFactory.AWS_DEFAULT_PROFILE, this.step.getProfile());
 				localEnv.override(AWSClientFactory.AWS_PROFILE, this.step.getProfile());
@@ -476,7 +476,7 @@ public class WithAWSStep extends Step {
 		}
 
 		private String createRoleSessionName() {
-			if (StringUtils.isEmpty(this.step.roleSessionName)) {
+			if (this.step.roleSessionName == null || this.step.roleSessionName.isEmpty()) {
 				return RoleSessionNameBuilder
 						.withJobName(this.envVars.get("JOB_NAME"))
 						.withBuildNumber(this.envVars.get("BUILD_NUMBER"))
@@ -487,7 +487,7 @@ public class WithAWSStep extends Step {
 		}
 
 		private String createAccountId(final StsClient sts) {
-			if (!StringUtils.isEmpty(this.step.getRoleAccount())) {
+			if (this.step.getRoleAccount() != null && !this.step.getRoleAccount().isEmpty()) {
 				return this.step.getRoleAccount();
 			} else {
 				return sts.getCallerIdentity(GetCallerIdentityRequest.builder().build()).account();

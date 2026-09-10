@@ -23,7 +23,6 @@ package de.taimos.pipeline.aws;
 import hudson.EnvVars;
 import hudson.FilePath;
 import hudson.model.TaskListener;
-import org.apache.commons.lang.StringUtils;
 import org.jenkinsci.plugins.workflow.steps.StepContext;
 import org.kohsuke.accmod.Restricted;
 import org.kohsuke.accmod.restrictions.NoExternalUse;
@@ -120,7 +119,7 @@ public class AWSClientFactory implements Serializable {
 		// v1 treats region and endpoint as mutually exclusive, but v2 needs a region for request
 		// signing even when the endpoint is overridden, so the region is always resolved here.
 		String endpointUrl = vars.get(AWS_ENDPOINT_URL);
-		if (StringUtils.isNotBlank(endpointUrl)) {
+		if (endpointUrl != null && !endpointUrl.isBlank()) {
 			clientBuilder.region(getV2RegionForEndpoint(vars, endpointUrl));
 			clientBuilder.endpointOverride(URI.create(endpointUrl));
 			relaxChecksumsForNonAwsEndpoint(clientBuilder, endpointUrl);
@@ -163,7 +162,7 @@ public class AWSClientFactory implements Serializable {
 				.credentialsProvider(getV2Credentials(vars, context));
 
 		String endpointUrl = vars.get(AWS_ENDPOINT_URL);
-		if (StringUtils.isNotBlank(endpointUrl)) {
+		if (endpointUrl != null && !endpointUrl.isBlank()) {
 			presigner.region(getV2RegionForEndpoint(vars, endpointUrl));
 			presigner.endpointOverride(URI.create(endpointUrl));
 		} else {

@@ -22,7 +22,6 @@
 package de.taimos.pipeline.aws.cloudformation;
 
 import hudson.model.TaskListener;
-import org.apache.commons.lang.StringUtils;
 import software.amazon.awssdk.services.cloudformation.CloudFormationClient;
 import software.amazon.awssdk.services.cloudformation.model.CloudFormationException;
 import software.amazon.awssdk.services.cloudformation.model.DescribeStackEventsRequest;
@@ -146,7 +145,7 @@ class EventPrinter {
 	}
 
 	private void printLine() {
-		this.listener.getLogger().println(StringUtils.repeat("-", 231));
+		this.listener.getLogger().println("-".repeat(231));
 	}
 
 	private void printStackName(String stackName) {
