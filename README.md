@@ -120,8 +120,8 @@ configuration - and they apply to the steps that run inside that scope.
 | `AWS_SDK_MAX_CONNECTIONS` | `500` | Maximum concurrent connections across all synchronous AWS requests in the controller. |
 
 `AWS_SDK_RETRIES` and `AWS_SDK_SOCKET_TIMEOUT` have been available since 751.v34a_8f1c5f312.
-`AWS_SDK_MAX_CONNECTIONS` arrives in the next release (see [current master](#current-master)) and is
-ignored by earlier ones.
+`AWS_SDK_MAX_CONNECTIONS` arrives with the AWS SDK v2 migration and is ignored by
+751.v34a_8f1c5f312 and earlier.
 
 `AWS_SDK_MAX_CONNECTIONS` is worth raising only if a very wide `parallel` block fails with
 `ConnectionPoolTimeoutException`; the limit is process-wide because the underlying connection pool is
