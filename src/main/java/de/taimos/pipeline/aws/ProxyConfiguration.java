@@ -238,7 +238,13 @@ class ProxyConfiguration {
 		private String host;
 		private int port = UNSET_PORT;
 		private String username;
-		private String password;
+		// transient although this class is not Serializable. This holder is built and discarded
+		// inside a static method, so the modifier is inert today; it is here to keep the field out of
+		// any future serialized form, and to tell the Jenkins Security Scan's
+		// jenkins/plaintext-storage query - which matches on field name alone, with no persistence
+		// analysis - that this is not a stored credential. Note the proxy password still reaches
+		// agents the way it always has, inside the EnvVars carrying HTTPS_PROXY.
+		private transient String password;
 		private Set<String> nonProxyHosts;
 
 		private software.amazon.awssdk.http.apache.ProxyConfiguration toProxyConfiguration() {
