@@ -67,7 +67,7 @@ What you do need to check before upgrading:
 * **Your controller must run Jenkins 2.541.1 or newer**, and `aws-credentials` 265 or newer (the
   version the plugin BOM supplies; the credentials API this plugin needs first shipped in
   238.v8fb_588a_2b_e67). If you cannot move the controller, earlier releases have lower floors:
-  those from 751.v34a_8f1c5f312 onward need 2.479.3, and 1.45 and earlier need 2.414.3.
+  751.v34a_8f1c5f312 needs 2.479.3, and 1.45 needs 2.414.3.
 * **`s3PresignURL`** now presigns a specific S3 operation rather than signing an arbitrary URL, so
   `httpMethod` must be one of `GET`, `PUT`, `DELETE`, `HEAD` - `POST` and `PATCH` are rejected - and
   `durationInSeconds` must be within 1..604800 (7 days).
@@ -118,6 +118,9 @@ configuration - and they apply to the steps that run inside that scope.
 | `AWS_SDK_RETRIES` | `10` | Retries per request, on top of the initial attempt. |
 | `AWS_SDK_SOCKET_TIMEOUT` | `50000` | Socket timeout in milliseconds. |
 | `AWS_SDK_MAX_CONNECTIONS` | `500` | Maximum concurrent connections across all synchronous AWS requests in the controller. |
+
+`AWS_SDK_RETRIES` and `AWS_SDK_SOCKET_TIMEOUT` have been available since 751.v34a_8f1c5f312;
+`AWS_SDK_MAX_CONNECTIONS` is new in this release and is ignored by earlier ones.
 
 `AWS_SDK_MAX_CONNECTIONS` is worth raising only if a very wide `parallel` block fails with
 `ConnectionPoolTimeoutException`; the limit is process-wide because the underlying connection pool is
@@ -1417,8 +1420,8 @@ changes" - Release Drafter had no published predecessor to compare against. 1.45
 28 March 2024, so this release is in fact the first to carry everything merged since then:
 
 * **Breaking**: requires Jenkins 2.479.3 or newer, up from 2.414.3, along with a new parent POM and
-  plugin BOM ([#348](https://github.com/jenkinsci/pipeline-aws-plugin/pull/348)). 1.45 and earlier
-  require only 2.414.3.
+  plugin BOM ([#348](https://github.com/jenkinsci/pipeline-aws-plugin/pull/348)). 1.45 requires
+  2.414.3; releases before it require less still.
 * `AWS_SDK_RETRIES` and `AWS_SDK_SOCKET_TIMEOUT` configure the AWS client's retry count and socket
   timeout ([#327](https://github.com/jenkinsci/pipeline-aws-plugin/pull/327)). Merged in February
   2025 and undocumented until now; see [Tuning](#tuning).
