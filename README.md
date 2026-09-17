@@ -52,7 +52,7 @@ This plugins adds Jenkins pipeline steps to interact with the AWS API.
 
 [**see the changelog for release information**](#changelog)
 
-# Upgrading from 1.45
+# Upgrading from 751.v34a_8f1c5f312
 
 The next release replaces the AWS SDK for Java 1.x - which reached end of life on 31 December 2025 -
 with the AWS SDK for Java 2.x throughout the plugin
@@ -66,7 +66,8 @@ What you do need to check before upgrading:
 
 * **Your controller must run Jenkins 2.541.1 or newer**, and `aws-credentials` 265 or newer (the
   version the plugin BOM supplies; the credentials API this plugin needs first shipped in
-  238.v8fb_588a_2b_e67). 1.45 is the last release usable on older controllers.
+  238.v8fb_588a_2b_e67). 751.v34a_8f1c5f312 is the last release usable on controllers older than
+  2.541.1, and 1.45 the last usable on controllers older than 2.479.3.
 * **`s3PresignURL`** now presigns a specific S3 operation rather than signing an arbitrary URL, so
   `httpMethod` must be one of `GET`, `PUT`, `DELETE`, `HEAD` - `POST` and `PATCH` are rejected - and
   `durationInSeconds` must be within 1..604800 (7 days).
@@ -1224,8 +1225,8 @@ ebWaitOnEnvironmentHealth(
 * **Breaking**: requires Jenkins 2.541.1 or newer. The plugin's parent POM and plugin BOM were
   updated to the 2.541 baseline in preparation for the migration to the AWS SDK for Java 2.x
   ([#341](https://github.com/jenkinsci/pipeline-aws-plugin/issues/341),
-  [JENKINS-73650](https://issues.jenkins.io/browse/JENKINS-73650)). 1.45 is the last release usable
-  on controllers older than 2.541.1.
+  [JENKINS-73650](https://issues.jenkins.io/browse/JENKINS-73650)). 751.v34a_8f1c5f312 is the last
+  release usable on controllers older than 2.541.1.
 * Migrated to the AWS SDK for Java 2.x: `snsPublish`, `ec2ShareAmi`, `setAccountAlias`, `updateIdP`,
   `updateTrustPolicy`, `listAWSAccounts`, `elbRegisterInstance`, `elbDeregisterInstance`,
   `elbIsInstanceRegistered`, `elbIsInstanceDeregistered`, `createDeployment`,
@@ -1404,10 +1405,28 @@ ebWaitOnEnvironmentHealth(
 * `createDeployment` (with `waitForCompletion`) and `awaitDeploymentCompletion` can now be
   interrupted: aborting a build while either was waiting left the step polling CodeDeploy until
   the deployment itself reached a terminal state, so the build did not stop when it was aborted.
-  This is a long-standing bug, present in 1.45 and earlier, not a regression introduced by the
-  SDK v2 migration.
+  This is a long-standing bug, present in 751.v34a_8f1c5f312 and earlier, not a regression
+  introduced by the SDK v2 migration.
 * `ebCreateConfigurationTemplate` now logs the application name in its completion message, which
   previously repeated the template name.
+
+## 751.v34a_8f1c5f312
+
+The first release cut by JEP-229 continuous delivery, so its generated release notes read "No
+changes" - Release Drafter had no published predecessor to compare against. It carries no step
+behaviour changes, but it is not a no-op:
+
+* **Breaking**: requires Jenkins 2.479.3 or newer, up from 2.414.3
+  ([#352](https://github.com/jenkinsci/pipeline-aws-plugin/pull/352)). 1.45 is the last release
+  usable on older controllers.
+* Releases are now published continuously and versioned from the git commit count and hash rather
+  than from `<revision>` in `pom.xml`, so version numbers no longer carry semantic meaning
+  ([#352](https://github.com/jenkinsci/pipeline-aws-plugin/pull/352)).
+* Replaced Apache Commons Lang 2 with JDK APIs and banned its reintroduction
+  ([#348](https://github.com/jenkinsci/pipeline-aws-plugin/pull/348)).
+* Enabled the Jenkins Security Scan
+  ([#357](https://github.com/jenkinsci/pipeline-aws-plugin/pull/357)) and Renovate
+  ([#353](https://github.com/jenkinsci/pipeline-aws-plugin/pull/353)).
 
 ## 1.45
 ### Enhanced ECS and Lambda Deployment Support
