@@ -25,7 +25,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
-import javax.annotation.Nonnull;
+import edu.umd.cs.findbugs.annotations.NonNull;
 
 import org.jenkinsci.plugins.workflow.steps.Step;
 import org.jenkinsci.plugins.workflow.steps.StepContext;
@@ -34,10 +34,9 @@ import org.jenkinsci.plugins.workflow.steps.StepExecution;
 import org.jenkinsci.plugins.workflow.steps.SynchronousNonBlockingStepExecution;
 import org.kohsuke.stapler.DataBoundConstructor;
 
-import com.amazonaws.services.securitytoken.AWSSecurityTokenService;
-import com.amazonaws.services.securitytoken.AWSSecurityTokenServiceClientBuilder;
-import com.amazonaws.services.securitytoken.model.GetCallerIdentityRequest;
-import com.amazonaws.services.securitytoken.model.GetCallerIdentityResult;
+import software.amazon.awssdk.services.sts.StsClient;
+import software.amazon.awssdk.services.sts.model.GetCallerIdentityRequest;
+import software.amazon.awssdk.services.sts.model.GetCallerIdentityResponse;
 
 import de.taimos.pipeline.aws.utils.StepUtils;
 import hudson.Extension;
@@ -76,21 +75,21 @@ public class AWSIdentityStep extends Step {
 
 	public static class Execution extends SynchronousNonBlockingStepExecution<Map<String, String>> {
 
-		protected Execution(@Nonnull StepContext context) {
+		protected Execution(@NonNull StepContext context) {
 			super(context);
 		}
 
 		@Override
 		protected Map<String, String> run() throws Exception {
-			AWSSecurityTokenService sts = AWSClientFactory.create(AWSSecurityTokenServiceClientBuilder.standard(), this.getContext());
-			GetCallerIdentityResult identity = sts.getCallerIdentity(new GetCallerIdentityRequest());
+			StsClient sts = AWSClientFactory.create(StsClient.builder(), this.getContext());
+			GetCallerIdentityResponse identity = sts.getCallerIdentity(GetCallerIdentityRequest.builder().build());
 
-			this.getContext().get(TaskListener.class).getLogger().format("Current AWS identity: %s - %s - %s %n", identity.getAccount(), identity.getUserId(), identity.getArn());
+			this.getContext().get(TaskListener.class).getLogger().format("Current AWS identity: %s - %s - %s %n", identity.account(), identity.userId(), identity.arn());
 
 			Map<String, String> info = new HashMap<>();
-			info.put("account", identity.getAccount());
-			info.put("user", identity.getUserId());
-			info.put("arn", identity.getArn());
+			info.put("account", identity.account());
+			info.put("user", identity.userId());
+			info.put("arn", identity.arn());
 			return info;
 		}
 

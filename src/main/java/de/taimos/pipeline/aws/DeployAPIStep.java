@@ -33,9 +33,8 @@ import org.jenkinsci.plugins.workflow.steps.SynchronousNonBlockingStepExecution;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
 
-import com.amazonaws.services.apigateway.AmazonApiGateway;
-import com.amazonaws.services.apigateway.AmazonApiGatewayClient;
-import com.amazonaws.services.apigateway.model.CreateDeploymentRequest;
+import software.amazon.awssdk.services.apigateway.ApiGatewayClient;
+import software.amazon.awssdk.services.apigateway.model.CreateDeploymentRequest;
 
 import de.taimos.pipeline.aws.utils.StepUtils;
 import hudson.Extension;
@@ -116,24 +115,24 @@ public class DeployAPIStep extends Step {
 		@Override
 		protected Void run() throws Exception {
 			TaskListener listener = this.getContext().get(TaskListener.class);
-			AmazonApiGateway client = AWSClientFactory.create(AmazonApiGatewayClient.builder(), this.getContext());
+			ApiGatewayClient client = AWSClientFactory.create(ApiGatewayClient.builder(), this.getContext());
 
 			String stage = this.step.getStage();
 			String api = this.step.getApi();
 
 			listener.getLogger().format("Deploying API %s to stage %s %n", api, stage);
 
-			CreateDeploymentRequest request = new CreateDeploymentRequest();
-			request.withRestApiId(api);
-			request.withStageName(stage);
+			CreateDeploymentRequest.Builder request = CreateDeploymentRequest.builder()
+					.restApiId(api)
+					.stageName(stage);
 			if (this.step.getDescription() != null) {
-				request.withDescription(this.step.getDescription());
+				request.description(this.step.getDescription());
 			}
 			if (this.step.getVariables() != null && this.step.getVariables().length > 0) {
-				request.withVariables(this.parseVariables(this.step.getVariables()));
+				request.variables(this.parseVariables(this.step.getVariables()));
 			}
 
-			client.createDeployment(request);
+			client.createDeployment(request.build());
 
 			listener.getLogger().println("Deployment complete");
 			return null;

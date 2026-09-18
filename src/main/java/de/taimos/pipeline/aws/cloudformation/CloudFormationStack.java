@@ -21,30 +21,32 @@
 
 package de.taimos.pipeline.aws.cloudformation;
 
-import com.amazonaws.services.cloudformation.AmazonCloudFormation;
-import com.amazonaws.services.cloudformation.model.AmazonCloudFormationException;
-import com.amazonaws.services.cloudformation.model.Capability;
-import com.amazonaws.services.cloudformation.model.ChangeSetStatus;
-import com.amazonaws.services.cloudformation.model.ChangeSetType;
-import com.amazonaws.services.cloudformation.model.CreateChangeSetRequest;
-import com.amazonaws.services.cloudformation.model.CreateStackRequest;
-import com.amazonaws.services.cloudformation.model.DeleteChangeSetRequest;
-import com.amazonaws.services.cloudformation.model.DeleteStackRequest;
-import com.amazonaws.services.cloudformation.model.DescribeChangeSetRequest;
-import com.amazonaws.services.cloudformation.model.DescribeChangeSetResult;
-import com.amazonaws.services.cloudformation.model.DescribeStacksRequest;
-import com.amazonaws.services.cloudformation.model.DescribeStacksResult;
-import com.amazonaws.services.cloudformation.model.ExecuteChangeSetRequest;
-import com.amazonaws.services.cloudformation.model.OnFailure;
-import com.amazonaws.services.cloudformation.model.Output;
-import com.amazonaws.services.cloudformation.model.Parameter;
-import com.amazonaws.services.cloudformation.model.RollbackConfiguration;
-import com.amazonaws.services.cloudformation.model.Stack;
-import com.amazonaws.services.cloudformation.model.Tag;
-import com.amazonaws.services.cloudformation.model.UpdateStackRequest;
-import com.amazonaws.waiters.Waiter;
+import software.amazon.awssdk.core.retry.backoff.FixedDelayBackoffStrategy;
+import software.amazon.awssdk.core.waiters.WaiterOverrideConfiguration;
+import software.amazon.awssdk.services.cloudformation.CloudFormationClient;
+import software.amazon.awssdk.services.cloudformation.model.CloudFormationException;
+import software.amazon.awssdk.services.cloudformation.model.Capability;
+import software.amazon.awssdk.services.cloudformation.model.ChangeSetStatus;
+import software.amazon.awssdk.services.cloudformation.model.ChangeSetType;
+import software.amazon.awssdk.services.cloudformation.model.CreateChangeSetRequest;
+import software.amazon.awssdk.services.cloudformation.model.CreateStackRequest;
+import software.amazon.awssdk.services.cloudformation.model.DeleteChangeSetRequest;
+import software.amazon.awssdk.services.cloudformation.model.DeleteStackRequest;
+import software.amazon.awssdk.services.cloudformation.model.DescribeChangeSetRequest;
+import software.amazon.awssdk.services.cloudformation.model.DescribeChangeSetResponse;
+import software.amazon.awssdk.services.cloudformation.model.DescribeStacksRequest;
+import software.amazon.awssdk.services.cloudformation.model.DescribeStacksResponse;
+import software.amazon.awssdk.services.cloudformation.model.ExecuteChangeSetRequest;
+import software.amazon.awssdk.services.cloudformation.model.OnFailure;
+import software.amazon.awssdk.services.cloudformation.model.Output;
+import software.amazon.awssdk.services.cloudformation.model.Parameter;
+import software.amazon.awssdk.services.cloudformation.model.RollbackConfiguration;
+import software.amazon.awssdk.services.cloudformation.model.Stack;
+import software.amazon.awssdk.services.cloudformation.model.Tag;
+import software.amazon.awssdk.services.cloudformation.model.UpdateStackRequest;
 import hudson.model.TaskListener;
 
+import java.time.Duration;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
@@ -54,11 +56,11 @@ public class CloudFormationStack {
 
 	private static final String UPDATE_STATUS_OUTPUT = "jenkinsStackUpdateStatus";
 
-	private final AmazonCloudFormation client;
+	private final CloudFormationClient client;
 	private final String stack;
 	private final TaskListener listener;
 
-	public CloudFormationStack(AmazonCloudFormation client, String stack, TaskListener listener) {
+	public CloudFormationStack(CloudFormationClient client, String stack, TaskListener listener) {
 		if (listener == null) {
 			throw new IllegalStateException("listener is null");
 		}
@@ -69,20 +71,20 @@ public class CloudFormationStack {
 
 	public boolean exists() {
 		try {
-			DescribeStacksResult result = this.client.describeStacks(new DescribeStacksRequest().withStackName(this.stack));
+			DescribeStacksResponse result = this.client.describeStacks(DescribeStacksRequest.builder().stackName(this.stack).build());
 			if (this.listener.getLogger() == null) {
 				throw new IllegalStateException("logger is null");
 			}
-			this.listener.getLogger().format("Found %d stacks in result %n", result.getStacks().size());
-			for (Stack stack : result.getStacks()) {
-				this.listener.getLogger().format("Found stackName=%s stackId=%s status=%s statusReason=%s in result %n", stack.getStackName(), stack.getStackId(), stack.getStackStatus(), stack.getStackStatusReason());
+			this.listener.getLogger().format("Found %d stacks in result %n", result.stacks().size());
+			for (Stack stack : result.stacks()) {
+				this.listener.getLogger().format("Found stackName=%s stackId=%s status=%s statusReason=%s in result %n", stack.stackName(), stack.stackId(), stack.stackStatusAsString(), stack.stackStatusReason());
 			}
-			return !result.getStacks().isEmpty();
-		} catch (AmazonCloudFormationException e) {
-			this.listener.getLogger().format("Got error from describeStacks: %s %n", e.getErrorMessage());
-			if ("AccessDenied".equals(e.getErrorCode())) {
+			return !result.stacks().isEmpty();
+		} catch (CloudFormationException e) {
+			this.listener.getLogger().format("Got error from describeStacks: %s %n", e.awsErrorDetails().errorMessage());
+			if ("AccessDenied".equals(e.awsErrorDetails().errorCode())) {
 				throw e;
-			} else if ("ValidationError".equals(e.getErrorCode()) && e.getErrorMessage().contains("does not exist")) {
+			} else if ("ValidationError".equals(e.awsErrorDetails().errorCode()) && e.awsErrorDetails().errorMessage().contains("does not exist")) {
 				return false;
 			} else {
 				throw e;
@@ -92,12 +94,12 @@ public class CloudFormationStack {
 
 	public boolean changeSetExists(String changeSetName) {
 		try {
-			DescribeChangeSetResult result = this.client.describeChangeSet(new DescribeChangeSetRequest().withStackName(this.stack).withChangeSetName(changeSetName));
-			this.listener.getLogger().format("Found changeSet=%s status=%s statusReason=%s %n", result.getChangeSetName(), result.getStatus(), result.getStatusReason());
+			DescribeChangeSetResponse result = this.client.describeChangeSet(DescribeChangeSetRequest.builder().stackName(this.stack).changeSetName(changeSetName).build());
+			this.listener.getLogger().format("Found changeSet=%s status=%s statusReason=%s %n", result.changeSetName(), result.statusAsString(), result.statusReason());
 			return true;
-		} catch (AmazonCloudFormationException e) {
-			this.listener.getLogger().format("Got error from describeStacks: %s %n", e.getErrorMessage());
-			if ("AccessDenied".equals(e.getErrorCode())) {
+		} catch (CloudFormationException e) {
+			this.listener.getLogger().format("Got error from describeStacks: %s %n", e.awsErrorDetails().errorMessage());
+			if ("AccessDenied".equals(e.awsErrorDetails().errorCode())) {
 				throw e;
 			}
 			return false;
@@ -105,18 +107,18 @@ public class CloudFormationStack {
 	}
 
 	private boolean emptyChangeSet(String changeSetName) {
-		DescribeChangeSetResult result = this.client.describeChangeSet(new DescribeChangeSetRequest().withStackName(this.stack).withChangeSetName(changeSetName));
-		return ChangeSetStatus.FAILED.name().equals(result.getStatus()) &&
-				(result.getStatusReason().toLowerCase().contains("the submitted information didn't contain changes") ||
-				result.getStatusReason().toLowerCase().contains("no updates are to be performed"));
+		DescribeChangeSetResponse result = this.client.describeChangeSet(DescribeChangeSetRequest.builder().stackName(this.stack).changeSetName(changeSetName).build());
+		return ChangeSetStatus.FAILED.toString().equals(result.statusAsString()) &&
+				(result.statusReason().toLowerCase().contains("the submitted information didn't contain changes") ||
+				result.statusReason().toLowerCase().contains("no updates are to be performed"));
 	}
 
 	public Map<String, String> describeOutputs() {
-		DescribeStacksResult result = this.client.describeStacks(new DescribeStacksRequest().withStackName(this.stack));
-		Stack cfnStack = result.getStacks().get(0);
+		DescribeStacksResponse result = this.client.describeStacks(DescribeStacksRequest.builder().stackName(this.stack).build());
+		Stack cfnStack = result.stacks().get(0);
 		Map<String, String> map = new HashMap<>();
-		for (Output output : cfnStack.getOutputs()) {
-			map.put(output.getOutputKey(), output.getOutputValue());
+		for (Output output : cfnStack.outputs()) {
+			map.put(output.outputKey(), output.outputValue());
 		}
 		return map;
 	}
@@ -126,19 +128,50 @@ public class CloudFormationStack {
 			throw new IllegalArgumentException("Either a file or url for the template must be specified");
 		}
 
-		CreateStackRequest req = new CreateStackRequest();
-		req.withStackName(this.stack).withCapabilities(Capability.CAPABILITY_IAM, Capability.CAPABILITY_NAMED_IAM, Capability.CAPABILITY_AUTO_EXPAND).withEnableTerminationProtection(enableTerminationProtection);
-		req.withTemplateBody(templateBody).withTemplateURL(templateUrl).withParameters(params).withTags(tags).withNotificationARNs(notificationARNs)
-				.withTimeoutInMinutes((int) pollConfiguration.getTimeout().toMinutes())
-				.withRoleARN(roleArn)
-				.withOnFailure(OnFailure.valueOf(onFailure));
+		CreateStackRequest req = CreateStackRequest.builder()
+				.stackName(this.stack)
+				.capabilities(Capability.CAPABILITY_IAM, Capability.CAPABILITY_NAMED_IAM, Capability.CAPABILITY_AUTO_EXPAND)
+				.enableTerminationProtection(enableTerminationProtection)
+				.templateBody(templateBody)
+				.templateURL(templateUrl)
+				.parameters(params)
+				.tags(tags)
+				.notificationARNs(notificationARNs)
+				.timeoutInMinutes((int) pollConfiguration.getTimeout().toMinutes())
+				.roleARN(roleArn)
+				.onFailure(OnFailure.valueOf(onFailure))
+				.build();
 		this.client.createStack(req);
 
-		getEventPrinter().waitAndPrintStackEvents(this.stack, this.client.waiters().stackCreateComplete(), pollConfiguration);
+		getEventPrinter().waitAndPrintStackEvents(this.stack,
+				() -> this.client.waiter().waitUntilStackCreateComplete(
+						DescribeStacksRequest.builder().stackName(this.stack).build(),
+						waiterConfig(pollConfiguration)),
+				pollConfiguration);
 
 		Map<String, String> outputs = this.describeOutputs();
 		outputs.put(UPDATE_STATUS_OUTPUT, "true");
 		return outputs;
+	}
+
+	/**
+	 * v1 drove the waiters with a PollingStrategy built from a custom TimeOutRetryStrategy and a
+	 * FixedDelayStrategy. v2 expresses both directly, so that class is gone: waitTimeout replaces
+	 * the retry strategy and a fixed backoff replaces the delay strategy. See
+	 * PollConfiguration.effectivePollInterval for why a non-positive interval is substituted.
+	 */
+	static WaiterOverrideConfiguration waiterConfig(PollConfiguration pollConfiguration) {
+		Duration backoff = pollConfiguration.getEffectivePollInterval();
+		return WaiterOverrideConfiguration.builder()
+				.waitTimeout(pollConfiguration.getTimeout())
+				.backoffStrategy(FixedDelayBackoffStrategy.create(backoff))
+				// Every generated CloudFormation waiter defaults to 120 attempts, and v2 stops at
+				// whichever of maxAttempts or waitTimeout comes first. Leaving the default would cap
+				// each wait at 120 polls - about two minutes with the default one second interval -
+				// regardless of the configured timeout. v1's polling strategy had no attempt cap and
+				// ran until the timeout elapsed.
+				.maxAttempts(Integer.MAX_VALUE)
+				.build();
 	}
 
 	protected EventPrinter getEventPrinter() {
@@ -148,38 +181,43 @@ public class CloudFormationStack {
 
 	public Map<String, String> update(String templateBody, String templateUrl, Collection<Parameter> params, Collection<Tag> tags, Collection<String> notificationARNs, PollConfiguration pollConfiguration, String roleArn, RollbackConfiguration rollbackConfig) throws ExecutionException {
 		try {
-			UpdateStackRequest req = new UpdateStackRequest();
-			req.withStackName(this.stack).withCapabilities(Capability.CAPABILITY_IAM, Capability.CAPABILITY_NAMED_IAM, Capability.CAPABILITY_AUTO_EXPAND);
+			UpdateStackRequest.Builder req = UpdateStackRequest.builder()
+					.stackName(this.stack)
+					.capabilities(Capability.CAPABILITY_IAM, Capability.CAPABILITY_NAMED_IAM, Capability.CAPABILITY_AUTO_EXPAND);
 
 			if (templateBody != null && !templateBody.isEmpty()) {
-				req.setTemplateBody(templateBody);
+				req.templateBody(templateBody);
 			} else if (templateUrl != null && !templateUrl.isEmpty()) {
-				req.setTemplateURL(templateUrl);
+				req.templateURL(templateUrl);
 			} else {
-				req.setUsePreviousTemplate(true);
+				req.usePreviousTemplate(true);
 			}
 
-			req.withRollbackConfiguration(rollbackConfig);
+			req.rollbackConfiguration(rollbackConfig);
 
-			req.withParameters(params);
-			if(tags != null && tags.size() > 0){
-				req.withTags(tags);
+			req.parameters(params);
+			if (tags != null && tags.size() > 0) {
+				req.tags(tags);
 			}
 			if (notificationARNs != null && notificationARNs.size() > 0) {
-				req.withNotificationARNs(notificationARNs);
+				req.notificationARNs(notificationARNs);
 			}
-			req.withRoleARN(roleArn);
+			req.roleARN(roleArn);
 
-			this.client.updateStack(req);
+			this.client.updateStack(req.build());
 
-			getEventPrinter().waitAndPrintStackEvents(this.stack, this.client.waiters().stackUpdateComplete(), pollConfiguration);
+			getEventPrinter().waitAndPrintStackEvents(this.stack,
+					() -> this.client.waiter().waitUntilStackUpdateComplete(
+							DescribeStacksRequest.builder().stackName(this.stack).build(),
+							waiterConfig(pollConfiguration)),
+					pollConfiguration);
 
 			this.listener.getLogger().format("Updated CloudFormation stack %s %n", this.stack);
 
 			Map<String, String> outputs = this.describeOutputs();
 			outputs.put(UPDATE_STATUS_OUTPUT, "true");
 			return outputs;
-		} catch (AmazonCloudFormationException e) {
+		} catch (CloudFormationException e) {
 			if (e.getMessage().contains("No updates are to be performed")) {
 				this.listener.getLogger().format("No updates were needed for CloudFormation stack %s %n", this.stack);
 				Map<String, String> outputs = this.describeOutputs();
@@ -203,33 +241,40 @@ public class CloudFormationStack {
 
 	private void doCreateChangeSet(String changeSetName, String templateBody, String templateUrl, Collection<Parameter> params, Collection<Tag> tags, Collection<String> notificationARNs, PollConfiguration pollConfiguration, ChangeSetType changeSetType, String roleArn, RollbackConfiguration rollbackConfig) throws ExecutionException {
 		try {
-			CreateChangeSetRequest req = new CreateChangeSetRequest();
-			req.withChangeSetName(changeSetName).withStackName(this.stack).withCapabilities(Capability.CAPABILITY_IAM, Capability.CAPABILITY_NAMED_IAM, Capability.CAPABILITY_AUTO_EXPAND).withChangeSetType(changeSetType);
+			CreateChangeSetRequest.Builder req = CreateChangeSetRequest.builder()
+					.changeSetName(changeSetName)
+					.stackName(this.stack)
+					.capabilities(Capability.CAPABILITY_IAM, Capability.CAPABILITY_NAMED_IAM, Capability.CAPABILITY_AUTO_EXPAND)
+					.changeSetType(changeSetType);
 
 			if (ChangeSetType.CREATE.equals(changeSetType)) {
 				this.listener.getLogger().format("Creating CloudFormation change set %s for new stack %s %n", changeSetName, this.stack);
 				if ((templateBody == null || templateBody.isEmpty()) && (templateUrl == null || templateUrl.isEmpty())) {
 					throw new IllegalArgumentException("Either a file or url for the template must be specified");
 				}
-				req.withTemplateBody(templateBody).withTemplateURL(templateUrl);
+				req.templateBody(templateBody).templateURL(templateUrl);
 			} else if (ChangeSetType.UPDATE.equals(changeSetType)) {
 				this.listener.getLogger().format("Creating CloudFormation change set %s for existing stack %s %n", changeSetName, this.stack);
 				if (templateBody != null && !templateBody.isEmpty()) {
-					req.setTemplateBody(templateBody);
+					req.templateBody(templateBody);
 				} else if (templateUrl != null && !templateUrl.isEmpty()) {
-					req.setTemplateURL(templateUrl);
+					req.templateURL(templateUrl);
 				} else {
-					req.setUsePreviousTemplate(true);
+					req.usePreviousTemplate(true);
 				}
 			} else {
 				throw new IllegalArgumentException("Cannot create a CloudFormation change set without a valid change set type.");
 			}
 
-			req.withParameters(params).withTags(tags).withNotificationARNs(notificationARNs).withRoleARN(roleArn).withRollbackConfiguration(rollbackConfig);
+			req.parameters(params).tags(tags).notificationARNs(notificationARNs).roleARN(roleArn).rollbackConfiguration(rollbackConfig);
 
-			this.client.createChangeSet(req);
+			this.client.createChangeSet(req.build());
 
-			getEventPrinter().waitAndPrintChangeSetEvents(this.stack, changeSetName, this.client.waiters().changeSetCreateComplete(), pollConfiguration);
+			getEventPrinter().waitAndPrintChangeSetEvents(this.stack, changeSetName,
+					() -> this.client.waiter().waitUntilChangeSetCreateComplete(
+							DescribeChangeSetRequest.builder().stackName(this.stack).changeSetName(changeSetName).build(),
+							waiterConfig(pollConfiguration)),
+					pollConfiguration);
 
 			this.listener.getLogger().format("Created CloudFormation change set %s for stack %s %n", changeSetName, this.stack);
 
@@ -252,7 +297,7 @@ public class CloudFormationStack {
 		if (!this.exists() || this.emptyChangeSet(changeSetName)) {
 			// If the change set has no changes or the stack was not prepared we should simply delete it.
 			this.listener.getLogger().format("Deleting empty change set %s for stack %s %n", changeSetName, this.stack);
-			DeleteChangeSetRequest req = new DeleteChangeSetRequest().withChangeSetName(changeSetName).withStackName(this.stack);
+			DeleteChangeSetRequest req = DeleteChangeSetRequest.builder().changeSetName(changeSetName).stackName(this.stack).build();
 			this.client.deleteChangeSet(req);
 
 			Map<String, String> outputs = this.describeOutputs();
@@ -261,16 +306,18 @@ public class CloudFormationStack {
 		} else {
 			this.listener.getLogger().format("Executing change set %s for stack %s %n", changeSetName, this.stack);
 
-			final Waiter<DescribeStacksRequest> waiter;
-			if (this.isInReview()) {
-				waiter = this.client.waiters().stackCreateComplete();
-			} else {
-				waiter = this.client.waiters().stackUpdateComplete();
-			}
+			final boolean inReview = this.isInReview();
 
-			ExecuteChangeSetRequest req = new ExecuteChangeSetRequest().withChangeSetName(changeSetName).withStackName(this.stack);
+			ExecuteChangeSetRequest req = ExecuteChangeSetRequest.builder().changeSetName(changeSetName).stackName(this.stack).build();
 			this.client.executeChangeSet(req);
-			getEventPrinter().waitAndPrintStackEvents(this.stack, waiter, pollConfiguration);
+			getEventPrinter().waitAndPrintStackEvents(this.stack,
+					() -> {
+						DescribeStacksRequest describe = DescribeStacksRequest.builder().stackName(this.stack).build();
+						return inReview
+								? this.client.waiter().waitUntilStackCreateComplete(describe, waiterConfig(pollConfiguration))
+								: this.client.waiter().waitUntilStackUpdateComplete(describe, waiterConfig(pollConfiguration));
+					},
+					pollConfiguration);
 			this.listener.getLogger().format("Executed change set %s for stack %s %n", changeSetName, this.stack);
 
 			Map<String, String> outputs = this.describeOutputs();
@@ -280,25 +327,30 @@ public class CloudFormationStack {
 	}
 
 	public void delete(PollConfiguration pollConfiguration, String[] retainResources, String roleArn, String clientRequestToken) throws ExecutionException {
-		DeleteStackRequest req = new DeleteStackRequest().withStackName(this.stack).withRoleARN(roleArn).withClientRequestToken(clientRequestToken);
-		if (retainResources != null){
-			req.withRetainResources(retainResources);
+		DeleteStackRequest.Builder req = DeleteStackRequest.builder().stackName(this.stack).roleARN(roleArn).clientRequestToken(clientRequestToken);
+		if (retainResources != null) {
+			req.retainResources(retainResources);
 		}
-		this.client.deleteStack(req);
-		getEventPrinter().waitAndPrintStackEvents(this.stack, this.client.waiters().stackDeleteComplete(), pollConfiguration);
+		this.client.deleteStack(req.build());
+		getEventPrinter().waitAndPrintStackEvents(this.stack,
+				() -> this.client.waiter().waitUntilStackDeleteComplete(
+						DescribeStacksRequest.builder().stackName(this.stack).build(),
+						waiterConfig(pollConfiguration)),
+				pollConfiguration);
 	}
 
-	public DescribeChangeSetResult describeChangeSet(String changeSet) {
-		return this.client.describeChangeSet(new DescribeChangeSetRequest()
-				.withStackName(this.stack)
-				.withChangeSetName(changeSet)
+	public DescribeChangeSetResponse describeChangeSet(String changeSet) {
+		return this.client.describeChangeSet(DescribeChangeSetRequest.builder()
+				.stackName(this.stack)
+				.changeSetName(changeSet)
+				.build()
 		);
 	}
 
 	private boolean isInReview() {
 		if (this.exists()) {
-			DescribeStacksResult result = this.client.describeStacks(new DescribeStacksRequest().withStackName(this.stack));
-			return result.getStacks().size() > 0 && result.getStacks().get(0).getStackStatus().equals("REVIEW_IN_PROGRESS");
+			DescribeStacksResponse result = this.client.describeStacks(DescribeStacksRequest.builder().stackName(this.stack).build());
+			return result.stacks().size() > 0 && "REVIEW_IN_PROGRESS".equals(result.stacks().get(0).stackStatusAsString());
 		}
 		return false;
 	}

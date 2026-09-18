@@ -20,8 +20,7 @@
  */
 package de.taimos.pipeline.aws;
 
-import com.amazonaws.auth.AWSCredentialsProvider;
-import com.amazonaws.auth.DefaultAWSCredentialsProviderChain;
+import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider;
 
 import hudson.model.TaskListener;
 import hudson.remoting.VirtualChannel;
@@ -46,7 +45,14 @@ public class AWSCredentialsProviderCallable extends MasterToSlaveFileCallable<Se
 
 	@Override
 	public SerializableAWSCredentialsProvider invoke(File f, VirtualChannel vc) throws IOException, InterruptedException {
-		AWSCredentialsProvider provider = new DefaultAWSCredentialsProviderChain();
+		// Deliberately not closed. DefaultCredentialsProvider is SdkAutoCloseable, but create()
+		// returns a shared static instance rather than a new one - AWSClientFactory hands the same
+		// object to every client built without static credentials or a profile - so closing it here
+		// would tear down the profile-file supplier and the container/IMDS caches for everything else
+		// in this JVM. On a long-lived agent the next step would get the already-closed instance back.
+		// There is nothing to leak: the instance is created once per JVM and reused, which is what
+		// CredentialsProviderOwnershipTest pins.
+		DefaultCredentialsProvider provider = DefaultCredentialsProvider.create();
 		listener.getLogger().println("Retrieving credentials from node.");
 		return new SerializableAWSCredentialsProvider(provider);
 	}

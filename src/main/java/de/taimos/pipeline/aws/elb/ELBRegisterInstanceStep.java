@@ -32,13 +32,11 @@ import org.jenkinsci.plugins.workflow.steps.SynchronousNonBlockingStepExecution;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
 
-import com.amazonaws.services.elasticloadbalancingv2.AmazonElasticLoadBalancing;
-import com.amazonaws.services.elasticloadbalancingv2.AmazonElasticLoadBalancingClientBuilder;
-import com.amazonaws.services.elasticloadbalancingv2.model.DescribeTargetHealthRequest;
-import com.amazonaws.services.elasticloadbalancingv2.model.DescribeTargetHealthResult;
-import com.amazonaws.services.elasticloadbalancingv2.model.RegisterTargetsRequest;
-import com.amazonaws.services.elasticloadbalancingv2.model.RegisterTargetsResult;
-import com.amazonaws.services.elasticloadbalancingv2.model.TargetDescription;
+import software.amazon.awssdk.services.elasticloadbalancingv2.ElasticLoadBalancingV2Client;
+import software.amazon.awssdk.services.elasticloadbalancingv2.model.DescribeTargetHealthRequest;
+import software.amazon.awssdk.services.elasticloadbalancingv2.model.DescribeTargetHealthResponse;
+import software.amazon.awssdk.services.elasticloadbalancingv2.model.RegisterTargetsRequest;
+import software.amazon.awssdk.services.elasticloadbalancingv2.model.TargetDescription;
 
 import de.taimos.pipeline.aws.AWSClientFactory;
 import de.taimos.pipeline.aws.utils.StepUtils;
@@ -121,13 +119,13 @@ public class ELBRegisterInstanceStep extends Step {
 			TaskListener listener = this.getContext().get(TaskListener.class);
 			listener.getLogger().println("elbRegisterInstance instanceID: " + this.step.instanceID + " port: " + this.step.port + " from targetGroupARN: " + this.step.targetGroupARN);
 			ArrayList<TargetDescription> arr = new ArrayList<TargetDescription>();
-			arr.add(new TargetDescription().withId(this.step.instanceID).withPort(this.step.port));
-			RegisterTargetsRequest request = new RegisterTargetsRequest().withTargetGroupArn(this.step.targetGroupARN).withTargets( arr );
-			AmazonElasticLoadBalancing client = AWSClientFactory.create(AmazonElasticLoadBalancingClientBuilder.standard(), this.getContext(), this.getEnvVars());
+			arr.add(TargetDescription.builder().id(this.step.instanceID).port(this.step.port).build());
+			RegisterTargetsRequest request = RegisterTargetsRequest.builder().targetGroupArn(this.step.targetGroupARN).targets(arr).build();
+			ElasticLoadBalancingV2Client client = AWSClientFactory.create(ElasticLoadBalancingV2Client.builder(), this.getContext(), this.getEnvVars());
 			client.registerTargets(request);
 
-			DescribeTargetHealthRequest req = new DescribeTargetHealthRequest().withTargetGroupArn(this.step.targetGroupARN);
-			DescribeTargetHealthResult res = client.describeTargetHealth(req);
+			DescribeTargetHealthRequest req = DescribeTargetHealthRequest.builder().targetGroupArn(this.step.targetGroupARN).build();
+			DescribeTargetHealthResponse res = client.describeTargetHealth(req);
 			listener.getLogger().println(res.toString());
 
 			return null;

@@ -21,8 +21,9 @@
 
 package de.taimos.pipeline.aws;
 
-import com.amazonaws.services.s3.AmazonS3;
+import software.amazon.awssdk.services.s3.S3Client;
 import com.google.common.base.Preconditions;
+import de.taimos.pipeline.aws.utils.S3Utils;
 import de.taimos.pipeline.aws.utils.StepUtils;
 import hudson.EnvVars;
 import hudson.Extension;
@@ -110,9 +111,9 @@ public class S3DoesObjectExistStep extends AbstractS3Step {
 
 			this.getContext().get(TaskListener.class).getLogger().format("Searching s3://%s for object:'%s'%n", bucket, path);
 
-			AmazonS3 s3Client = AWSClientFactory.create(Execution.this.step.createS3ClientOptions().createAmazonS3ClientBuilder(), Execution.this.getContext());
+			S3Client s3Client = AWSClientFactory.create(Execution.this.step.createS3ClientOptions().createS3ClientBuilder(), Execution.this.getContext());
 
-			Boolean stepResult = s3Client.doesObjectExist(bucket, path);
+			Boolean stepResult = S3Utils.doesObjectExist(s3Client, bucket, path);
 
 			this.getContext().get(TaskListener.class).getLogger().println("Search complete");
 			return stepResult;

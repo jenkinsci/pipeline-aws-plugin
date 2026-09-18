@@ -1,0 +1,5 @@
+# A handful of files in this repository use CRLF line endings. Freeze the endings
+# as committed so that a contributor whose git has core.autocrlf=input or =true does
+# not silently rewrite an entire file while changing a few lines of it, which buries
+# the real change and re-points git blame.
+*.java -text

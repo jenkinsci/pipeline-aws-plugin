@@ -21,7 +21,7 @@
 
 package de.taimos.pipeline.aws.cloudformation.parser;
 
-import com.amazonaws.services.cloudformation.model.Parameter;
+import software.amazon.awssdk.services.cloudformation.model.Parameter;
 
 import java.io.IOException;
 import java.io.InputStream;

@@ -27,7 +27,7 @@ import java.util.Date;
 import org.junit.Assert;
 import org.junit.Test;
 
-import com.amazonaws.services.s3.model.S3ObjectSummary;
+import software.amazon.awssdk.services.s3.model.S3Object;
 
 public class S3FindFilesStepTest {
 	@Test
@@ -129,27 +129,27 @@ public class S3FindFilesStepTest {
 	@Test
 	public void createFileWrapperFromFile() throws Exception {
 		FileWrapper file;
-		S3ObjectSummary s3ObjectSummary = new S3ObjectSummary();
-		s3ObjectSummary.setBucketName("my-bucket");
-		s3ObjectSummary.setKey("path/to/my/file.ext");
-		s3ObjectSummary.setLastModified(new Date(9000));
-		s3ObjectSummary.setSize(12);
+		S3Object s3Object = S3Object.builder()
+				.key("path/to/my/file.ext")
+				.lastModified(new Date(9000).toInstant())
+				.size(12L)
+				.build();
 
-		file = S3FindFilesStep.Execution.createFileWrapperFromFile(0, Paths.get(s3ObjectSummary.getKey()), s3ObjectSummary);
+		file = S3FindFilesStep.Execution.createFileWrapperFromFile(0, Paths.get(s3Object.key()), s3Object);
 		Assert.assertEquals("file.ext", file.getName());
 		Assert.assertEquals("path/to/my/file.ext", file.getPath());
 		Assert.assertFalse(file.isDirectory());
 		Assert.assertEquals(12, file.getLength());
 		Assert.assertEquals(9000, file.getLastModified());
 
-		file = S3FindFilesStep.Execution.createFileWrapperFromFile(1, Paths.get(s3ObjectSummary.getKey()), s3ObjectSummary);
+		file = S3FindFilesStep.Execution.createFileWrapperFromFile(1, Paths.get(s3Object.key()), s3Object);
 		Assert.assertEquals("file.ext", file.getName());
 		Assert.assertEquals("to/my/file.ext", file.getPath());
 		Assert.assertFalse(file.isDirectory());
 		Assert.assertEquals(12, file.getLength());
 		Assert.assertEquals(9000, file.getLastModified());
 
-		file = S3FindFilesStep.Execution.createFileWrapperFromFile(2, Paths.get(s3ObjectSummary.getKey()), s3ObjectSummary);
+		file = S3FindFilesStep.Execution.createFileWrapperFromFile(2, Paths.get(s3Object.key()), s3Object);
 		Assert.assertEquals("file.ext", file.getName());
 		Assert.assertEquals("my/file.ext", file.getPath());
 		Assert.assertFalse(file.isDirectory());

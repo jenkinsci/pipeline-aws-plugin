@@ -1,6 +1,6 @@
 package de.taimos.pipeline.aws.cloudformation.parser;
 
-import com.amazonaws.services.cloudformation.model.Tag;
+import software.amazon.awssdk.services.cloudformation.model.Tag;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
@@ -19,9 +19,10 @@ public class TagsFileParser {
 		ArrayNode jsonNodes = (ArrayNode) tree;
 		return StreamSupport.stream(jsonNodes.spliterator(), false)
 				.map(node -> {
-					return new Tag()
-							.withKey(node.get("Key").asText())
-							.withValue(node.get("Value").asText());
+					return Tag.builder()
+							.key(node.get("Key").asText())
+							.value(node.get("Value").asText())
+							.build();
 				})
 				.collect(Collectors.toList());
 	}

@@ -11,9 +11,9 @@ import org.jenkinsci.plugins.workflow.steps.Step;
 import org.jenkinsci.plugins.workflow.steps.StepExecution;
 import org.kohsuke.stapler.DataBoundSetter;
 
-import com.amazonaws.services.cloudformation.model.RollbackConfiguration;
-import com.amazonaws.services.cloudformation.model.RollbackTrigger;
-import com.amazonaws.services.cloudformation.model.Tag;
+import software.amazon.awssdk.services.cloudformation.model.RollbackConfiguration;
+import software.amazon.awssdk.services.cloudformation.model.RollbackTrigger;
+import software.amazon.awssdk.services.cloudformation.model.Tag;
 
 import hudson.FilePath;
 
@@ -175,7 +175,7 @@ public abstract class TemplateStepBase extends Step implements ParameterProvider
 				}
 				String key = tag.substring(0, i);
 				String value = tag.substring(i + 1);
-				tagList.add(new Tag().withKey(key).withValue(value));
+				tagList.add(Tag.builder().key(key).value(value).build());
 			}
 		}
 		if (this.tagsFile != null) {
@@ -238,14 +238,14 @@ public abstract class TemplateStepBase extends Step implements ParameterProvider
 	}
 
 	protected RollbackConfiguration getRollbackConfiguration() {
-		RollbackConfiguration rollbackConfig = new RollbackConfiguration().withMonitoringTimeInMinutes(0);
+		RollbackConfiguration.Builder rollbackConfig = RollbackConfiguration.builder().monitoringTimeInMinutes(0);
 		if (this.getRollbackTimeoutInMinutes() != null) {
-			rollbackConfig.withMonitoringTimeInMinutes(this.getRollbackTimeoutInMinutes());
+			rollbackConfig.monitoringTimeInMinutes(this.getRollbackTimeoutInMinutes());
 		}
 		if (this.getRollbackTriggers() != null) {
-			rollbackConfig.withRollbackTriggers(this.parseRollbackTriggers(this.getRollbackTriggers()));
+			rollbackConfig.rollbackTriggers(this.parseRollbackTriggers(this.getRollbackTriggers()));
 		}
-		return rollbackConfig;
+		return rollbackConfig.build();
 	}
 
 	private Collection<RollbackTrigger> parseRollbackTriggers(String[] configs) {
@@ -257,7 +257,7 @@ public abstract class TemplateStepBase extends Step implements ParameterProvider
 			}
 			String key = cfg.substring(0, i);
 			String value = cfg.substring(i + 1);
-			rollbackTriggers.add(new RollbackTrigger().withType(key).withArn(value));
+			rollbackTriggers.add(RollbackTrigger.builder().type(key).arn(value).build());
 		}
 		return rollbackTriggers;
 	}

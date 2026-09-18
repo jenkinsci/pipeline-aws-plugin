@@ -1,17 +1,18 @@
 package de.taimos.pipeline.aws.cloudformation;
 
-import com.amazonaws.services.cloudformation.AmazonCloudFormation;
-import com.amazonaws.services.cloudformation.model.Change;
-import com.amazonaws.services.cloudformation.model.ChangeSetStatus;
-import com.amazonaws.services.cloudformation.model.ChangeSetType;
-import com.amazonaws.services.cloudformation.model.DescribeChangeSetResult;
-import com.amazonaws.services.cloudformation.model.Parameter;
+import software.amazon.awssdk.services.cloudformation.CloudFormationClient;
+import software.amazon.awssdk.services.cloudformation.model.Change;
+import software.amazon.awssdk.services.cloudformation.model.ChangeSetStatus;
+import software.amazon.awssdk.services.cloudformation.model.ChangeSetType;
+import software.amazon.awssdk.services.cloudformation.model.DescribeChangeSetResponse;
+import software.amazon.awssdk.services.cloudformation.model.Parameter;
 import de.taimos.pipeline.aws.AWSClientFactory;
 import de.taimos.pipeline.aws.AWSUtilFactory;
 import hudson.model.Result;
 import hudson.model.Run;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -32,7 +33,7 @@ public class CFNCreateChangeSetTests {
 	@Before
 	public void setupSdk() throws Exception {
 		this.stack = Mockito.mock(CloudFormationStack.class);
-		AmazonCloudFormation cloudFormation = Mockito.mock(AmazonCloudFormation.class);
+		CloudFormationClient cloudFormation = Mockito.mock(CloudFormationClient.class);
 		AWSClientFactory.setFactoryDelegate((x) -> cloudFormation);
 		AWSUtilFactory.setStackSupplier((s) -> {
 			assertEquals("foo", s);
@@ -40,13 +41,17 @@ public class CFNCreateChangeSetTests {
 		});
 	}
 
+	@After
+	public void tearDownSdk() {
+		AWSClientFactory.setFactoryDelegate(null);
+		AWSUtilFactory.setStackSupplier(null);
+	}
+
 	@Test
 	public void createChangeSetStackParametersFromMap() throws Exception {
 		WorkflowJob job = this.jenkinsRule.jenkins.createProject(WorkflowJob.class, "cfnTest");
 		Mockito.when(this.stack.exists()).thenReturn(true);
-		Mockito.when(this.stack.describeChangeSet("bar")).thenReturn(new DescribeChangeSetResult()
-				.withChanges(new Change())
-				.withStatus(ChangeSetStatus.CREATE_COMPLETE)
+		Mockito.when(this.stack.describeChangeSet("bar")).thenReturn(DescribeChangeSetResponse.builder().changes(Change.builder().build()).status(ChangeSetStatus.CREATE_COMPLETE).build()
 		);
 		job.setDefinition(new CpsFlowDefinition(""
 				+ "node {\n"
@@ -59,8 +64,8 @@ public class CFNCreateChangeSetTests {
 
 		Mockito.verify(this.stack).createChangeSet(Mockito.eq("bar"),
 				nullable(String.class), nullable(String.class), Mockito.eq(Arrays.asList(
-				new Parameter().withParameterKey("foo").withParameterValue("bar"),
-				new Parameter().withParameterKey("baz").withParameterValue("true")
+				Parameter.builder().parameterKey("foo").parameterValue("bar").build(),
+				Parameter.builder().parameterKey("baz").parameterValue("true").build()
 		)), Mockito.anyCollection(), Mockito.anyCollection(), Mockito.any(PollConfiguration.class), Mockito.eq(ChangeSetType.UPDATE), nullable(String.class),
 												   Mockito.any());
 	}
@@ -69,9 +74,7 @@ public class CFNCreateChangeSetTests {
 	public void createChangeSetStackExists() throws Exception {
 		WorkflowJob job = this.jenkinsRule.jenkins.createProject(WorkflowJob.class, "cfnTest");
 		Mockito.when(this.stack.exists()).thenReturn(true);
-		Mockito.when(this.stack.describeChangeSet("bar")).thenReturn(new DescribeChangeSetResult()
-				.withChanges(new Change())
-				.withStatus(ChangeSetStatus.CREATE_COMPLETE)
+		Mockito.when(this.stack.describeChangeSet("bar")).thenReturn(DescribeChangeSetResponse.builder().changes(Change.builder().build()).status(ChangeSetStatus.CREATE_COMPLETE).build()
 		);
 		job.setDefinition(new CpsFlowDefinition(""
 				+ "node {\n"
@@ -91,9 +94,7 @@ public class CFNCreateChangeSetTests {
 	public void createChangeSetWithRawTemplate() throws Exception {
 		WorkflowJob job = this.jenkinsRule.jenkins.createProject(WorkflowJob.class, "cfnTest");
 		Mockito.when(this.stack.exists()).thenReturn(true);
-		Mockito.when(this.stack.describeChangeSet("bar")).thenReturn(new DescribeChangeSetResult()
-				.withChanges(new Change())
-				.withStatus(ChangeSetStatus.CREATE_COMPLETE)
+		Mockito.when(this.stack.describeChangeSet("bar")).thenReturn(DescribeChangeSetResponse.builder().changes(Change.builder().build()).status(ChangeSetStatus.CREATE_COMPLETE).build()
 		);
 		job.setDefinition(new CpsFlowDefinition(""
 				+ "node {\n"
@@ -113,9 +114,7 @@ public class CFNCreateChangeSetTests {
 	public void updateChangeSetWithRawTemplate() throws Exception {
 		WorkflowJob job = this.jenkinsRule.jenkins.createProject(WorkflowJob.class, "cfnTest");
 		Mockito.when(this.stack.exists()).thenReturn(false);
-		Mockito.when(this.stack.describeChangeSet("bar")).thenReturn(new DescribeChangeSetResult()
-				.withChanges(new Change())
-				.withStatus(ChangeSetStatus.CREATE_COMPLETE)
+		Mockito.when(this.stack.describeChangeSet("bar")).thenReturn(DescribeChangeSetResponse.builder().changes(Change.builder().build()).status(ChangeSetStatus.CREATE_COMPLETE).build()
 		);
 		job.setDefinition(new CpsFlowDefinition(""
 				+ "node {\n"
@@ -136,8 +135,7 @@ public class CFNCreateChangeSetTests {
 		WorkflowJob job = this.jenkinsRule.jenkins.createProject(WorkflowJob.class, "cfnTest");
 		Mockito.when(this.stack.exists()).thenReturn(true);
 		Mockito.when(this.stack.describeChangeSet("bar"))
-				.thenReturn(new DescribeChangeSetResult()
-						.withStatus(ChangeSetStatus.FAILED)
+				.thenReturn(DescribeChangeSetResponse.builder().status(ChangeSetStatus.FAILED).build()
 				);
 		job.setDefinition(new CpsFlowDefinition(""
 				+ "node {\n"
@@ -152,9 +150,7 @@ public class CFNCreateChangeSetTests {
 		WorkflowJob job = this.jenkinsRule.jenkins.createProject(WorkflowJob.class, "cfnTest");
 		Mockito.when(this.stack.exists()).thenReturn(true);
 		Mockito.when(this.stack.describeChangeSet("bar"))
-				.thenReturn(new DescribeChangeSetResult()
-						.withStatus(ChangeSetStatus.FAILED)
-						.withStatusReason("The submitted information didn't contain changes. Submit different information to create a change set.")
+				.thenReturn(DescribeChangeSetResponse.builder().status(ChangeSetStatus.FAILED).statusReason("The submitted information didn't contain changes. Submit different information to create a change set.").build()
 				);
 		job.setDefinition(new CpsFlowDefinition(""
 				+ "node {\n"
@@ -172,9 +168,7 @@ public class CFNCreateChangeSetTests {
 		WorkflowJob job = this.jenkinsRule.jenkins.createProject(WorkflowJob.class, "cfnTest");
 		Mockito.when(this.stack.exists()).thenReturn(true);
 		Mockito.when(this.stack.describeChangeSet("bar"))
-				.thenReturn(new DescribeChangeSetResult()
-						.withStatus(ChangeSetStatus.FAILED)
-						.withStatusReason("No updates are to be performed.")
+				.thenReturn(DescribeChangeSetResponse.builder().status(ChangeSetStatus.FAILED).statusReason("No updates are to be performed.").build()
 				);
 		job.setDefinition(new CpsFlowDefinition(""
 				+ "node {\n"
@@ -191,9 +185,7 @@ public class CFNCreateChangeSetTests {
 	public void createChangeSetStackDoesNotExist() throws Exception {
 		WorkflowJob job = this.jenkinsRule.jenkins.createProject(WorkflowJob.class, "cfnTest");
 		Mockito.when(this.stack.exists()).thenReturn(false);
-		Mockito.when(this.stack.describeChangeSet("bar")).thenReturn(new DescribeChangeSetResult()
-				.withChanges(new Change())
-				.withStatus(ChangeSetStatus.CREATE_COMPLETE)
+		Mockito.when(this.stack.describeChangeSet("bar")).thenReturn(DescribeChangeSetResponse.builder().changes(Change.builder().build()).status(ChangeSetStatus.CREATE_COMPLETE).build()
 		);
 		job.setDefinition(new CpsFlowDefinition(""
 				+ "node {\n"

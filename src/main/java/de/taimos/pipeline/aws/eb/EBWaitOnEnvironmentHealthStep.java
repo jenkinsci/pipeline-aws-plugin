@@ -1,11 +1,10 @@
 package de.taimos.pipeline.aws.eb;
 
-import com.amazonaws.services.elasticbeanstalk.AWSElasticBeanstalk;
-import com.amazonaws.services.elasticbeanstalk.AWSElasticBeanstalkClientBuilder;
-import com.amazonaws.services.elasticbeanstalk.model.AWSElasticBeanstalkException;
-import com.amazonaws.services.elasticbeanstalk.model.DescribeEnvironmentsRequest;
-import com.amazonaws.services.elasticbeanstalk.model.DescribeEnvironmentsResult;
-import com.amazonaws.services.elasticbeanstalk.model.EnvironmentDescription;
+import software.amazon.awssdk.services.elasticbeanstalk.ElasticBeanstalkClient;
+import software.amazon.awssdk.services.elasticbeanstalk.model.ElasticBeanstalkException;
+import software.amazon.awssdk.services.elasticbeanstalk.model.DescribeEnvironmentsRequest;
+import software.amazon.awssdk.services.elasticbeanstalk.model.DescribeEnvironmentsResponse;
+import software.amazon.awssdk.services.elasticbeanstalk.model.EnvironmentDescription;
 import de.taimos.pipeline.aws.AWSClientFactory;
 import de.taimos.pipeline.aws.utils.StepUtils;
 import hudson.EnvVars;
@@ -19,7 +18,7 @@ import org.jenkinsci.plugins.workflow.steps.SynchronousNonBlockingStepExecution;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
 
-import javax.annotation.Nonnull;
+import edu.umd.cs.findbugs.annotations.NonNull;
 import java.util.Collections;
 import java.util.Set;
 
@@ -63,7 +62,7 @@ public class EBWaitOnEnvironmentHealthStep extends Step {
 			return "ebWaitOnEnvironmentHealth";
 		}
 
-		@Nonnull
+		@NonNull
 		@Override
 		public String getDisplayName() {
 			return "Waits until the specified environment application becomes available";
@@ -74,7 +73,7 @@ public class EBWaitOnEnvironmentHealthStep extends Step {
 		private static final long serialVersionUID = 1L;
 		private final transient EBWaitOnEnvironmentHealthStep step;
 
-		protected Execution(EBWaitOnEnvironmentHealthStep step, @Nonnull StepContext context) {
+		protected Execution(EBWaitOnEnvironmentHealthStep step, @NonNull StepContext context) {
 			super(context);
 			this.step = step;
 		}
@@ -82,33 +81,34 @@ public class EBWaitOnEnvironmentHealthStep extends Step {
 		@Override
 		protected Void run() throws Exception {
 			TaskListener listener = this.getContext().get(TaskListener.class);
-			AWSElasticBeanstalk client = AWSClientFactory.create(
-					AWSElasticBeanstalkClientBuilder.standard(),
+			ElasticBeanstalkClient client = AWSClientFactory.create(
+					ElasticBeanstalkClient.builder(),
 					this.getContext(),
 					this.getContext().get(EnvVars.class)
 			);
 
 			listener.getLogger().format("Waiting on environment %s health... %n", step.environmentName);
 
-			DescribeEnvironmentsRequest request = new DescribeEnvironmentsRequest();
-			request.setApplicationName(step.applicationName);
-			request.setEnvironmentNames(Collections.singletonList(step.environmentName));
+			DescribeEnvironmentsRequest request = DescribeEnvironmentsRequest.builder()
+					.applicationName(step.applicationName)
+					.environmentNames(Collections.singletonList(step.environmentName))
+					.build();
 			long startTime = System.currentTimeMillis();
 			while (true) {
-				DescribeEnvironmentsResult result = client.describeEnvironments(request);
+				DescribeEnvironmentsResponse result = client.describeEnvironments(request);
 
-				if (result.getEnvironments().isEmpty()) {
-					throw new AWSElasticBeanstalkException("Environment not found");
+				if (result.environments().isEmpty()) {
+					throw ElasticBeanstalkException.builder().message("Environment not found").build();
 				}
 
-				EnvironmentDescription environment = result.getEnvironments().get(0);
+				EnvironmentDescription environment = result.environments().get(0);
 				listener.getLogger().format(
 						"Environment Health: %s (%s) %n",
-						environment.getHealth(),
-						environment.getHealthStatus()
+						environment.healthAsString(),
+						environment.healthStatusAsString()
 				);
 
-				if (environment.getHealth().equalsIgnoreCase(step.health)) {
+				if (environment.healthAsString().equalsIgnoreCase(step.health)) {
 					long stableFor = System.currentTimeMillis() - startTime;
 					if(stableFor > step.stabilityThreshold * 1000) {
 						return null;

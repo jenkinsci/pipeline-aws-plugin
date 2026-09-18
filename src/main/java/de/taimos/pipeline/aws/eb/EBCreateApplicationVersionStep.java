@@ -1,10 +1,9 @@
 package de.taimos.pipeline.aws.eb;
 
-import com.amazonaws.services.elasticbeanstalk.AWSElasticBeanstalk;
-import com.amazonaws.services.elasticbeanstalk.AWSElasticBeanstalkClientBuilder;
-import com.amazonaws.services.elasticbeanstalk.model.CreateApplicationVersionRequest;
-import com.amazonaws.services.elasticbeanstalk.model.CreateApplicationVersionResult;
-import com.amazonaws.services.elasticbeanstalk.model.S3Location;
+import software.amazon.awssdk.services.elasticbeanstalk.ElasticBeanstalkClient;
+import software.amazon.awssdk.services.elasticbeanstalk.model.CreateApplicationVersionRequest;
+import software.amazon.awssdk.services.elasticbeanstalk.model.CreateApplicationVersionResponse;
+import software.amazon.awssdk.services.elasticbeanstalk.model.S3Location;
 import de.taimos.pipeline.aws.AWSClientFactory;
 import de.taimos.pipeline.aws.utils.StepUtils;
 import hudson.EnvVars;
@@ -18,7 +17,7 @@ import org.jenkinsci.plugins.workflow.steps.StepExecution;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
 
-import javax.annotation.Nonnull;
+import edu.umd.cs.findbugs.annotations.NonNull;
 import java.util.Set;
 
 public class EBCreateApplicationVersionStep extends Step {
@@ -59,7 +58,7 @@ public class EBCreateApplicationVersionStep extends Step {
 			return "ebCreateApplicationVersion";
 		}
 
-		@Nonnull
+		@NonNull
 		@Override
 		public String getDisplayName() {
 			return "Creates a new version for an elastic beanstalk application";
@@ -70,7 +69,7 @@ public class EBCreateApplicationVersionStep extends Step {
 		private static final long serialVersionUID = 1L;
 		private final transient EBCreateApplicationVersionStep step;
 
-		protected Execution(EBCreateApplicationVersionStep step, @Nonnull StepContext context) {
+		protected Execution(EBCreateApplicationVersionStep step, @NonNull StepContext context) {
 			super(context);
 			this.step = step;
 		}
@@ -78,26 +77,27 @@ public class EBCreateApplicationVersionStep extends Step {
 		@Override
 		protected Void run() throws Exception {
 			TaskListener listener = this.getContext().get(TaskListener.class);
-			AWSElasticBeanstalk client = AWSClientFactory.create(
-					AWSElasticBeanstalkClientBuilder.standard(),
+			ElasticBeanstalkClient client = AWSClientFactory.create(
+					ElasticBeanstalkClient.builder(),
 					this.getContext(),
 					this.getContext().get(EnvVars.class)
 			);
 
 			listener.getLogger().format("Creating application version (%s) for application (%s) %n", step.versionLabel, step.applicationName);
 
-			CreateApplicationVersionRequest request = new CreateApplicationVersionRequest();
-			request.setApplicationName(step.applicationName);
-			request.setVersionLabel(step.versionLabel);
-			request.setSourceBundle(new S3Location(step.s3Bucket, step.s3Key));
-			request.setDescription(step.description);
+			CreateApplicationVersionRequest request = CreateApplicationVersionRequest.builder()
+					.applicationName(step.applicationName)
+					.versionLabel(step.versionLabel)
+					.sourceBundle(S3Location.builder().s3Bucket(step.s3Bucket).s3Key(step.s3Key).build())
+					.description(step.description)
+					.build();
 
-			CreateApplicationVersionResult result = client.createApplicationVersion(request);
+			CreateApplicationVersionResponse result = client.createApplicationVersion(request);
 			listener.getLogger().format(
 					"Created a new version (%s) for the application (%s) with arn (%s) %n",
 					step.versionLabel,
 					step.applicationName,
-					result.getApplicationVersion().getApplicationVersionArn()
+					result.applicationVersion().applicationVersionArn()
 			);
 
 			return null;

@@ -1,17 +1,15 @@
 package de.taimos.pipeline.aws.code.deploy;
 
-import com.amazonaws.services.codedeploy.AmazonCodeDeploy;
-import com.amazonaws.services.codedeploy.AmazonCodeDeployClientBuilder;
-import com.amazonaws.services.codedeploy.model.CreateDeploymentRequest;
-import com.amazonaws.services.codedeploy.model.CreateDeploymentResult;
-import com.amazonaws.services.codedeploy.model.FileExistsBehavior;
-import com.amazonaws.services.codedeploy.model.GitHubLocation;
-import com.amazonaws.services.codedeploy.model.RevisionLocation;
-import com.amazonaws.services.codedeploy.model.RevisionLocationType;
-import com.amazonaws.services.codedeploy.model.S3Location;
-import com.amazonaws.services.codedeploy.model.GetDeploymentGroupRequest;
-import com.amazonaws.services.codedeploy.model.GetDeploymentGroupResult;
-import com.amazonaws.services.codedeploy.model.DeploymentGroupInfo;
+import software.amazon.awssdk.services.codedeploy.CodeDeployClient;
+import software.amazon.awssdk.services.codedeploy.model.CreateDeploymentRequest;
+import software.amazon.awssdk.services.codedeploy.model.CreateDeploymentResponse;
+import software.amazon.awssdk.services.codedeploy.model.FileExistsBehavior;
+import software.amazon.awssdk.services.codedeploy.model.GitHubLocation;
+import software.amazon.awssdk.services.codedeploy.model.RevisionLocation;
+import software.amazon.awssdk.services.codedeploy.model.RevisionLocationType;
+import software.amazon.awssdk.services.codedeploy.model.S3Location;
+import software.amazon.awssdk.services.codedeploy.model.GetDeploymentGroupRequest;
+import software.amazon.awssdk.services.codedeploy.model.GetDeploymentGroupResponse;
 import de.taimos.pipeline.aws.AWSClientFactory;
 import de.taimos.pipeline.aws.utils.StepUtils;
 import hudson.Extension;
@@ -152,29 +150,32 @@ public class CreateDeployStep extends Step {
 		@Override
 		protected Void run() throws Exception {
 			TaskListener listener = this.getContext().get(TaskListener.class);
-			AmazonCodeDeploy client = AWSClientFactory.create(AmazonCodeDeployClientBuilder.standard(), this.getContext());
+			CodeDeployClient client = AWSClientFactory.create(CodeDeployClient.builder(), this.getContext());
 
 			listener.getLogger().format("Deploying application (%s) with group name (%s) %n", step.getApplicationName(), step.getDeploymentGroupName());
 
-			CreateDeploymentRequest deploymentRequest = new CreateDeploymentRequest()
-					.withApplicationName(step.getApplicationName())
-					.withDeploymentGroupName(step.getDeploymentGroupName())
-					.withDeploymentConfigName(step.getDeploymentConfigName())
-					.withDescription(step.getDescription())
-					.withRevision(getRevisionLocation())
-					.withIgnoreApplicationStopFailures(step.getIgnoreApplicationStopFailures());
+			CreateDeploymentRequest.Builder deploymentRequest = CreateDeploymentRequest.builder()
+					.applicationName(step.getApplicationName())
+					.deploymentGroupName(step.getDeploymentGroupName())
+					.deploymentConfigName(step.getDeploymentConfigName())
+					.description(step.getDescription())
+					.revision(getRevisionLocation())
+					.ignoreApplicationStopFailures(step.getIgnoreApplicationStopFailures());
 
 			FileExistsBehavior fileExistsBehavior = getFileExistsBehavior(step.getFileExistsBehavior());
 			if (fileExistsBehavior != null) {
-				deploymentRequest.withFileExistsBehavior(fileExistsBehavior);
+				deploymentRequest.fileExistsBehavior(fileExistsBehavior);
 			}
 
-			CreateDeploymentResult deployment = client.createDeployment(deploymentRequest);
+			CreateDeploymentResponse deployment = client.createDeployment(deploymentRequest.build());
 
-			listener.getLogger().format("DeploymentId (%s) %n", deployment.getDeploymentId());
+			listener.getLogger().format("DeploymentId (%s) %n", deployment.deploymentId());
 
-			if (step.waitForCompletion) {
-				new DeployUtils().waitDeployment(deployment.getDeploymentId(), listener, client);
+			// waitForCompletion is an optional Boolean, so it is null unless the pipeline sets it;
+			// dereferencing it directly threw a NullPointerException for every caller that omitted
+			// it. Predates the SDK migration - the README examples all pass the flag.
+			if (Boolean.TRUE.equals(step.waitForCompletion)) {
+				new DeployUtils().waitDeployment(deployment.deploymentId(), listener, client);
 			}
 
 			listener.getLogger().println("Deployment complete");
@@ -182,28 +183,45 @@ public class CreateDeployStep extends Step {
 		}
 
 		private FileExistsBehavior getFileExistsBehavior(String fileExistsBehavior) {
+			// Validated before the ECS/Lambda check so a bad value is rejected the same way for
+			// every compute platform. Deciding first would mean a typo hard-fails against a Server
+			// deployment group and is silently dropped against an ECS one - and since
+			// isEcsOrLambdaDeployment swallows every exception and returns false, a transient
+			// getDeploymentGroup failure would flip which of the two a pipeline gets.
+			final FileExistsBehavior behavior;
+			if (fileExistsBehavior == null || fileExistsBehavior.isEmpty()) {
+				behavior = FileExistsBehavior.DISALLOW;
+			} else {
+				behavior = FileExistsBehavior.fromValue(fileExistsBehavior);
+				// v1's fromValue throws on an unrecognised value; v2 returns this sentinel, whose
+				// value is null, so without this check a typo would be sent to AWS as
+				// fileExistsBehavior=null and fail there with an opaque error.
+				if (behavior == FileExistsBehavior.UNKNOWN_TO_SDK_VERSION) {
+					throw new IllegalArgumentException("Cannot create enum from " + fileExistsBehavior + " value!");
+				}
+			}
+
+			// ECS and Lambda deployments must not carry the parameter at all
 			if (isEcsOrLambdaDeployment()) {
 				return null;
 			}
-			if (fileExistsBehavior == null || fileExistsBehavior.isEmpty()) {
-				return FileExistsBehavior.DISALLOW;
-			}
-			return FileExistsBehavior.fromValue(fileExistsBehavior);
+			return behavior;
 		}
 
 		private boolean isEcsOrLambdaDeployment() {
-			AmazonCodeDeploy codeDeploy = AWSClientFactory.create(AmazonCodeDeployClientBuilder.standard(), this.getContext());
+			CodeDeployClient codeDeploy = AWSClientFactory.create(CodeDeployClient.builder(), this.getContext());
 			
 			try {
 				GetDeploymentGroupRequest request = 
-					new GetDeploymentGroupRequest()
-						.withApplicationName(step.getApplicationName())
-						.withDeploymentGroupName(step.getDeploymentGroupName());
+					GetDeploymentGroupRequest.builder()
+						.applicationName(step.getApplicationName())
+						.deploymentGroupName(step.getDeploymentGroupName())
+						.build();
 				
-				GetDeploymentGroupResult response = 
+				GetDeploymentGroupResponse response = 
 					codeDeploy.getDeploymentGroup(request);
 				
-				String computePlatform = response.getDeploymentGroupInfo().getComputePlatform();
+				String computePlatform = response.deploymentGroupInfo().computePlatformAsString();
 				
 				return "ECS".equalsIgnoreCase(computePlatform) || "Lambda".equalsIgnoreCase(computePlatform);
 			} catch (Exception e) {
@@ -214,18 +232,22 @@ public class CreateDeployStep extends Step {
 
 		private RevisionLocation getRevisionLocation() {
 			if (step.getS3Bucket() != null && !step.getS3Bucket().isEmpty()) {
-				final S3Location s3Location = new S3Location().withBucket(step.getS3Bucket())
-						.withKey(step.getS3Key())
-						.withBundleType(step.getS3BundleType());
-				return new RevisionLocation()
-						.withS3Location(s3Location)
-						.withRevisionType(RevisionLocationType.S3);
+				final S3Location s3Location = S3Location.builder().bucket(step.getS3Bucket())
+						.key(step.getS3Key())
+						.bundleType(step.getS3BundleType())
+						.build();
+				return RevisionLocation.builder()
+						.s3Location(s3Location)
+						.revisionType(RevisionLocationType.S3)
+						.build();
 			}
-			final GitHubLocation gitHubLocation = new GitHubLocation().withRepository(step.getGitHubRepository())
-					.withCommitId(step.getGitHubCommitId());
-			return new RevisionLocation()
-					.withGitHubLocation(gitHubLocation)
-					.withRevisionType(RevisionLocationType.GitHub);
+			final GitHubLocation gitHubLocation = GitHubLocation.builder().repository(step.getGitHubRepository())
+					.commitId(step.getGitHubCommitId())
+					.build();
+			return RevisionLocation.builder()
+					.gitHubLocation(gitHubLocation)
+					.revisionType(RevisionLocationType.GIT_HUB)
+					.build();
 		}
 
 		private static final long serialVersionUID = 1L;

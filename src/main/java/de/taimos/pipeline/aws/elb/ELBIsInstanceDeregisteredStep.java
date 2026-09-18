@@ -32,11 +32,10 @@ import org.jenkinsci.plugins.workflow.steps.SynchronousNonBlockingStepExecution;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
 
-import com.amazonaws.services.elasticloadbalancingv2.AmazonElasticLoadBalancing;
-import com.amazonaws.services.elasticloadbalancingv2.AmazonElasticLoadBalancingClientBuilder;
-import com.amazonaws.services.elasticloadbalancingv2.model.DescribeTargetHealthRequest;
-import com.amazonaws.services.elasticloadbalancingv2.model.DescribeTargetHealthResult;
-import com.amazonaws.services.elasticloadbalancingv2.model.TargetHealthDescription;
+import software.amazon.awssdk.services.elasticloadbalancingv2.ElasticLoadBalancingV2Client;
+import software.amazon.awssdk.services.elasticloadbalancingv2.model.DescribeTargetHealthRequest;
+import software.amazon.awssdk.services.elasticloadbalancingv2.model.DescribeTargetHealthResponse;
+import software.amazon.awssdk.services.elasticloadbalancingv2.model.TargetHealthDescription;
 
 import de.taimos.pipeline.aws.AWSClientFactory;
 import de.taimos.pipeline.aws.utils.StepUtils;
@@ -120,12 +119,12 @@ public class ELBIsInstanceDeregisteredStep extends Step {
 			listener.getLogger().println("elbIsInstanceDeregistered instanceID: " + this.step.instanceID + " port: " + this.step.port + " from targetGroupARN: " + this.step.targetGroupARN);
 
 			Boolean rval = true;
-			AmazonElasticLoadBalancing client = AWSClientFactory.create(AmazonElasticLoadBalancingClientBuilder.standard(), this.getContext(), this.getEnvVars());
-			DescribeTargetHealthRequest req = new DescribeTargetHealthRequest().withTargetGroupArn(this.step.targetGroupARN);
-			DescribeTargetHealthResult res = client.describeTargetHealth(req);
-			List<TargetHealthDescription> targets = res.getTargetHealthDescriptions();
+			ElasticLoadBalancingV2Client client = AWSClientFactory.create(ElasticLoadBalancingV2Client.builder(), this.getContext(), this.getEnvVars());
+			DescribeTargetHealthRequest req = DescribeTargetHealthRequest.builder().targetGroupArn(this.step.targetGroupARN).build();
+			DescribeTargetHealthResponse res = client.describeTargetHealth(req);
+			List<TargetHealthDescription> targets = res.targetHealthDescriptions();
 			for (TargetHealthDescription target : targets) {
-				if (target.getTarget().getId().equals(this.step.instanceID) ) {
+				if (target.target().id().equals(this.step.instanceID)) {
 					rval = false;
 					break;
 				}

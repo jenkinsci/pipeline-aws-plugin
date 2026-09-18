@@ -21,16 +21,15 @@
 
 package de.taimos.pipeline.aws;
 
-import com.amazonaws.event.ProgressEventType;
-import com.amazonaws.event.ProgressListener;
-import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.model.CannedAccessControlList;
-import com.amazonaws.services.s3.model.CopyObjectRequest;
-import com.amazonaws.services.s3.model.ObjectMetadata;
-import com.amazonaws.services.s3.model.SSEAwsKeyManagementParams;
-import com.amazonaws.services.s3.transfer.Copy;
-import com.amazonaws.services.s3.transfer.TransferManager;
+import de.taimos.pipeline.aws.utils.CannedAcl;
+import software.amazon.awssdk.services.s3.S3AsyncClient;
+import software.amazon.awssdk.services.s3.model.CopyObjectRequest;
+import software.amazon.awssdk.services.s3.model.MetadataDirective;
+import software.amazon.awssdk.services.s3.model.ServerSideEncryption;
+import software.amazon.awssdk.transfer.s3.S3TransferManager;
+import software.amazon.awssdk.transfer.s3.model.CopyRequest;
 import com.google.common.base.Preconditions;
+import de.taimos.pipeline.aws.utils.S3Utils;
 import de.taimos.pipeline.aws.utils.StepUtils;
 import hudson.EnvVars;
 import hudson.Extension;
@@ -42,7 +41,7 @@ import org.jenkinsci.plugins.workflow.steps.SynchronousNonBlockingStepExecution;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
 
-import javax.annotation.Nonnull;
+import edu.umd.cs.findbugs.annotations.NonNull;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
@@ -55,7 +54,7 @@ public class S3CopyStep extends AbstractS3Step {
 	private final String toPath;
 	private String kmsId;
 	private String[] metadatas;
-	private CannedAccessControlList acl;
+	private CannedAcl acl;
 	private String cacheControl;
 	private String contentType;
 	private String contentDisposition;
@@ -112,12 +111,12 @@ public class S3CopyStep extends AbstractS3Step {
 		}
 	}
 
-	public CannedAccessControlList getAcl() {
+	public CannedAcl getAcl() {
 		return this.acl;
 	}
 
 	@DataBoundSetter
-	public void setAcl(CannedAccessControlList acl) {
+	public void setAcl(CannedAcl acl) {
 		this.acl = acl;
 	}
 
@@ -176,7 +175,7 @@ public class S3CopyStep extends AbstractS3Step {
 		}
 
 		@Override
-		@Nonnull
+		@NonNull
 		public String getDisplayName() {
 			return "Copy file between S3 buckets";
 		}
@@ -201,7 +200,7 @@ public class S3CopyStep extends AbstractS3Step {
 			final String toPath = this.step.getToPath();
 			final String kmsId = this.step.getKmsId();
 			final Map<String, String> metadatas = new HashMap<>();
-			final CannedAccessControlList acl = this.step.getAcl();
+			final CannedAcl acl = this.step.getAcl();
 			final String cacheControl = this.step.getCacheControl();
 			final String contentType = this.step.getContentType();
 			final String contentDisposition = this.step.getContentDisposition();
@@ -225,53 +224,51 @@ public class S3CopyStep extends AbstractS3Step {
 			TaskListener listener = Execution.this.getContext().get(TaskListener.class);
 			listener.getLogger().format("Copying s3://%s/%s to s3://%s/%s%n", fromBucket, fromPath, toBucket, toPath);
 
-			CopyObjectRequest request = new CopyObjectRequest(fromBucket, fromPath, toBucket, toPath);
+			CopyObjectRequest.Builder request = CopyObjectRequest.builder()
+					.sourceBucket(fromBucket).sourceKey(fromPath)
+					.destinationBucket(toBucket).destinationKey(toPath);
 
 			// Add metadata
 			if (metadatas.size() > 0 || (cacheControl != null && !cacheControl.isEmpty()) || (contentType != null && !contentType.isEmpty()) || (contentDisposition != null && !contentDisposition.isEmpty())|| (sseAlgorithm != null && !sseAlgorithm.isEmpty())) {
-				ObjectMetadata metas = new ObjectMetadata();
+				// v1 carried these in an ObjectMetadata attached to the request; v2 puts them on the
+				// request itself. REPLACE is what withNewObjectMetadata implied - without it S3 copies
+				// the source object's metadata and ignores everything set here.
+				request.metadataDirective(MetadataDirective.REPLACE);
 				if (metadatas.size() > 0) {
-					metas.setUserMetadata(metadatas);
+					request.metadata(metadatas);
 				}
 				if (cacheControl != null && !cacheControl.isEmpty()) {
-					metas.setCacheControl(cacheControl);
+					request.cacheControl(cacheControl);
 				}
 				if (contentType != null && !contentType.isEmpty()) {
-					metas.setContentType(contentType);
+					request.contentType(contentType);
 				}
 				if (contentDisposition != null && !contentDisposition.isEmpty()) {
-					metas.setContentDisposition(contentDisposition);
+					request.contentDisposition(contentDisposition);
 				}
 				if (sseAlgorithm != null && !sseAlgorithm.isEmpty()) {
-					metas.setSSEAlgorithm(sseAlgorithm);
+					// String overload rather than fromValue - see S3UploadOptions for why.
+					request.serverSideEncryption(sseAlgorithm);
 				}
-				request.withNewObjectMetadata(metas);
 			}
 
 			// Add acl
 			if (acl != null) {
-				request.withCannedAccessControlList(acl);
+				request.acl(acl.toObjectCannedACL());
 			}
 
 			// Add kms
 			if (kmsId != null && !kmsId.isEmpty()) {
 				listener.getLogger().format("Using KMS: %s%n", kmsId);
-				request.withSSEAwsKeyManagementParams(new SSEAwsKeyManagementParams(kmsId));
+				request.ssekmsKeyId(kmsId).serverSideEncryption(ServerSideEncryption.AWS_KMS);
 			}
 
-			AmazonS3 s3client = AWSClientFactory.create(s3ClientOptions.createAmazonS3ClientBuilder(), this.getContext(), envVars);
-			TransferManager mgr = AWSUtilFactory.newTransferManager(s3client);
-			try {
-				final Copy copy = mgr.copy(request);
-				copy.addProgressListener((ProgressListener) progressEvent -> {
-					if (progressEvent.getEventType() == ProgressEventType.TRANSFER_COMPLETED_EVENT) {
-						listener.getLogger().println("Finished: " + copy.getDescription());
-					}
-				});
-				copy.waitForCompletion();
-			}
-			finally{
-				mgr.shutdownNow();
+			// S3TransferManager only closes an async client it created itself, so a client passed to
+			// it has to be closed here or its netty event loop outlives the step.
+			try (S3AsyncClient s3client = AWSClientFactory.create(s3ClientOptions.createS3AsyncClientBuilderForCopy(), this.getContext(), envVars);
+					S3TransferManager mgr = AWSUtilFactory.newV2TransferManager(s3client)) {
+				S3Utils.joinTransfer(mgr.copy(CopyRequest.builder()
+						.copyObjectRequest(request.build()).build()).completionFuture());
 			}
 
 			listener.getLogger().println("Copy complete");

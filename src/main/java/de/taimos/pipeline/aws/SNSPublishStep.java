@@ -25,8 +25,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
-import com.amazonaws.services.sns.model.MessageAttributeValue;
-import com.amazonaws.services.sns.model.PublishRequest;
 import org.jenkinsci.plugins.workflow.steps.Step;
 import org.jenkinsci.plugins.workflow.steps.StepContext;
 import org.jenkinsci.plugins.workflow.steps.StepDescriptor;
@@ -34,9 +32,10 @@ import org.jenkinsci.plugins.workflow.steps.StepExecution;
 import org.jenkinsci.plugins.workflow.steps.SynchronousNonBlockingStepExecution;
 import org.kohsuke.stapler.DataBoundConstructor;
 
-import com.amazonaws.services.sns.AmazonSNS;
-import com.amazonaws.services.sns.AmazonSNSClientBuilder;
-import com.amazonaws.services.sns.model.PublishResult;
+import software.amazon.awssdk.services.sns.SnsClient;
+import software.amazon.awssdk.services.sns.model.MessageAttributeValue;
+import software.amazon.awssdk.services.sns.model.PublishRequest;
+import software.amazon.awssdk.services.sns.model.PublishResponse;
 
 import de.taimos.pipeline.aws.utils.StepUtils;
 import hudson.Extension;
@@ -122,25 +121,27 @@ public class SNSPublishStep extends Step {
 			final Map<String, String> messageAttributes = this.step.getMessageAttributes();
 
 			TaskListener listener = this.getContext().get(TaskListener.class);
-			AmazonSNS snsClient = AWSClientFactory.create(AmazonSNSClientBuilder.standard(), this.getContext());
+			SnsClient snsClient = AWSClientFactory.create(SnsClient.builder(), this.getContext());
 
 			listener.getLogger().format("Publishing notification %s to %s %n", subject, topicArn);
 
-			PublishRequest publishRequest = new PublishRequest()
-					.withTopicArn(topicArn).withMessage(message).withSubject(subject);
+			PublishRequest.Builder publishRequest = PublishRequest.builder()
+					.topicArn(topicArn).message(message).subject(subject);
 
 			if (messageAttributes != null && !messageAttributes.isEmpty()) {
+				Map<String, MessageAttributeValue> attributes = new HashMap<>();
 				for (Map.Entry<String, String> entry : messageAttributes.entrySet()) {
-					MessageAttributeValue value = new MessageAttributeValue();
-					value.setStringValue(entry.getValue());
-					value.setDataType(STRING_DATATYPE);
-					publishRequest.addMessageAttributesEntry(entry.getKey(), value);
+					attributes.put(entry.getKey(), MessageAttributeValue.builder()
+							.stringValue(entry.getValue())
+							.dataType(STRING_DATATYPE)
+							.build());
 				}
+				publishRequest.messageAttributes(attributes);
 			}
 
-			PublishResult result = snsClient.publish(publishRequest);
+			PublishResponse result = snsClient.publish(publishRequest.build());
 
-			listener.getLogger().format("Message published as %s %n", result.getMessageId());
+			listener.getLogger().format("Message published as %s %n", result.messageId());
 			return null;
 		}
 

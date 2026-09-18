@@ -1,14 +1,13 @@
 package de.taimos.pipeline.aws.eb;
 
-import com.amazonaws.services.elasticbeanstalk.AWSElasticBeanstalk;
-import com.amazonaws.services.elasticbeanstalk.AWSElasticBeanstalkClientBuilder;
-import com.amazonaws.services.elasticbeanstalk.model.CreateEnvironmentRequest;
-import com.amazonaws.services.elasticbeanstalk.model.CreateEnvironmentResult;
-import com.amazonaws.services.elasticbeanstalk.model.DescribeEnvironmentsRequest;
-import com.amazonaws.services.elasticbeanstalk.model.DescribeEnvironmentsResult;
-import com.amazonaws.services.elasticbeanstalk.model.EnvironmentDescription;
-import com.amazonaws.services.elasticbeanstalk.model.UpdateEnvironmentRequest;
-import com.amazonaws.services.elasticbeanstalk.model.UpdateEnvironmentResult;
+import software.amazon.awssdk.services.elasticbeanstalk.ElasticBeanstalkClient;
+import software.amazon.awssdk.services.elasticbeanstalk.model.CreateEnvironmentRequest;
+import software.amazon.awssdk.services.elasticbeanstalk.model.CreateEnvironmentResponse;
+import software.amazon.awssdk.services.elasticbeanstalk.model.DescribeEnvironmentsRequest;
+import software.amazon.awssdk.services.elasticbeanstalk.model.DescribeEnvironmentsResponse;
+import software.amazon.awssdk.services.elasticbeanstalk.model.EnvironmentDescription;
+import software.amazon.awssdk.services.elasticbeanstalk.model.UpdateEnvironmentRequest;
+import software.amazon.awssdk.services.elasticbeanstalk.model.UpdateEnvironmentResponse;
 import de.taimos.pipeline.aws.AWSClientFactory;
 import de.taimos.pipeline.aws.utils.StepUtils;
 import hudson.EnvVars;
@@ -22,7 +21,7 @@ import org.jenkinsci.plugins.workflow.steps.StepExecution;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
 
-import javax.annotation.Nonnull;
+import edu.umd.cs.findbugs.annotations.NonNull;
 import java.util.Collections;
 import java.util.Optional;
 import java.util.Set;
@@ -85,7 +84,7 @@ public class EBCreateEnvironmentStep extends Step {
 			return "ebCreateEnvironment";
 		}
 
-		@Nonnull
+		@NonNull
 		@Override
 		public String getDisplayName() {
 			return "Creates a new Elastic Beanstalk environment";
@@ -96,7 +95,7 @@ public class EBCreateEnvironmentStep extends Step {
 		private static final long serialVersionUID = 1L;
 		private final transient EBCreateEnvironmentStep step;
 
-		protected Execution(EBCreateEnvironmentStep step, @Nonnull StepContext context) {
+		protected Execution(EBCreateEnvironmentStep step, @NonNull StepContext context) {
 			super(context);
 			this.step = step;
 		}
@@ -104,8 +103,8 @@ public class EBCreateEnvironmentStep extends Step {
 		@Override
 		protected Void run() throws Exception {
 			TaskListener listener = this.getContext().get(TaskListener.class);
-			AWSElasticBeanstalk client = AWSClientFactory.create(
-					AWSElasticBeanstalkClientBuilder.standard(),
+			ElasticBeanstalkClient client = AWSClientFactory.create(
+					ElasticBeanstalkClient.builder(),
 					this.getContext(),
 					this.getContext().get(EnvVars.class)
 			);
@@ -114,49 +113,53 @@ public class EBCreateEnvironmentStep extends Step {
 
 			boolean environmentExists = false;
 			if (step.updateOnExisting) {
-				DescribeEnvironmentsRequest describeRequest = new DescribeEnvironmentsRequest();
-				describeRequest.setApplicationName(step.applicationName);
-				describeRequest.setEnvironmentNames(Collections.singletonList(step.environmentName));
-				DescribeEnvironmentsResult result = client.describeEnvironments(describeRequest);
-				Optional<EnvironmentDescription> environment = result.getEnvironments().stream()
-						.filter(env -> !env.getStatus().equalsIgnoreCase("Terminated"))
+				DescribeEnvironmentsRequest describeRequest = DescribeEnvironmentsRequest.builder()
+						.applicationName(step.applicationName)
+						.environmentNames(Collections.singletonList(step.environmentName))
+						.build();
+				DescribeEnvironmentsResponse result = client.describeEnvironments(describeRequest);
+				// statusAsString: v2 models the status as an enum, the comparison is against a literal
+				Optional<EnvironmentDescription> environment = result.environments().stream()
+						.filter(env -> !env.statusAsString().equalsIgnoreCase("Terminated"))
 						.findFirst();
 				environmentExists = environment.isPresent();
 			}
 
 			if (environmentExists) {
-				UpdateEnvironmentRequest updateRequest = new UpdateEnvironmentRequest();
-				updateRequest.setApplicationName(step.applicationName);
-				updateRequest.setEnvironmentName(step.environmentName);
-				updateRequest.setDescription(step.description);
-				updateRequest.setTemplateName(step.templateName);
-				updateRequest.setVersionLabel(step.versionLabel);
-				updateRequest.setSolutionStackName(step.solutionStackName);
-				UpdateEnvironmentResult result = client.updateEnvironment(updateRequest);
+				UpdateEnvironmentRequest updateRequest = UpdateEnvironmentRequest.builder()
+						.applicationName(step.applicationName)
+						.environmentName(step.environmentName)
+						.description(step.description)
+						.templateName(step.templateName)
+						.versionLabel(step.versionLabel)
+						.solutionStackName(step.solutionStackName)
+						.build();
+				UpdateEnvironmentResponse result = client.updateEnvironment(updateRequest);
 
 				listener.getLogger().format(
 						"Updated existing environment %s (%s) with arn (%s) %n",
-						result.getEnvironmentName(),
-						result.getEnvironmentId(),
-						result.getEnvironmentArn()
+						result.environmentName(),
+						result.environmentId(),
+						result.environmentArn()
 				);
 				return null;
 			}
 
-			CreateEnvironmentRequest request = new CreateEnvironmentRequest();
-			request.setApplicationName(step.applicationName);
-			request.setEnvironmentName(step.environmentName);
-			request.setDescription(step.description);
-			request.setTemplateName(step.templateName);
-			request.setVersionLabel(step.versionLabel);
-			request.setSolutionStackName(step.solutionStackName);
+			CreateEnvironmentRequest request = CreateEnvironmentRequest.builder()
+					.applicationName(step.applicationName)
+					.environmentName(step.environmentName)
+					.description(step.description)
+					.templateName(step.templateName)
+					.versionLabel(step.versionLabel)
+					.solutionStackName(step.solutionStackName)
+					.build();
 
-			CreateEnvironmentResult result = client.createEnvironment(request);
+			CreateEnvironmentResponse result = client.createEnvironment(request);
 			listener.getLogger().format(
 					"Created environment %s (%s) with arn (%s) %n",
-					result.getEnvironmentName(),
-					result.getEnvironmentId(),
-					result.getEnvironmentArn()
+					result.environmentName(),
+					result.environmentId(),
+					result.environmentArn()
 			);
 
 			return null;

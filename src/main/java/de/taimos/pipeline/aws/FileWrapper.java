@@ -52,7 +52,7 @@ package de.taimos.pipeline.aws;
 import java.io.IOException;
 import java.io.Serializable;
 
-import javax.annotation.Nonnull;
+import edu.umd.cs.findbugs.annotations.NonNull;
 
 import org.jenkinsci.plugins.scriptsecurity.sandbox.whitelists.Whitelisted;
 
@@ -67,15 +67,15 @@ public class FileWrapper implements Serializable {
 	private static final long serialVersionUID = 1L;
 	private static final String PATH_SUFFIX = "/";
 
-	@Nonnull
+	@NonNull
 	private final String name;
-	@Nonnull
+	@NonNull
 	private final String path;
 	private final boolean directory;
 	private final long length;
 	private final long lastModified;
 
-	public FileWrapper(@Nonnull String name, @Nonnull String path, boolean directory, long length, long lastModified) {
+	public FileWrapper(@NonNull String name, @NonNull String path, boolean directory, long length, long lastModified) {
 		this.name = name;
 		this.directory = directory;
 		this.length = length;
@@ -87,7 +87,7 @@ public class FileWrapper implements Serializable {
 		}
 	}
 
-	protected FileWrapper(@Nonnull FilePath base, @Nonnull FilePath file) throws IOException, InterruptedException {
+	protected FileWrapper(@NonNull FilePath base, @NonNull FilePath file) throws IOException, InterruptedException {
 		this(file.getName(),
 			file.getRemote().substring(base.getRemote().length() + 1),
 			file.isDirectory(),
@@ -96,18 +96,18 @@ public class FileWrapper implements Serializable {
 		);
 	}
 
-	protected FileWrapper(@Nonnull FilePath file) throws IOException, InterruptedException {
+	protected FileWrapper(@NonNull FilePath file) throws IOException, InterruptedException {
 		this(file.getName(), file.getRemote(), file.isDirectory(), file.length(), file.lastModified());
 	}
 
 	@Whitelisted
-	@Nonnull
+	@NonNull
 	public String getName() {
 		return this.name;
 	}
 
 	@Whitelisted
-	@Nonnull
+	@NonNull
 	public String getPath() {
 		return this.path;
 	}
@@ -129,7 +129,7 @@ public class FileWrapper implements Serializable {
 
 	@Override
 	@Whitelisted
-	@Nonnull
+	@NonNull
 	public String toString() {
 		return this.getPath();
 	}

@@ -1,10 +1,11 @@
 package de.taimos.pipeline.aws.cloudformation;
 
-import com.amazonaws.services.cloudformation.AmazonCloudFormation;
+import software.amazon.awssdk.services.cloudformation.CloudFormationClient;
 import de.taimos.pipeline.aws.AWSClientFactory;
 import de.taimos.pipeline.aws.AWSUtilFactory;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -21,17 +22,23 @@ public class CFNUpdateStackTests {
 	@Rule
 	public JenkinsRule jenkinsRule = new JenkinsRule();
 	private CloudFormationStack stack;
-	private AmazonCloudFormation cloudFormation;
+	private CloudFormationClient cloudFormation;
 
 	@Before
 	public void setupSdk() throws Exception {
 		this.stack = Mockito.mock(CloudFormationStack.class);
-		this.cloudFormation = Mockito.mock(AmazonCloudFormation.class);
+		this.cloudFormation = Mockito.mock(CloudFormationClient.class);
 		AWSClientFactory.setFactoryDelegate((x) -> this.cloudFormation);
 		AWSUtilFactory.setStackSupplier(s -> {
 			assertEquals("foo", s);
 			return stack;
 		});
+	}
+
+	@After
+	public void tearDownSdk() {
+		AWSClientFactory.setFactoryDelegate(null);
+		AWSUtilFactory.setStackSupplier(null);
 	}
 
 	@Test

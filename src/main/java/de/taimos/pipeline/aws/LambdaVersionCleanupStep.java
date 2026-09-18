@@ -26,9 +26,9 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import com.amazonaws.services.cloudformation.model.ListStackResourcesRequest;
-import com.amazonaws.services.cloudformation.model.ListStackResourcesResult;
-import com.amazonaws.services.cloudformation.model.StackResourceSummary;
+import software.amazon.awssdk.services.cloudformation.model.ListStackResourcesRequest;
+import software.amazon.awssdk.services.cloudformation.model.ListStackResourcesResponse;
+import software.amazon.awssdk.services.cloudformation.model.StackResourceSummary;
 import org.jenkinsci.plugins.workflow.steps.Step;
 import org.jenkinsci.plugins.workflow.steps.StepContext;
 import org.jenkinsci.plugins.workflow.steps.StepDescriptor;
@@ -37,17 +37,12 @@ import org.jenkinsci.plugins.workflow.steps.SynchronousNonBlockingStepExecution;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
 
-import com.amazonaws.services.cloudformation.AmazonCloudFormation;
-import com.amazonaws.services.cloudformation.AmazonCloudFormationClientBuilder;
-import com.amazonaws.services.lambda.AWSLambda;
-import com.amazonaws.services.lambda.AWSLambdaClientBuilder;
-import com.amazonaws.services.lambda.model.ListVersionsByFunctionRequest;
-import com.amazonaws.services.lambda.model.ListVersionsByFunctionResult;
-import com.amazonaws.services.lambda.model.DeleteFunctionRequest;
-import com.amazonaws.services.lambda.model.FunctionConfiguration;
-import com.amazonaws.services.lambda.model.ListAliasesRequest;
-
-import java.util.LinkedList;
+import software.amazon.awssdk.services.cloudformation.CloudFormationClient;
+import software.amazon.awssdk.services.lambda.LambdaClient;
+import software.amazon.awssdk.services.lambda.model.ListVersionsByFunctionRequest;
+import software.amazon.awssdk.services.lambda.model.DeleteFunctionRequest;
+import software.amazon.awssdk.services.lambda.model.FunctionConfiguration;
+import software.amazon.awssdk.services.lambda.model.ListAliasesRequest;
 
 import de.taimos.pipeline.aws.utils.StepUtils;
 import hudson.Extension;
@@ -112,79 +107,73 @@ public class LambdaVersionCleanupStep extends Step {
 			this.step = step;
 		}
 
-		private List<FunctionConfiguration> findAllVersions(AWSLambda client, String functionName) {
-			List<FunctionConfiguration> list = new LinkedList<>();
-			ListVersionsByFunctionRequest request = new ListVersionsByFunctionRequest()
-				.withFunctionName(functionName);
-			do {
-				ListVersionsByFunctionResult result = client.listVersionsByFunction(request);
-				list.addAll(result.getVersions());
-				request.setMarker(result.getNextMarker());
-			} while (request.getMarker() != null);
-
-			return list;
+		private List<FunctionConfiguration> findAllVersions(LambdaClient client, String functionName) {
+			// v1 walked the marker by hand; the paginator issues the same sequence of calls
+			return client.listVersionsByFunctionPaginator(ListVersionsByFunctionRequest.builder()
+							.functionName(functionName)
+							.build())
+					.stream()
+					.flatMap(page -> page.versions().stream())
+					.collect(Collectors.toList());
 		}
 
-		private void deleteAllVersions(AWSLambda client, String functionName) throws Exception {
+		private void deleteAllVersions(LambdaClient client, String functionName) throws Exception {
 			TaskListener listener = Execution.this.getContext().get(TaskListener.class);
 			listener.getLogger().format("Looking for old versions functionName=%s%n", functionName);
-			List<String> aliasedVersions = client.listAliases(new ListAliasesRequest()
-					.withFunctionName(functionName)).getAliases().stream()
-					.map( (alias) -> alias.getFunctionVersion())
+			List<String> aliasedVersions = client.listAliases(ListAliasesRequest.builder()
+					.functionName(functionName)
+					.build()).aliases().stream()
+					.map(alias -> alias.functionVersion())
 					.collect(Collectors.toList());
 			listener.getLogger().format("Found alises functionName=%s alias=%s%n", functionName, aliasedVersions);
 			List<FunctionConfiguration> allVersions = findAllVersions(client, functionName);
 			listener.getLogger().format("Found old versions functionName=%s count=%d%n", functionName, allVersions.size());
 			List<FunctionConfiguration> filteredVersions = allVersions.stream()
 				.filter( (function) -> {
-					ZonedDateTime parsedDateTime = DateTimeUtils.parse(function.getLastModified());
+					ZonedDateTime parsedDateTime = DateTimeUtils.parse(function.lastModified());
 					return parsedDateTime.isBefore(this.step.versionCutoff);
 				})
-				.filter( (function) -> !"$LATEST".equals(function.getVersion()))
-				.filter( (function) -> !aliasedVersions.contains(function.getVersion()))
+				.filter( (function) -> !"$LATEST".equals(function.version()))
+				.filter( (function) -> !aliasedVersions.contains(function.version()))
 				.collect(Collectors.toList());
 			for (FunctionConfiguration functionConfiguration : filteredVersions) {
-				listener.getLogger().format("Deleting old version functionName=%s version=%s lastModified=%s%n", functionName, functionConfiguration.getVersion(), functionConfiguration.getLastModified());
-				client.deleteFunction(new DeleteFunctionRequest()
-						.withFunctionName(functionName)
-						.withQualifier(functionConfiguration.getVersion())
+				listener.getLogger().format("Deleting old version functionName=%s version=%s lastModified=%s%n", functionName, functionConfiguration.version(), functionConfiguration.lastModified());
+				client.deleteFunction(DeleteFunctionRequest.builder()
+						.functionName(functionName)
+						.qualifier(functionConfiguration.version())
+						.build()
 				);
 			}
 		}
 
 		private List<StackResourceSummary> findAllResourcesForStack(String stackName) {
-			AmazonCloudFormation cloudformation = AWSClientFactory.create(AmazonCloudFormationClientBuilder.standard(), this.getContext());
+			CloudFormationClient cloudformation = AWSClientFactory.create(CloudFormationClient.builder(), this.getContext());
 			List<StackResourceSummary> stackResources = new ArrayList<>();
-			String nextToken = null;
-			do {
-				ListStackResourcesResult result = cloudformation.listStackResources(new ListStackResourcesRequest()
-						.withNextToken(nextToken)
-						.withStackName(stackName)
-				);
-				nextToken = result.getNextToken();
-				stackResources.addAll(result.getStackResourceSummaries());
-			} while (nextToken != null);
+			for (ListStackResourcesResponse page : cloudformation.listStackResourcesPaginator(
+					ListStackResourcesRequest.builder().stackName(stackName).build())) {
+				stackResources.addAll(page.stackResourceSummaries());
+			}
 			return stackResources;
 		}
 
-		private void deleteAllStackFunctionVersions(AWSLambda client, String stackName) throws Exception  {
+		private void deleteAllStackFunctionVersions(LambdaClient client, String stackName) throws Exception  {
 			TaskListener listener = Execution.this.getContext().get(TaskListener.class);
 			listener.getLogger().format("Deleting old versions from stackName=%s%n", stackName);
 			List<StackResourceSummary> stackResources = findAllResourcesForStack(stackName);
 			listener.getLogger().format("Found %d resources in stackName=%s%n", stackResources.size(), stackName);
 			List<StackResourceSummary> lambdaFunctions = stackResources.stream()
-					.filter(resource -> "AWS::Lambda::Function".equals(resource.getResourceType()))
+					.filter(resource -> "AWS::Lambda::Function".equals(resource.resourceType()))
 					.collect(Collectors.toList());
 			listener.getLogger().format("Found %d lambda resources in stackName=%s%n", lambdaFunctions.size(), stackName);
 			for (StackResourceSummary stackResource : lambdaFunctions) {
-				deleteAllVersions(client, stackResource.getPhysicalResourceId());
+				deleteAllVersions(client, stackResource.physicalResourceId());
 			}
 		}
 
 		@Override
 		public String run() throws Exception {
 
-			AWSLambda client = AWSClientFactory.create(AWSLambdaClientBuilder.standard(), this.getContext());
+			LambdaClient client = AWSClientFactory.create(LambdaClient.builder(), this.getContext());
 
 			if (this.step.functionName != null) {
 				deleteAllVersions(client, this.step.functionName);

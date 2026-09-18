@@ -18,14 +18,13 @@ package de.taimos.pipeline.aws.utils;
 
 import java.util.Optional;
 
-import com.amazonaws.services.securitytoken.AWSSecurityTokenService;
-import com.amazonaws.services.securitytoken.model.AssumeRoleRequest;
-import com.amazonaws.services.securitytoken.model.AssumeRoleResult;
-import com.amazonaws.services.securitytoken.model.AssumeRoleWithSAMLRequest;
-import com.amazonaws.services.securitytoken.model.AssumeRoleWithSAMLResult;
-import com.amazonaws.services.securitytoken.model.AssumedRoleUser;
-import com.amazonaws.services.securitytoken.model.Credentials;
-import com.amazonaws.util.StringUtils;
+import software.amazon.awssdk.services.sts.StsClient;
+import software.amazon.awssdk.services.sts.model.AssumeRoleRequest;
+import software.amazon.awssdk.services.sts.model.AssumeRoleResponse;
+import software.amazon.awssdk.services.sts.model.AssumeRoleWithSamlRequest;
+import software.amazon.awssdk.services.sts.model.AssumeRoleWithSamlResponse;
+import software.amazon.awssdk.services.sts.model.AssumedRoleUser;
+import software.amazon.awssdk.services.sts.model.Credentials;
 
 /**
  */
@@ -71,17 +70,17 @@ public class AssumedRole {
 		}
 		
 		public AssumeRole withSessionName(final String sessionName) {
-			this.sessionName = StringUtils.isNullOrEmpty(sessionName) ? null : sessionName;
+			this.sessionName = sessionName == null || sessionName.isEmpty() ? null : sessionName;
 			return this;
 		}
 		
 		public AssumeRole withExternalId(final String externalId) {
-			this.externalId = StringUtils.isNullOrEmpty(externalId) ? null : externalId;
+			this.externalId = externalId == null || externalId.isEmpty() ? null : externalId;
 			return this;
 		}
 		
 		public AssumeRole withPolicy(final String policy) {
-			this.policy =  StringUtils.isNullOrEmpty(policy) ? null : policy;
+			this.policy = policy == null || policy.isEmpty() ? null : policy;
 			return this;
 		}
 		
@@ -91,33 +90,35 @@ public class AssumedRole {
 		}
 		
 		public AssumeRole withSamlAssertion(final String samlAssertion, final String principalArn) {
-			this.samlAssertion =  StringUtils.isNullOrEmpty(samlAssertion) ? null : samlAssertion;
+			this.samlAssertion = samlAssertion == null || samlAssertion.isEmpty() ? null : samlAssertion;
 			this.principalArn = principalArn;
 			return this;
 		}
 		
-		public AssumedRole assumedRole(final AWSSecurityTokenService sts) {
+		public AssumedRole assumedRole(final StsClient sts) {
 			return this.samlAssertion == null ? this.assumeRole(sts) : this.assumeRoleWithSAML(sts);
 		}
 		
-		private AssumedRole assumeRole(final AWSSecurityTokenService sts) {
-			final AssumeRoleRequest assumeRoleRequest = new AssumeRoleRequest().withRoleArn(this.roleArn)
-							.withRoleSessionName(this.sessionName)
-							.withDurationSeconds(this.durationInSeconds);
-			Optional.ofNullable(this.externalId).ifPresent(assumeRoleRequest::setExternalId);
-			Optional.ofNullable(this.policy).ifPresent(assumeRoleRequest::withPolicy);
-			AssumeRoleResult assumeRoleResult = sts.assumeRole(assumeRoleRequest);
-			return new AssumedRole(assumeRoleResult.getCredentials(), assumeRoleResult.getAssumedRoleUser());
+		private AssumedRole assumeRole(final StsClient sts) {
+			final AssumeRoleRequest.Builder assumeRoleRequest = AssumeRoleRequest.builder()
+							.roleArn(this.roleArn)
+							.roleSessionName(this.sessionName)
+							.durationSeconds(this.durationInSeconds);
+			Optional.ofNullable(this.externalId).ifPresent(assumeRoleRequest::externalId);
+			Optional.ofNullable(this.policy).ifPresent(assumeRoleRequest::policy);
+			AssumeRoleResponse assumeRoleResult = sts.assumeRole(assumeRoleRequest.build());
+			return new AssumedRole(assumeRoleResult.credentials(), assumeRoleResult.assumedRoleUser());
 		}
 
-		private AssumedRole assumeRoleWithSAML(final AWSSecurityTokenService sts) {
-			final AssumeRoleWithSAMLRequest assumeRoleRequest = new AssumeRoleWithSAMLRequest().withRoleArn(this.roleArn)
-					.withDurationSeconds(this.durationInSeconds)
-					.withPrincipalArn(this.principalArn)
-					.withSAMLAssertion(this.samlAssertion);
-			Optional.ofNullable(this.policy).ifPresent(assumeRoleRequest::withPolicy);
-			AssumeRoleWithSAMLResult assumeRoleWithSAMLResult = sts.assumeRoleWithSAML(assumeRoleRequest);
-			return new AssumedRole(assumeRoleWithSAMLResult.getCredentials(), assumeRoleWithSAMLResult.getAssumedRoleUser());
+		private AssumedRole assumeRoleWithSAML(final StsClient sts) {
+			final AssumeRoleWithSamlRequest.Builder assumeRoleRequest = AssumeRoleWithSamlRequest.builder()
+					.roleArn(this.roleArn)
+					.durationSeconds(this.durationInSeconds)
+					.principalArn(this.principalArn)
+					.samlAssertion(this.samlAssertion);
+			Optional.ofNullable(this.policy).ifPresent(assumeRoleRequest::policy);
+			AssumeRoleWithSamlResponse assumeRoleWithSAMLResult = sts.assumeRoleWithSAML(assumeRoleRequest.build());
+			return new AssumedRole(assumeRoleWithSAMLResult.credentials(), assumeRoleWithSAMLResult.assumedRoleUser());
 		}
 		
 	}

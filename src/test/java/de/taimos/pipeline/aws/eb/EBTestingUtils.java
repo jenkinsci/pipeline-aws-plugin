@@ -1,6 +1,6 @@
 package de.taimos.pipeline.aws.eb;
 
-import com.amazonaws.services.elasticbeanstalk.AWSElasticBeanstalk;
+import software.amazon.awssdk.services.elasticbeanstalk.ElasticBeanstalkClient;
 import de.taimos.pipeline.aws.AWSClientFactory;
 import hudson.EnvVars;
 import hudson.model.TaskListener;
@@ -20,9 +20,13 @@ class EBTestingUtils {
         return context;
     }
 
-    static AWSElasticBeanstalk setupElasticBeanstalkClient() {
-        AWSElasticBeanstalk client = Mockito.mock(AWSElasticBeanstalk.class);
+    static ElasticBeanstalkClient setupElasticBeanstalkClient() {
+        ElasticBeanstalkClient client = Mockito.mock(ElasticBeanstalkClient.class);
         AWSClientFactory.setFactoryDelegate((x) -> client);
         return client;
+    }
+
+    static void resetElasticBeanstalkClient() {
+        AWSClientFactory.setFactoryDelegate(null);
     }
 }

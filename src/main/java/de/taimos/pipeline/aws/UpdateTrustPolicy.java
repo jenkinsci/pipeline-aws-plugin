@@ -30,9 +30,8 @@ import org.jenkinsci.plugins.workflow.steps.StepExecution;
 import org.jenkinsci.plugins.workflow.steps.SynchronousNonBlockingStepExecution;
 import org.kohsuke.stapler.DataBoundConstructor;
 
-import com.amazonaws.services.identitymanagement.AmazonIdentityManagement;
-import com.amazonaws.services.identitymanagement.AmazonIdentityManagementClientBuilder;
-import com.amazonaws.services.identitymanagement.model.UpdateAssumeRolePolicyRequest;
+import software.amazon.awssdk.services.iam.IamClient;
+import software.amazon.awssdk.services.iam.model.UpdateAssumeRolePolicyRequest;
 import com.google.common.base.Preconditions;
 
 import de.taimos.pipeline.aws.utils.StepUtils;
@@ -101,11 +100,12 @@ public class UpdateTrustPolicy extends Step {
 			Preconditions.checkArgument(roleName != null && !roleName.isEmpty(), "roleName must not be null or empty");
 			Preconditions.checkArgument(policyFile != null && !policyFile.isEmpty(), "policyFile must not be null or empty");
 
-			AmazonIdentityManagement iamClient = AWSClientFactory.create(AmazonIdentityManagementClientBuilder.standard(), Execution.this.getContext());
+			IamClient iamClient = AWSClientFactory.create(IamClient.builder(), Execution.this.getContext());
 
-			UpdateAssumeRolePolicyRequest request = new UpdateAssumeRolePolicyRequest();
-			request.withRoleName(roleName);
-			request.withPolicyDocument(Execution.this.getContext().get(FilePath.class).child(policyFile).readToString());
+			UpdateAssumeRolePolicyRequest request = UpdateAssumeRolePolicyRequest.builder()
+					.roleName(roleName)
+					.policyDocument(Execution.this.getContext().get(FilePath.class).child(policyFile).readToString())
+					.build();
 			iamClient.updateAssumeRolePolicy(request);
 
 			Execution.this.getContext().get(TaskListener.class).getLogger().format("Updated trust policy of role %s %n", roleName);

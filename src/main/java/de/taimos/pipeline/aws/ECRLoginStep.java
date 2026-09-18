@@ -33,11 +33,10 @@ import org.jenkinsci.plugins.workflow.steps.SynchronousNonBlockingStepExecution;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
 
-import com.amazonaws.services.ecr.AmazonECR;
-import com.amazonaws.services.ecr.AmazonECRClientBuilder;
-import com.amazonaws.services.ecr.model.AuthorizationData;
-import com.amazonaws.services.ecr.model.GetAuthorizationTokenRequest;
-import com.amazonaws.services.ecr.model.GetAuthorizationTokenResult;
+import software.amazon.awssdk.services.ecr.EcrClient;
+import software.amazon.awssdk.services.ecr.model.AuthorizationData;
+import software.amazon.awssdk.services.ecr.model.GetAuthorizationTokenRequest;
+import software.amazon.awssdk.services.ecr.model.GetAuthorizationTokenResponse;
 
 import de.taimos.pipeline.aws.utils.StepUtils;
 import hudson.Extension;
@@ -105,21 +104,21 @@ public class ECRLoginStep extends Step {
 
 		@Override
 		protected String run() throws Exception {
-			AmazonECR ecr = AWSClientFactory.create(AmazonECRClientBuilder.standard(), this.getContext());
+			EcrClient ecr = AWSClientFactory.create(EcrClient.builder(), this.getContext());
 
-			GetAuthorizationTokenRequest request = new GetAuthorizationTokenRequest();
+			GetAuthorizationTokenRequest.Builder request = GetAuthorizationTokenRequest.builder();
 			List<String> registryIds;
-			if((registryIds = this.step.getRegistryIds()) != null) {
-				request.setRegistryIds(registryIds);
+			if ((registryIds = this.step.getRegistryIds()) != null) {
+				request.registryIds(registryIds);
 			}
-			GetAuthorizationTokenResult token = ecr.getAuthorizationToken(request);
+			GetAuthorizationTokenResponse token = ecr.getAuthorizationToken(request.build());
 
-			if (token.getAuthorizationData().size() != 1) {
+			if (token.authorizationData().size() != 1) {
 				throw new RuntimeException("Did not get authorizationData from AWS");
 			}
 
-			AuthorizationData authorizationData = token.getAuthorizationData().get(0);
-			byte[] bytes = org.apache.commons.codec.binary.Base64.decodeBase64(authorizationData.getAuthorizationToken());
+			AuthorizationData authorizationData = token.authorizationData().get(0);
+			byte[] bytes = org.apache.commons.codec.binary.Base64.decodeBase64(authorizationData.authorizationToken());
 			String data = new String(bytes, Charsets.UTF_8);
 			String[] parts = data.split(":");
 			if (parts.length != 2) {
@@ -127,7 +126,7 @@ public class ECRLoginStep extends Step {
 			}
 
 			String emailString = this.step.getEmail() ? "-e none" : "";
-			return String.format("docker login -u %s -p %s %s %s", parts[0], parts[1], emailString, authorizationData.getProxyEndpoint());
+			return String.format("docker login -u %s -p %s %s %s", parts[0], parts[1], emailString, authorizationData.proxyEndpoint());
 		}
 
 		private static final long serialVersionUID = 1L;

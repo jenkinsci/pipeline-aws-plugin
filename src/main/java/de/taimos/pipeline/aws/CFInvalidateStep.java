@@ -32,14 +32,11 @@ import org.jenkinsci.plugins.workflow.steps.SynchronousNonBlockingStepExecution;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
 
-import com.amazonaws.services.cloudfront.AmazonCloudFront;
-import com.amazonaws.services.cloudfront.AmazonCloudFrontClientBuilder;
-import com.amazonaws.services.cloudfront.model.CreateInvalidationRequest;
-import com.amazonaws.services.cloudfront.model.GetInvalidationRequest;
-import com.amazonaws.services.cloudfront.model.InvalidationBatch;
-import com.amazonaws.services.cloudfront.model.Paths;
-import com.amazonaws.services.cloudfront.waiters.AmazonCloudFrontWaiters;
-import com.amazonaws.waiters.WaiterParameters;
+import software.amazon.awssdk.services.cloudfront.CloudFrontClient;
+import software.amazon.awssdk.services.cloudfront.model.CreateInvalidationRequest;
+import software.amazon.awssdk.services.cloudfront.model.GetInvalidationRequest;
+import software.amazon.awssdk.services.cloudfront.model.InvalidationBatch;
+import software.amazon.awssdk.services.cloudfront.model.Paths;
 
 import de.taimos.pipeline.aws.utils.StepUtils;
 import hudson.Extension;
@@ -111,7 +108,7 @@ public class CFInvalidateStep extends Step {
 		protected Void run() throws Exception {
 			TaskListener listener = this.getContext().get(TaskListener.class);
 
-			AmazonCloudFront client = AWSClientFactory.create(AmazonCloudFrontClientBuilder.standard(), this.getContext());
+			CloudFrontClient client = AWSClientFactory.create(CloudFrontClient.builder(), this.getContext());
 
 			String distribution = this.step.getDistribution();
 			String[] paths = this.step.getPaths();
@@ -119,15 +116,25 @@ public class CFInvalidateStep extends Step {
 
 			listener.getLogger().format("Invalidating paths %s in distribution %s%n", Arrays.toString(paths), distribution);
 
-			Paths invalidationPaths = new Paths().withItems(paths).withQuantity(paths.length);
-			InvalidationBatch batch = new InvalidationBatch(invalidationPaths, Long.toString(System.currentTimeMillis()));
+			Paths invalidationPaths = Paths.builder().items(paths).quantity(paths.length).build();
+			InvalidationBatch batch = InvalidationBatch.builder()
+					.paths(invalidationPaths)
+					.callerReference(Long.toString(System.currentTimeMillis()))
+					.build();
 
-			String invalidationId = client.createInvalidation(new CreateInvalidationRequest(distribution, batch)).getInvalidation().getId();
+			String invalidationId = client.createInvalidation(CreateInvalidationRequest.builder()
+					.distributionId(distribution)
+					.invalidationBatch(batch)
+					.build()
+			).invalidation().id();
 			listener.getLogger().format("Invalidation %s enqueued%n", invalidationId);
 
 			if (waitForCompletion) {
 				listener.getLogger().format("Waiting for invalidation %s to be completed...%n", invalidationId);
-				client.waiters().invalidationCompleted().run(new WaiterParameters<GetInvalidationRequest>(new GetInvalidationRequest(distribution, invalidationId)));
+				client.waiter().waitUntilInvalidationCompleted(GetInvalidationRequest.builder()
+						.distributionId(distribution)
+						.id(invalidationId)
+						.build());
 				listener.getLogger().format("Invalidation %s completed%n", invalidationId);
 			}
 
