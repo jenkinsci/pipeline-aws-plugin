@@ -6,7 +6,7 @@
      "packageRules": [
          {
              "matchPackageNames": ["net.bytebuddy:byte-buddy"],
-      "allowedVersions": "/^(?!.*-jdk5$).*$/"
+      "allowedVersions": "/^\\d+\\.\\d+\\.\\d+$/"
          }
     ]
 }
