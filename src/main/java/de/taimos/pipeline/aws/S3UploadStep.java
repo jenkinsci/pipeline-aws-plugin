@@ -24,6 +24,8 @@ package de.taimos.pipeline.aws;
 import de.taimos.pipeline.aws.utils.CannedAcl;
 import de.taimos.pipeline.aws.utils.S3Utils;
 import software.amazon.awssdk.core.async.AsyncRequestBody;
+import software.amazon.awssdk.core.sync.RequestBody;
+import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.transfer.s3.S3TransferManager;
@@ -440,6 +442,7 @@ public class S3UploadStep extends AbstractS3Step {
 	private static class RemoteUploader extends MasterToSlaveFileCallable<Void> {
 
 		protected static final long serialVersionUID = 1L;
+		private static final long MULTIPART_UPLOAD_THRESHOLD_BYTES = 16L * 1024 * 1024;
 
 		private final S3ClientOptions amazonS3ClientOptions;
 		private final EnvVars envVars;
@@ -459,25 +462,37 @@ public class S3UploadStep extends AbstractS3Step {
 
 		@Override
 		public Void invoke(File localFile, VirtualChannel channel) throws IOException, InterruptedException {
-			// S3TransferManager only closes an async client it created itself, so a client passed to it
-			// has to be closed here - these run on agents, which stay up across many builds.
-			try (S3AsyncClient s3Client = AWSClientFactory.create(this.amazonS3ClientOptions.createS3AsyncClientBuilderForUpload(), this.envVars);
-					S3TransferManager mgr = AWSUtilFactory.newV2TransferManager(s3Client)) {
-				if (localFile.isFile()) {
-					String key = this.path;
-					if (key.endsWith("/") || key.isEmpty()) {
-						key += localFile.getName();
+			if (localFile.isFile()) {
+				String key = this.path;
+				if (key.endsWith("/") || key.isEmpty()) {
+					key += localFile.getName();
+				}
+				if (this.options.getKmsId() != null && !this.options.getKmsId().isEmpty()) {
+					this.taskListener.getLogger().format("Using KMS: %s%n", this.options.getKmsId());
+				}
+				PutObjectRequest request = this.options.applyTo(
+						PutObjectRequest.builder().bucket(this.bucket).key(key)).build();
+				if (localFile.length() < MULTIPART_UPLOAD_THRESHOLD_BYTES) {
+					try (S3Client s3Client = AWSClientFactory.create(this.amazonS3ClientOptions.createS3ClientBuilder(), this.envVars)) {
+						s3Client.putObject(request, RequestBody.fromFile(localFile));
 					}
-					if (this.options.getKmsId() != null && !this.options.getKmsId().isEmpty()) {
-						this.taskListener.getLogger().format("Using KMS: %s%n", this.options.getKmsId());
+				} else {
+					// S3TransferManager only closes an async client it created itself, so a client passed to it
+					// has to be closed here - these run on agents, which stay up across many builds.
+					try (S3AsyncClient s3Client = AWSClientFactory.create(this.amazonS3ClientOptions.createS3AsyncClientBuilderForUpload(), this.envVars);
+							S3TransferManager mgr = AWSUtilFactory.newV2TransferManager(s3Client)) {
+						S3Utils.joinTransfer(mgr.uploadFile(UploadFileRequest.builder()
+								.putObjectRequest(request)
+								.source(localFile)
+								.build()).completionFuture());
 					}
-					S3Utils.joinTransfer(mgr.uploadFile(UploadFileRequest.builder()
-							.putObjectRequest(this.options.applyTo(
-									PutObjectRequest.builder().bucket(this.bucket).key(key)).build())
-							.source(localFile)
-							.build()).completionFuture());
-					this.taskListener.getLogger().println("Finished: upload of s3://" + this.bucket + "/" + key);
-				} else if (localFile.isDirectory()) {
+				}
+				this.taskListener.getLogger().println("Finished: upload of s3://" + this.bucket + "/" + key);
+			} else if (localFile.isDirectory()) {
+				// S3TransferManager only closes an async client it created itself, so a client passed to it
+				// has to be closed here - these run on agents, which stay up across many builds.
+				try (S3AsyncClient s3Client = AWSClientFactory.create(this.amazonS3ClientOptions.createS3AsyncClientBuilderForUpload(), this.envVars);
+						S3TransferManager mgr = AWSUtilFactory.newV2TransferManager(s3Client)) {
 					uploadDirectory(mgr, this.bucket, this.path, localFile, this.options, this.taskListener);
 				}
 			}
