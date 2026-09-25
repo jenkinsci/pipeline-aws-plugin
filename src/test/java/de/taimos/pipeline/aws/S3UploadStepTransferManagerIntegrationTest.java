@@ -17,6 +17,8 @@
 package de.taimos.pipeline.aws;
 
 import software.amazon.awssdk.services.s3.S3AsyncClient;
+import software.amazon.awssdk.services.s3.S3AsyncClientBuilder;
+import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.PutObjectResponse;
 import software.amazon.awssdk.transfer.s3.S3TransferManager;
 import software.amazon.awssdk.transfer.s3.model.CompletedFileUpload;
@@ -58,6 +60,7 @@ public class S3UploadStepTransferManagerIntegrationTest {
 
 	private S3TransferManager transferManager;
 	private S3AsyncClient asyncClient;
+	private S3Client s3Client;
 
 	@ClassRule
 	public static BuildWatcher buildWatcher = new BuildWatcher();
@@ -69,7 +72,8 @@ public class S3UploadStepTransferManagerIntegrationTest {
 	public void setupSdk() throws Exception {
 		transferManager = Mockito.mock(S3TransferManager.class);
 		asyncClient = Mockito.mock(S3AsyncClient.class);
-		AWSClientFactory.setFactoryDelegate((x) -> asyncClient);
+		s3Client = Mockito.mock(S3Client.class);
+		AWSClientFactory.setFactoryDelegate((x) -> x instanceof S3AsyncClientBuilder ? asyncClient : s3Client);
 		AWSUtilFactory.setV2TransferManagerSupplier(() -> transferManager);
 	}
 
@@ -111,6 +115,29 @@ public class S3UploadStepTransferManagerIntegrationTest {
 		assertThat(captor.getValue().source().toString(), matchesRegex("^.*subdir.test.txt$"));
 		// the key is relative to workingDir, not to the workspace: 'work/' must not appear in it
 		assertThat(captor.getValue().putObjectRequest().key(), not(containsString("work")));
+	}
+
+	@Test
+	public void usePutObjectForSmallSingleFileUpload() throws Exception {
+		WorkflowJob job = jenkinsRule.jenkins.createProject(WorkflowJob.class, "S3UploadSingleFileTest");
+		job.setDefinition(new CpsFlowDefinition(""
+				+ "node {\n"
+				+ "  writeFile file: 'test.txt', text: 'Hello!'\n"
+				+ "  s3Upload(bucket: 'test-bucket', file: 'test.txt', path: 'target.txt')"
+				+ "}\n", true)
+		);
+
+		Mockito.when(s3Client.putObject(Mockito.any(PutObjectRequest.class), Mockito.any(software.amazon.awssdk.core.sync.RequestBody.class)))
+				.thenReturn(PutObjectResponse.builder().build());
+
+		jenkinsRule.assertBuildStatusSuccess(job.scheduleBuild2(0));
+
+		ArgumentCaptor<PutObjectRequest> captor = ArgumentCaptor.forClass(PutObjectRequest.class);
+		Mockito.verify(s3Client).putObject(captor.capture(), Mockito.any(software.amazon.awssdk.core.sync.RequestBody.class));
+		Mockito.verify(s3Client).close();
+		Mockito.verifyNoInteractions(transferManager);
+		Assert.assertEquals("test-bucket", captor.getValue().bucket());
+		Assert.assertEquals("target.txt", captor.getValue().key());
 	}
 
 	@Test
