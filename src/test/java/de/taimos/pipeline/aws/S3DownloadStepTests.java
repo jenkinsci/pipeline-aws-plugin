@@ -34,7 +34,11 @@ import org.junit.rules.Timeout;
 import org.jvnet.hudson.test.JenkinsRule;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
+import software.amazon.awssdk.core.async.AsyncRequestBody;
+import software.amazon.awssdk.core.async.AsyncResponseTransformer;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
+import software.amazon.awssdk.services.s3.model.GetObjectRequest;
+import software.amazon.awssdk.services.s3.model.GetObjectResponse;
 import software.amazon.awssdk.services.s3.model.ListObjectsV2Request;
 import software.amazon.awssdk.transfer.s3.S3TransferManager;
 import software.amazon.awssdk.transfer.s3.model.CompletedDirectoryDownload;
@@ -175,5 +179,28 @@ public class S3DownloadStepTests {
 
 		Mockito.verify(this.transferManager).close();
 		Mockito.verify(this.asyncClient).close();
+	}
+
+	/**
+	 * v1's TransferManager created the target's parent directories; Ensure v2's downloadFile preserves
+	 * this behavior.
+	 */
+	@Test
+	public void createsTheParentDirectoriesOfTheTarget() throws Exception {
+		Mockito.when(this.asyncClient.getObject(Mockito.any(GetObjectRequest.class), Mockito.any(AsyncResponseTransformer.class)))
+				.thenAnswer(invocation -> {
+					AsyncResponseTransformer<GetObjectResponse, ?> transformer = invocation.getArgument(1);
+					CompletableFuture<?> future = transformer.prepare();
+					transformer.onResponse(GetObjectResponse.builder().contentLength(4L).build());
+					transformer.onStream(AsyncRequestBody.fromString("data"));
+					return future;
+				});
+		AWSUtilFactory.setV2TransferManagerSupplier(() -> S3TransferManager.builder().s3Client(this.asyncClient).build());
+
+		this.run("s3DownloadNested", "bucket: 'my-bucket', path: 'a/b.txt', file: 'does-not-exist/yet/out.txt'", Result.SUCCESS);
+
+		WorkflowJob job = this.jenkinsRule.jenkins.getItemByFullName("s3DownloadNested", WorkflowJob.class);
+		Assertions.assertThat(this.jenkinsRule.jenkins.getWorkspaceFor(job).child("does-not-exist/yet/out.txt").readToString())
+				.isEqualTo("data");
 	}
 }

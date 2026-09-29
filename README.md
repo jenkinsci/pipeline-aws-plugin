@@ -1332,6 +1332,11 @@ ebWaitOnEnvironmentHealth(
   individual object could not be downloaded, listing each failure. SDK v1 threw in that case; SDK v2
   reports per-file failures on an otherwise successful transfer, so without an explicit check a
   partly-downloaded directory would have looked like a clean download.
+* Fixed: `s3Download` of a single object failed with `NoSuchFileException` when the target's parent
+  directory did not exist - a nested `file`, or a workspace that no earlier step had created, as on a
+  fresh agent. SDK v1 created the missing directories; SDK v2 does not, and retried the local error
+  as if it were a network one. Missing parent directories are created again
+  ([#369](https://github.com/jenkinsci/pipeline-aws-plugin/issues/369)).
 * `s3Copy` now uses the AWS SDK v2 transfer manager. The `acl` parameter keeps its v1 spellings
   (`acl: 'PublicRead'`, not `'PUBLIC_READ'`) so existing Jenkinsfiles are unaffected.
 * Fixed: `s3Upload` of a directory sent every file with no bucket and no key, so the upload failed
