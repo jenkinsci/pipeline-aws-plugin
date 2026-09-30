@@ -45,6 +45,7 @@ import org.kohsuke.stapler.DataBoundSetter;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Set;
 
@@ -231,7 +232,12 @@ public class S3DownloadStep extends AbstractS3Step {
 			return null;
 		}
 
-		private void downloadFile(S3TransferManager mgr, File localFile) throws InterruptedException {
+		private void downloadFile(S3TransferManager mgr, File localFile) throws IOException, InterruptedException {
+			Path parent = localFile.getAbsoluteFile().toPath().getParent();
+			if (parent != null) {
+				// v1 created the target's parent directories before writing. Preserve this behavior.
+				Files.createDirectories(parent);
+			}
 			S3Utils.joinTransfer(mgr.downloadFile(DownloadFileRequest.builder()
 					.getObjectRequest(get -> get.bucket(this.bucket).key(this.path))
 					.destination(localFile)
