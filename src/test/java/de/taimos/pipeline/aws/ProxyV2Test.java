@@ -131,12 +131,14 @@ public class ProxyV2Test {
 	@Test
 	public void shouldSetNonProxyHosts() throws Exception {
 		EnvVars vars = new EnvVars();
-		vars.put(de.taimos.pipeline.aws.ProxyConfiguration.NO_PROXY, "127.0.0.1,localhost");
+		vars.put(de.taimos.pipeline.aws.ProxyConfiguration.NO_PROXY, "127.0.0.1,localhost,*.us-east-2.amazonaws.com");
 		vars.put(de.taimos.pipeline.aws.ProxyConfiguration.HTTPS_PROXY, "http://127.0.0.1:8888/");
 
 		ProxyConfiguration config = de.taimos.pipeline.aws.ProxyConfiguration.buildV2ProxyConfiguration(vars);
 
-		assertThat(config.nonProxyHosts()).containsExactlyInAnyOrder("127.0.0.1", "localhost");
+		assertThat(config.nonProxyHosts()).containsExactlyInAnyOrder("127\\.0\\.0\\.1", "localhost", ".*\\.us-east-2\\.amazonaws\\.com");
+		assertThat(config.nonProxyHosts()).anyMatch(pattern -> "bucket.s3.us-east-2.amazonaws.com".matches(pattern));
+		assertThat(config.nonProxyHosts()).noneMatch(pattern -> "bucket.s3xus-east-2.amazonaws.com".matches(pattern));
 	}
 
 	@Test
@@ -147,7 +149,7 @@ public class ProxyV2Test {
 
 		ProxyConfiguration config = de.taimos.pipeline.aws.ProxyConfiguration.buildV2ProxyConfiguration(vars);
 
-		assertThat(config.nonProxyHosts()).containsExactlyInAnyOrder("127.0.0.1", "localhost");
+		assertThat(config.nonProxyHosts()).containsExactlyInAnyOrder("127\\.0\\.0\\.1", "localhost");
 	}
 
 	/**
@@ -187,7 +189,7 @@ public class ProxyV2Test {
 
 		assertThat(config.host()).isEqualTo("sysprop.corp");
 		assertThat(config.port()).isEqualTo(3129);
-		assertThat(config.nonProxyHosts()).containsExactlyInAnyOrder("internal.corp", "*.local");
+		assertThat(config.nonProxyHosts()).containsExactlyInAnyOrder("internal\\.corp", ".*\\.local");
 	}
 
 	/**

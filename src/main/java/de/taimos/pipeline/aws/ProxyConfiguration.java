@@ -148,7 +148,34 @@ class ProxyConfiguration {
 
 		useSystemPropertiesV2(settings);
 
+		settings.nonProxyHosts = toRegexNonProxyHosts(settings.nonProxyHosts);
+
 		return settings;
+	}
+
+	private static Set<String> toRegexNonProxyHosts(Set<String> nonProxyHosts) {
+		if (nonProxyHosts == null) {
+			return null;
+		}
+		Set<String> patterns = new HashSet<>();
+		for (String host : nonProxyHosts) {
+			StringBuilder pattern = new StringBuilder();
+			for (int i = 0; i < host.length(); i++) {
+				char character = host.charAt(i);
+				if (character == '*') {
+					pattern.append(".*");
+				} else if (character == '?') {
+					pattern.append('.');
+				} else {
+					if (".\\[]{}()+^$|".indexOf(character) >= 0) {
+						pattern.append('\\');
+					}
+					pattern.append(character);
+				}
+			}
+			patterns.add(pattern.toString());
+		}
+		return patterns;
 	}
 
 	/**
