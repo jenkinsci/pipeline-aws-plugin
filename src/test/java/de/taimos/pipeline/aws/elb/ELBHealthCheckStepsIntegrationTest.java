@@ -25,12 +25,11 @@ import de.taimos.pipeline.aws.AWSClientFactory;
 import hudson.model.Run;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.jvnet.hudson.test.JenkinsRule;
-import org.mockito.Mockito;
+import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
 import software.amazon.awssdk.services.elasticloadbalancingv2.ElasticLoadBalancingV2Client;
 import software.amazon.awssdk.services.elasticloadbalancingv2.model.DescribeTargetHealthRequest;
 import software.amazon.awssdk.services.elasticloadbalancingv2.model.DescribeTargetHealthResponse;
@@ -38,27 +37,32 @@ import software.amazon.awssdk.services.elasticloadbalancingv2.model.TargetDescri
 import software.amazon.awssdk.services.elasticloadbalancingv2.model.TargetHealth;
 import software.amazon.awssdk.services.elasticloadbalancingv2.model.TargetHealthDescription;
 
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
 /**
  * elbIsInstanceRegistered compares the target health state against the literal "healthy". v2 models
  * that state as an enum, so the comparison has to go through stateAsString(); reading the enum
  * directly would make the step always report false. Nothing else in the suite executes these steps.
  */
-public class ELBHealthCheckStepsIntegrationTest {
+@WithJenkins
+class ELBHealthCheckStepsIntegrationTest {
 
 	private static final String ARN = "arn:aws:elasticloadbalancing:us-east-1:1:targetgroup/tg/1";
 
-	@Rule
-	public JenkinsRule jenkinsRule = new JenkinsRule();
+	private JenkinsRule jenkinsRule;
 	private ElasticLoadBalancingV2Client elb;
 
-	@Before
-	public void setupSdk() throws Exception {
-		this.elb = Mockito.mock(ElasticLoadBalancingV2Client.class);
-		AWSClientFactory.setFactoryDelegate((x) -> this.elb);
+	@BeforeEach
+	void setupSdk(JenkinsRule rule) {
+		this.jenkinsRule = rule;
+		this.elb = mock(ElasticLoadBalancingV2Client.class);
+		AWSClientFactory.setFactoryDelegate(x -> this.elb);
 	}
 
-	@After
-	public void tearDownSdk() throws Exception {
+	@AfterEach
+	void tearDownSdk() {
 		AWSClientFactory.setFactoryDelegate(null);
 	}
 
@@ -70,7 +74,7 @@ public class ELBHealthCheckStepsIntegrationTest {
 					.targetHealth(TargetHealth.builder().state(state).build())
 					.build());
 		}
-		Mockito.when(this.elb.describeTargetHealth(Mockito.any(DescribeTargetHealthRequest.class)))
+		when(this.elb.describeTargetHealth(any(DescribeTargetHealthRequest.class)))
 				.thenReturn(response.build());
 	}
 
@@ -86,7 +90,7 @@ public class ELBHealthCheckStepsIntegrationTest {
 	}
 
 	@Test
-	public void registeredIsTrueForAHealthyMatchingTarget() throws Exception {
+	void registeredIsTrueForAHealthyMatchingTarget() throws Exception {
 		this.stubHealth("i-123", "healthy");
 
 		Run run = this.runStep("elbRegisteredHealthy", "elbIsInstanceRegistered");
@@ -95,7 +99,7 @@ public class ELBHealthCheckStepsIntegrationTest {
 	}
 
 	@Test
-	public void registeredIsFalseWhileTheTargetIsStillInitial() throws Exception {
+	void registeredIsFalseWhileTheTargetIsStillInitial() throws Exception {
 		this.stubHealth("i-123", "initial");
 
 		Run run = this.runStep("elbRegisteredInitial", "elbIsInstanceRegistered");
@@ -104,7 +108,7 @@ public class ELBHealthCheckStepsIntegrationTest {
 	}
 
 	@Test
-	public void registeredIsFalseForAnotherInstance() throws Exception {
+	void registeredIsFalseForAnotherInstance() throws Exception {
 		this.stubHealth("i-999", "healthy");
 
 		Run run = this.runStep("elbRegisteredOther", "elbIsInstanceRegistered");
@@ -113,7 +117,7 @@ public class ELBHealthCheckStepsIntegrationTest {
 	}
 
 	@Test
-	public void deregisteredIsTrueWhenTheTargetIsGone() throws Exception {
+	void deregisteredIsTrueWhenTheTargetIsGone() throws Exception {
 		this.stubHealth(null, null);
 
 		Run run = this.runStep("elbDeregisteredGone", "elbIsInstanceDeregistered");
@@ -122,7 +126,7 @@ public class ELBHealthCheckStepsIntegrationTest {
 	}
 
 	@Test
-	public void deregisteredIsFalseWhileTheTargetIsStillListed() throws Exception {
+	void deregisteredIsFalseWhileTheTargetIsStillListed() throws Exception {
 		this.stubHealth("i-123", "draining");
 
 		Run run = this.runStep("elbDeregisteredPresent", "elbIsInstanceDeregistered");

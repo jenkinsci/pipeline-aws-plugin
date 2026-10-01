@@ -22,11 +22,9 @@
 package de.taimos.pipeline.aws.code.deploy;
 
 import hudson.model.TaskListener;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.Timeout;
-import org.mockito.Mockito;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import software.amazon.awssdk.services.codedeploy.CodeDeployClient;
 import software.amazon.awssdk.services.codedeploy.model.DeploymentInfo;
 import software.amazon.awssdk.services.codedeploy.model.DeploymentStatus;
@@ -35,33 +33,34 @@ import software.amazon.awssdk.services.codedeploy.model.GetDeploymentRequest;
 import software.amazon.awssdk.services.codedeploy.model.GetDeploymentResponse;
 
 import java.io.PrintStream;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 /**
  * waitDeployment polls until the deployment status matches one of three literals derived from the
  * SDK enum. If those literals stopped matching what the API returns, the loop would never reach a
  * terminal branch and the build would hang rather than fail - which no other test would notice.
+ * These steps poll in an unbounded while(true) loop, so a regression in how the status is read
+ * would hang the build instead of failing it. The timeout turns that back into a test failure.
  */
-public class DeployUtilsTest {
-
-	/**
-	 * These steps poll in an unbounded while(true) loop, so a regression in how the status is read
-	 * would hang the build instead of failing it. The timeout turns that back into a test failure.
-	 */
-	@Rule
-	public Timeout globalTimeout = Timeout.seconds(60);
+@Timeout(value = 60, unit = TimeUnit.SECONDS)
+class DeployUtilsTest {
 
 	private CodeDeployClient client;
 	private TaskListener listener;
 
-	@Before
-	public void setup() {
-		this.client = Mockito.mock(CodeDeployClient.class);
-		this.listener = Mockito.mock(TaskListener.class);
-		Mockito.when(this.listener.getLogger()).thenReturn(Mockito.mock(PrintStream.class));
+	@BeforeEach
+	void setup() {
+		this.client = mock(CodeDeployClient.class);
+		this.listener = mock(TaskListener.class);
+		when(this.listener.getLogger()).thenReturn(mock(PrintStream.class));
 	}
 
 	/**
@@ -69,7 +68,7 @@ public class DeployUtilsTest {
 	 * name. Pinned explicitly because everything else in this class depends on it.
 	 */
 	@Test
-	public void statusEnumsRenderTheWireValues() {
+	void statusEnumsRenderTheWireValues() {
 		assertThat(DeploymentStatus.SUCCEEDED.toString()).isEqualTo("Succeeded");
 		assertThat(DeploymentStatus.FAILED.toString()).isEqualTo("Failed");
 		assertThat(DeploymentStatus.STOPPED.toString()).isEqualTo("Stopped");
@@ -80,21 +79,21 @@ public class DeployUtilsTest {
 		if (errorMessage != null) {
 			info.errorInformation(ErrorInformation.builder().message(errorMessage).build());
 		}
-		Mockito.when(this.client.getDeployment(Mockito.any(GetDeploymentRequest.class)))
+		when(this.client.getDeployment(any(GetDeploymentRequest.class)))
 				.thenReturn(GetDeploymentResponse.builder().deploymentInfo(info.build()).build());
 	}
 
 	@Test
-	public void returnsOnceTheDeploymentSucceeds() throws Exception {
+	void returnsOnceTheDeploymentSucceeds() throws Exception {
 		this.stubStatus("Succeeded", null);
 
 		new DeployUtils().waitDeployment("d-1", this.listener, this.client);
 
-		Mockito.verify(this.client).getDeployment(Mockito.any(GetDeploymentRequest.class));
+		verify(this.client).getDeployment(any(GetDeploymentRequest.class));
 	}
 
 	@Test
-	public void failsWithTheErrorMessageFromAws() throws Exception {
+	void failsWithTheErrorMessageFromAws() {
 		this.stubStatus("Failed", "the boom happened");
 
 		assertThatThrownBy(() -> new DeployUtils().waitDeployment("d-1", this.listener, this.client))
@@ -102,7 +101,7 @@ public class DeployUtilsTest {
 	}
 
 	@Test
-	public void failsWhenTheDeploymentIsStopped() throws Exception {
+	void failsWhenTheDeploymentIsStopped() {
 		this.stubStatus("Stopped", null);
 
 		assertThatThrownBy(() -> new DeployUtils().waitDeployment("d-1", this.listener, this.client))
@@ -115,7 +114,7 @@ public class DeployUtilsTest {
 	 * terminal state and the build did not stop when it was aborted.
 	 */
 	@Test
-	public void isInterruptibleSoAbortingABuildStopsTheWait() throws Exception {
+	void isInterruptibleSoAbortingABuildStopsTheWait() throws Exception {
 		this.stubStatus("InProgress", null);
 		AtomicReference<Throwable> thrown = new AtomicReference<>();
 
@@ -142,11 +141,11 @@ public class DeployUtilsTest {
 	}
 
 	@Test
-	public void passesTheDeploymentIdThrough() throws Exception {
+	void passesTheDeploymentIdThrough() throws Exception {
 		this.stubStatus("Succeeded", null);
 
 		new DeployUtils().waitDeployment("d-42", this.listener, this.client);
 
-		Mockito.verify(this.client).getDeployment(GetDeploymentRequest.builder().deploymentId("d-42").build());
+		verify(this.client).getDeployment(GetDeploymentRequest.builder().deploymentId("d-42").build());
 	}
 }

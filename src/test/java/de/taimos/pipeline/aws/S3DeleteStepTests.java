@@ -24,14 +24,13 @@ package de.taimos.pipeline.aws;
 import org.assertj.core.api.Assertions;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.Timeout;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.jvnet.hudson.test.JenkinsRule;
+import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
 import org.mockito.ArgumentCaptor;
-import org.mockito.Mockito;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.CommonPrefix;
 import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
@@ -43,7 +42,14 @@ import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
 import software.amazon.awssdk.services.s3.model.S3Object;
 import software.amazon.awssdk.services.s3.paginators.ListObjectsV2Iterable;
 
-import java.util.List;
+import java.util.concurrent.TimeUnit;
+
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 /**
  * Execution coverage for s3Delete's folder walk. The v1 implementation drove the listing with
@@ -51,26 +57,25 @@ import java.util.List;
  * real ListObjectsV2Iterable over the mocked client so the SDK's own paging issues the calls rather
  * than the test faking the sequence.
  */
-public class S3DeleteStepTests {
+@WithJenkins
+@Timeout(value = 60, unit = TimeUnit.SECONDS)
+class S3DeleteStepTests {
 
-	@Rule
-	public JenkinsRule jenkinsRule = new JenkinsRule();
-
-	@Rule
-	public Timeout timeout = Timeout.seconds(60);
+	private JenkinsRule jenkinsRule;
 
 	private S3Client s3Client;
 
-	@Before
-	public void setupSdk() {
-		this.s3Client = Mockito.mock(S3Client.class);
-		AWSClientFactory.setFactoryDelegate((x) -> this.s3Client);
-		Mockito.when(this.s3Client.listObjectsV2Paginator(Mockito.any(ListObjectsV2Request.class)))
+	@BeforeEach
+	void setupSdk(JenkinsRule rule) {
+		this.jenkinsRule = rule;
+		this.s3Client = mock(S3Client.class);
+		AWSClientFactory.setFactoryDelegate(x -> this.s3Client);
+		when(this.s3Client.listObjectsV2Paginator(any(ListObjectsV2Request.class)))
 				.thenAnswer(invocation -> new ListObjectsV2Iterable(this.s3Client, invocation.getArgument(0)));
 	}
 
-	@After
-	public void tearDownSdk() {
+	@AfterEach
+	void tearDownSdk() {
 		AWSClientFactory.setFactoryDelegate(null);
 	}
 
@@ -79,10 +84,10 @@ public class S3DeleteStepTests {
 	 * sub-prefix, which is then listed in turn. Every key found across all of that must be deleted.
 	 */
 	@Test
-	public void deleteFolderWalksEveryPageAndSubPrefix() throws Exception {
-		Mockito.when(this.s3Client.headObject(Mockito.any(HeadObjectRequest.class)))
+	void deleteFolderWalksEveryPageAndSubPrefix() throws Exception {
+		when(this.s3Client.headObject(any(HeadObjectRequest.class)))
 				.thenThrow(NoSuchKeyException.builder().statusCode(404).build());
-		Mockito.when(this.s3Client.listObjectsV2(Mockito.any(ListObjectsV2Request.class)))
+		when(this.s3Client.listObjectsV2(any(ListObjectsV2Request.class)))
 				.thenAnswer(invocation -> {
 					ListObjectsV2Request request = invocation.getArgument(0);
 					if ("top/".equals(request.prefix())) {
@@ -104,15 +109,16 @@ public class S3DeleteStepTests {
 				});
 
 		WorkflowJob job = this.jenkinsRule.jenkins.createProject(WorkflowJob.class, "s3DeleteFolder");
-		job.setDefinition(new CpsFlowDefinition(""
-				+ "node {\n"
-				+ "  s3Delete(bucket: 'my-bucket', path: 'top/')\n"
-				+ "}\n", true)
+		job.setDefinition(new CpsFlowDefinition("""
+                node {
+                  s3Delete(bucket: 'my-bucket', path: 'top/')
+                }
+                """, true)
 		);
 		this.jenkinsRule.assertBuildStatusSuccess(job.scheduleBuild2(0));
 
 		ArgumentCaptor<DeleteObjectRequest> captor = ArgumentCaptor.forClass(DeleteObjectRequest.class);
-		Mockito.verify(this.s3Client, Mockito.times(3)).deleteObject(captor.capture());
+		verify(this.s3Client, times(3)).deleteObject(captor.capture());
 		Assertions.assertThat(captor.getAllValues())
 				.extracting(DeleteObjectRequest::bucket, DeleteObjectRequest::key)
 				.containsExactlyInAnyOrder(
@@ -127,39 +133,41 @@ public class S3DeleteStepTests {
 	 * delete only that key - never list.
 	 */
 	@Test
-	public void deleteFileDeletesOnlyThatKey() throws Exception {
-		Mockito.when(this.s3Client.headObject(Mockito.any(HeadObjectRequest.class)))
+	void deleteFileDeletesOnlyThatKey() throws Exception {
+		when(this.s3Client.headObject(any(HeadObjectRequest.class)))
 				.thenReturn(HeadObjectResponse.builder().build());
 
 		WorkflowJob job = this.jenkinsRule.jenkins.createProject(WorkflowJob.class, "s3DeleteFile");
-		job.setDefinition(new CpsFlowDefinition(""
-				+ "node {\n"
-				+ "  s3Delete(bucket: 'my-bucket', path: 'top/one')\n"
-				+ "}\n", true)
+		job.setDefinition(new CpsFlowDefinition("""
+                node {
+                  s3Delete(bucket: 'my-bucket', path: 'top/one')
+                }
+                """, true)
 		);
 		this.jenkinsRule.assertBuildStatusSuccess(job.scheduleBuild2(0));
 
-		Mockito.verify(this.s3Client).deleteObject(DeleteObjectRequest.builder()
+		verify(this.s3Client).deleteObject(DeleteObjectRequest.builder()
 				.bucket("my-bucket").key("top/one").build());
-		Mockito.verify(this.s3Client, Mockito.never()).listObjectsV2(Mockito.any(ListObjectsV2Request.class));
+		verify(this.s3Client, never()).listObjectsV2(any(ListObjectsV2Request.class));
 	}
 
 	/**
 	 * A missing single object is a no-op, not a failure - v1's doesObjectExist guard did the same.
 	 */
 	@Test
-	public void deleteFileSkipsAMissingObject() throws Exception {
-		Mockito.when(this.s3Client.headObject(Mockito.any(HeadObjectRequest.class)))
+	void deleteFileSkipsAMissingObject() throws Exception {
+		when(this.s3Client.headObject(any(HeadObjectRequest.class)))
 				.thenThrow(NoSuchKeyException.builder().statusCode(404).build());
 
 		WorkflowJob job = this.jenkinsRule.jenkins.createProject(WorkflowJob.class, "s3DeleteMissing");
-		job.setDefinition(new CpsFlowDefinition(""
-				+ "node {\n"
-				+ "  s3Delete(bucket: 'my-bucket', path: 'top/gone')\n"
-				+ "}\n", true)
+		job.setDefinition(new CpsFlowDefinition("""
+                node {
+                  s3Delete(bucket: 'my-bucket', path: 'top/gone')
+                }
+                """, true)
 		);
 		this.jenkinsRule.assertBuildStatusSuccess(job.scheduleBuild2(0));
 
-		Mockito.verify(this.s3Client, Mockito.never()).deleteObject(Mockito.any(DeleteObjectRequest.class));
+		verify(this.s3Client, never()).deleteObject(any(DeleteObjectRequest.class));
 	}
 }

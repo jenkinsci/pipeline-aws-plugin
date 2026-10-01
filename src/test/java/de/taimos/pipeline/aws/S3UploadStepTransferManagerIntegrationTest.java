@@ -16,6 +16,9 @@
 
 package de.taimos.pipeline.aws;
 
+import org.junit.jupiter.api.extension.RegisterExtension;
+import org.jvnet.hudson.test.junit.jupiter.BuildWatcherExtension;
+import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.s3.S3AsyncClientBuilder;
 import software.amazon.awssdk.services.s3.S3Client;
@@ -34,69 +37,69 @@ import software.amazon.awssdk.transfer.s3.model.UploadFileRequest;
 import hudson.model.Run;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.jvnet.hudson.test.BuildWatcher;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.jvnet.hudson.test.For;
 import org.jvnet.hudson.test.JenkinsRule;
 import org.mockito.ArgumentCaptor;
-import org.mockito.Mockito;
-
-import java.io.File;
-import java.util.Collections;
-import java.util.List;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
-import static org.hamcrest.Matchers.endsWith;
 import static org.hamcrest.Matchers.matchesRegex;
 import static org.hamcrest.Matchers.not;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
+import static org.mockito.Mockito.when;
 
 @For(S3UploadStep.class)
-public class S3UploadStepTransferManagerIntegrationTest {
+@WithJenkins
+class S3UploadStepTransferManagerIntegrationTest {
 
 	private S3TransferManager transferManager;
 	private S3AsyncClient asyncClient;
 	private S3Client s3Client;
 
-	@ClassRule
-	public static BuildWatcher buildWatcher = new BuildWatcher();
+	@RegisterExtension
+	private static final BuildWatcherExtension buildWatcher = new BuildWatcherExtension();
 
-	@Rule
-	public JenkinsRule jenkinsRule = new JenkinsRule();
+	private JenkinsRule jenkinsRule;
 
-	@Before
-	public void setupSdk() throws Exception {
-		transferManager = Mockito.mock(S3TransferManager.class);
-		asyncClient = Mockito.mock(S3AsyncClient.class);
-		s3Client = Mockito.mock(S3Client.class);
-		AWSClientFactory.setFactoryDelegate((x) -> x instanceof S3AsyncClientBuilder ? asyncClient : s3Client);
+	@BeforeEach
+	void setupSdk(JenkinsRule rule) {
+		this.jenkinsRule = rule;
+		transferManager = mock(S3TransferManager.class);
+		asyncClient = mock(S3AsyncClient.class);
+		s3Client = mock(S3Client.class);
+		AWSClientFactory.setFactoryDelegate(x -> x instanceof S3AsyncClientBuilder ? asyncClient : s3Client);
 		AWSUtilFactory.setV2TransferManagerSupplier(() -> transferManager);
 	}
 
-	@org.junit.After
-	public void tearDownSdk() {
+	@AfterEach
+	void tearDownSdk() {
 		AWSClientFactory.setFactoryDelegate(null);
 		AWSUtilFactory.setV2TransferManagerSupplier(null);
 	}
 
 	@Test
-	public void useFileListUploaderWhenIncludePathPatternDefined() throws Exception {
+	void useFileListUploaderWhenIncludePathPatternDefined() throws Exception {
 		WorkflowJob job = jenkinsRule.jenkins.createProject(WorkflowJob.class, "S3UploadStepTest");
-		job.setDefinition(new CpsFlowDefinition(""
-				+ "node {\n"
-				+ "  writeFile file: 'work/subdir/test.txt', text: 'Hello!'\n"
-				+ "  s3Upload(bucket: 'test-bucket', includePathPattern: '**/*.txt', workingDir: 'work')"
-				+ "}\n", true)
+		job.setDefinition(new CpsFlowDefinition("""
+                node {
+                  writeFile file: 'work/subdir/test.txt', text: 'Hello!'
+                  s3Upload(bucket: 'test-bucket', includePathPattern: '**/*.txt', workingDir: 'work')\
+                }
+                """, true)
 		);
 
-		FileUpload upload = Mockito.mock(FileUpload.class);
-		Mockito.when(upload.completionFuture()).thenReturn(java.util.concurrent.CompletableFuture.completedFuture(
+		FileUpload upload = mock(FileUpload.class);
+		when(upload.completionFuture()).thenReturn(java.util.concurrent.CompletableFuture.completedFuture(
 				CompletedFileUpload.builder().response(PutObjectResponse.builder().build()).build()));
-		Mockito.when(transferManager.uploadFile(Mockito.any(UploadFileRequest.class))).thenReturn(upload);
+		when(transferManager.uploadFile(any(UploadFileRequest.class))).thenReturn(upload);
 
 		jenkinsRule.assertBuildStatusSuccess(job.scheduleBuild2(0));
 
@@ -104,56 +107,58 @@ public class S3UploadStepTransferManagerIntegrationTest {
 		// one uploadFile per resolved file. The key still has to be relative to workingDir, not to
 		// the workspace, or the subdirectory would be lost from the object name.
 		ArgumentCaptor<UploadFileRequest> captor = ArgumentCaptor.forClass(UploadFileRequest.class);
-		Mockito.verify(transferManager).uploadFile(captor.capture());
-		Mockito.verify(transferManager).close();
-		Mockito.verifyNoMoreInteractions(transferManager);
+		verify(transferManager).uploadFile(captor.capture());
+		verify(transferManager).close();
+		verifyNoMoreInteractions(transferManager);
 		// the manager does not close a client it was handed, so the step must
-		Mockito.verify(asyncClient).close();
+		verify(asyncClient).close();
 
-		Assert.assertEquals("test-bucket", captor.getValue().putObjectRequest().bucket());
-		Assert.assertEquals("subdir/test.txt", captor.getValue().putObjectRequest().key());
+		assertEquals("test-bucket", captor.getValue().putObjectRequest().bucket());
+		assertEquals("subdir/test.txt", captor.getValue().putObjectRequest().key());
 		assertThat(captor.getValue().source().toString(), matchesRegex("^.*subdir.test.txt$"));
 		// the key is relative to workingDir, not to the workspace: 'work/' must not appear in it
 		assertThat(captor.getValue().putObjectRequest().key(), not(containsString("work")));
 	}
 
 	@Test
-	public void usePutObjectForSmallSingleFileUpload() throws Exception {
+	void usePutObjectForSmallSingleFileUpload() throws Exception {
 		WorkflowJob job = jenkinsRule.jenkins.createProject(WorkflowJob.class, "S3UploadSingleFileTest");
-		job.setDefinition(new CpsFlowDefinition(""
-				+ "node {\n"
-				+ "  writeFile file: 'test.txt', text: 'Hello!'\n"
-				+ "  s3Upload(bucket: 'test-bucket', file: 'test.txt', path: 'target.txt')"
-				+ "}\n", true)
+		job.setDefinition(new CpsFlowDefinition("""
+                node {
+                  writeFile file: 'test.txt', text: 'Hello!'
+                  s3Upload(bucket: 'test-bucket', file: 'test.txt', path: 'target.txt')\
+                }
+                """, true)
 		);
 
-		Mockito.when(s3Client.putObject(Mockito.any(PutObjectRequest.class), Mockito.any(software.amazon.awssdk.core.sync.RequestBody.class)))
+		when(s3Client.putObject(any(PutObjectRequest.class), any(software.amazon.awssdk.core.sync.RequestBody.class)))
 				.thenReturn(PutObjectResponse.builder().build());
 
 		jenkinsRule.assertBuildStatusSuccess(job.scheduleBuild2(0));
 
 		ArgumentCaptor<PutObjectRequest> captor = ArgumentCaptor.forClass(PutObjectRequest.class);
-		Mockito.verify(s3Client).putObject(captor.capture(), Mockito.any(software.amazon.awssdk.core.sync.RequestBody.class));
-		Mockito.verify(s3Client).close();
-		Mockito.verifyNoInteractions(transferManager);
-		Assert.assertEquals("test-bucket", captor.getValue().bucket());
-		Assert.assertEquals("target.txt", captor.getValue().key());
+		verify(s3Client).putObject(captor.capture(), any(software.amazon.awssdk.core.sync.RequestBody.class));
+		verify(s3Client).close();
+		verifyNoInteractions(transferManager);
+		assertEquals("test-bucket", captor.getValue().bucket());
+		assertEquals("target.txt", captor.getValue().key());
 	}
 
 	@Test
-	public void shouldNotUploadAnythingWhenPatternDoNotMatchAnyFile() throws Exception {
+	void shouldNotUploadAnythingWhenPatternDoNotMatchAnyFile() throws Exception {
 		WorkflowJob job = jenkinsRule.jenkins.createProject(WorkflowJob.class, "S3UploadStepTest");
-		job.setDefinition(new CpsFlowDefinition(""
-				+ "node {\n"
-				+ "  writeFile file: 'work/subdir/test.txt', text: 'Hello!'\n"
-				+ "  s3Upload(bucket: 'test-bucket', includePathPattern: '**/*.no-match', workingDir: 'work')"
-				+ "}\n", true)
+		job.setDefinition(new CpsFlowDefinition("""
+                node {
+                  writeFile file: 'work/subdir/test.txt', text: 'Hello!'
+                  s3Upload(bucket: 'test-bucket', includePathPattern: '**/*.no-match', workingDir: 'work')\
+                }
+                """, true)
 		);
 
 		Run run = jenkinsRule.assertBuildStatusSuccess(job.scheduleBuild2(0));
 		jenkinsRule.assertLogContains("Nothing to upload", run);
 
-		Mockito.verifyNoMoreInteractions(transferManager);
+		verifyNoMoreInteractions(transferManager);
 	}
 
 	/**
@@ -166,28 +171,29 @@ public class S3UploadStepTransferManagerIntegrationTest {
 	 * builder is what catches that.
 	 */
 	@Test
-	public void directoryUploadKeepsTheBucketAndKeyTheTransferManagerComputed() throws Exception {
+	void directoryUploadKeepsTheBucketAndKeyTheTransferManagerComputed() throws Exception {
 		WorkflowJob job = jenkinsRule.jenkins.createProject(WorkflowJob.class, "S3UploadDirTest");
-		job.setDefinition(new CpsFlowDefinition(""
-				+ "node {\n"
-				+ "  writeFile file: 'dir/a.txt', text: 'Hello!'\n"
-				+ "  s3Upload(bucket: 'test-bucket', file: 'dir', path: 'artifacts/', kmsId: 'my-key')"
-				+ "}\n", true)
+		job.setDefinition(new CpsFlowDefinition("""
+                node {
+                  writeFile file: 'dir/a.txt', text: 'Hello!'
+                  s3Upload(bucket: 'test-bucket', file: 'dir', path: 'artifacts/', kmsId: 'my-key')\
+                }
+                """, true)
 		);
 
-		DirectoryUpload upload = Mockito.mock(DirectoryUpload.class);
-		Mockito.when(upload.completionFuture()).thenReturn(CompletableFuture.completedFuture(
+		DirectoryUpload upload = mock(DirectoryUpload.class);
+		when(upload.completionFuture()).thenReturn(CompletableFuture.completedFuture(
 				CompletedDirectoryUpload.builder().failedTransfers(java.util.Collections.emptyList()).build()));
-		Mockito.when(transferManager.uploadDirectory(Mockito.any(UploadDirectoryRequest.class))).thenReturn(upload);
+		when(transferManager.uploadDirectory(any(UploadDirectoryRequest.class))).thenReturn(upload);
 
 		jenkinsRule.assertBuildStatusSuccess(job.scheduleBuild2(0));
 
 		ArgumentCaptor<UploadDirectoryRequest> captor = ArgumentCaptor.forClass(UploadDirectoryRequest.class);
-		Mockito.verify(transferManager).uploadDirectory(captor.capture());
+		verify(transferManager).uploadDirectory(captor.capture());
 
 		// v1 normalised the prefix before joining it to each key; v2 joins with a delimiter, so a
 		// trailing slash here would name every object 'artifacts//a.txt'
-		Assert.assertEquals("artifacts", captor.getValue().s3Prefix().orElse(null));
+		assertEquals("artifacts", captor.getValue().s3Prefix().orElse(null));
 
 		UploadFileRequest.Builder perFile = UploadFileRequest.builder()
 				.source(java.nio.file.Paths.get("a.txt"))
@@ -195,9 +201,9 @@ public class S3UploadStepTransferManagerIntegrationTest {
 		captor.getValue().uploadFileRequestTransformer().accept(perFile);
 		PutObjectRequest transformed = perFile.build().putObjectRequest();
 
-		Assert.assertEquals("test-bucket", transformed.bucket());
-		Assert.assertEquals("artifacts/a.txt", transformed.key());
-		Assert.assertEquals("my-key", transformed.ssekmsKeyId());
+		assertEquals("test-bucket", transformed.bucket());
+		assertEquals("artifacts/a.txt", transformed.key());
+		assertEquals("my-key", transformed.ssekmsKeyId());
 	}
 
 	/**
@@ -205,17 +211,18 @@ public class S3UploadStepTransferManagerIntegrationTest {
 	 * per-file failures, so without it a partial upload would look like a clean one.
 	 */
 	@Test
-	public void aPartlyFailedDirectoryUploadFailsTheBuild() throws Exception {
+	void aPartlyFailedDirectoryUploadFailsTheBuild() throws Exception {
 		WorkflowJob job = jenkinsRule.jenkins.createProject(WorkflowJob.class, "S3UploadDirFailTest");
-		job.setDefinition(new CpsFlowDefinition(""
-				+ "node {\n"
-				+ "  writeFile file: 'dir/a.txt', text: 'Hello!'\n"
-				+ "  s3Upload(bucket: 'test-bucket', file: 'dir')"
-				+ "}\n", true)
+		job.setDefinition(new CpsFlowDefinition("""
+                node {
+                  writeFile file: 'dir/a.txt', text: 'Hello!'
+                  s3Upload(bucket: 'test-bucket', file: 'dir')\
+                }
+                """, true)
 		);
 
-		DirectoryUpload upload = Mockito.mock(DirectoryUpload.class);
-		Mockito.when(upload.completionFuture()).thenReturn(CompletableFuture.completedFuture(
+		DirectoryUpload upload = mock(DirectoryUpload.class);
+		when(upload.completionFuture()).thenReturn(CompletableFuture.completedFuture(
 				CompletedDirectoryUpload.builder().failedTransfers(java.util.Collections.singletonList(
 						FailedFileUpload.builder()
 								.exception(new RuntimeException("denied"))
@@ -224,7 +231,7 @@ public class S3UploadStepTransferManagerIntegrationTest {
 										.putObjectRequest(PutObjectRequest.builder().bucket("test-bucket").key("a.txt").build())
 										.build())
 								.build())).build()));
-		Mockito.when(transferManager.uploadDirectory(Mockito.any(UploadDirectoryRequest.class))).thenReturn(upload);
+		when(transferManager.uploadDirectory(any(UploadDirectoryRequest.class))).thenReturn(upload);
 
 		Run run = jenkinsRule.assertBuildStatus(hudson.model.Result.FAILURE, job.scheduleBuild2(0));
 		jenkinsRule.assertLogContains("failed for 1 file(s)", run);

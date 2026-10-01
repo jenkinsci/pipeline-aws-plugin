@@ -1,52 +1,55 @@
 package de.taimos.pipeline.aws.cloudformation.stacksets;
 
+import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
 import software.amazon.awssdk.services.cloudformation.CloudFormationClient;
 import de.taimos.pipeline.aws.AWSClientFactory;
 import de.taimos.pipeline.aws.AWSUtilFactory;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.jvnet.hudson.test.JenkinsRule;
-import org.mockito.Mockito;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 
-public class CFNDeleteStackSetStepTest {
+@WithJenkins
+class CFNDeleteStackSetStepTest {
 
-	@Rule
-	public JenkinsRule jenkinsRule = new JenkinsRule();
+	private JenkinsRule jenkinsRule;
 	private CloudFormationStackSet stackSet;
 
-	@Before
-	public void setupSdk() throws Exception {
-		stackSet = Mockito.mock(CloudFormationStackSet.class);
-		CloudFormationClient cloudFormation = Mockito.mock(CloudFormationClient.class);
-		AWSClientFactory.setFactoryDelegate((x) -> cloudFormation);
+	@BeforeEach
+	void setupSdk(JenkinsRule rule) {
+		this.jenkinsRule = rule;
+		stackSet = mock(CloudFormationStackSet.class);
+		CloudFormationClient cloudFormation = mock(CloudFormationClient.class);
+		AWSClientFactory.setFactoryDelegate(x -> cloudFormation);
 		AWSUtilFactory.setStackSetSupplier(s -> {
 			assertEquals("foo", s);
 			return stackSet;
 		});
 	}
 
-	@After
-	public void tearDownSdk() {
+	@AfterEach
+	void tearDownSdk() {
 		AWSClientFactory.setFactoryDelegate(null);
 		AWSUtilFactory.setStackSetSupplier(null);
 	}
 
 	@Test
-	public void deleteStackSet() throws Exception {
+	void deleteStackSet() throws Exception {
 		WorkflowJob job = jenkinsRule.jenkins.createProject(WorkflowJob.class, "testStepWithGlobalCredentials");
-		job.setDefinition(new CpsFlowDefinition(""
-				+ "node {\n"
-				+ "  cfnDeleteStackSet(stackSet: 'foo')"
-				+ "}\n", true)
+		job.setDefinition(new CpsFlowDefinition("""
+                node {
+                  cfnDeleteStackSet(stackSet: 'foo')
+                }
+                """, true)
 		);
 		jenkinsRule.assertBuildStatusSuccess(job.scheduleBuild2(0));
-		Mockito.verify(stackSet).delete();
+		verify(stackSet).delete();
 	}
 
 	/**
@@ -55,15 +58,16 @@ public class CFNDeleteStackSetStepTest {
 	 * without failing anything.
 	 */
 	@Test
-	public void stillAcceptsTheDeprecatedPollInterval() throws Exception {
+	void stillAcceptsTheDeprecatedPollInterval() throws Exception {
 		WorkflowJob job = jenkinsRule.jenkins.createProject(WorkflowJob.class, "cfnDeleteStackSetPollInterval");
-		job.setDefinition(new CpsFlowDefinition(""
-				+ "node {\n"
-				+ "  cfnDeleteStackSet(stackSet: 'foo', pollInterval: 25)\n"
-				+ "}\n", true)
+		job.setDefinition(new CpsFlowDefinition("""
+                node {
+                  cfnDeleteStackSet(stackSet: 'foo', pollInterval: 25)
+                }
+                """, true)
 		);
 		jenkinsRule.assertBuildStatusSuccess(job.scheduleBuild2(0));
 
-		Mockito.verify(stackSet).delete();
+		verify(stackSet).delete();
 	}
 }

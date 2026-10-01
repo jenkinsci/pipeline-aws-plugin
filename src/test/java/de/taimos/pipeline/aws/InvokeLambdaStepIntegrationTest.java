@@ -25,13 +25,12 @@ import hudson.model.Result;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
 import org.jenkinsci.plugins.workflow.job.WorkflowRun;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.jvnet.hudson.test.JenkinsRule;
+import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
 import org.mockito.ArgumentCaptor;
-import org.mockito.Mockito;
 import software.amazon.awssdk.core.SdkBytes;
 import software.amazon.awssdk.services.lambda.LambdaClient;
 import software.amazon.awssdk.services.lambda.model.InvokeRequest;
@@ -42,26 +41,31 @@ import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 /**
  * InvokeLambdaStepTest only covers turning the payload parameter into a string. The request the
  * step sends and what it does with the response - both rewritten for the v2 SdkBytes payload -
  * were unasserted.
  */
-public class InvokeLambdaStepIntegrationTest {
+@WithJenkins
+class InvokeLambdaStepIntegrationTest {
 
-	@Rule
-	public JenkinsRule jenkinsRule = new JenkinsRule();
+	private JenkinsRule jenkinsRule;
 	private LambdaClient lambda;
 
-	@Before
-	public void setupSdk() throws Exception {
-		this.lambda = Mockito.mock(LambdaClient.class);
-		AWSClientFactory.setFactoryDelegate((x) -> this.lambda);
+	@BeforeEach
+	void setupSdk(JenkinsRule rule) {
+		this.jenkinsRule = rule;
+		this.lambda = mock(LambdaClient.class);
+		AWSClientFactory.setFactoryDelegate(x -> this.lambda);
 	}
 
-	@After
-	public void tearDownSdk() throws Exception {
+	@AfterEach
+	void tearDownSdk() {
 		AWSClientFactory.setFactoryDelegate(null);
 	}
 
@@ -72,7 +76,7 @@ public class InvokeLambdaStepIntegrationTest {
 		if (functionError != null) {
 			response.functionError(functionError);
 		}
-		Mockito.when(this.lambda.invoke(Mockito.any(InvokeRequest.class))).thenReturn(response.build());
+		when(this.lambda.invoke(any(InvokeRequest.class))).thenReturn(response.build());
 	}
 
 	private WorkflowRun run(String jobName, String script, Result expected) throws Exception {
@@ -82,13 +86,13 @@ public class InvokeLambdaStepIntegrationTest {
 	}
 
 	@Test
-	public void sendsTheFunctionNamePayloadAndLogType() throws Exception {
+	void sendsTheFunctionNamePayloadAndLogType() throws Exception {
 		this.stubInvoke("{\"ok\":true}", null);
 
 		this.run("lambdaInvoke", "  invokeLambda(functionName: 'fn', payload: [key: 'value'])", Result.SUCCESS);
 
 		ArgumentCaptor<InvokeRequest> captor = ArgumentCaptor.forClass(InvokeRequest.class);
-		Mockito.verify(this.lambda).invoke(captor.capture());
+		verify(this.lambda).invoke(captor.capture());
 		assertThat(captor.getValue().functionName()).isEqualTo("fn");
 		assertThat(captor.getValue().payload().asString(StandardCharsets.UTF_8)).isEqualTo("{\"key\":\"value\"}");
 		assertThat(captor.getValue().logType()).isEqualTo(LogType.TAIL);
@@ -99,13 +103,13 @@ public class InvokeLambdaStepIntegrationTest {
 	 * invokeLambda(functionName: 'fn') on its own is a legal call.
 	 */
 	@Test
-	public void worksWithoutAPayload() throws Exception {
+	void worksWithoutAPayload() throws Exception {
 		this.stubInvoke("{}", null);
 
 		this.run("lambdaNoPayload", "  invokeLambda(functionName: 'fn')", Result.SUCCESS);
 
 		ArgumentCaptor<InvokeRequest> captor = ArgumentCaptor.forClass(InvokeRequest.class);
-		Mockito.verify(this.lambda).invoke(captor.capture());
+		verify(this.lambda).invoke(captor.capture());
 		assertThat(captor.getValue().payload()).isNull();
 	}
 
@@ -114,7 +118,7 @@ public class InvokeLambdaStepIntegrationTest {
 	 * into the SdkBytes conversion than the payload parameter.
 	 */
 	@Test
-	public void sendsAStringPayloadUnchanged() throws Exception {
+	void sendsAStringPayloadUnchanged() throws Exception {
 		this.stubInvoke("{}", null);
 
 		this.run("lambdaStringPayload",
@@ -122,12 +126,12 @@ public class InvokeLambdaStepIntegrationTest {
 				Result.SUCCESS);
 
 		ArgumentCaptor<InvokeRequest> captor = ArgumentCaptor.forClass(InvokeRequest.class);
-		Mockito.verify(this.lambda).invoke(captor.capture());
+		verify(this.lambda).invoke(captor.capture());
 		assertThat(captor.getValue().payload().asString(StandardCharsets.UTF_8)).isEqualTo("{\"key\": \"value\"}");
 	}
 
 	@Test
-	public void parsesTheResponsePayloadByDefault() throws Exception {
+	void parsesTheResponsePayloadByDefault() throws Exception {
 		this.stubInvoke("{\"answer\":42}", null);
 
 		WorkflowRun run = this.run("lambdaParsed",
@@ -138,7 +142,7 @@ public class InvokeLambdaStepIntegrationTest {
 	}
 
 	@Test
-	public void returnsTheRawStringWhenAsked() throws Exception {
+	void returnsTheRawStringWhenAsked() throws Exception {
 		this.stubInvoke("{\"answer\":42}", null);
 
 		WorkflowRun run = this.run("lambdaRaw",
@@ -153,7 +157,7 @@ public class InvokeLambdaStepIntegrationTest {
 	 * response rather than rely on an exception.
 	 */
 	@Test
-	public void failsTheBuildWhenTheFunctionReportsAnError() throws Exception {
+	void failsTheBuildWhenTheFunctionReportsAnError() throws Exception {
 		this.stubInvoke("{\"errorMessage\":\"boom\"}", "Unhandled");
 
 		WorkflowRun run = this.run("lambdaError", "  invokeLambda(functionName: 'fn', payload: [:])", Result.FAILURE);
@@ -162,7 +166,7 @@ public class InvokeLambdaStepIntegrationTest {
 	}
 
 	@Test
-	public void logsTheDecodedTailOutput() throws Exception {
+	void logsTheDecodedTailOutput() throws Exception {
 		this.stubInvoke("{}", null);
 
 		WorkflowRun run = this.run("lambdaLog", "  invokeLambda(functionName: 'fn', payload: [:])", Result.SUCCESS);

@@ -22,12 +22,12 @@
 package de.taimos.pipeline.aws;
 
 import hudson.EnvVars;
+import org.junit.jupiter.api.AfterEach;
 
 import java.util.HashMap;
 import java.util.Map;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import software.amazon.awssdk.http.apache.ProxyConfiguration;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -36,7 +36,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * Mirrors {@link ProxyTest} for the SDK v2 proxy configuration, so the two can be compared
  * case for case while both SDKs are present.
  */
-public class ProxyV2Test {
+class ProxyV2Test {
 
 	private static final String[] PROXY_PROPERTIES = {
 			"https.proxyHost", "https.proxyPort", "https.proxyUser", "https.proxyPassword", "http.nonProxyHosts"
@@ -49,16 +49,16 @@ public class ProxyV2Test {
 	 * to start from a known state: a machine whose Maven JVM carries -Dhttps.proxyHost (the usual
 	 * way to put Maven behind a corporate proxy) would otherwise fail the cases asserting no proxy.
 	 */
-	@Before
-	public void clearProxyProperties() {
+	@BeforeEach
+	void clearProxyProperties() {
 		for (String key : PROXY_PROPERTIES) {
 			this.savedProperties.put(key, System.getProperty(key));
 			System.clearProperty(key);
 		}
 	}
 
-	@After
-	public void restoreProxyProperties() {
+	@AfterEach
+	void restoreProxyProperties() {
 		for (Map.Entry<String, String> entry : this.savedProperties.entrySet()) {
 			if (entry.getValue() == null) {
 				System.clearProperty(entry.getKey());
@@ -69,7 +69,7 @@ public class ProxyV2Test {
 	}
 
 	@Test
-	public void shouldNotChangeIfNotPresent() throws Exception {
+	void shouldNotChangeIfNotPresent() {
 		ProxyConfiguration config = de.taimos.pipeline.aws.ProxyConfiguration.buildV2ProxyConfiguration(new EnvVars());
 
 		assertThat(config.username()).isNull();
@@ -78,7 +78,7 @@ public class ProxyV2Test {
 	}
 
 	@Test
-	public void shouldParseProxy() throws Exception {
+	void shouldParseProxy() {
 		EnvVars vars = new EnvVars();
 		vars.put(de.taimos.pipeline.aws.ProxyConfiguration.HTTPS_PROXY, "http://127.0.0.1:8888/");
 
@@ -91,7 +91,7 @@ public class ProxyV2Test {
 	}
 
 	@Test
-	public void shouldParseProxyWithoutPort() throws Exception {
+	void shouldParseProxyWithoutPort() {
 		EnvVars vars = new EnvVars();
 		vars.put(de.taimos.pipeline.aws.ProxyConfiguration.HTTPS_PROXY, "http://127.0.0.1/");
 
@@ -102,7 +102,7 @@ public class ProxyV2Test {
 	}
 
 	@Test
-	public void shouldParseProxyLowerCase() throws Exception {
+	void shouldParseProxyLowerCase() {
 		EnvVars vars = new EnvVars();
 		vars.put(de.taimos.pipeline.aws.ProxyConfiguration.HTTPS_PROXY_LC, "http://127.0.0.1:8888/");
 
@@ -113,7 +113,7 @@ public class ProxyV2Test {
 	}
 
 	@Test
-	public void shouldParseProxyWithAuth() throws Exception {
+	void shouldParseProxyWithAuth() {
 		EnvVars vars = new EnvVars();
 		vars.put(de.taimos.pipeline.aws.ProxyConfiguration.HTTPS_PROXY, "http://foo:bar@127.0.0.1:8888/");
 
@@ -129,7 +129,7 @@ public class ProxyV2Test {
 	 * v1 joins non-proxy hosts into a pipe-separated string; v2 takes a set.
 	 */
 	@Test
-	public void shouldSetNonProxyHosts() throws Exception {
+	void shouldSetNonProxyHosts() {
 		EnvVars vars = new EnvVars();
 		vars.put(de.taimos.pipeline.aws.ProxyConfiguration.NO_PROXY, "127.0.0.1,localhost,*.us-east-2.amazonaws.com");
 		vars.put(de.taimos.pipeline.aws.ProxyConfiguration.HTTPS_PROXY, "http://127.0.0.1:8888/");
@@ -137,12 +137,12 @@ public class ProxyV2Test {
 		ProxyConfiguration config = de.taimos.pipeline.aws.ProxyConfiguration.buildV2ProxyConfiguration(vars);
 
 		assertThat(config.nonProxyHosts()).containsExactlyInAnyOrder("127\\.0\\.0\\.1", "localhost", ".*\\.us-east-2\\.amazonaws\\.com");
-		assertThat(config.nonProxyHosts()).anyMatch(pattern -> "bucket.s3.us-east-2.amazonaws.com".matches(pattern));
-		assertThat(config.nonProxyHosts()).noneMatch(pattern -> "bucket.s3xus-east-2.amazonaws.com".matches(pattern));
+		assertThat(config.nonProxyHosts()).anyMatch("bucket.s3.us-east-2.amazonaws.com"::matches);
+		assertThat(config.nonProxyHosts()).noneMatch("bucket.s3xus-east-2.amazonaws.com"::matches);
 	}
 
 	@Test
-	public void shouldSetNonProxyHostsLowerCase() throws Exception {
+	void shouldSetNonProxyHostsLowerCase() {
 		EnvVars vars = new EnvVars();
 		vars.put(de.taimos.pipeline.aws.ProxyConfiguration.NO_PROXY_LC, "127.0.0.1,localhost");
 		vars.put(de.taimos.pipeline.aws.ProxyConfiguration.HTTPS_PROXY, "http://127.0.0.1:8888/");
@@ -164,7 +164,7 @@ public class ProxyV2Test {
 	 * cannot be run that way, because WithAWSStepTest makes real calls to AWS STS.
 	 */
 	@Test
-	public void shouldIgnoreHttpProxyAsV1Does() throws Exception {
+	void shouldIgnoreHttpProxyAsV1Does() {
 		EnvVars vars = new EnvVars();
 		vars.put(de.taimos.pipeline.aws.ProxyConfiguration.HTTP_PROXY, "http://127.0.0.1:8888/");
 
@@ -180,7 +180,7 @@ public class ProxyV2Test {
 	 * system-property support resolves against the endpoint scheme rather than v1's https.* names.
 	 */
 	@Test
-	public void fallsBackToTheJvmProxySystemProperties() throws Exception {
+	void fallsBackToTheJvmProxySystemProperties() {
 		System.setProperty("https.proxyHost", "sysprop.corp");
 		System.setProperty("https.proxyPort", "3129");
 		System.setProperty("http.nonProxyHosts", "internal.corp|*.local");
@@ -197,7 +197,7 @@ public class ProxyV2Test {
 	 * against the scheme (http, so 80). Defaulting to 443 here would dial http://proxy:443.
 	 */
 	@Test
-	public void systemPropertyProxyWithoutAPortLeavesThePortUnset() throws Exception {
+	void systemPropertyProxyWithoutAPortLeavesThePortUnset() {
 		System.setProperty("https.proxyHost", "sysprop.corp");
 
 		ProxyConfiguration config = de.taimos.pipeline.aws.ProxyConfiguration.buildV2ProxyConfiguration(new EnvVars());
@@ -212,7 +212,7 @@ public class ProxyV2Test {
 	 * -Dhttps.proxyUser would start getting 407s from the proxy on migrated steps only.
 	 */
 	@Test
-	public void systemPropertyCredentialsApplyToAProxyFromTheEnvironment() throws Exception {
+	void systemPropertyCredentialsApplyToAProxyFromTheEnvironment() {
 		System.setProperty("https.proxyUser", "sysuser");
 		System.setProperty("https.proxyPassword", "syspass");
 		EnvVars vars = new EnvVars();
@@ -229,7 +229,7 @@ public class ProxyV2Test {
 	 * The system properties are only a fallback: an explicitly configured proxy wins, as in v1.
 	 */
 	@Test
-	public void environmentVariablesWinOverSystemProperties() throws Exception {
+	void environmentVariablesWinOverSystemProperties() {
 		System.setProperty("https.proxyHost", "sysprop.corp");
 		EnvVars vars = new EnvVars();
 		vars.put(de.taimos.pipeline.aws.ProxyConfiguration.HTTPS_PROXY, "http://fromenv.corp:8888/");
@@ -245,7 +245,7 @@ public class ProxyV2Test {
 	 * so an https:// proxy URL must not turn into a TLS connection to the proxy here either.
 	 */
 	@Test
-	public void shouldIgnoreProxyUrlScheme() throws Exception {
+	void shouldIgnoreProxyUrlScheme() {
 		EnvVars vars = new EnvVars();
 		vars.put(de.taimos.pipeline.aws.ProxyConfiguration.HTTPS_PROXY, "https://proxy.corp:8080/");
 
@@ -263,7 +263,7 @@ public class ProxyV2Test {
 	 * dialled proxy:0 while the sync clients worked. Deleting the mapping leaves the apache cases green.
 	 */
 	@Test
-	public void nettyGivesAnUnsetPortTheSameDefaultApacheResolvesTo() {
+	void nettyGivesAnUnsetPortTheSameDefaultApacheResolvesTo() {
 		System.setProperty("https.proxyHost", "proxy.example.com");
 
 		software.amazon.awssdk.http.nio.netty.ProxyConfiguration netty =
@@ -274,7 +274,7 @@ public class ProxyV2Test {
 	}
 
 	@Test
-	public void nettyCarriesAnExplicitPortThrough() {
+	void nettyCarriesAnExplicitPortThrough() {
 		System.setProperty("https.proxyHost", "proxy.example.com");
 		System.setProperty("https.proxyPort", "8443");
 
@@ -293,7 +293,7 @@ public class ProxyV2Test {
 	 * other assertion.
 	 */
 	@Test
-	public void equalProxyConfigurationsShareAnIdentity() {
+	void equalProxyConfigurationsShareAnIdentity() {
 		EnvVars one = new EnvVars();
 		one.put(de.taimos.pipeline.aws.ProxyConfiguration.HTTPS_PROXY, "http://user:pass@proxy.example.com:8080");
 		one.put(de.taimos.pipeline.aws.ProxyConfiguration.NO_PROXY, "example.org,example.net");
@@ -308,7 +308,7 @@ public class ProxyV2Test {
 	}
 
 	@Test
-	public void eachProxyFieldChangesTheIdentity() {
+	void eachProxyFieldChangesTheIdentity() {
 		String base = identity(proxyVars("http://user:pass@proxy.example.com:8080"));
 
 		assertThat(identity(proxyVars("http://user:pass@other.example.com:8080"))).isNotEqualTo(base);
@@ -332,7 +332,7 @@ public class ProxyV2Test {
 	 * cannot express the pair; the Jenkins proxy configuration is the other way in.
 	 */
 	@Test
-	public void adjacentProxyFieldsCannotBeConfused() {
+	void adjacentProxyFieldsCannotBeConfused() {
 		System.setProperty("https.proxyHost", "proxy.example.com");
 		System.setProperty("https.proxyUser", "ab");
 		System.setProperty("https.proxyPassword", "c");

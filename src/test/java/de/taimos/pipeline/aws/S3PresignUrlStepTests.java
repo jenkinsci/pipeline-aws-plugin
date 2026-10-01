@@ -24,9 +24,10 @@ package de.taimos.pipeline.aws;
 import hudson.model.Run;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.jvnet.hudson.test.JenkinsRule;
+import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
 
 /**
  * Presigning is computed in process - no request is sent - so these run against a real S3Presigner
@@ -36,10 +37,10 @@ import org.jvnet.hudson.test.JenkinsRule;
  * The credentials arrive through the environment because AWSClientFactory resolves them from
  * EnvVars, which is also what withAWS populates.
  */
-public class S3PresignUrlStepTests {
+@WithJenkins
+class S3PresignUrlStepTests {
 
-	@Rule
-	public JenkinsRule jenkinsRule = new JenkinsRule();
+	private JenkinsRule jenkinsRule;
 
 	/**
 	 * A JenkinsRule build's EnvVars include the controller process environment, and these tests assert
@@ -68,8 +69,13 @@ public class S3PresignUrlStepTests {
 		return this.jenkinsRule.assertBuildStatusSuccess(job.scheduleBuild2(0));
 	}
 
+	@BeforeEach
+	void beforeEach(JenkinsRule rule) {
+		this.jenkinsRule = rule;
+	}
+
 	@Test
-	public void presignsAGetWithTheDefaultExpiration() throws Exception {
+	void presignsAGetWithTheDefaultExpiration() throws Exception {
 		Run run = this.runPresign("s3PresignDefault", "bucket: 'foo', key: 'bar'");
 
 		this.jenkinsRule.assertLogContains("url=https://foo.s3.us-west-2.amazonaws.com/bar?", run);
@@ -78,7 +84,7 @@ public class S3PresignUrlStepTests {
 	}
 
 	@Test
-	public void durationInSecondsReachesTheSignature() throws Exception {
+	void durationInSecondsReachesTheSignature() throws Exception {
 		Run run = this.runPresign("s3PresignDuration", "bucket: 'foo', key: 'bar', durationInSeconds: 3600");
 
 		this.jenkinsRule.assertLogContains("X-Amz-Expires=3600", run);
@@ -89,7 +95,7 @@ public class S3PresignUrlStepTests {
 	 * every one is accepted and signed rather than quietly falling back to GET.
 	 */
 	@Test
-	public void presignsEachSupportedMethod() throws Exception {
+	void presignsEachSupportedMethod() throws Exception {
 		for (String method : new String[]{"GET", "PUT", "DELETE", "HEAD"}) {
 			Run run = this.runPresign("s3Presign" + method, "bucket: 'foo', key: 'bar', httpMethod: '" + method + "'");
 
@@ -99,7 +105,7 @@ public class S3PresignUrlStepTests {
 	}
 
 	@Test
-	public void lowerCaseMethodIsAccepted() throws Exception {
+	void lowerCaseMethodIsAccepted() throws Exception {
 		Run run = this.runPresign("s3PresignLowerCase", "bucket: 'foo', key: 'bar', httpMethod: 'put'");
 
 		this.jenkinsRule.assertLogContains("X-Amz-Signature=", run);
@@ -111,7 +117,7 @@ public class S3PresignUrlStepTests {
 	 * signed for the wrong verb.
 	 */
 	@Test
-	public void unsupportedMethodsAreRejected() throws Exception {
+	void unsupportedMethodsAreRejected() throws Exception {
 		for (String method : new String[]{"POST", "PATCH"}) {
 			WorkflowJob job = this.jenkinsRule.jenkins.createProject(WorkflowJob.class, "s3PresignBad" + method);
 			job.setDefinition(new CpsFlowDefinition(""
@@ -129,7 +135,7 @@ public class S3PresignUrlStepTests {
 	 * virtual-host URL it cannot serve.
 	 */
 	@Test
-	public void pathStyleAccessChangesTheUrlShape() throws Exception {
+	void pathStyleAccessChangesTheUrlShape() throws Exception {
 		Run run = this.runPresign("s3PresignPathStyle", "bucket: 'foo', key: 'bar', pathStyleAccessEnabled: true");
 
 		this.jenkinsRule.assertLogContains("url=https://s3.us-west-2.amazonaws.com/foo/bar?", run);
@@ -140,7 +146,7 @@ public class S3PresignUrlStepTests {
 	 * this is the combination it exists for: a third-party store addressed path-style.
 	 */
 	@Test
-	public void honoursAnEndpointOverride() throws Exception {
+	void honoursAnEndpointOverride() throws Exception {
 		WorkflowJob job = this.jenkinsRule.jenkins.createProject(WorkflowJob.class, "s3PresignEndpoint");
 		job.setDefinition(new CpsFlowDefinition(""
 				+ "node {\n"
@@ -164,19 +170,20 @@ public class S3PresignUrlStepTests {
 	 * IllegalArgumentException deep in the step into a message naming the parameter.
 	 */
 	@Test
-	public void sevenDaysIsAccepted() throws Exception {
+	void sevenDaysIsAccepted() throws Exception {
 		Run run = this.runPresign("s3PresignMaxDuration", "bucket: 'foo', key: 'bar', durationInSeconds: 604800");
 
 		this.jenkinsRule.assertLogContains("X-Amz-Expires=604800", run);
 	}
 
 	@Test
-	public void durationsBeyondSevenDaysAreRejected() throws Exception {
+	void durationsBeyondSevenDaysAreRejected() throws Exception {
 		WorkflowJob job = this.jenkinsRule.jenkins.createProject(WorkflowJob.class, "s3PresignTooLong");
-		job.setDefinition(new CpsFlowDefinition(""
-				+ "node {\n"
-				+ "  s3PresignURL(bucket: 'foo', key: 'bar', durationInSeconds: 604801)\n"
-				+ "}\n", true)
+		job.setDefinition(new CpsFlowDefinition("""
+                node {
+                  s3PresignURL(bucket: 'foo', key: 'bar', durationInSeconds: 604801)
+                }
+                """, true)
 		);
 		Run run = this.jenkinsRule.assertBuildStatus(hudson.model.Result.FAILURE, job.scheduleBuild2(0));
 
@@ -184,12 +191,13 @@ public class S3PresignUrlStepTests {
 	}
 
 	@Test
-	public void zeroDurationIsRejected() throws Exception {
+	void zeroDurationIsRejected() throws Exception {
 		WorkflowJob job = this.jenkinsRule.jenkins.createProject(WorkflowJob.class, "s3PresignZero");
-		job.setDefinition(new CpsFlowDefinition(""
-				+ "node {\n"
-				+ "  s3PresignURL(bucket: 'foo', key: 'bar', durationInSeconds: 0)\n"
-				+ "}\n", true)
+		job.setDefinition(new CpsFlowDefinition("""
+                node {
+                  s3PresignURL(bucket: 'foo', key: 'bar', durationInSeconds: 0)
+                }
+                """, true)
 		);
 		Run run = this.jenkinsRule.assertBuildStatus(hudson.model.Result.FAILURE, job.scheduleBuild2(0));
 

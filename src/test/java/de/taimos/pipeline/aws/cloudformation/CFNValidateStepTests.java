@@ -1,5 +1,6 @@
 package de.taimos.pipeline.aws.cloudformation;
 
+import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
 import software.amazon.awssdk.services.cloudformation.CloudFormationClient;
 import software.amazon.awssdk.awscore.exception.AwsErrorDetails;
 import software.amazon.awssdk.services.cloudformation.model.CloudFormationException;
@@ -12,42 +13,47 @@ import org.assertj.core.api.Assertions;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
 import org.jenkinsci.plugins.workflow.job.WorkflowRun;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.jvnet.hudson.test.JenkinsRule;
 import org.mockito.ArgumentCaptor;
-import org.mockito.Mockito;
 
-public class CFNValidateStepTests {
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
-	@Rule
-	public JenkinsRule jenkinsRule = new JenkinsRule();
+@WithJenkins
+class CFNValidateStepTests {
+
+	private JenkinsRule jenkinsRule;
 	private CloudFormationClient cloudFormation;
 
-	@Before
-	public void setupSdk() throws Exception {
-		this.cloudFormation = Mockito.mock(CloudFormationClient.class);
-		AWSClientFactory.setFactoryDelegate((x) -> this.cloudFormation);
+	@BeforeEach
+	void setupSdk(JenkinsRule rule) {
+		this.jenkinsRule = rule;
+		this.cloudFormation = mock(CloudFormationClient.class);
+		AWSClientFactory.setFactoryDelegate(x -> this.cloudFormation);
 	}
 
-	@After
-	public void tearDownSdk() {
+	@AfterEach
+	void tearDownSdk() {
 		AWSClientFactory.setFactoryDelegate(null);
 	}
 
 	@Test
-	public void validateWithUrlSuccess() throws Exception {
+	void validateWithUrlSuccess() throws Exception {
 		WorkflowJob job = this.jenkinsRule.jenkins.createProject(WorkflowJob.class, "cfnTest");
-		job.setDefinition(new CpsFlowDefinition(""
-				+ "node {\n"
-				+ "  def response = cfnValidate(url: 'foo')\n"
-				+ "  echo \"description=${response.description}\"\n"
-				+ "  echo \"parameters=${response.parameters.toString()}\"\n"
-				+ "}\n", true)
+		job.setDefinition(new CpsFlowDefinition("""
+                node {
+                  def response = cfnValidate(url: 'foo')
+                  echo "description=${response.description}"
+                  echo "parameters=${response.parameters.toString()}"
+                }
+                """, true)
 		);
-		Mockito.when(this.cloudFormation.validateTemplate(Mockito.any(ValidateTemplateRequest.class))).thenReturn(ValidateTemplateResponse.builder()
+		when(this.cloudFormation.validateTemplate(any(ValidateTemplateRequest.class))).thenReturn(ValidateTemplateResponse.builder()
 				.description("myDescription")
 				.parameters(TemplateParameter.builder()
 						.defaultValue("hello")
@@ -61,28 +67,29 @@ public class CFNValidateStepTests {
 		jenkinsRule.assertLogContains("description=myDescription", run);
 		jenkinsRule.assertLogContains("parameters=[[parameterKey:myParam, defaultValue:hello, noEcho:null, description:myParamDescription]]", run);
 		ArgumentCaptor<ValidateTemplateRequest> captor = ArgumentCaptor.forClass(ValidateTemplateRequest.class);
-		Mockito.verify(this.cloudFormation).validateTemplate(captor.capture());
+		verify(this.cloudFormation).validateTemplate(captor.capture());
 		Assertions.assertThat(captor.getValue()).isEqualTo(ValidateTemplateRequest.builder()
 				.templateURL("foo").build()
 		);
 	}
 
 	@Test
-	public void validateWithUrlFailure() throws Exception {
+	void validateWithUrlFailure() throws Exception {
 		WorkflowJob job = this.jenkinsRule.jenkins.createProject(WorkflowJob.class, "cfnTest");
 		CloudFormationException ex = (CloudFormationException) CloudFormationException.builder().message("invalid template").awsErrorDetails(AwsErrorDetails.builder().errorMessage("invalid template").build()).build();
-		Mockito.when(this.cloudFormation.validateTemplate(Mockito.any(ValidateTemplateRequest.class)))
+		when(this.cloudFormation.validateTemplate(any(ValidateTemplateRequest.class)))
 				.thenThrow(ex);
-		job.setDefinition(new CpsFlowDefinition(""
-				+ "node {\n"
-				+ "  cfnValidate(url: 'foo')"
-				+ "}\n", true)
+		job.setDefinition(new CpsFlowDefinition("""
+                node {
+                  cfnValidate(url: 'foo')
+                }
+                """, true)
 		);
 
 		this.jenkinsRule.assertBuildStatus(Result.FAILURE, job.scheduleBuild2(0));
 
 		ArgumentCaptor<ValidateTemplateRequest> captor = ArgumentCaptor.forClass(ValidateTemplateRequest.class);
-		Mockito.verify(this.cloudFormation).validateTemplate(captor.capture());
+		verify(this.cloudFormation).validateTemplate(captor.capture());
 		Assertions.assertThat(captor.getValue()).isEqualTo(ValidateTemplateRequest.builder()
 				.templateURL("foo").build()
 		);

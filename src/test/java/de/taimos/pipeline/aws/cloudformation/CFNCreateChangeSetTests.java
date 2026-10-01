@@ -1,5 +1,6 @@
 package de.taimos.pipeline.aws.cloudformation;
 
+import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
 import software.amazon.awssdk.services.cloudformation.CloudFormationClient;
 import software.amazon.awssdk.services.cloudformation.model.Change;
 import software.amazon.awssdk.services.cloudformation.model.ChangeSetStatus;
@@ -12,151 +13,162 @@ import hudson.model.Result;
 import hudson.model.Run;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.jvnet.hudson.test.JenkinsRule;
-import org.mockito.Mockito;
 
 import java.util.Arrays;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyCollection;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.nullable;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
-public class CFNCreateChangeSetTests {
+@WithJenkins
+class CFNCreateChangeSetTests {
 
-	@Rule
-	public JenkinsRule jenkinsRule = new JenkinsRule();
+	private JenkinsRule jenkinsRule;
 	private CloudFormationStack stack;
 
-	@Before
-	public void setupSdk() throws Exception {
-		this.stack = Mockito.mock(CloudFormationStack.class);
-		CloudFormationClient cloudFormation = Mockito.mock(CloudFormationClient.class);
-		AWSClientFactory.setFactoryDelegate((x) -> cloudFormation);
+	@BeforeEach
+	void setupSdk(JenkinsRule rule) {
+		this.jenkinsRule = rule;
+		this.stack = mock(CloudFormationStack.class);
+		CloudFormationClient cloudFormation = mock(CloudFormationClient.class);
+		AWSClientFactory.setFactoryDelegate(x -> cloudFormation);
 		AWSUtilFactory.setStackSupplier((s) -> {
 			assertEquals("foo", s);
 			return stack;
 		});
 	}
 
-	@After
-	public void tearDownSdk() {
+	@AfterEach
+	void tearDownSdk() {
 		AWSClientFactory.setFactoryDelegate(null);
 		AWSUtilFactory.setStackSupplier(null);
 	}
 
 	@Test
-	public void createChangeSetStackParametersFromMap() throws Exception {
+	void createChangeSetStackParametersFromMap() throws Exception {
 		WorkflowJob job = this.jenkinsRule.jenkins.createProject(WorkflowJob.class, "cfnTest");
-		Mockito.when(this.stack.exists()).thenReturn(true);
-		Mockito.when(this.stack.describeChangeSet("bar")).thenReturn(DescribeChangeSetResponse.builder().changes(Change.builder().build()).status(ChangeSetStatus.CREATE_COMPLETE).build()
+		when(this.stack.exists()).thenReturn(true);
+		when(this.stack.describeChangeSet("bar")).thenReturn(DescribeChangeSetResponse.builder().changes(Change.builder().build()).status(ChangeSetStatus.CREATE_COMPLETE).build()
 		);
-		job.setDefinition(new CpsFlowDefinition(""
-				+ "node {\n"
-				+ "  def changes = cfnCreateChangeSet(stack: 'foo', changeSet: 'bar', params: ['foo': 'bar', 'baz': 'true'])\n"
-				+ "  echo \"changesCount=${changes.size()}\"\n"
-				+ "}\n", true)
+		job.setDefinition(new CpsFlowDefinition("""
+                node {
+                  def changes = cfnCreateChangeSet(stack: 'foo', changeSet: 'bar', params: ['foo': 'bar', 'baz': 'true'])
+                  echo "changesCount=${changes.size()}"
+                }
+                """, true)
 		);
 		Run run = this.jenkinsRule.assertBuildStatusSuccess(job.scheduleBuild2(0));
 		this.jenkinsRule.assertLogContains("changesCount=1", run);
 
-		Mockito.verify(this.stack).createChangeSet(Mockito.eq("bar"),
-				nullable(String.class), nullable(String.class), Mockito.eq(Arrays.asList(
+		verify(this.stack).createChangeSet(eq("bar"),
+				nullable(String.class), nullable(String.class), eq(Arrays.asList(
 				Parameter.builder().parameterKey("foo").parameterValue("bar").build(),
 				Parameter.builder().parameterKey("baz").parameterValue("true").build()
-		)), Mockito.anyCollection(), Mockito.anyCollection(), Mockito.any(PollConfiguration.class), Mockito.eq(ChangeSetType.UPDATE), nullable(String.class),
-												   Mockito.any());
+		)), anyCollection(), anyCollection(), any(PollConfiguration.class), eq(ChangeSetType.UPDATE), nullable(String.class),
+												   any());
 	}
 
 	@Test
-	public void createChangeSetStackExists() throws Exception {
+	void createChangeSetStackExists() throws Exception {
 		WorkflowJob job = this.jenkinsRule.jenkins.createProject(WorkflowJob.class, "cfnTest");
-		Mockito.when(this.stack.exists()).thenReturn(true);
-		Mockito.when(this.stack.describeChangeSet("bar")).thenReturn(DescribeChangeSetResponse.builder().changes(Change.builder().build()).status(ChangeSetStatus.CREATE_COMPLETE).build()
+		when(this.stack.exists()).thenReturn(true);
+		when(this.stack.describeChangeSet("bar")).thenReturn(DescribeChangeSetResponse.builder().changes(Change.builder().build()).status(ChangeSetStatus.CREATE_COMPLETE).build()
 		);
-		job.setDefinition(new CpsFlowDefinition(""
-				+ "node {\n"
-				+ "  def changes = cfnCreateChangeSet(stack: 'foo', changeSet: 'bar')\n"
-				+ "  echo \"changesCount=${changes.size()}\"\n"
-				+ "}\n", true)
+		job.setDefinition(new CpsFlowDefinition("""
+                node {
+                  def changes = cfnCreateChangeSet(stack: 'foo', changeSet: 'bar')
+                  echo "changesCount=${changes.size()}"
+                }
+                """, true)
 		);
 		Run run = this.jenkinsRule.assertBuildStatusSuccess(job.scheduleBuild2(0));
 		this.jenkinsRule.assertLogContains("changesCount=1", run);
 
-		Mockito.verify(this.stack).createChangeSet(Mockito.eq("bar"), nullable(String.class), nullable(String.class),
-				Mockito.anyCollection(), Mockito.anyCollection(), Mockito.anyCollection(),
-				Mockito.any(PollConfiguration.class), Mockito.eq(ChangeSetType.UPDATE), nullable(String.class), Mockito.any());
+		verify(this.stack).createChangeSet(eq("bar"), nullable(String.class), nullable(String.class),
+				anyCollection(), anyCollection(), anyCollection(),
+				any(PollConfiguration.class), eq(ChangeSetType.UPDATE), nullable(String.class), any());
 	}
 
 	@Test
-	public void createChangeSetWithRawTemplate() throws Exception {
+	void createChangeSetWithRawTemplate() throws Exception {
 		WorkflowJob job = this.jenkinsRule.jenkins.createProject(WorkflowJob.class, "cfnTest");
-		Mockito.when(this.stack.exists()).thenReturn(true);
-		Mockito.when(this.stack.describeChangeSet("bar")).thenReturn(DescribeChangeSetResponse.builder().changes(Change.builder().build()).status(ChangeSetStatus.CREATE_COMPLETE).build()
+		when(this.stack.exists()).thenReturn(true);
+		when(this.stack.describeChangeSet("bar")).thenReturn(DescribeChangeSetResponse.builder().changes(Change.builder().build()).status(ChangeSetStatus.CREATE_COMPLETE).build()
 		);
-		job.setDefinition(new CpsFlowDefinition(""
-				+ "node {\n"
-				+ "  def changes = cfnCreateChangeSet(stack: 'foo', changeSet: 'bar', template: 'foobaz')\n"
-				+ "  echo \"changesCount=${changes.size()}\"\n"
-				+ "}\n", true)
+		job.setDefinition(new CpsFlowDefinition("""
+                node {
+                  def changes = cfnCreateChangeSet(stack: 'foo', changeSet: 'bar', template: 'foobaz')
+                  echo "changesCount=${changes.size()}"
+                }
+                """, true)
 		);
 		Run run = this.jenkinsRule.assertBuildStatusSuccess(job.scheduleBuild2(0));
 		this.jenkinsRule.assertLogContains("changesCount=1", run);
 
-		Mockito.verify(this.stack).createChangeSet(Mockito.eq("bar"), Mockito.eq("foobaz"), nullable(String.class),
-				Mockito.anyCollection(), Mockito.anyCollection(), Mockito.anyCollection(),
-				Mockito.any(PollConfiguration.class), Mockito.eq(ChangeSetType.UPDATE), nullable(String.class), Mockito.any());
+		verify(this.stack).createChangeSet(eq("bar"), eq("foobaz"), nullable(String.class),
+				anyCollection(), anyCollection(), anyCollection(),
+				any(PollConfiguration.class), eq(ChangeSetType.UPDATE), nullable(String.class), any());
 	}
 
 	@Test
-	public void updateChangeSetWithRawTemplate() throws Exception {
+	void updateChangeSetWithRawTemplate() throws Exception {
 		WorkflowJob job = this.jenkinsRule.jenkins.createProject(WorkflowJob.class, "cfnTest");
-		Mockito.when(this.stack.exists()).thenReturn(false);
-		Mockito.when(this.stack.describeChangeSet("bar")).thenReturn(DescribeChangeSetResponse.builder().changes(Change.builder().build()).status(ChangeSetStatus.CREATE_COMPLETE).build()
+		when(this.stack.exists()).thenReturn(false);
+		when(this.stack.describeChangeSet("bar")).thenReturn(DescribeChangeSetResponse.builder().changes(Change.builder().build()).status(ChangeSetStatus.CREATE_COMPLETE).build()
 		);
-		job.setDefinition(new CpsFlowDefinition(""
-				+ "node {\n"
-				+ "  def changes = cfnCreateChangeSet(stack: 'foo', changeSet: 'bar', template: 'foobaz')\n"
-				+ "  echo \"changesCount=${changes.size()}\"\n"
-				+ "}\n", true)
+		job.setDefinition(new CpsFlowDefinition("""
+                node {
+                  def changes = cfnCreateChangeSet(stack: 'foo', changeSet: 'bar', template: 'foobaz')
+                  echo "changesCount=${changes.size()}"
+                }
+                """, true)
 		);
 		Run run = this.jenkinsRule.assertBuildStatusSuccess(job.scheduleBuild2(0));
 		this.jenkinsRule.assertLogContains("changesCount=1", run);
 
-		Mockito.verify(this.stack).createChangeSet(Mockito.eq("bar"), Mockito.eq("foobaz"), nullable(String.class),
-				Mockito.anyCollection(), Mockito.anyCollection(), Mockito.anyCollection(),
-				Mockito.any(PollConfiguration.class), Mockito.eq(ChangeSetType.CREATE), nullable(String.class), Mockito.any());
+		verify(this.stack).createChangeSet(eq("bar"), eq("foobaz"), nullable(String.class),
+				anyCollection(), anyCollection(), anyCollection(),
+				any(PollConfiguration.class), eq(ChangeSetType.CREATE), nullable(String.class), any());
 	}
 
 	@Test
-	public void createChangeSetStackFailure() throws Exception {
+	void createChangeSetStackFailure() throws Exception {
 		WorkflowJob job = this.jenkinsRule.jenkins.createProject(WorkflowJob.class, "cfnTest");
-		Mockito.when(this.stack.exists()).thenReturn(true);
-		Mockito.when(this.stack.describeChangeSet("bar"))
+		when(this.stack.exists()).thenReturn(true);
+		when(this.stack.describeChangeSet("bar"))
 				.thenReturn(DescribeChangeSetResponse.builder().status(ChangeSetStatus.FAILED).build()
 				);
-		job.setDefinition(new CpsFlowDefinition(""
-				+ "node {\n"
-				+ "  cfnCreateChangeSet(stack: 'foo', changeSet: 'bar')\n"
-				+ "}\n", true)
+		job.setDefinition(new CpsFlowDefinition("""
+                node {
+                  cfnCreateChangeSet(stack: 'foo', changeSet: 'bar')
+                }
+                """, true)
 		);
 		this.jenkinsRule.assertBuildStatus(Result.FAILURE, job.scheduleBuild2(0));
 	}
 
 	@Test
-	public void createEmptyChangeSet() throws Exception {
+	void createEmptyChangeSet() throws Exception {
 		WorkflowJob job = this.jenkinsRule.jenkins.createProject(WorkflowJob.class, "cfnTest");
-		Mockito.when(this.stack.exists()).thenReturn(true);
-		Mockito.when(this.stack.describeChangeSet("bar"))
+		when(this.stack.exists()).thenReturn(true);
+		when(this.stack.describeChangeSet("bar"))
 				.thenReturn(DescribeChangeSetResponse.builder().status(ChangeSetStatus.FAILED).statusReason("The submitted information didn't contain changes. Submit different information to create a change set.").build()
 				);
-		job.setDefinition(new CpsFlowDefinition(""
-				+ "node {\n"
-				+ "  def changes = cfnCreateChangeSet(stack: 'foo', changeSet: 'bar')\n"
-				+ "  echo \"changesCount=${changes.size()}\"\n"
-				+ "}\n", true)
+		job.setDefinition(new CpsFlowDefinition("""
+                node {
+                  def changes = cfnCreateChangeSet(stack: 'foo', changeSet: 'bar')
+                  echo "changesCount=${changes.size()}"
+                }
+                """, true)
 		);
 		Run run = this.jenkinsRule.assertBuildStatusSuccess(job.scheduleBuild2(0));
 		this.jenkinsRule.assertLogContains("changesCount=0", run);
@@ -164,17 +176,18 @@ public class CFNCreateChangeSetTests {
 	}
 
 	@Test
-	public void createEmptyChangeSet_statusReason() throws Exception {
+	void createEmptyChangeSet_statusReason() throws Exception {
 		WorkflowJob job = this.jenkinsRule.jenkins.createProject(WorkflowJob.class, "cfnTest");
-		Mockito.when(this.stack.exists()).thenReturn(true);
-		Mockito.when(this.stack.describeChangeSet("bar"))
+		when(this.stack.exists()).thenReturn(true);
+		when(this.stack.describeChangeSet("bar"))
 				.thenReturn(DescribeChangeSetResponse.builder().status(ChangeSetStatus.FAILED).statusReason("No updates are to be performed.").build()
 				);
-		job.setDefinition(new CpsFlowDefinition(""
-				+ "node {\n"
-				+ "  def changes = cfnCreateChangeSet(stack: 'foo', changeSet: 'bar')\n"
-				+ "  echo \"changesCount=${changes.size()}\"\n"
-				+ "}\n", true)
+		job.setDefinition(new CpsFlowDefinition("""
+                node {
+                  def changes = cfnCreateChangeSet(stack: 'foo', changeSet: 'bar')
+                  echo "changesCount=${changes.size()}"
+                }
+                """, true)
 		);
 		Run run = this.jenkinsRule.assertBuildStatusSuccess(job.scheduleBuild2(0));
 		this.jenkinsRule.assertLogContains("changesCount=0", run);
@@ -182,23 +195,24 @@ public class CFNCreateChangeSetTests {
 	}
 
 	@Test
-	public void createChangeSetStackDoesNotExist() throws Exception {
+	void createChangeSetStackDoesNotExist() throws Exception {
 		WorkflowJob job = this.jenkinsRule.jenkins.createProject(WorkflowJob.class, "cfnTest");
-		Mockito.when(this.stack.exists()).thenReturn(false);
-		Mockito.when(this.stack.describeChangeSet("bar")).thenReturn(DescribeChangeSetResponse.builder().changes(Change.builder().build()).status(ChangeSetStatus.CREATE_COMPLETE).build()
+		when(this.stack.exists()).thenReturn(false);
+		when(this.stack.describeChangeSet("bar")).thenReturn(DescribeChangeSetResponse.builder().changes(Change.builder().build()).status(ChangeSetStatus.CREATE_COMPLETE).build()
 		);
-		job.setDefinition(new CpsFlowDefinition(""
-				+ "node {\n"
-				+ "  def changes = cfnCreateChangeSet(stack: 'foo', changeSet: 'bar')\n"
-				+ "  echo \"changesCount=${changes.size()}\"\n"
-				+ "}\n", true)
+		job.setDefinition(new CpsFlowDefinition("""
+                node {
+                  def changes = cfnCreateChangeSet(stack: 'foo', changeSet: 'bar')
+                  echo "changesCount=${changes.size()}"
+                }
+                """, true)
 		);
 		Run run = this.jenkinsRule.assertBuildStatusSuccess(job.scheduleBuild2(0));
 		this.jenkinsRule.assertLogContains("changesCount=1", run);
 
-		Mockito.verify(this.stack).createChangeSet(Mockito.eq("bar"), nullable(String.class),
-				nullable(String.class), Mockito.anyCollection(), Mockito.anyCollection(),
-				Mockito.anyCollection(), Mockito.any(PollConfiguration.class), Mockito.eq(ChangeSetType.CREATE), nullable(String.class), Mockito.any());
+		verify(this.stack).createChangeSet(eq("bar"), nullable(String.class),
+				nullable(String.class), anyCollection(), anyCollection(),
+				anyCollection(), any(PollConfiguration.class), eq(ChangeSetType.CREATE), nullable(String.class), any());
 	}
 
 }

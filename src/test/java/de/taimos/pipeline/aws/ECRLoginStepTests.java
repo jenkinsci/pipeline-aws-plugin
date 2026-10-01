@@ -25,13 +25,12 @@ import hudson.model.Result;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
 import org.jenkinsci.plugins.workflow.job.WorkflowRun;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.jvnet.hudson.test.JenkinsRule;
+import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
 import org.mockito.ArgumentCaptor;
-import org.mockito.Mockito;
 import software.amazon.awssdk.services.ecr.EcrClient;
 import software.amazon.awssdk.services.ecr.model.AuthorizationData;
 import software.amazon.awssdk.services.ecr.model.GetAuthorizationTokenRequest;
@@ -41,30 +40,35 @@ import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 /**
  * ecrLogin had no test. It base64-decodes the authorization token, splits it on a colon and formats
  * a docker login command, none of which a compile checks after the accessors were rewritten.
  */
-public class ECRLoginStepTests {
+@WithJenkins
+class ECRLoginStepTests {
 
-	@Rule
-	public JenkinsRule jenkinsRule = new JenkinsRule();
+	private JenkinsRule jenkinsRule;
 	private EcrClient ecr;
 
-	@Before
-	public void setupSdk() throws Exception {
-		this.ecr = Mockito.mock(EcrClient.class);
-		AWSClientFactory.setFactoryDelegate((x) -> this.ecr);
+	@BeforeEach
+	void setupSdk(JenkinsRule rule) {
+		this.jenkinsRule = rule;
+		this.ecr = mock(EcrClient.class);
+		AWSClientFactory.setFactoryDelegate(x -> this.ecr);
 	}
 
-	@After
-	public void tearDownSdk() throws Exception {
+	@AfterEach
+	void tearDownSdk() {
 		AWSClientFactory.setFactoryDelegate(null);
 	}
 
 	private void stubToken(String decodedToken) {
-		Mockito.when(this.ecr.getAuthorizationToken(Mockito.any(GetAuthorizationTokenRequest.class)))
+		when(this.ecr.getAuthorizationToken(any(GetAuthorizationTokenRequest.class)))
 				.thenReturn(GetAuthorizationTokenResponse.builder()
 						.authorizationData(AuthorizationData.builder()
 								.authorizationToken(Base64.getEncoder()
@@ -86,7 +90,7 @@ public class ECRLoginStepTests {
 	}
 
 	@Test
-	public void buildsADockerLoginCommand() throws Exception {
+	void buildsADockerLoginCommand() throws Exception {
 		this.stubToken("AWS:secret-password");
 
 		WorkflowRun run = this.run("ecrLoginBasic", "", Result.SUCCESS);
@@ -96,7 +100,7 @@ public class ECRLoginStepTests {
 	}
 
 	@Test
-	public void addsTheEmailFlagWhenAsked() throws Exception {
+	void addsTheEmailFlagWhenAsked() throws Exception {
 		this.stubToken("AWS:secret-password");
 
 		WorkflowRun run = this.run("ecrLoginEmail", "email: true", Result.SUCCESS);
@@ -108,32 +112,32 @@ public class ECRLoginStepTests {
 	 * registryIds is optional; omitting it must leave the request without one rather than fail.
 	 */
 	@Test
-	public void omitsRegistryIdsWhenNotGiven() throws Exception {
+	void omitsRegistryIdsWhenNotGiven() throws Exception {
 		this.stubToken("AWS:secret-password");
 
 		this.run("ecrLoginNoRegistry", "", Result.SUCCESS);
 
 		ArgumentCaptor<GetAuthorizationTokenRequest> captor = ArgumentCaptor.forClass(GetAuthorizationTokenRequest.class);
-		Mockito.verify(this.ecr).getAuthorizationToken(captor.capture());
+		verify(this.ecr).getAuthorizationToken(captor.capture());
 		// hasRegistryIds, not isEmpty: v2 returns an auto-construct empty list for an unset member,
 		// so isEmpty would also pass if the step had sent an explicit empty list
 		assertThat(captor.getValue().hasRegistryIds()).isFalse();
 	}
 
 	@Test
-	public void passesRegistryIdsWhenGiven() throws Exception {
+	void passesRegistryIdsWhenGiven() throws Exception {
 		this.stubToken("AWS:secret-password");
 
 		this.run("ecrLoginRegistry", "registryIds: ['1234', '5678']", Result.SUCCESS);
 
 		ArgumentCaptor<GetAuthorizationTokenRequest> captor = ArgumentCaptor.forClass(GetAuthorizationTokenRequest.class);
-		Mockito.verify(this.ecr).getAuthorizationToken(captor.capture());
+		verify(this.ecr).getAuthorizationToken(captor.capture());
 		assertThat(captor.getValue().registryIds()).containsExactly("1234", "5678");
 	}
 
 	@Test
-	public void failsWhenAwsReturnsNoAuthorizationData() throws Exception {
-		Mockito.when(this.ecr.getAuthorizationToken(Mockito.any(GetAuthorizationTokenRequest.class)))
+	void failsWhenAwsReturnsNoAuthorizationData() throws Exception {
+		when(this.ecr.getAuthorizationToken(any(GetAuthorizationTokenRequest.class)))
 				.thenReturn(GetAuthorizationTokenResponse.builder().build());
 
 		WorkflowRun run = this.run("ecrLoginNoData", "", Result.FAILURE);
@@ -142,7 +146,7 @@ public class ECRLoginStepTests {
 	}
 
 	@Test
-	public void failsWhenTheTokenIsNotUserColonPassword() throws Exception {
+	void failsWhenTheTokenIsNotUserColonPassword() throws Exception {
 		this.stubToken("not-a-pair");
 
 		WorkflowRun run = this.run("ecrLoginBadToken", "", Result.FAILURE);

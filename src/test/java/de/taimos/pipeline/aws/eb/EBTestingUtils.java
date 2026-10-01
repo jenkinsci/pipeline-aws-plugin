@@ -5,24 +5,26 @@ import de.taimos.pipeline.aws.AWSClientFactory;
 import hudson.EnvVars;
 import hudson.model.TaskListener;
 import org.jenkinsci.plugins.workflow.steps.StepContext;
-import org.mockito.Mockito;
 
 import java.io.PrintStream;
+
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 class EBTestingUtils {
 
     static StepContext setupStepContext() throws Exception {
-        StepContext context = Mockito.mock(StepContext.class);
-        TaskListener listener = Mockito.mock(TaskListener.class);
-        Mockito.when(listener.getLogger()).thenReturn(Mockito.mock(PrintStream.class));
-        Mockito.when(context.get(TaskListener.class)).thenReturn(listener);
-        Mockito.when(context.get(EnvVars.class)).thenReturn(new EnvVars());
+        StepContext context = mock(StepContext.class);
+        TaskListener listener = mock(TaskListener.class);
+        when(listener.getLogger()).thenReturn(mock(PrintStream.class));
+        when(context.get(TaskListener.class)).thenReturn(listener);
+        when(context.get(EnvVars.class)).thenReturn(new EnvVars());
         return context;
     }
 
     static ElasticBeanstalkClient setupElasticBeanstalkClient() {
-        ElasticBeanstalkClient client = Mockito.mock(ElasticBeanstalkClient.class);
-        AWSClientFactory.setFactoryDelegate((x) -> client);
+        ElasticBeanstalkClient client = mock(ElasticBeanstalkClient.class);
+        AWSClientFactory.setFactoryDelegate(x -> client);
         return client;
     }
 

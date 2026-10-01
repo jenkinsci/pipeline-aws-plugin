@@ -25,14 +25,13 @@ import hudson.model.Run;
 import org.assertj.core.api.Assertions;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.Timeout;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.jvnet.hudson.test.JenkinsRule;
+import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
 import org.mockito.ArgumentCaptor;
-import org.mockito.Mockito;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.s3.model.CopyObjectRequest;
 import software.amazon.awssdk.services.s3.model.CopyObjectResponse;
@@ -45,38 +44,43 @@ import software.amazon.awssdk.transfer.s3.model.CopyRequest;
 import software.amazon.awssdk.transfer.s3.model.CompletedCopy;
 
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
+
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 /**
  * s3Copy had no execution coverage at all, so the whole v1 ObjectMetadata to v2 request-field
  * translation was unpinned - and the failure mode is silent: a dropped metadataDirective means S3
  * copies the source object's metadata and ignores everything the step was asked to set.
  */
-public class S3CopyStepTests {
+@WithJenkins
+@Timeout(value = 120, unit = TimeUnit.SECONDS)
+class S3CopyStepTests {
 
-	@Rule
-	public JenkinsRule jenkinsRule = new JenkinsRule();
-
-	@Rule
-	public Timeout timeout = Timeout.seconds(120);
+	private JenkinsRule jenkinsRule;
 
 	private S3TransferManager transferManager;
 	private S3AsyncClient asyncClient;
 
-	@Before
-	public void setupSdk() {
-		this.transferManager = Mockito.mock(S3TransferManager.class);
-		Copy copy = Mockito.mock(Copy.class);
-		Mockito.when(copy.completionFuture()).thenReturn(CompletableFuture.completedFuture(
+	@BeforeEach
+	void setupSdk(JenkinsRule rule) {
+		this.jenkinsRule = rule;
+		this.transferManager = mock(S3TransferManager.class);
+		Copy copy = mock(Copy.class);
+		when(copy.completionFuture()).thenReturn(CompletableFuture.completedFuture(
 				CompletedCopy.builder().response(CopyObjectResponse.builder().build()).build()));
-		Mockito.when(this.transferManager.copy(Mockito.any(CopyRequest.class))).thenReturn(copy);
+		when(this.transferManager.copy(any(CopyRequest.class))).thenReturn(copy);
 		AWSUtilFactory.setV2TransferManagerSupplier(() -> this.transferManager);
 		// the step still builds an async client before handing it to the manager
-		this.asyncClient = Mockito.mock(S3AsyncClient.class);
-		AWSClientFactory.setFactoryDelegate((x) -> this.asyncClient);
+		this.asyncClient = mock(S3AsyncClient.class);
+		AWSClientFactory.setFactoryDelegate(x -> this.asyncClient);
 	}
 
-	@After
-	public void tearDownSdk() {
+	@AfterEach
+	void tearDownSdk() {
 		AWSUtilFactory.setV2TransferManagerSupplier(null);
 		AWSClientFactory.setFactoryDelegate(null);
 	}
@@ -91,12 +95,12 @@ public class S3CopyStepTests {
 		this.jenkinsRule.assertBuildStatusSuccess(job.scheduleBuild2(0));
 
 		ArgumentCaptor<CopyRequest> captor = ArgumentCaptor.forClass(CopyRequest.class);
-		Mockito.verify(this.transferManager).copy(captor.capture());
+		verify(this.transferManager).copy(captor.capture());
 		return captor.getValue().copyObjectRequest();
 	}
 
 	@Test
-	public void copiesBetweenBucketsAndKeys() throws Exception {
+	void copiesBetweenBucketsAndKeys() throws Exception {
 		CopyObjectRequest request = this.runAndCapture("s3CopyPlain",
 				"fromBucket: 'src', fromPath: 'a/b.txt', toBucket: 'dst', toPath: 'c/d.txt'");
 
@@ -109,13 +113,14 @@ public class S3CopyStepTests {
 	}
 
 	@Test
-	public void returnsTheDestinationUrl() throws Exception {
+	void returnsTheDestinationUrl() throws Exception {
 		WorkflowJob job = this.jenkinsRule.jenkins.createProject(WorkflowJob.class, "s3CopyReturn");
-		job.setDefinition(new CpsFlowDefinition(""
-				+ "node {\n"
-				+ "  def url = s3Copy(fromBucket: 'src', fromPath: 'a', toBucket: 'dst', toPath: 'c')\n"
-				+ "  echo \"url=${url}\"\n"
-				+ "}\n", true)
+		job.setDefinition(new CpsFlowDefinition("""
+                node {
+                  def url = s3Copy(fromBucket: 'src', fromPath: 'a', toBucket: 'dst', toPath: 'c')
+                  echo "url=${url}"
+                }
+                """, true)
 		);
 		Run run = this.jenkinsRule.assertBuildStatusSuccess(job.scheduleBuild2(0));
 
@@ -127,7 +132,7 @@ public class S3CopyStepTests {
 	 * source object's metadata instead - which is what v1's withNewObjectMetadata implied.
 	 */
 	@Test
-	public void metadataOverridesRequireTheReplaceDirective() throws Exception {
+	void metadataOverridesRequireTheReplaceDirective() throws Exception {
 		CopyObjectRequest request = this.runAndCapture("s3CopyMetadata",
 				"fromBucket: 'src', fromPath: 'a', toBucket: 'dst', toPath: 'c',"
 						+ " metadatas: ['k1:v1', 'k2:v2'], cacheControl: 'no-cache',"
@@ -141,7 +146,7 @@ public class S3CopyStepTests {
 	}
 
 	@Test
-	public void aclUsesTheV1Spelling() throws Exception {
+	void aclUsesTheV1Spelling() throws Exception {
 		CopyObjectRequest request = this.runAndCapture("s3CopyAcl",
 				"fromBucket: 'src', fromPath: 'a', toBucket: 'dst', toPath: 'c', acl: 'PublicRead'");
 
@@ -153,7 +158,7 @@ public class S3CopyStepTests {
 	 * v2 request they are separate fields and setting only the key would leave the object unencrypted.
 	 */
 	@Test
-	public void kmsIdSetsBothTheKeyAndTheAlgorithm() throws Exception {
+	void kmsIdSetsBothTheKeyAndTheAlgorithm() throws Exception {
 		CopyObjectRequest request = this.runAndCapture("s3CopyKms",
 				"fromBucket: 'src', fromPath: 'a', toBucket: 'dst', toPath: 'c', kmsId: 'my-key'");
 
@@ -162,7 +167,7 @@ public class S3CopyStepTests {
 	}
 
 	@Test
-	public void sseAlgorithmIsPassedThrough() throws Exception {
+	void sseAlgorithmIsPassedThrough() throws Exception {
 		CopyObjectRequest request = this.runAndCapture("s3CopySse",
 				"fromBucket: 'src', fromPath: 'a', toBucket: 'dst', toPath: 'c', sseAlgorithm: 'AES256'");
 
@@ -175,7 +180,7 @@ public class S3CopyStepTests {
 	 * string one.
 	 */
 	@Test
-	public void anUnmodelledSseAlgorithmReachesS3VerbatimRatherThanAsNull() throws Exception {
+	void anUnmodelledSseAlgorithmReachesS3VerbatimRatherThanAsNull() throws Exception {
 		CopyObjectRequest request = this.runAndCapture("s3CopyUnmodelledSse",
 				"fromBucket: 'src', fromPath: 'a', toBucket: 'dst', toPath: 'c', sseAlgorithm: 'AES-256'");
 
@@ -188,10 +193,10 @@ public class S3CopyStepTests {
 	 * asserted this while the leak was present across three commits.
 	 */
 	@Test
-	public void closesBothTheTransferManagerAndTheClientItWasGiven() throws Exception {
+	void closesBothTheTransferManagerAndTheClientItWasGiven() throws Exception {
 		this.runAndCapture("s3CopyClose", "fromBucket: 'src', fromPath: 'a', toBucket: 'dst', toPath: 'c'");
 
-		Mockito.verify(this.transferManager).close();
-		Mockito.verify(this.asyncClient).close();
+		verify(this.transferManager).close();
+		verify(this.asyncClient).close();
 	}
 }

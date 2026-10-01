@@ -22,9 +22,9 @@
 package de.taimos.pipeline.aws;
 
 import hudson.EnvVars;
+import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
-import org.junit.Test;
 import org.mockito.Mockito;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.AwsCredentials;
@@ -49,15 +49,19 @@ import software.amazon.awssdk.services.sts.StsClient;
 import software.amazon.awssdk.retries.api.RetryStrategy;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 
 /**
  * Covers the SDK v2 half of {@link AWSClientFactory}, asserting it reproduces the v1 semantics
  * these environment variables have always had.
  */
-public class AWSClientFactoryV2Test {
+class AWSClientFactoryV2Test {
 
 	@Test
-	public void awsDefaultRegionWinsOverAwsRegion() {
+	void awsDefaultRegionWinsOverAwsRegion() {
 		EnvVars vars = new EnvVars();
 		vars.put(AWSClientFactory.AWS_DEFAULT_REGION, "eu-central-1");
 		vars.put(AWSClientFactory.AWS_REGION, "us-east-1");
@@ -66,7 +70,7 @@ public class AWSClientFactoryV2Test {
 	}
 
 	@Test
-	public void awsRegionIsUsedWhenDefaultRegionIsAbsent() {
+	void awsRegionIsUsedWhenDefaultRegionIsAbsent() {
 		EnvVars vars = new EnvVars();
 		vars.put(AWSClientFactory.AWS_REGION, "ap-southeast-2");
 
@@ -78,7 +82,7 @@ public class AWSClientFactoryV2Test {
 	 * fine in v2, which treats region ids as opaque strings.
 	 */
 	@Test
-	public void resolvesRegionsUnknownToTheV1Sdk() {
+	void resolvesRegionsUnknownToTheV1Sdk() {
 		EnvVars vars = new EnvVars();
 		vars.put(AWSClientFactory.AWS_REGION, "ap-southeast-5");
 
@@ -86,7 +90,7 @@ public class AWSClientFactoryV2Test {
 	}
 
 	@Test
-	public void staticCredentialsAreUsedWhenBothKeysArePresent() {
+	void staticCredentialsAreUsedWhenBothKeysArePresent() {
 		EnvVars vars = new EnvVars();
 		vars.put(AWSClientFactory.AWS_ACCESS_KEY_ID, "AKIAEXAMPLE");
 		vars.put(AWSClientFactory.AWS_SECRET_ACCESS_KEY, "secret");
@@ -101,7 +105,7 @@ public class AWSClientFactoryV2Test {
 	}
 
 	@Test
-	public void aSessionTokenProducesSessionCredentials() {
+	void aSessionTokenProducesSessionCredentials() {
 		EnvVars vars = new EnvVars();
 		vars.put(AWSClientFactory.AWS_ACCESS_KEY_ID, "AKIAEXAMPLE");
 		vars.put(AWSClientFactory.AWS_SECRET_ACCESS_KEY, "secret");
@@ -134,7 +138,7 @@ public class AWSClientFactoryV2Test {
 	 * endpointUrl as mutually exclusive, that is the normal way withAWS(endpointUrl: ...) is used.
 	 */
 	@Test
-	public void regionIsDerivedFromAnAwsEndpointWhenNoRegionIsSet() {
+	void regionIsDerivedFromAnAwsEndpointWhenNoRegionIsSet() {
 		EnvVars vars = new EnvVars();
 
 		assertThat(AWSClientFactory.getV2RegionForEndpoint(vars, "https://s3.eu-west-1.amazonaws.com"))
@@ -147,7 +151,7 @@ public class AWSClientFactoryV2Test {
 	}
 
 	@Test
-	public void anExplicitRegionWinsOverTheEndpointHost() {
+	void anExplicitRegionWinsOverTheEndpointHost() {
 		EnvVars vars = new EnvVars();
 		vars.put(AWSClientFactory.AWS_REGION, "ap-southeast-2");
 
@@ -163,7 +167,7 @@ public class AWSClientFactoryV2Test {
 	 * on the machine the suite runs on.
 	 */
 	@Test
-	public void aCustomEndpointFallsBackToTheNormalChain() {
+	void aCustomEndpointFallsBackToTheNormalChain() {
 		EnvVars vars = new EnvVars();
 
 		assertThat(AWSClientFactory.getV2RegionForEndpoint(vars, "https://minio.mycompany.com"))
@@ -177,7 +181,7 @@ public class AWSClientFactoryV2Test {
 	 * PermanentRedirect from S3.
 	 */
 	@Test
-	public void matchesTheV1EndpointRegionParsing() {
+	void matchesTheV1EndpointRegionParsing() {
 		EnvVars vars = new EnvVars();
 
 		assertThat(AWSClientFactory.getV2RegionForEndpoint(vars, "https://s3-eu-west-1.amazonaws.com"))
@@ -205,7 +209,7 @@ public class AWSClientFactoryV2Test {
 	 * is the case that fails outright if the region is not always set.
 	 */
 	@Test
-	public void buildsAClientWithOnlyAnEndpointConfigured() {
+	void buildsAClientWithOnlyAnEndpointConfigured() {
 		EnvVars vars = new EnvVars();
 		vars.put(AWSClientFactory.AWS_ENDPOINT_URL, "https://minio.mycompany.com");
 		vars.put(AWSClientFactory.AWS_ACCESS_KEY_ID, "AKIAEXAMPLE");
@@ -215,7 +219,7 @@ public class AWSClientFactoryV2Test {
 	}
 
 	@Test
-	public void socketTimeoutIsCarriedOver() {
+	void socketTimeoutIsCarriedOver() {
 		EnvVars vars = new EnvVars();
 		vars.put(AWSClientFactory.AWS_SDK_SOCKET_TIMEOUT, "1234");
 
@@ -231,7 +235,7 @@ public class AWSClientFactoryV2Test {
 	 * long-running controller. Nothing closes the synchronous clients, so they have to be shared.
 	 */
 	@Test
-	public void syncHttpClientIsSharedPerConfiguration() {
+	void syncHttpClientIsSharedPerConfiguration() {
 		EnvVars vars = new EnvVars();
 		vars.put(AWSClientFactory.AWS_SDK_SOCKET_TIMEOUT, "4321");
 
@@ -255,7 +259,7 @@ public class AWSClientFactoryV2Test {
 	 * every later synchronous step in the JVM would fail with "Connection pool shut down".
 	 */
 	@Test
-	public void closingAServiceClientDoesNotCloseTheHttpClientItWasGiven() {
+	void closingAServiceClientDoesNotCloseTheHttpClientItWasGiven() {
 		CloseRecordingHttpClient stub = new CloseRecordingHttpClient();
 
 		S3Client client = S3Client.builder()
@@ -289,7 +293,7 @@ public class AWSClientFactoryV2Test {
 	 * busy controller does not silently reuse a pool built at the old size.
 	 */
 	@Test
-	public void maxConnectionsIsRaisedAboveTheSdkDefaultAndKeyedOn() {
+	void maxConnectionsIsRaisedAboveTheSdkDefaultAndKeyedOn() {
 		assertThat(AWSClientFactory.getV2MaxConnections(new EnvVars())).isGreaterThan(50);
 
 		EnvVars vars = new EnvVars();
@@ -309,27 +313,27 @@ public class AWSClientFactoryV2Test {
 	 * itself, the way asyncSocketTimeoutCoversBothDirections does for netty.
 	 */
 	@Test
-	public void syncClientConfigReachesTheBuilder() {
+	void syncClientConfigReachesTheBuilder() {
 		EnvVars vars = new EnvVars();
 		vars.put(AWSClientFactory.AWS_SDK_SOCKET_TIMEOUT, "1234");
 		vars.put(AWSClientFactory.AWS_SDK_MAX_CONNECTIONS, "321");
-		ApacheHttpClient.Builder builder = Mockito.mock(ApacheHttpClient.Builder.class, Mockito.RETURNS_SELF);
+		ApacheHttpClient.Builder builder = mock(ApacheHttpClient.Builder.class, Mockito.RETURNS_SELF);
 
 		AWSClientFactory.applySyncClientConfig(builder, vars);
 
-		Mockito.verify(builder).socketTimeout(Duration.ofMillis(1234));
-		Mockito.verify(builder).maxConnections(321);
-		Mockito.verify(builder).proxyConfiguration(Mockito.any(ProxyConfiguration.class));
+		verify(builder).socketTimeout(Duration.ofMillis(1234));
+		verify(builder).maxConnections(321);
+		verify(builder).proxyConfiguration(any(ProxyConfiguration.class));
 	}
 
 	/** The default the shared pool actually gets, not just what the resolver returns. */
 	@Test
-	public void syncClientDefaultsToTheRaisedConnectionLimit() {
-		ApacheHttpClient.Builder builder = Mockito.mock(ApacheHttpClient.Builder.class, Mockito.RETURNS_SELF);
+	void syncClientDefaultsToTheRaisedConnectionLimit() {
+		ApacheHttpClient.Builder builder = mock(ApacheHttpClient.Builder.class, Mockito.RETURNS_SELF);
 
 		AWSClientFactory.applySyncClientConfig(builder, new EnvVars());
 
-		Mockito.verify(builder).maxConnections(500);
+		verify(builder).maxConnections(500);
 	}
 
 	private static S3ClientBuilder configureS3Builder(String endpointUrl) {
@@ -341,7 +345,7 @@ public class AWSClientFactoryV2Test {
 			vars.put(AWSClientFactory.AWS_ENDPOINT_URL, endpointUrl);
 		}
 		// a mock of the builder interface is also an SdkSyncClientBuilder, so the sync branch is happy
-		S3ClientBuilder builder = Mockito.mock(S3ClientBuilder.class, Mockito.RETURNS_SELF);
+		S3ClientBuilder builder = mock(S3ClientBuilder.class, Mockito.RETURNS_SELF);
 		AWSClientFactory.configureV2Builder(builder, null, vars);
 		return builder;
 	}
@@ -352,23 +356,23 @@ public class AWSClientFactoryV2Test {
 	 * otherwise pass the entire suite: the relaxation is for non-AWS hosts only, and only for S3.
 	 */
 	@Test
-	public void checksumsAreRelaxedForANonAwsEndpoint() {
-		Mockito.verify(configureS3Builder("https://minio.mycompany.com"))
+	void checksumsAreRelaxedForANonAwsEndpoint() {
+		verify(configureS3Builder("https://minio.mycompany.com"))
 				.requestChecksumCalculation(RequestChecksumCalculation.WHEN_REQUIRED);
 	}
 
 	@Test
-	public void checksumsKeepTheSdkDefaultForARealAwsEndpoint() {
+	void checksumsKeepTheSdkDefaultForARealAwsEndpoint() {
 		// endpointUrl is also the documented way to pin an AWS regional endpoint; those keep the
 		// integrity trailer.
-		Mockito.verify(configureS3Builder("https://s3.eu-west-1.amazonaws.com"), Mockito.never())
-				.requestChecksumCalculation(Mockito.any(RequestChecksumCalculation.class));
+		verify(configureS3Builder("https://s3.eu-west-1.amazonaws.com"), never())
+				.requestChecksumCalculation(any(RequestChecksumCalculation.class));
 	}
 
 	@Test
-	public void checksumsKeepTheSdkDefaultWithNoEndpointOverride() {
-		Mockito.verify(configureS3Builder(null), Mockito.never())
-				.requestChecksumCalculation(Mockito.any(RequestChecksumCalculation.class));
+	void checksumsKeepTheSdkDefaultWithNoEndpointOverride() {
+		verify(configureS3Builder(null), never())
+				.requestChecksumCalculation(any(RequestChecksumCalculation.class));
 	}
 
 	/**
@@ -378,17 +382,17 @@ public class AWSClientFactoryV2Test {
 	 * while three successive commits shipped the leaking form.
 	 */
 	@Test
-	public void asyncBuildersGetAnHttpClientBuilderRatherThanAnInstance() {
+	void asyncBuildersGetAnHttpClientBuilderRatherThanAnInstance() {
 		EnvVars vars = new EnvVars();
 		vars.put(AWSClientFactory.AWS_REGION, "us-west-2");
 		vars.put(AWSClientFactory.AWS_ACCESS_KEY_ID, "AKIAEXAMPLE");
 		vars.put(AWSClientFactory.AWS_SECRET_ACCESS_KEY, "secret");
-		S3AsyncClientBuilder builder = Mockito.mock(S3AsyncClientBuilder.class, Mockito.RETURNS_SELF);
+		S3AsyncClientBuilder builder = mock(S3AsyncClientBuilder.class, Mockito.RETURNS_SELF);
 
 		AWSClientFactory.configureV2Builder(builder, null, vars);
 
-		Mockito.verify(builder).httpClientBuilder(Mockito.any(SdkAsyncHttpClient.Builder.class));
-		Mockito.verify(builder, Mockito.never()).httpClient(Mockito.any(SdkAsyncHttpClient.class));
+		verify(builder).httpClientBuilder(any(SdkAsyncHttpClient.Builder.class));
+		verify(builder, never()).httpClient(any(SdkAsyncHttpClient.class));
 	}
 
 	/**
@@ -396,19 +400,19 @@ public class AWSClientFactoryV2Test {
 	 * only one would quietly halve what AWS_SDK_SOCKET_TIMEOUT covers.
 	 */
 	@Test
-	public void asyncSocketTimeoutCoversBothDirections() {
+	void asyncSocketTimeoutCoversBothDirections() {
 		EnvVars vars = new EnvVars();
 		vars.put(AWSClientFactory.AWS_SDK_SOCKET_TIMEOUT, "1234");
-		NettyNioAsyncHttpClient.Builder builder = Mockito.mock(NettyNioAsyncHttpClient.Builder.class, Mockito.RETURNS_SELF);
+		NettyNioAsyncHttpClient.Builder builder = mock(NettyNioAsyncHttpClient.Builder.class, Mockito.RETURNS_SELF);
 
 		AWSClientFactory.applyAsyncTimeouts(builder, vars);
 
-		Mockito.verify(builder).readTimeout(Duration.ofMillis(1234));
-		Mockito.verify(builder).writeTimeout(Duration.ofMillis(1234));
+		verify(builder).readTimeout(Duration.ofMillis(1234));
+		verify(builder).writeTimeout(Duration.ofMillis(1234));
 	}
 
 	@Test
-	public void retryCountKeepsTheV1NumberOfAttempts() {
+	void retryCountKeepsTheV1NumberOfAttempts() {
 		assertThat(resolveMaxAttempts(AWSClientFactory.getV2OverrideConfiguration(new EnvVars()))).isEqualTo(11);
 
 		EnvVars vars = new EnvVars();

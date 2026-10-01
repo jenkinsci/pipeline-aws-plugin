@@ -1,5 +1,6 @@
 package de.taimos.pipeline.aws.ecr;
 
+import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
 import software.amazon.awssdk.services.ecr.EcrClient;
 import software.amazon.awssdk.services.ecr.model.BatchDeleteImageRequest;
 import software.amazon.awssdk.services.ecr.model.BatchDeleteImageResponse;
@@ -7,37 +8,42 @@ import software.amazon.awssdk.services.ecr.model.ImageIdentifier;
 import de.taimos.pipeline.aws.AWSClientFactory;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
-import org.junit.Assert;
 import hudson.model.Run;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.jvnet.hudson.test.JenkinsRule;
 import org.mockito.ArgumentCaptor;
-import org.mockito.Mockito;
 
 import java.util.Collections;
 
-public class ECRDeleteImagesStepTests {
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
-	@Rule
-	public JenkinsRule jenkinsRule = new JenkinsRule();
+@WithJenkins
+class ECRDeleteImagesStepTests {
+
+	private JenkinsRule jenkinsRule;
 	private EcrClient ecr;
 
-	@Before
-	public void setupSdk() throws Exception {
-		this.ecr = Mockito.mock(EcrClient.class);
-		AWSClientFactory.setFactoryDelegate((x) -> this.ecr);
+	@BeforeEach
+	void setupSdk(JenkinsRule rule) {
+		this.jenkinsRule = rule;
+		this.ecr = mock(EcrClient.class);
+		AWSClientFactory.setFactoryDelegate(x -> this.ecr);
 	}
 
-	@After
-	public void tearDownSdk() throws Exception {
+	@AfterEach
+	void tearDownSdk() {
 		AWSClientFactory.setFactoryDelegate(null);
 	}
 
 	private void stubDeletedImage() {
-		Mockito.when(this.ecr.batchDeleteImage(Mockito.any(BatchDeleteImageRequest.class)))
+		when(this.ecr.batchDeleteImage(any(BatchDeleteImageRequest.class)))
 				.thenReturn(BatchDeleteImageResponse.builder()
 						.imageIds(ImageIdentifier.builder().imageTag("it1").imageDigest("id1").build())
 						.failures(Collections.emptyList())
@@ -46,21 +52,22 @@ public class ECRDeleteImagesStepTests {
 	}
 
 	@Test
-	public void deleteImage() throws Exception {
+	void deleteImage() throws Exception {
 		this.stubDeletedImage();
 		WorkflowJob job = this.jenkinsRule.jenkins.createProject(WorkflowJob.class, "cfnTest");
-		job.setDefinition(new CpsFlowDefinition(""
-				+ "node {\n"
-				+ "  ecrDeleteImage(imageIds: [[imageTag: 'it1', imageDigest: 'id1']], registryId: 'rId', repositoryName: 'rName')\n"
-				+ "}\n", true)
+		job.setDefinition(new CpsFlowDefinition("""
+                node {
+                  ecrDeleteImage(imageIds: [[imageTag: 'it1', imageDigest: 'id1']], registryId: 'rId', repositoryName: 'rName')
+                }
+                """, true)
 		);
 		this.jenkinsRule.assertBuildStatusSuccess(job.scheduleBuild2(0));
 
 		ArgumentCaptor<BatchDeleteImageRequest> argumentCaptor = ArgumentCaptor.forClass(BatchDeleteImageRequest.class);
-		Mockito.verify(this.ecr).batchDeleteImage(argumentCaptor.capture());
+		verify(this.ecr).batchDeleteImage(argumentCaptor.capture());
 
 		BatchDeleteImageRequest request = argumentCaptor.getValue();
-		Assert.assertEquals(BatchDeleteImageRequest.builder()
+		assertEquals(BatchDeleteImageRequest.builder()
 				.imageIds(
 						ImageIdentifier.builder().imageTag("it1").imageDigest("id1").build()
 				)
@@ -75,14 +82,15 @@ public class ECRDeleteImagesStepTests {
 	 * actually read.
 	 */
 	@Test
-	public void returnsImageIdsAsReadableMaps() throws Exception {
+	void returnsImageIdsAsReadableMaps() throws Exception {
 		this.stubDeletedImage();
 		WorkflowJob job = this.jenkinsRule.jenkins.createProject(WorkflowJob.class, "ecrDeleteReturn");
-		job.setDefinition(new CpsFlowDefinition(""
-				+ "node {\n"
-				+ "  def r = ecrDeleteImage(imageIds: [[imageTag: 'it1']], repositoryName: 'rName')\n"
-				+ "  echo \"tag=${r[0].imageTag} digest=${r[0].imageDigest}\"\n"
-				+ "}\n", true)
+		job.setDefinition(new CpsFlowDefinition("""
+                node {
+                  def r = ecrDeleteImage(imageIds: [[imageTag: 'it1']], repositoryName: 'rName')
+                  echo "tag=${r[0].imageTag} digest=${r[0].imageDigest}"
+                }
+                """, true)
 		);
 		Run run = this.jenkinsRule.assertBuildStatusSuccess(job.scheduleBuild2(0));
 
@@ -94,20 +102,21 @@ public class ECRDeleteImagesStepTests {
 	 * without it.
 	 */
 	@Test
-	public void worksWithoutARegistryId() throws Exception {
-		Mockito.when(this.ecr.batchDeleteImage(Mockito.any(BatchDeleteImageRequest.class)))
+	void worksWithoutARegistryId() throws Exception {
+		when(this.ecr.batchDeleteImage(any(BatchDeleteImageRequest.class)))
 				.thenReturn(BatchDeleteImageResponse.builder().failures(Collections.emptyList()).build());
 		WorkflowJob job = this.jenkinsRule.jenkins.createProject(WorkflowJob.class, "ecrDeleteNoRegistry");
-		job.setDefinition(new CpsFlowDefinition(""
-				+ "node {\n"
-				+ "  ecrDeleteImage(imageIds: [[imageTag: 'it1']], repositoryName: 'rName')\n"
-				+ "}\n", true)
+		job.setDefinition(new CpsFlowDefinition("""
+                node {
+                  ecrDeleteImage(imageIds: [[imageTag: 'it1']], repositoryName: 'rName')
+                }
+                """, true)
 		);
 		this.jenkinsRule.assertBuildStatusSuccess(job.scheduleBuild2(0));
 
 		ArgumentCaptor<BatchDeleteImageRequest> captor = ArgumentCaptor.forClass(BatchDeleteImageRequest.class);
-		Mockito.verify(this.ecr).batchDeleteImage(captor.capture());
-		Assert.assertNull(captor.getValue().registryId());
+		verify(this.ecr).batchDeleteImage(captor.capture());
+		assertNull(captor.getValue().registryId());
 	}
 
 }

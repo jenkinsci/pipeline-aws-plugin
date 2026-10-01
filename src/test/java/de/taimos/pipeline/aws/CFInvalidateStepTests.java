@@ -24,14 +24,13 @@ package de.taimos.pipeline.aws;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
 import org.jenkinsci.plugins.workflow.job.WorkflowRun;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.Timeout;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.jvnet.hudson.test.JenkinsRule;
+import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
 import org.mockito.ArgumentCaptor;
-import org.mockito.Mockito;
 import software.amazon.awssdk.services.cloudfront.CloudFrontClient;
 import software.amazon.awssdk.services.cloudfront.model.CreateInvalidationRequest;
 import software.amazon.awssdk.services.cloudfront.model.CreateInvalidationResponse;
@@ -40,7 +39,15 @@ import software.amazon.awssdk.services.cloudfront.model.GetInvalidationResponse;
 import software.amazon.awssdk.services.cloudfront.model.Invalidation;
 import software.amazon.awssdk.services.cloudfront.waiters.CloudFrontWaiter;
 
+import java.util.concurrent.TimeUnit;
+
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.atLeastOnce;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 /**
  * cfInvalidate had no test at all, and its wait path is the first waiter converted to v2.
@@ -48,32 +55,31 @@ import static org.assertj.core.api.Assertions.assertThat;
  * The waiter is driven for real over the mocked client rather than being mocked itself, so the
  * SDK's own polling and acceptor logic decides when the wait ends - what is asserted is then the
  * request the step builds and the fact that it terminates.
+ * The wait polls; a regression in the acceptor would hang rather than fail without this.
  */
-public class CFInvalidateStepTests {
+@WithJenkins
+@Timeout(value = 120, unit = TimeUnit.SECONDS)
+class CFInvalidateStepTests {
 
-	@Rule
-	public JenkinsRule jenkinsRule = new JenkinsRule();
-
-	/** The wait polls; a regression in the acceptor would hang rather than fail without this. */
-	@Rule
-	public Timeout globalTimeout = Timeout.seconds(120);
+	private JenkinsRule jenkinsRule;
 
 	private CloudFrontClient cloudFront;
 
-	@Before
-	public void setupSdk() throws Exception {
-		this.cloudFront = Mockito.mock(CloudFrontClient.class);
-		Mockito.when(this.cloudFront.createInvalidation(Mockito.any(CreateInvalidationRequest.class)))
+	@BeforeEach
+	void setupSdk(JenkinsRule rule) {
+		this.jenkinsRule = rule;
+		this.cloudFront = mock(CloudFrontClient.class);
+		when(this.cloudFront.createInvalidation(any(CreateInvalidationRequest.class)))
 				.thenReturn(CreateInvalidationResponse.builder()
 						.invalidation(Invalidation.builder().id("I123").build())
 						.build());
-		Mockito.when(this.cloudFront.waiter())
+		when(this.cloudFront.waiter())
 				.thenAnswer(invocation -> CloudFrontWaiter.builder().client(this.cloudFront).build());
-		AWSClientFactory.setFactoryDelegate((x) -> this.cloudFront);
+		AWSClientFactory.setFactoryDelegate(x -> this.cloudFront);
 	}
 
-	@After
-	public void tearDownSdk() throws Exception {
+	@AfterEach
+	void tearDownSdk() {
 		AWSClientFactory.setFactoryDelegate(null);
 	}
 
@@ -88,11 +94,11 @@ public class CFInvalidateStepTests {
 	}
 
 	@Test
-	public void buildsTheInvalidationBatchFromThePaths() throws Exception {
+	void buildsTheInvalidationBatchFromThePaths() throws Exception {
 		this.run("cfInvalidateBasic", "distribution: 'D123', paths: ['/index.html', '/assets/*']");
 
 		ArgumentCaptor<CreateInvalidationRequest> captor = ArgumentCaptor.forClass(CreateInvalidationRequest.class);
-		Mockito.verify(this.cloudFront).createInvalidation(captor.capture());
+		verify(this.cloudFront).createInvalidation(captor.capture());
 		CreateInvalidationRequest request = captor.getValue();
 		assertThat(request.distributionId()).isEqualTo("D123");
 		assertThat(request.invalidationBatch().paths().items()).containsExactly("/index.html", "/assets/*");
@@ -101,15 +107,15 @@ public class CFInvalidateStepTests {
 	}
 
 	@Test
-	public void doesNotWaitByDefault() throws Exception {
+	void doesNotWaitByDefault() throws Exception {
 		this.run("cfInvalidateNoWait", "distribution: 'D123', paths: ['/*']");
 
-		Mockito.verify(this.cloudFront, Mockito.never()).getInvalidation(Mockito.any(GetInvalidationRequest.class));
+		verify(this.cloudFront, never()).getInvalidation(any(GetInvalidationRequest.class));
 	}
 
 	@Test
-	public void waitsForTheInvalidationToComplete() throws Exception {
-		Mockito.when(this.cloudFront.getInvalidation(Mockito.any(GetInvalidationRequest.class)))
+	void waitsForTheInvalidationToComplete() throws Exception {
+		when(this.cloudFront.getInvalidation(any(GetInvalidationRequest.class)))
 				.thenReturn(GetInvalidationResponse.builder()
 						.invalidation(Invalidation.builder().id("I123").status("Completed").build())
 						.build());
@@ -117,7 +123,7 @@ public class CFInvalidateStepTests {
 		WorkflowRun run = this.run("cfInvalidateWait", "distribution: 'D123', paths: ['/*'], waitForCompletion: true");
 
 		ArgumentCaptor<GetInvalidationRequest> captor = ArgumentCaptor.forClass(GetInvalidationRequest.class);
-		Mockito.verify(this.cloudFront, Mockito.atLeastOnce()).getInvalidation(captor.capture());
+		verify(this.cloudFront, atLeastOnce()).getInvalidation(captor.capture());
 		assertThat(captor.getValue().distributionId()).isEqualTo("D123");
 		assertThat(captor.getValue().id()).isEqualTo("I123");
 		this.jenkinsRule.assertLogContains("Invalidation I123 completed", run);

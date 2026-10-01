@@ -21,7 +21,7 @@ package utils;
  */
 
 import de.taimos.pipeline.aws.utils.CannedAcl;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import software.amazon.awssdk.services.s3.model.ObjectCannedACL;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -31,10 +31,10 @@ import static org.assertj.core.api.Assertions.assertThat;
  * than an implementation detail: renaming one to its v2 spelling breaks every Jenkinsfile using it.
  * The names are pinned here as strings so that cannot happen silently.
  */
-public class CannedAclTest {
+class CannedAclTest {
 
 	@Test
-	public void v1SpellingsStillBind() {
+	void v1SpellingsStillBind() {
 		assertThat(CannedAcl.valueOf("Private").toObjectCannedACL()).isEqualTo(ObjectCannedACL.PRIVATE);
 		assertThat(CannedAcl.valueOf("PublicRead").toObjectCannedACL()).isEqualTo(ObjectCannedACL.PUBLIC_READ);
 		assertThat(CannedAcl.valueOf("PublicReadWrite").toObjectCannedACL()).isEqualTo(ObjectCannedACL.PUBLIC_READ_WRITE);
@@ -49,7 +49,7 @@ public class CannedAclTest {
 	 * would render as "null" on the wire rather than failing.
 	 */
 	@Test
-	public void noneMapToTheUnknownSentinel() {
+	void noneMapToTheUnknownSentinel() {
 		for (CannedAcl acl : CannedAcl.values()) {
 			assertThat(acl.toObjectCannedACL()).isNotEqualTo(ObjectCannedACL.UNKNOWN_TO_SDK_VERSION);
 		}

@@ -21,19 +21,20 @@
 
 package de.taimos.pipeline.aws;
 
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-public class SafeNameCreatorTest {
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
+class SafeNameCreatorTest {
 
 	@Test
-	public void createSafeName() throws Exception {
-		Assert.assertEquals("testaccount", ListAWSAccountsStep.SafeNameCreator.createSafeName("TestAccount"));
-		Assert.assertEquals("some-test", ListAWSAccountsStep.SafeNameCreator.createSafeName("Some - Test"));
-		Assert.assertEquals("some-other", ListAWSAccountsStep.SafeNameCreator.createSafeName("Some_Other"));
-		Assert.assertEquals("special-chars", ListAWSAccountsStep.SafeNameCreator.createSafeName("Special%Chars"));
-		Assert.assertEquals("multi-special", ListAWSAccountsStep.SafeNameCreator.createSafeName("Multi$%&Special"));
-		Assert.assertEquals("account-12", ListAWSAccountsStep.SafeNameCreator.createSafeName("Account 12"));
+	void createSafeName() {
+		assertEquals("testaccount", ListAWSAccountsStep.SafeNameCreator.createSafeName("TestAccount"));
+		assertEquals("some-test", ListAWSAccountsStep.SafeNameCreator.createSafeName("Some - Test"));
+		assertEquals("some-other", ListAWSAccountsStep.SafeNameCreator.createSafeName("Some_Other"));
+		assertEquals("special-chars", ListAWSAccountsStep.SafeNameCreator.createSafeName("Special%Chars"));
+		assertEquals("multi-special", ListAWSAccountsStep.SafeNameCreator.createSafeName("Multi$%&Special"));
+		assertEquals("account-12", ListAWSAccountsStep.SafeNameCreator.createSafeName("Account 12"));
 	}
 
 }

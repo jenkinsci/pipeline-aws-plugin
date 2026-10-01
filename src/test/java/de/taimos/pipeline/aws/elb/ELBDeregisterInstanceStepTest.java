@@ -21,15 +21,17 @@
 
 package de.taimos.pipeline.aws.elb;
 
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-public class ELBDeregisterInstanceStepTest {
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
+class ELBDeregisterInstanceStepTest {
+
 	@Test
-	public void gettersWorkAsExpected() throws Exception {
+	void gettersWorkAsExpected() {
 		ELBDeregisterInstanceStep step = new ELBDeregisterInstanceStep("my-target-group-arn", "my-instance-id", 8888);
-		Assert.assertEquals("my-target-group-arn", step.getTargetGroupARN());
-		Assert.assertEquals("my-instance-id", step.getInstanceID());
-		Assert.assertEquals(8888, step.getPort());
+		assertEquals("my-target-group-arn", step.getTargetGroupARN());
+		assertEquals("my-instance-id", step.getInstanceID());
+		assertEquals(8888, step.getPort());
 	}
 }

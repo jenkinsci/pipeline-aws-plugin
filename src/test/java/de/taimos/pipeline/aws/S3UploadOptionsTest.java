@@ -22,7 +22,7 @@
 package de.taimos.pipeline.aws;
 
 import de.taimos.pipeline.aws.utils.CannedAcl;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import software.amazon.awssdk.services.s3.model.ObjectCannedACL;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.model.ServerSideEncryption;
@@ -38,7 +38,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * them sent the KMS key id as the encryption algorithm - so it is worth pinning directly rather than
  * only through the steps.
  */
-public class S3UploadOptionsTest {
+class S3UploadOptionsTest {
 
 	private static S3UploadOptions options(Map<String, String> metadatas, Map<String, String> tags, CannedAcl acl,
 			String cacheControl, String contentEncoding, String contentType, String contentDisposition,
@@ -56,7 +56,7 @@ public class S3UploadOptionsTest {
 	 * A key without aws:kms leaves the object unencrypted.
 	 */
 	@Test
-	public void kmsIdSetsBothTheKeyAndTheAlgorithm() {
+	void kmsIdSetsBothTheKeyAndTheAlgorithm() {
 		PutObjectRequest request = apply(options(null, null, null, null, null, null, null, "my-key", null, null));
 
 		assertThat(request.ssekmsKeyId()).isEqualTo("my-key");
@@ -64,7 +64,7 @@ public class S3UploadOptionsTest {
 	}
 
 	@Test
-	public void sseAlgorithmAloneIsPassedThrough() {
+	void sseAlgorithmAloneIsPassedThrough() {
 		PutObjectRequest request = apply(options(null, null, null, null, null, null, null, null, "AES256", null));
 
 		assertThat(request.serverSideEncryption()).isEqualTo(ServerSideEncryption.AES256);
@@ -79,7 +79,7 @@ public class S3UploadOptionsTest {
 	 * way - which is why the pre-existing AES256 tests above passed with the bug present.
 	 */
 	@Test
-	public void anUnmodelledSseAlgorithmReachesS3VerbatimRatherThanAsNull() {
+	void anUnmodelledSseAlgorithmReachesS3VerbatimRatherThanAsNull() {
 		PutObjectRequest request = apply(options(null, null, null, null, null, null, null, null, "AES-256", null));
 
 		assertThat(request.serverSideEncryptionAsString()).isEqualTo("AES-256");
@@ -89,7 +89,7 @@ public class S3UploadOptionsTest {
 	 * v1 applied SSEAwsKeyManagementParams after the metadata's SSE algorithm, so a kmsId won.
 	 */
 	@Test
-	public void kmsIdWinsOverAnExplicitSseAlgorithm() {
+	void kmsIdWinsOverAnExplicitSseAlgorithm() {
 		PutObjectRequest request = apply(options(null, null, null, null, null, null, null, "my-key", "AES256", null));
 
 		assertThat(request.serverSideEncryption()).isEqualTo(ServerSideEncryption.AWS_KMS);
@@ -97,7 +97,7 @@ public class S3UploadOptionsTest {
 	}
 
 	@Test
-	public void everyOtherFieldReachesTheRequest() {
+	void everyOtherFieldReachesTheRequest() {
 		Map<String, String> metadatas = new HashMap<>();
 		metadatas.put("k1", "v1");
 
@@ -120,7 +120,7 @@ public class S3UploadOptionsTest {
 	 * directory upload, the bucket and key the transfer manager already computed.
 	 */
 	@Test
-	public void unsetOptionsLeaveTheRequestAlone() {
+	void unsetOptionsLeaveTheRequestAlone() {
 		PutObjectRequest request = apply(options(Collections.emptyMap(), Collections.emptyMap(),
 				null, "", "", "", "", "", "", ""));
 

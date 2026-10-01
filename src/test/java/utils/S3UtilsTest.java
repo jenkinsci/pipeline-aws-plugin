@@ -21,8 +21,7 @@ package utils;
  */
 
 import de.taimos.pipeline.aws.utils.S3Utils;
-import org.junit.Test;
-import org.mockito.Mockito;
+import org.junit.jupiter.api.Test;
 import software.amazon.awssdk.awscore.exception.AwsErrorDetails;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
@@ -33,26 +32,29 @@ import software.amazon.awssdk.services.s3.model.S3Exception;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 /**
  * v1's doesObjectExist was "getObjectMetadata, and treat any 404 as absent". The cases below are the
  * ones where a naive port to headObject plus catch NoSuchKeyException would diverge from it.
  */
-public class S3UtilsTest {
+class S3UtilsTest {
 
-	private final S3Client s3Client = Mockito.mock(S3Client.class);
+	private final S3Client s3Client = mock(S3Client.class);
 
 	@Test
-	public void presentObject() {
-		Mockito.when(this.s3Client.headObject(Mockito.any(HeadObjectRequest.class)))
+	void presentObject() {
+		when(this.s3Client.headObject(any(HeadObjectRequest.class)))
 				.thenReturn(HeadObjectResponse.builder().build());
 
 		assertThat(S3Utils.doesObjectExist(this.s3Client, "bucket", "key")).isTrue();
 	}
 
 	@Test
-	public void missingObjectIsAbsentRatherThanAnError() {
-		Mockito.when(this.s3Client.headObject(Mockito.any(HeadObjectRequest.class)))
+	void missingObjectIsAbsentRatherThanAnError() {
+		when(this.s3Client.headObject(any(HeadObjectRequest.class)))
 				.thenThrow(NoSuchKeyException.builder().statusCode(404).build());
 
 		assertThat(S3Utils.doesObjectExist(this.s3Client, "bucket", "key")).isFalse();
@@ -63,8 +65,8 @@ public class S3UtilsTest {
 	 * NoSuchKeyException, so matching on the exception type alone would throw here instead.
 	 */
 	@Test
-	public void missingBucketIsAlsoAbsent() {
-		Mockito.when(this.s3Client.headObject(Mockito.any(HeadObjectRequest.class)))
+	void missingBucketIsAlsoAbsent() {
+		when(this.s3Client.headObject(any(HeadObjectRequest.class)))
 				.thenThrow(NoSuchBucketException.builder().statusCode(404).build());
 
 		assertThat(S3Utils.doesObjectExist(this.s3Client, "bucket", "key")).isFalse();
@@ -75,8 +77,8 @@ public class S3UtilsTest {
 	 * policy into a silently skipped s3Delete.
 	 */
 	@Test
-	public void accessDeniedPropagates() {
-		Mockito.when(this.s3Client.headObject(Mockito.any(HeadObjectRequest.class)))
+	void accessDeniedPropagates() {
+		when(this.s3Client.headObject(any(HeadObjectRequest.class)))
 				.thenThrow(S3Exception.builder()
 						.statusCode(403)
 						.awsErrorDetails(AwsErrorDetails.builder().errorCode("AccessDenied").build())

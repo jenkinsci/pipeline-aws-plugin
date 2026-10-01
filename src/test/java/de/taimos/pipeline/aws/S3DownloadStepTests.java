@@ -26,14 +26,13 @@ import hudson.model.Run;
 import org.assertj.core.api.Assertions;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.Timeout;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.jvnet.hudson.test.JenkinsRule;
+import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
 import org.mockito.ArgumentCaptor;
-import org.mockito.Mockito;
 import software.amazon.awssdk.core.async.AsyncRequestBody;
 import software.amazon.awssdk.core.async.AsyncResponseTransformer;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
@@ -51,6 +50,13 @@ import software.amazon.awssdk.transfer.s3.model.FileDownload;
 
 import java.util.Collections;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
+
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 /**
  * s3Download runs its transfer inside a MasterToSlaveFileCallable. These exercise it on the
@@ -58,44 +64,43 @@ import java.util.concurrent.CompletableFuture;
  * s3Download yet; s3Upload's remoting path is covered by S3UploadStepIntegrationTest, which runs on a
  * real agent.
  */
-public class S3DownloadStepTests {
+@WithJenkins
+@Timeout(value = 120, unit = TimeUnit.SECONDS)
+class S3DownloadStepTests {
 
-	@Rule
-	public JenkinsRule jenkinsRule = new JenkinsRule();
-
-	@Rule
-	public Timeout timeout = Timeout.seconds(120);
+	private JenkinsRule jenkinsRule;
 
 	private S3TransferManager transferManager;
 	private S3AsyncClient asyncClient;
 
-	@Before
-	public void setupSdk() {
-		this.transferManager = Mockito.mock(S3TransferManager.class);
+	@BeforeEach
+	void setupSdk(JenkinsRule rule) {
+		this.jenkinsRule = rule;
+		this.transferManager = mock(S3TransferManager.class);
 		AWSUtilFactory.setV2TransferManagerSupplier(() -> this.transferManager);
-		this.asyncClient = Mockito.mock(S3AsyncClient.class);
-		AWSClientFactory.setFactoryDelegate((x) -> this.asyncClient);
+		this.asyncClient = mock(S3AsyncClient.class);
+		AWSClientFactory.setFactoryDelegate(x -> this.asyncClient);
 	}
 
-	@After
-	public void tearDownSdk() {
+	@AfterEach
+	void tearDownSdk() {
 		AWSUtilFactory.setV2TransferManagerSupplier(null);
 		AWSClientFactory.setFactoryDelegate(null);
 	}
 
 	private void stubFileDownload() {
-		FileDownload download = Mockito.mock(FileDownload.class);
-		Mockito.when(download.completionFuture()).thenReturn(CompletableFuture.completedFuture(
+		FileDownload download = mock(FileDownload.class);
+		when(download.completionFuture()).thenReturn(CompletableFuture.completedFuture(
 				CompletedFileDownload.builder()
 						.response(software.amazon.awssdk.services.s3.model.GetObjectResponse.builder().build()).build()));
-		Mockito.when(this.transferManager.downloadFile(Mockito.any(DownloadFileRequest.class))).thenReturn(download);
+		when(this.transferManager.downloadFile(any(DownloadFileRequest.class))).thenReturn(download);
 	}
 
 	private void stubDirectoryDownload(java.util.List<FailedFileDownload> failures) {
-		DirectoryDownload download = Mockito.mock(DirectoryDownload.class);
-		Mockito.when(download.completionFuture()).thenReturn(CompletableFuture.completedFuture(
+		DirectoryDownload download = mock(DirectoryDownload.class);
+		when(download.completionFuture()).thenReturn(CompletableFuture.completedFuture(
 				CompletedDirectoryDownload.builder().failedTransfers(failures).build()));
-		Mockito.when(this.transferManager.downloadDirectory(Mockito.any(DownloadDirectoryRequest.class))).thenReturn(download);
+		when(this.transferManager.downloadDirectory(any(DownloadDirectoryRequest.class))).thenReturn(download);
 	}
 
 	private Run run(String jobName, String args, Result expected) throws Exception {
@@ -109,17 +114,17 @@ public class S3DownloadStepTests {
 	}
 
 	@Test
-	public void downloadsASingleObject() throws Exception {
+	void downloadsASingleObject() throws Exception {
 		this.stubFileDownload();
 
 		this.run("s3DownloadFile", "bucket: 'my-bucket', path: 'a/b.txt', file: 'out.txt'", Result.SUCCESS);
 
 		ArgumentCaptor<DownloadFileRequest> captor = ArgumentCaptor.forClass(DownloadFileRequest.class);
-		Mockito.verify(this.transferManager).downloadFile(captor.capture());
+		verify(this.transferManager).downloadFile(captor.capture());
 		Assertions.assertThat(captor.getValue().getObjectRequest().bucket()).isEqualTo("my-bucket");
 		Assertions.assertThat(captor.getValue().getObjectRequest().key()).isEqualTo("a/b.txt");
 		Assertions.assertThat(captor.getValue().destination().toString()).endsWith("out.txt");
-		Mockito.verify(this.transferManager, Mockito.never()).downloadDirectory(Mockito.any(DownloadDirectoryRequest.class));
+		verify(this.transferManager, never()).downloadDirectory(any(DownloadDirectoryRequest.class));
 	}
 
 	/**
@@ -127,13 +132,13 @@ public class S3DownloadStepTests {
 	 * listing or the whole bucket is downloaded instead of the requested subtree.
 	 */
 	@Test
-	public void aTrailingSlashDownloadsTheDirectoryUnderThatPrefix() throws Exception {
+	void aTrailingSlashDownloadsTheDirectoryUnderThatPrefix() throws Exception {
 		this.stubDirectoryDownload(Collections.emptyList());
 
 		this.run("s3DownloadDir", "bucket: 'my-bucket', path: 'a/b/', file: 'out'", Result.SUCCESS);
 
 		ArgumentCaptor<DownloadDirectoryRequest> captor = ArgumentCaptor.forClass(DownloadDirectoryRequest.class);
-		Mockito.verify(this.transferManager).downloadDirectory(captor.capture());
+		verify(this.transferManager).downloadDirectory(captor.capture());
 		Assertions.assertThat(captor.getValue().bucket()).isEqualTo("my-bucket");
 
 		ListObjectsV2Request.Builder listing = ListObjectsV2Request.builder();
@@ -151,7 +156,7 @@ public class S3DownloadStepTests {
 	 * partly-downloaded directory.
 	 */
 	@Test
-	public void aPartlyFailedDirectoryDownloadFailsTheBuild() throws Exception {
+	void aPartlyFailedDirectoryDownloadFailsTheBuild() throws Exception {
 		this.stubDirectoryDownload(Collections.singletonList(
 				FailedFileDownload.builder()
 						.exception(new RuntimeException("access denied for a/b/secret.txt"))
@@ -172,13 +177,13 @@ public class S3DownloadStepTests {
 	 * across builds.
 	 */
 	@Test
-	public void closesBothTheTransferManagerAndTheClientItWasGiven() throws Exception {
+	void closesBothTheTransferManagerAndTheClientItWasGiven() throws Exception {
 		this.stubFileDownload();
 
 		this.run("s3DownloadClose", "bucket: 'my-bucket', path: 'a/b.txt', file: 'out.txt'", Result.SUCCESS);
 
-		Mockito.verify(this.transferManager).close();
-		Mockito.verify(this.asyncClient).close();
+		verify(this.transferManager).close();
+		verify(this.asyncClient).close();
 	}
 
 	/**
@@ -186,8 +191,8 @@ public class S3DownloadStepTests {
 	 * this behavior.
 	 */
 	@Test
-	public void createsTheParentDirectoriesOfTheTarget() throws Exception {
-		Mockito.when(this.asyncClient.getObject(Mockito.any(GetObjectRequest.class), Mockito.any(AsyncResponseTransformer.class)))
+	void createsTheParentDirectoriesOfTheTarget() throws Exception {
+		when(this.asyncClient.getObject(any(GetObjectRequest.class), any(AsyncResponseTransformer.class)))
 				.thenAnswer(invocation -> {
 					AsyncResponseTransformer<GetObjectResponse, ?> transformer = invocation.getArgument(1);
 					CompletableFuture<?> future = transformer.prepare();

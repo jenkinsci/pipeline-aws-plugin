@@ -1,18 +1,17 @@
 package de.taimos.pipeline.aws.cloudformation.parser;
-
+import org.junit.jupiter.api.Test;
 import software.amazon.awssdk.services.cloudformation.model.Parameter;
 import java.io.ByteArrayInputStream;
 import java.nio.charset.StandardCharsets;
 import org.assertj.core.api.Assertions;
-import org.junit.Test;
 
 import java.io.IOException;
 import java.util.Collection;
 
-public class YAMLParameterFileParserTests {
+class YAMLParameterFileParserTests {
 
 	@Test
-	public void parseParameters() throws IOException {
+	void parseParameters() throws IOException {
 		YAMLParameterFileParser parser = new YAMLParameterFileParser();
 		String json = "bar: foo";
 		Collection<Parameter> parameters = parser.parseParams(new ByteArrayInputStream(json.getBytes(StandardCharsets.UTF_8)));
@@ -22,7 +21,7 @@ public class YAMLParameterFileParserTests {
 	}
 
 	@Test
-	public void parseParameterCollection() throws IOException {
+	void parseParameterCollection() throws IOException {
 		YAMLParameterFileParser parser = new YAMLParameterFileParser();
 		String json = "bar:\n  - foo1\n  - foo2";
 		Collection<Parameter> parameters = parser.parseParams(new ByteArrayInputStream(json.getBytes(StandardCharsets.UTF_8)));

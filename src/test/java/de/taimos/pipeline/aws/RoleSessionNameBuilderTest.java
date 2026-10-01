@@ -21,72 +21,73 @@
 
 package de.taimos.pipeline.aws;
 
-import static org.junit.Assert.assertEquals;
+import org.junit.jupiter.api.Test;
 
-import org.junit.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
-public class RoleSessionNameBuilderTest {
+class RoleSessionNameBuilderTest {
+
 	@Test
-	public void shortNamesAreNotStripped() {
+	void shortNamesAreNotStripped() {
 		String shortJobName = "shortName";
 		String buildNumber = "1";
 		final RoleSessionNameBuilder roleSessionNameBuilder = RoleSessionNameBuilder
 				.withJobName(shortJobName)
 				.withBuildNumber(buildNumber);
 		final String result = roleSessionNameBuilder.build();
-		assertEquals("roleSessionNameBuilder should not be strapped", "Jenkins-shortName-1", result);
+		assertEquals("Jenkins-shortName-1", result, "roleSessionNameBuilder should not be strapped");
 	}
 
 	@Test
-	public void nameLongerThanAWSLimitAreStripped() {
+	void nameLongerThanAWSLimitAreStripped() {
 		String jobName = "s".repeat(64);
 		String buildNumber = "123";
 		final RoleSessionNameBuilder roleSessionNameBuilder = RoleSessionNameBuilder.withJobName(jobName)
 				.withBuildNumber(buildNumber);
 		final String result = roleSessionNameBuilder.build();
-		assertEquals("The result should be equal to the limit", 64, result.length());
+		assertEquals(64, result.length(), "The result should be equal to the limit");
 	}
 
 	@Test
-	public void nameEqualToAWSLimitAreStripped() {
+	void nameEqualToAWSLimitAreStripped() {
 		String jobName = "s".repeat(52);
 		String buildNumber = "123";
 		final RoleSessionNameBuilder roleSessionNameBuilder = RoleSessionNameBuilder.withJobName(jobName)
 				.withBuildNumber(buildNumber);
 		final String result = roleSessionNameBuilder.build();
-		assertEquals("The result should be equal to the limit", 64, result.length());
+		assertEquals(64, result.length(), "The result should be equal to the limit");
 	}
 
 	@Test
-	public void htmlEncodingJobName() {
+	void htmlEncodingJobName() {
 		String jobName = "withHTMLEncoding%2FJobName";
 		String buildNumber = "123";
 		final RoleSessionNameBuilder roleSessionNameBuilder = RoleSessionNameBuilder
 				.withJobName(jobName)
 				.withBuildNumber(buildNumber);
 		final String result = roleSessionNameBuilder.build();
-		assertEquals("The result should not have any encoded html characters", "Jenkins-withHTMLEncoding-JobName-123", result);
+		assertEquals("Jenkins-withHTMLEncoding-JobName-123", result, "The result should not have any encoded html characters");
 	}
 
 	@Test
-	public void htmlEncodingBuildNumber() {
+	void htmlEncodingBuildNumber() {
 		String jobName = "jobName";
 		String buildNumber = "withHTMLEncoding%2FNumber";
 		final RoleSessionNameBuilder roleSessionNameBuilder = RoleSessionNameBuilder
 				.withJobName(jobName)
 				.withBuildNumber(buildNumber);
 		final String result = roleSessionNameBuilder.build();
-		assertEquals("The result should not have any encoded html characters", "Jenkins-jobName-withHTMLEncoding-Number", result);
+		assertEquals("Jenkins-jobName-withHTMLEncoding-Number", result, "The result should not have any encoded html characters");
 	}
 
 	@Test
-	public void sanitizeJobName() {
+	void sanitizeJobName() {
 		String jobName = "\"jobName' space / slash (paran)";
 		String buildNumber = "(some)123";
 		final RoleSessionNameBuilder roleSessionNameBuilder = RoleSessionNameBuilder
 				.withJobName(jobName)
 				.withBuildNumber(buildNumber);
 		final String result = roleSessionNameBuilder.build();
-		assertEquals("The result should not have any special characters", "Jenkins-jobNamespace-slash-paran-some-123", result);
+		assertEquals("Jenkins-jobNamespace-slash-paran-some-123", result, "The result should not have any special characters");
 	}
 }

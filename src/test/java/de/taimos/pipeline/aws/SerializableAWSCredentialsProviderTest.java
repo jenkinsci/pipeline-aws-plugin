@@ -21,8 +21,7 @@
 
 package de.taimos.pipeline.aws;
 
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.AwsCredentials;
 import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
@@ -30,26 +29,29 @@ import software.amazon.awssdk.auth.credentials.AwsSessionCredentials;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.identity.spi.AwsSessionCredentialsIdentity;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+
 /**
  * This provider carries credentials resolved on an agent back to the controller, so what it does
  * with a session token is what decides whether the controller can sign at all.
  */
-public class SerializableAWSCredentialsProviderTest {
+class SerializableAWSCredentialsProviderTest {
 
 	private static final String ACCESS_KEY_ID = "access-key-id";
 	private static final String SECRET_KEY_ID = "secret-key-id";
 	private static final String SESSION_TOKEN = "session-token";
 
 	@Test
-	public void serializeBasicCredentials() throws Exception {
+	void serializeBasicCredentials() {
 		AwsCredentialsProvider provider = StaticCredentialsProvider.create(
 				AwsBasicCredentials.create(ACCESS_KEY_ID, SECRET_KEY_ID));
 
 		AwsCredentials credentials = new SerializableAWSCredentialsProvider(provider).resolveCredentials();
 
-		Assert.assertEquals(ACCESS_KEY_ID, credentials.accessKeyId());
-		Assert.assertEquals(SECRET_KEY_ID, credentials.secretAccessKey());
-		Assert.assertFalse(credentials instanceof AwsSessionCredentialsIdentity);
+		assertEquals(ACCESS_KEY_ID, credentials.accessKeyId());
+		assertEquals(SECRET_KEY_ID, credentials.secretAccessKey());
+		assertFalse(credentials instanceof AwsSessionCredentialsIdentity);
 	}
 
 	/**
@@ -58,15 +60,15 @@ public class SerializableAWSCredentialsProviderTest {
 	 * controller ends up with a key and secret that cannot sign.
 	 */
 	@Test
-	public void serializeSessionCredentials() throws Exception {
+	void serializeSessionCredentials() {
 		AwsCredentialsProvider provider = StaticCredentialsProvider.create(
 				AwsSessionCredentials.create(ACCESS_KEY_ID, SECRET_KEY_ID, SESSION_TOKEN));
 
 		AwsCredentials credentials = new SerializableAWSCredentialsProvider(provider).resolveCredentials();
 
-		Assert.assertEquals(ACCESS_KEY_ID, credentials.accessKeyId());
-		Assert.assertEquals(SECRET_KEY_ID, credentials.secretAccessKey());
-		Assert.assertEquals(SESSION_TOKEN, ((AwsSessionCredentialsIdentity) credentials).sessionToken());
+		assertEquals(ACCESS_KEY_ID, credentials.accessKeyId());
+		assertEquals(SECRET_KEY_ID, credentials.secretAccessKey());
+		assertEquals(SESSION_TOKEN, ((AwsSessionCredentialsIdentity) credentials).sessionToken());
 	}
 
 	/**
@@ -74,12 +76,12 @@ public class SerializableAWSCredentialsProviderTest {
 	 * a provider returning its own implementation keeps its token rather than silently losing it.
 	 */
 	@Test
-	public void serializeAThirdPartySessionCredential() throws Exception {
-		AwsCredentialsProvider provider = () -> new ThirdPartySessionCredentials();
+	void serializeAThirdPartySessionCredential() {
+		AwsCredentialsProvider provider = ThirdPartySessionCredentials::new;
 
 		AwsCredentials credentials = new SerializableAWSCredentialsProvider(provider).resolveCredentials();
 
-		Assert.assertEquals(SESSION_TOKEN, ((AwsSessionCredentialsIdentity) credentials).sessionToken());
+		assertEquals(SESSION_TOKEN, ((AwsSessionCredentialsIdentity) credentials).sessionToken());
 	}
 
 	private static final class ThirdPartySessionCredentials implements AwsCredentials, AwsSessionCredentialsIdentity {
