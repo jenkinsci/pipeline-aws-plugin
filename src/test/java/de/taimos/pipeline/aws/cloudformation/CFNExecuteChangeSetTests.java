@@ -1,53 +1,58 @@
 package de.taimos.pipeline.aws.cloudformation;
 
+import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
 import software.amazon.awssdk.services.cloudformation.CloudFormationClient;
 import de.taimos.pipeline.aws.AWSClientFactory;
 import de.taimos.pipeline.aws.AWSUtilFactory;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.jvnet.hudson.test.JenkinsRule;
-import org.mockito.Mockito;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 
-public class CFNExecuteChangeSetTests {
+@WithJenkins
+class CFNExecuteChangeSetTests {
 
-	@Rule
-	public JenkinsRule jenkinsRule = new JenkinsRule();
+	private JenkinsRule jenkinsRule;
 	private CloudFormationStack stack;
 
-	@Before
-	public void setupSdk() throws Exception {
-		this.stack = Mockito.mock(CloudFormationStack.class);
-		CloudFormationClient cloudFormation = Mockito.mock(CloudFormationClient.class);
-		AWSClientFactory.setFactoryDelegate((x) -> cloudFormation);
+	@BeforeEach
+	void setupSdk(JenkinsRule rule) {
+		this.jenkinsRule = rule;
+		this.stack = mock(CloudFormationStack.class);
+		CloudFormationClient cloudFormation = mock(CloudFormationClient.class);
+		AWSClientFactory.setFactoryDelegate(x -> cloudFormation);
 		AWSUtilFactory.setStackSupplier(s -> {
 			assertEquals("foo", s);
 			return stack;
 		});
 	}
 
-	@After
-	public void tearDownSdk() {
+	@AfterEach
+	void tearDownSdk() {
 		AWSClientFactory.setFactoryDelegate(null);
 		AWSUtilFactory.setStackSupplier(null);
 	}
 
 	@Test
-	public void executeChangeSet() throws Exception {
+	void executeChangeSet() throws Exception {
 		WorkflowJob job = this.jenkinsRule.jenkins.createProject(WorkflowJob.class, "cfnTest");
-		job.setDefinition(new CpsFlowDefinition(""
-														+ "node {\n"
-														+ "  cfnExecuteChangeSet(stack: 'foo', changeSet: 'bar')"
-														+ "}\n", true)
+		job.setDefinition(new CpsFlowDefinition("""
+                node {
+                  cfnExecuteChangeSet(stack: 'foo', changeSet: 'bar')\
+                }
+                """, true)
 		);
 		this.jenkinsRule.assertBuildStatusSuccess(job.scheduleBuild2(0));
 
-		Mockito.verify(this.stack).executeChangeSet(Mockito.eq("bar"), Mockito.any(PollConfiguration.class));
+		verify(this.stack).executeChangeSet(eq("bar"), any(PollConfiguration.class));
 	}
 
 }

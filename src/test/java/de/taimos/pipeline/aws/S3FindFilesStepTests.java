@@ -24,13 +24,12 @@ package de.taimos.pipeline.aws;
 import hudson.model.Run;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.Timeout;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.jvnet.hudson.test.JenkinsRule;
-import org.mockito.Mockito;
+import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.CommonPrefix;
 import software.amazon.awssdk.services.s3.model.ListObjectsV2Request;
@@ -39,32 +38,36 @@ import software.amazon.awssdk.services.s3.model.S3Object;
 import software.amazon.awssdk.services.s3.paginators.ListObjectsV2Iterable;
 
 import java.time.Instant;
+import java.util.concurrent.TimeUnit;
+
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 /**
  * Execution coverage for s3FindFiles' listing walk, which the migration rewrote from
  * listObjects/listNextBatchOfObjects onto the paginator. The mock hands back a real
  * ListObjectsV2Iterable so the SDK's own paging drives the calls.
  */
-public class S3FindFilesStepTests {
+@WithJenkins
+@Timeout(value = 60, unit = TimeUnit.SECONDS)
+class S3FindFilesStepTests {
 
-	@Rule
-	public JenkinsRule jenkinsRule = new JenkinsRule();
-
-	@Rule
-	public Timeout timeout = Timeout.seconds(60);
+	private JenkinsRule jenkinsRule;
 
 	private S3Client s3Client;
 
-	@Before
-	public void setupSdk() {
-		this.s3Client = Mockito.mock(S3Client.class);
-		AWSClientFactory.setFactoryDelegate((x) -> this.s3Client);
-		Mockito.when(this.s3Client.listObjectsV2Paginator(Mockito.any(ListObjectsV2Request.class)))
+	@BeforeEach
+	void setupSdk(JenkinsRule rule) {
+		this.jenkinsRule = rule;
+		this.s3Client = mock(S3Client.class);
+		AWSClientFactory.setFactoryDelegate(x -> this.s3Client);
+		when(this.s3Client.listObjectsV2Paginator(any(ListObjectsV2Request.class)))
 				.thenAnswer(invocation -> new ListObjectsV2Iterable(this.s3Client, invocation.getArgument(0)));
 	}
 
-	@After
-	public void tearDownSdk() {
+	@AfterEach
+	void tearDownSdk() {
 		AWSClientFactory.setFactoryDelegate(null);
 	}
 
@@ -77,8 +80,8 @@ public class S3FindFilesStepTests {
 	 * pseudo-folders the console creates are skipped, and commonPrefixes are followed as folders.
 	 */
 	@Test
-	public void findsFilesAcrossPagesAndSkipsPseudoFolders() throws Exception {
-		Mockito.when(this.s3Client.listObjectsV2(Mockito.any(ListObjectsV2Request.class)))
+	void findsFilesAcrossPagesAndSkipsPseudoFolders() throws Exception {
+		when(this.s3Client.listObjectsV2(any(ListObjectsV2Request.class)))
 				.thenAnswer(invocation -> {
 					ListObjectsV2Request request = invocation.getArgument(0);
 					if ("top/".equals(request.prefix())) {
@@ -100,13 +103,14 @@ public class S3FindFilesStepTests {
 				});
 
 		WorkflowJob job = this.jenkinsRule.jenkins.createProject(WorkflowJob.class, "s3FindFiles");
-		job.setDefinition(new CpsFlowDefinition(""
-				+ "node {\n"
-				+ "  def files = s3FindFiles(bucket: 'my-bucket', path: 'top/', glob: '**')\n"
-				+ "  echo \"count=${files.size()}\"\n"
-				+ "  echo \"names=${files.collect { it.name }.sort()}\"\n"
-				+ "  echo \"lengths=${files.collect { it.length }.sort()}\"\n"
-				+ "}\n", true)
+		job.setDefinition(new CpsFlowDefinition("""
+                node {
+                  def files = s3FindFiles(bucket: 'my-bucket', path: 'top/', glob: '**')
+                  echo "count=${files.size()}"
+                  echo "names=${files.collect { it.name }.sort()}"
+                  echo "lengths=${files.collect { it.length }.sort()}"
+                }
+                """, true)
 		);
 		Run run = this.jenkinsRule.assertBuildStatusSuccess(job.scheduleBuild2(0));
 
@@ -120,8 +124,8 @@ public class S3FindFilesStepTests {
 	 * onlyFiles drops the commonPrefix entries from the result but must still recurse into them.
 	 */
 	@Test
-	public void onlyFilesExcludesFoldersButStillRecurses() throws Exception {
-		Mockito.when(this.s3Client.listObjectsV2(Mockito.any(ListObjectsV2Request.class)))
+	void onlyFilesExcludesFoldersButStillRecurses() throws Exception {
+		when(this.s3Client.listObjectsV2(any(ListObjectsV2Request.class)))
 				.thenAnswer(invocation -> {
 					ListObjectsV2Request request = invocation.getArgument(0);
 					if ("top/".equals(request.prefix())) {
@@ -136,11 +140,12 @@ public class S3FindFilesStepTests {
 				});
 
 		WorkflowJob job = this.jenkinsRule.jenkins.createProject(WorkflowJob.class, "s3FindFilesOnlyFiles");
-		job.setDefinition(new CpsFlowDefinition(""
-				+ "node {\n"
-				+ "  def files = s3FindFiles(bucket: 'my-bucket', path: 'top/', glob: '**', onlyFiles: true)\n"
-				+ "  echo \"names=${files.collect { it.name }.sort()}\"\n"
-				+ "}\n", true)
+		job.setDefinition(new CpsFlowDefinition("""
+                node {
+                  def files = s3FindFiles(bucket: 'my-bucket', path: 'top/', glob: '**', onlyFiles: true)
+                  echo "names=${files.collect { it.name }.sort()}"
+                }
+                """, true)
 		);
 		Run run = this.jenkinsRule.assertBuildStatusSuccess(job.scheduleBuild2(0));
 

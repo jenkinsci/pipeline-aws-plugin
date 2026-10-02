@@ -21,26 +21,29 @@
 
 package de.taimos.pipeline.aws;
 
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-public class S3DownloadStepTest {
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+
+class S3DownloadStepTest {
+
 	@Test
-	public void gettersWorkAsExpected() throws Exception {
+	void gettersWorkAsExpected() {
 		S3DownloadStep step = new S3DownloadStep("my-file", "my-bucket", false, false);
-		Assert.assertEquals("my-file", step.getFile());
-		Assert.assertEquals("my-bucket", step.getBucket());
+		assertEquals("my-file", step.getFile());
+		assertEquals("my-bucket", step.getBucket());
 	}
 
 	@Test
-	public void defaultPathIsEmpty() throws Exception {
+	void defaultPathIsEmpty() {
 		S3DownloadStep step = new S3DownloadStep("my-file", "my-bucket", false, false);
-		Assert.assertEquals("", step.getPath());
+		assertEquals("", step.getPath());
 	}
 
 	@Test
-	public void defaultForceIsFalse() throws Exception {
+	void defaultForceIsFalse() {
 		S3DownloadStep step = new S3DownloadStep("my-file", "my-bucket", false, false);
-		Assert.assertFalse(step.isForce());
+		assertFalse(step.isForce());
 	}
 }

@@ -22,17 +22,18 @@
 package de.taimos.pipeline.aws;
 
 import org.jenkinsci.plugins.workflow.steps.StepContext;
-import org.junit.Assert;
-import org.junit.Test;
-import org.mockito.Mockito;
+import org.junit.jupiter.api.Test;
 
 import de.taimos.pipeline.aws.utils.CannedAcl;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.Mockito.mock;
 
-public class S3UploadStepTest {
+class S3UploadStepTest {
+
 	@Test
-	public void gettersWorkAsExpectedForFileCase() throws Exception {
+	void gettersWorkAsExpectedForFileCase() {
 		S3UploadStep step = new S3UploadStep("my-bucket", false, false);
 		step.setFile("my-file");
 		step.setText("my content text");
@@ -41,88 +42,88 @@ public class S3UploadStepTest {
 		step.setCacheControl("my-cachecontrol");
 		step.setSseAlgorithm("AES256");
 		step.setRedirectLocation("/redirect");
-		Assert.assertEquals("my-file", step.getFile());
-		Assert.assertEquals("my content text", step.getText());
-		Assert.assertEquals("my-bucket", step.getBucket());
-		Assert.assertEquals(CannedAcl.PublicRead, step.getAcl());
-		Assert.assertEquals("my-cachecontrol", step.getCacheControl());
-		Assert.assertEquals("AES256", step.getSseAlgorithm());
-		Assert.assertEquals("alias/foo", step.getKmsId());
-		Assert.assertEquals("/redirect", step.getRedirectLocation());
+		assertEquals("my-file", step.getFile());
+		assertEquals("my content text", step.getText());
+		assertEquals("my-bucket", step.getBucket());
+		assertEquals(CannedAcl.PublicRead, step.getAcl());
+		assertEquals("my-cachecontrol", step.getCacheControl());
+		assertEquals("AES256", step.getSseAlgorithm());
+		assertEquals("alias/foo", step.getKmsId());
+		assertEquals("/redirect", step.getRedirectLocation());
 	}
 
 	@Test
-	public void gettersWorkAsExpectedForContentDisposition() throws Exception {
+	void gettersWorkAsExpectedForContentDisposition() {
 		S3UploadStep step = new S3UploadStep("my-bucket", false, false);
 		step.setFile("my-file");
 		step.setContentDisposition("attachment");
-		Assert.assertEquals("my-file", step.getFile());
-		Assert.assertEquals("attachment", step.getContentDisposition());
+		assertEquals("my-file", step.getFile());
+		assertEquals("attachment", step.getContentDisposition());
 	}
 
 	@Test
-	public void gettersWorkAsExpectedForPatternCase() throws Exception {
+	void gettersWorkAsExpectedForPatternCase() {
 		S3UploadStep step = new S3UploadStep("my-bucket", false, false);
 		step.setIncludePathPattern("**");
 		step.setExcludePathPattern("**/*.svg");
 		step.setWorkingDir("dist");
-		Assert.assertEquals("dist", step.getWorkingDir());
-		Assert.assertEquals("**", step.getIncludePathPattern());
-		Assert.assertEquals("**/*.svg", step.getExcludePathPattern());
-		Assert.assertEquals("my-bucket", step.getBucket());
+		assertEquals("dist", step.getWorkingDir());
+		assertEquals("**", step.getIncludePathPattern());
+		assertEquals("**/*.svg", step.getExcludePathPattern());
+		assertEquals("my-bucket", step.getBucket());
 	}
 
 	@Test
-	public void defaultPathIsEmpty() throws Exception {
+	void defaultPathIsEmpty() {
 		S3UploadStep step = new S3UploadStep("my-bucket", false, false);
 		step.setFile("my-file");
-		Assert.assertEquals("", step.getPath());
+		assertEquals("", step.getPath());
 	}
 
 	@Test
-	public void bucketMustBeDefined() throws Exception {
+	void bucketMustBeDefined() {
 		S3UploadStep step = new S3UploadStep(null, false, false);
-		S3UploadStep.Execution execution = new S3UploadStep.Execution(step, Mockito.mock(StepContext.class));
+		S3UploadStep.Execution execution = new S3UploadStep.Execution(step, mock(StepContext.class));
 		Throwable t = assertThrows(IllegalArgumentException.class, execution::run);
-		Assert.assertEquals("Bucket must not be null or empty", t.getMessage());
+		assertEquals("Bucket must not be null or empty", t.getMessage());
 	}
 
 	@Test
-	public void fileOrIncludePathPatternMustBeDefined() throws Exception {
+	void fileOrIncludePathPatternMustBeDefined() {
 		S3UploadStep step = new S3UploadStep("my-bucket", false, false);
-		S3UploadStep.Execution execution = new S3UploadStep.Execution(step, Mockito.mock(StepContext.class));
+		S3UploadStep.Execution execution = new S3UploadStep.Execution(step, mock(StepContext.class));
 		Throwable t = assertThrows(IllegalArgumentException.class, execution::run);
-		Assert.assertEquals("At least one argument of Text, File or IncludePathPattern must be included", t.getMessage());
+		assertEquals("At least one argument of Text, File or IncludePathPattern must be included", t.getMessage());
 	}
 
 	@Test
-	public void doNotAcceptFileAndIncludePathPatternArgumentsFilePattern() throws Exception {
+	void doNotAcceptFileAndIncludePathPatternArgumentsFilePattern() {
 		S3UploadStep step = new S3UploadStep("my-bucket", false, false);
 		step.setFile("file.txt");
 		step.setIncludePathPattern("*.txt");
-		S3UploadStep.Execution execution = new S3UploadStep.Execution(step, Mockito.mock(StepContext.class));
+		S3UploadStep.Execution execution = new S3UploadStep.Execution(step, mock(StepContext.class));
 		Throwable t = assertThrows(IllegalArgumentException.class, execution::run);
-		Assert.assertEquals("File and IncludePathPattern cannot be used together", t.getMessage());
+		assertEquals("File and IncludePathPattern cannot be used together", t.getMessage());
 	}
 
 	@Test
-	public void doNotAcceptFileAndIncludePathPatternArgumentsTextPattern() throws Exception {
+	void doNotAcceptFileAndIncludePathPatternArgumentsTextPattern() {
 		S3UploadStep step = new S3UploadStep("my-bucket", false, false);
 		step.setText("Just some text content.");
 		step.setIncludePathPattern("*.txt");
-		S3UploadStep.Execution execution = new S3UploadStep.Execution(step, Mockito.mock(StepContext.class));
+		S3UploadStep.Execution execution = new S3UploadStep.Execution(step, mock(StepContext.class));
 		Throwable t = assertThrows(IllegalArgumentException.class, execution::run);
-		Assert.assertEquals("IncludePathPattern and Text cannot be used together", t.getMessage());
+		assertEquals("IncludePathPattern and Text cannot be used together", t.getMessage());
 	}
 
 	@Test
-	public void doNotAcceptFileAndIncludePathPatternArgumentsFileText() throws Exception {
+	void doNotAcceptFileAndIncludePathPatternArgumentsFileText() {
 		S3UploadStep step = new S3UploadStep("my-bucket", false, false);
 		step.setFile("file.txt");
 		step.setText("Just some text content.");
-		S3UploadStep.Execution execution = new S3UploadStep.Execution(step, Mockito.mock(StepContext.class));
+		S3UploadStep.Execution execution = new S3UploadStep.Execution(step, mock(StepContext.class));
 		Throwable t = assertThrows(IllegalArgumentException.class, execution::run);
-		Assert.assertEquals("Text and File cannot be used together", t.getMessage());
+		assertEquals("Text and File cannot be used together", t.getMessage());
 	}
 
 }

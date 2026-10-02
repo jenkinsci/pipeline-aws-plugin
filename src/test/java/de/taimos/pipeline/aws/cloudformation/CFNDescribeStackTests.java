@@ -1,36 +1,38 @@
 package de.taimos.pipeline.aws.cloudformation;
 
+import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
 import software.amazon.awssdk.services.cloudformation.CloudFormationClient;
 import de.taimos.pipeline.aws.AWSClientFactory;
 import de.taimos.pipeline.aws.AWSUtilFactory;
 import hudson.model.Run;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.jvnet.hudson.test.JenkinsRule;
-import org.mockito.Mockito;
 
 import java.util.Collections;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
-public class CFNDescribeStackTests {
+@WithJenkins
+class CFNDescribeStackTests {
 
-	@Rule
-	public JenkinsRule jenkinsRule = new JenkinsRule();
+	private JenkinsRule jenkinsRule;
 	private CloudFormationStack stack;
 	private CloudFormationClient cloudFormation;
 	private int stackCounter;
 
-	@Before
-	public void setupSdk() throws Exception {
-		this.stack = Mockito.mock(CloudFormationStack.class);
-		this.cloudFormation = Mockito.mock(CloudFormationClient.class);
-		AWSClientFactory.setFactoryDelegate((x) -> this.cloudFormation);
+	@BeforeEach
+	void setupSdk(JenkinsRule rule) {
+		this.jenkinsRule = rule;
+		this.stack = mock(CloudFormationStack.class);
+		this.cloudFormation = mock(CloudFormationClient.class);
+		AWSClientFactory.setFactoryDelegate(x -> this.cloudFormation);
 		AWSUtilFactory.setStackSupplier(s -> {
 			assertEquals("foo", s);
 			stackCounter++;
@@ -39,21 +41,22 @@ public class CFNDescribeStackTests {
 		stackCounter = 0;
 	}
 
-	@After
-	public void tearDownSdk() {
+	@AfterEach
+	void tearDownSdk() {
 		AWSClientFactory.setFactoryDelegate(null);
 		AWSUtilFactory.setStackSupplier(null);
 	}
 
 	@Test
-	public void describe() throws Exception {
+	void describe() throws Exception {
 		WorkflowJob job = this.jenkinsRule.jenkins.createProject(WorkflowJob.class, "cfnTest");
-		Mockito.when(this.stack.describeOutputs()).thenReturn(Collections.singletonMap("foo", "bar"));
-		job.setDefinition(new CpsFlowDefinition(""
-														+ "node {\n"
-														+ "  def outputs = cfnDescribe(stack: 'foo')\n"
-														+ "  echo \"foo=${outputs['foo']}\""
-														+ "}\n", true)
+		when(this.stack.describeOutputs()).thenReturn(Collections.singletonMap("foo", "bar"));
+		job.setDefinition(new CpsFlowDefinition("""
+                node {
+                  def outputs = cfnDescribe(stack: 'foo')
+                  echo "foo=${outputs['foo']}"\
+                }
+                """, true)
 		);
 		Run run = this.jenkinsRule.assertBuildStatusSuccess(job.scheduleBuild2(0));
 		this.jenkinsRule.assertLogContains("foo=bar", run);

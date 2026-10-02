@@ -24,110 +24,114 @@ package de.taimos.pipeline.aws;
 import java.nio.file.Paths;
 import java.util.Date;
 
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import software.amazon.awssdk.services.s3.model.S3Object;
 
-public class S3FindFilesStepTest {
+class S3FindFilesStepTest {
+
 	@Test
-	public void gettersWorkAsExpected() throws Exception {
+	void gettersWorkAsExpected() {
 		S3FindFilesStep step = new S3FindFilesStep("my-bucket", false, false);
-		Assert.assertEquals("my-bucket", step.getBucket());
+		assertEquals("my-bucket", step.getBucket());
 	}
 
 	@Test
-	public void defaultPathIsEmpty() throws Exception {
+	void defaultPathIsEmpty() {
 		S3FindFilesStep step = new S3FindFilesStep("my-bucket", false, false);
-		Assert.assertEquals("", step.getPath());
+		assertEquals("", step.getPath());
 	}
 
 	@Test
-	public void pathCanBeSet() throws Exception {
+	void pathCanBeSet() {
 		S3FindFilesStep step = new S3FindFilesStep("my-bucket", false, false);
 		step.setPath("path1");
-		Assert.assertEquals("path1", step.getPath());
+		assertEquals("path1", step.getPath());
 		step.setPath("path2");
-		Assert.assertEquals("path2", step.getPath());
+		assertEquals("path2", step.getPath());
 	}
 
 	@Test
-	public void defaultGlobIsEmpty() throws Exception {
+	void defaultGlobIsEmpty() {
 		S3FindFilesStep step = new S3FindFilesStep("my-bucket", false, false);
-		Assert.assertEquals("", step.getGlob());
+		assertEquals("", step.getGlob());
 	}
 
 	@Test
-	public void globCanBeSet() throws Exception {
+	void globCanBeSet() {
 		S3FindFilesStep step = new S3FindFilesStep("my-bucket", false, false);
 		step.setGlob("glob1");
-		Assert.assertEquals("glob1", step.getGlob());
+		assertEquals("glob1", step.getGlob());
 		step.setGlob("glob2");
-		Assert.assertEquals("glob2", step.getGlob());
+		assertEquals("glob2", step.getGlob());
 	}
 
 	@Test
-	public void defaultOnlyFilesIsFalse() throws Exception {
+	void defaultOnlyFilesIsFalse() {
 		S3FindFilesStep step = new S3FindFilesStep("my-bucket", false, false);
-		Assert.assertFalse(step.isOnlyFiles());
+		assertFalse(step.isOnlyFiles());
 	}
 
 	@Test
-	public void onlyFilesCanBeSet() throws Exception {
+	void onlyFilesCanBeSet() {
 		S3FindFilesStep step = new S3FindFilesStep("my-bucket", false, false);
 		step.setOnlyFiles(true);
-		Assert.assertTrue(step.isOnlyFiles());
+		assertTrue(step.isOnlyFiles());
 		step.setOnlyFiles(false);
-		Assert.assertFalse(step.isOnlyFiles());
+		assertFalse(step.isOnlyFiles());
 	}
 
 	@Test
-	public void computeMatcherString() throws Exception {
+	void computeMatcherString() {
 		String matcherString;
 		matcherString = S3FindFilesStep.Execution.computeMatcherString("", "");
-		Assert.assertEquals("glob:*", matcherString);
+		assertEquals("glob:*", matcherString);
 		matcherString = S3FindFilesStep.Execution.computeMatcherString("path", "file.*");
-		Assert.assertEquals("glob:path/file.*", matcherString);
+		assertEquals("glob:path/file.*", matcherString);
 		matcherString = S3FindFilesStep.Execution.computeMatcherString("", "file.*");
-		Assert.assertEquals("glob:file.*", matcherString);
+		assertEquals("glob:file.*", matcherString);
 		matcherString = S3FindFilesStep.Execution.computeMatcherString("path/to", "my/**/file.*");
-		Assert.assertEquals("glob:path/to/my/**/file.*", matcherString);
+		assertEquals("glob:path/to/my/**/file.*", matcherString);
 	}
 
 	@Test
-	public void createFileWrapperFromFolder() throws Exception {
+	void createFileWrapperFromFolder() {
 		FileWrapper file;
 
 		file = S3FindFilesStep.Execution.createFileWrapperFromFolder(0, Paths.get("path/to/folder"));
-		Assert.assertEquals("folder", file.getName());
-		Assert.assertEquals("path/to/folder/", file.getPath());
-		Assert.assertTrue(file.isDirectory());
-		Assert.assertEquals(0, file.getLength());
-		Assert.assertEquals(0, file.getLastModified());
+		assertEquals("folder", file.getName());
+		assertEquals("path/to/folder/", file.getPath());
+		assertTrue(file.isDirectory());
+		assertEquals(0, file.getLength());
+		assertEquals(0, file.getLastModified());
 		file = S3FindFilesStep.Execution.createFileWrapperFromFolder(0, Paths.get("path/to/folder/"));
-		Assert.assertEquals("folder", file.getName());
-		Assert.assertEquals("path/to/folder/", file.getPath());
-		Assert.assertTrue(file.isDirectory());
-		Assert.assertEquals(0, file.getLength());
-		Assert.assertEquals(0, file.getLastModified());
+		assertEquals("folder", file.getName());
+		assertEquals("path/to/folder/", file.getPath());
+		assertTrue(file.isDirectory());
+		assertEquals(0, file.getLength());
+		assertEquals(0, file.getLastModified());
 
 		file = S3FindFilesStep.Execution.createFileWrapperFromFolder(1, Paths.get("path/to/folder"));
-		Assert.assertEquals("folder", file.getName());
-		Assert.assertEquals("to/folder/", file.getPath());
-		Assert.assertTrue(file.isDirectory());
-		Assert.assertEquals(0, file.getLength());
-		Assert.assertEquals(0, file.getLastModified());
+		assertEquals("folder", file.getName());
+		assertEquals("to/folder/", file.getPath());
+		assertTrue(file.isDirectory());
+		assertEquals(0, file.getLength());
+		assertEquals(0, file.getLastModified());
 
 		file = S3FindFilesStep.Execution.createFileWrapperFromFolder(2, Paths.get("path/to/folder"));
-		Assert.assertEquals("folder", file.getName());
-		Assert.assertEquals("folder/", file.getPath());
-		Assert.assertTrue(file.isDirectory());
-		Assert.assertEquals(0, file.getLength());
-		Assert.assertEquals(0, file.getLastModified());
+		assertEquals("folder", file.getName());
+		assertEquals("folder/", file.getPath());
+		assertTrue(file.isDirectory());
+		assertEquals(0, file.getLength());
+		assertEquals(0, file.getLastModified());
 	}
 
 	@Test
-	public void createFileWrapperFromFile() throws Exception {
+	void createFileWrapperFromFile() {
 		FileWrapper file;
 		S3Object s3Object = S3Object.builder()
 				.key("path/to/my/file.ext")
@@ -136,24 +140,24 @@ public class S3FindFilesStepTest {
 				.build();
 
 		file = S3FindFilesStep.Execution.createFileWrapperFromFile(0, Paths.get(s3Object.key()), s3Object);
-		Assert.assertEquals("file.ext", file.getName());
-		Assert.assertEquals("path/to/my/file.ext", file.getPath());
-		Assert.assertFalse(file.isDirectory());
-		Assert.assertEquals(12, file.getLength());
-		Assert.assertEquals(9000, file.getLastModified());
+		assertEquals("file.ext", file.getName());
+		assertEquals("path/to/my/file.ext", file.getPath());
+		assertFalse(file.isDirectory());
+		assertEquals(12, file.getLength());
+		assertEquals(9000, file.getLastModified());
 
 		file = S3FindFilesStep.Execution.createFileWrapperFromFile(1, Paths.get(s3Object.key()), s3Object);
-		Assert.assertEquals("file.ext", file.getName());
-		Assert.assertEquals("to/my/file.ext", file.getPath());
-		Assert.assertFalse(file.isDirectory());
-		Assert.assertEquals(12, file.getLength());
-		Assert.assertEquals(9000, file.getLastModified());
+		assertEquals("file.ext", file.getName());
+		assertEquals("to/my/file.ext", file.getPath());
+		assertFalse(file.isDirectory());
+		assertEquals(12, file.getLength());
+		assertEquals(9000, file.getLastModified());
 
 		file = S3FindFilesStep.Execution.createFileWrapperFromFile(2, Paths.get(s3Object.key()), s3Object);
-		Assert.assertEquals("file.ext", file.getName());
-		Assert.assertEquals("my/file.ext", file.getPath());
-		Assert.assertFalse(file.isDirectory());
-		Assert.assertEquals(12, file.getLength());
-		Assert.assertEquals(9000, file.getLastModified());
+		assertEquals("file.ext", file.getName());
+		assertEquals("my/file.ext", file.getPath());
+		assertFalse(file.isDirectory());
+		assertEquals(12, file.getLength());
+		assertEquals(9000, file.getLastModified());
 	}
 }

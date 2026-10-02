@@ -21,7 +21,7 @@
 
 package de.taimos.pipeline.aws.cloudformation;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
 
@@ -32,10 +32,10 @@ import static org.assertj.core.api.Assertions.assertThat;
  * their own copy of this rule; testing it here is what keeps "the stack sets get the same treatment
  * as the cfnUpdate waiters" true rather than aspirational.
  */
-public class PollConfigurationTest {
+class PollConfigurationTest {
 
 	@Test
-	public void aNonPositiveIntervalBecomesOneSecond() {
+	void aNonPositiveIntervalBecomesOneSecond() {
 		assertThat(PollConfiguration.effectivePollInterval(Duration.ZERO)).isEqualTo(Duration.ofSeconds(1));
 		assertThat(PollConfiguration.effectivePollInterval(Duration.ofMillis(-5))).isEqualTo(Duration.ofSeconds(1));
 	}
@@ -46,7 +46,7 @@ public class PollConfigurationTest {
 	 * honoured as "no delay".
 	 */
 	@Test
-	public void aSubMillisecondIntervalCountsAsDisabled() {
+	void aSubMillisecondIntervalCountsAsDisabled() {
 		assertThat(PollConfiguration.effectivePollInterval(Duration.ofNanos(1))).isEqualTo(Duration.ofSeconds(1));
 		assertThat(PollConfiguration.effectivePollInterval(Duration.ofNanos(999_999))).isEqualTo(Duration.ofSeconds(1));
 	}
@@ -55,14 +55,14 @@ public class PollConfigurationTest {
 	 * pollInterval is in milliseconds, so sub-second values are legal and must survive untouched.
 	 */
 	@Test
-	public void positiveIntervalsAreHonouredExactly() {
+	void positiveIntervalsAreHonouredExactly() {
 		assertThat(PollConfiguration.effectivePollInterval(Duration.ofMillis(1))).isEqualTo(Duration.ofMillis(1));
 		assertThat(PollConfiguration.effectivePollInterval(Duration.ofMillis(250))).isEqualTo(Duration.ofMillis(250));
 		assertThat(PollConfiguration.effectivePollInterval(Duration.ofSeconds(30))).isEqualTo(Duration.ofSeconds(30));
 	}
 
 	@Test
-	public void theInstanceFormReadsThePollInterval() {
+	void theInstanceFormReadsThePollInterval() {
 		assertThat(PollConfiguration.builder()
 				.timeout(Duration.ofMinutes(10))
 				.pollInterval(Duration.ZERO)

@@ -21,57 +21,61 @@
 
 package de.taimos.pipeline.aws;
 
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-public class FileWrapperTest {
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+class FileWrapperTest {
+
 	@Test
-	public void constructorWorksAsExpected() throws Exception {
+	void constructorWorksAsExpected() {
 		FileWrapper file;
 
 		// Test a normal file.
 		file = new FileWrapper("my-name", "my-path", false, 12, 9000);
-		Assert.assertEquals("my-name", file.getName());
-		Assert.assertEquals("my-path", file.getPath());
-		Assert.assertFalse(file.isDirectory());
-		Assert.assertEquals(12, file.getLength());
-		Assert.assertEquals(9000, file.getLastModified());
+		assertEquals("my-name", file.getName());
+		assertEquals("my-path", file.getPath());
+		assertFalse(file.isDirectory());
+		assertEquals(12, file.getLength());
+		assertEquals(9000, file.getLastModified());
 
 		// Test a directory.
 		// Note that if we tell it that it is a directory, then it will append
 		// a trailing "/" to the path if one isn't there already.
 		file = new FileWrapper("my-name", "my-path", true, 12, 9000);
-		Assert.assertEquals("my-name", file.getName());
-		Assert.assertEquals("my-path/", file.getPath());
-		Assert.assertTrue(file.isDirectory());
-		Assert.assertEquals(12, file.getLength());
-		Assert.assertEquals(9000, file.getLastModified());
+		assertEquals("my-name", file.getName());
+		assertEquals("my-path/", file.getPath());
+		assertTrue(file.isDirectory());
+		assertEquals(12, file.getLength());
+		assertEquals(9000, file.getLastModified());
 
 		// Test a directory that already has a trailing "/".
 		file = new FileWrapper("my-name", "my-path/", true, 12, 9000);
-		Assert.assertEquals("my-name", file.getName());
-		Assert.assertEquals("my-path/", file.getPath());
-		Assert.assertTrue(file.isDirectory());
-		Assert.assertEquals(12, file.getLength());
-		Assert.assertEquals(9000, file.getLastModified());
+		assertEquals("my-name", file.getName());
+		assertEquals("my-path/", file.getPath());
+		assertTrue(file.isDirectory());
+		assertEquals(12, file.getLength());
+		assertEquals(9000, file.getLastModified());
 	}
 
 	@Test
-	public void pathIsUsedInAStringContext() throws Exception {
+	void pathIsUsedInAStringContext() {
 		FileWrapper file;
 
 		// Test a normal file.
 		file = new FileWrapper("my-name", "my-path", false, 12, 9000);
-		Assert.assertEquals("my-path", file.toString());
+		assertEquals("my-path", file.toString());
 
 		// Test a directory.
 		// Note that if we tell it that it is a directory, then it will append
 		// a trailing "/" to the path if one isn't there already.
 		file = new FileWrapper("my-name", "my-path", true, 12, 9000);
-		Assert.assertEquals("my-path/", file.toString());
+		assertEquals("my-path/", file.toString());
 
 		// Test a directory that already has a trailing "/".
 		file = new FileWrapper("my-name", "my-path/", true, 12, 9000);
-		Assert.assertEquals("my-path/", file.toString());
+		assertEquals("my-path/", file.toString());
 	}
 }

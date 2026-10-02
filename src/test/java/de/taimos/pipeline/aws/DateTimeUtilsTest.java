@@ -7,18 +7,19 @@ import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 
-import org.junit.Test;
-import org.junit.Assert;
+import org.junit.jupiter.api.Test;
 
-public class DateTimeUtilsTest {
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
-	public void verifyParse(String parse, ZonedDateTime dt) throws Exception {
+class DateTimeUtilsTest {
+
+	private void verifyParse(String parse, ZonedDateTime dt) {
 		ZoneId tz = ZoneOffset.UTC;
-		Assert.assertEquals(DateTimeUtils.parse(parse).withZoneSameLocal(tz), dt.withZoneSameLocal(tz));
+		assertEquals(DateTimeUtils.parse(parse).withZoneSameLocal(tz), dt.withZoneSameLocal(tz));
 	}
 
 	@Test
-	public void parseDate() throws Exception {
+	void parseDate() {
 		ZonedDateTime now = ZonedDateTime.now();
 		verifyParse(now.format(DateTimeFormatter.ISO_ZONED_DATE_TIME), now);
 		verifyParse("2018-02-05T11:15:12Z", ZonedDateTime.of(

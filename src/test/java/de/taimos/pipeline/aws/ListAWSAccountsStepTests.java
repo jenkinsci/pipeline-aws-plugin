@@ -21,6 +21,7 @@
 
 package de.taimos.pipeline.aws;
 
+import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
 import software.amazon.awssdk.services.organizations.OrganizationsClient;
 import software.amazon.awssdk.services.organizations.model.Account;
 import software.amazon.awssdk.services.organizations.model.ListAccountsForParentRequest;
@@ -32,46 +33,50 @@ import software.amazon.awssdk.services.organizations.paginators.ListAccountsIter
 import hudson.model.Run;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.jvnet.hudson.test.JenkinsRule;
 import org.mockito.ArgumentCaptor;
-import org.mockito.Mockito;
 
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 /**
  * Pins the map keys that {@code listAWSAccounts} returns to the pipeline, and the pagination
  * contract. The keys are built by hand in the step, but the values and the paging tokens come
  * straight off the SDK model, so this guards the mapping through an SDK upgrade.
  */
-public class ListAWSAccountsStepTests {
+@WithJenkins
+class ListAWSAccountsStepTests {
 
-	@Rule
-	public JenkinsRule jenkinsRule = new JenkinsRule();
+	private JenkinsRule jenkinsRule;
 	private OrganizationsClient organizations;
 
-	@Before
-	public void setupSdk() throws Exception {
-		this.organizations = Mockito.mock(OrganizationsClient.class);
-		AWSClientFactory.setFactoryDelegate((x) -> this.organizations);
+	@BeforeEach
+	void setupSdk(JenkinsRule rule) {
+		this.jenkinsRule = rule;
+		this.organizations = mock(OrganizationsClient.class);
+		AWSClientFactory.setFactoryDelegate(x -> this.organizations);
 
 		// The paginator methods are defaults on the client interface, so a mock returns null for
 		// them. Handing back a real paginator over the mock keeps the assertions below meaningful:
 		// the SDK's own paging logic issues the underlying calls, so what is captured is what the
 		// SDK really sends, including the token it carries between pages.
-		Mockito.when(this.organizations.listAccountsPaginator(Mockito.any(ListAccountsRequest.class)))
+		when(this.organizations.listAccountsPaginator(any(ListAccountsRequest.class)))
 				.thenAnswer(invocation -> new ListAccountsIterable(this.organizations, invocation.getArgument(0)));
-		Mockito.when(this.organizations.listAccountsForParentPaginator(Mockito.any(ListAccountsForParentRequest.class)))
+		when(this.organizations.listAccountsForParentPaginator(any(ListAccountsForParentRequest.class)))
 				.thenAnswer(invocation -> new ListAccountsForParentIterable(this.organizations, invocation.getArgument(0)));
 	}
 
-	@After
-	public void tearDownSdk() throws Exception {
+	@AfterEach
+	void tearDownSdk() {
 		AWSClientFactory.setFactoryDelegate(null);
 	}
 
@@ -87,24 +92,25 @@ public class ListAWSAccountsStepTests {
 	}
 
 	@Test
-	public void listAccountsExposesEveryKey() throws Exception {
-		Mockito.when(this.organizations.listAccounts(Mockito.any(ListAccountsRequest.class))).thenReturn(ListAccountsResponse.builder()
+	void listAccountsExposesEveryKey() throws Exception {
+		when(this.organizations.listAccounts(any(ListAccountsRequest.class))).thenReturn(ListAccountsResponse.builder()
 				.accounts(account("111111111111", "My Account"))
 				.build()
 		);
 
 		WorkflowJob job = this.jenkinsRule.jenkins.createProject(WorkflowJob.class, "listAccountsTest");
-		job.setDefinition(new CpsFlowDefinition(""
-				+ "node {\n"
-				+ "  def accounts = listAWSAccounts()\n"
-				+ "  echo \"accountsCount=${accounts.size()}\"\n"
-				+ "  echo \"id=${accounts[0].id}\"\n"
-				+ "  echo \"arn=${accounts[0].arn}\"\n"
-				+ "  echo \"name=${accounts[0].name}\"\n"
-				+ "  echo \"safeName=${accounts[0].safeName}\"\n"
-				+ "  echo \"status=${accounts[0].status}\"\n"
-				+ "  echo \"state=${accounts[0].state}\"\n"
-				+ "}\n", true)
+		job.setDefinition(new CpsFlowDefinition("""
+                node {
+                  def accounts = listAWSAccounts()
+                  echo "accountsCount=${accounts.size()}"
+                  echo "id=${accounts[0].id}"
+                  echo "arn=${accounts[0].arn}"
+                  echo "name=${accounts[0].name}"
+                  echo "safeName=${accounts[0].safeName}"
+                  echo "status=${accounts[0].status}"
+                  echo "state=${accounts[0].state}"
+                }
+                """, true)
 		);
 
 		Run run = this.jenkinsRule.assertBuildStatusSuccess(job.scheduleBuild2(0));
@@ -124,8 +130,8 @@ public class ListAWSAccountsStepTests {
 	 * way, so the documented status key does not go null.
 	 */
 	@Test
-	public void statusFallsBackToStateWhenTheResponseOmitsStatus() throws Exception {
-		Mockito.when(this.organizations.listAccounts(Mockito.any(ListAccountsRequest.class))).thenReturn(ListAccountsResponse.builder()
+	void statusFallsBackToStateWhenTheResponseOmitsStatus() throws Exception {
+		when(this.organizations.listAccounts(any(ListAccountsRequest.class))).thenReturn(ListAccountsResponse.builder()
 				.accounts(Account.builder()
 						.id("222222222222")
 						.arn("arn:aws:organizations::123456789012:account/o-exampleorg/222222222222")
@@ -138,12 +144,13 @@ public class ListAWSAccountsStepTests {
 		);
 
 		WorkflowJob job = this.jenkinsRule.jenkins.createProject(WorkflowJob.class, "listAccountsStateFallback");
-		job.setDefinition(new CpsFlowDefinition(""
-				+ "node {\n"
-				+ "  def accounts = listAWSAccounts()\n"
-				+ "  echo \"status=${accounts[0].status}\"\n"
-				+ "  echo \"state=${accounts[0].state}\"\n"
-				+ "}\n", true)
+		job.setDefinition(new CpsFlowDefinition("""
+                node {
+                  def accounts = listAWSAccounts()
+                  echo "status=${accounts[0].status}"
+                  echo "state=${accounts[0].state}"
+                }
+                """, true)
 		);
 
 		Run run = this.jenkinsRule.assertBuildStatusSuccess(job.scheduleBuild2(0));
@@ -158,8 +165,8 @@ public class ListAWSAccountsStepTests {
 	 * status even for a response that supplied a perfectly good Status.
 	 */
 	@Test
-	public void statusAndStateReportTheirOwnFieldWhenTheyDisagree() throws Exception {
-		Mockito.when(this.organizations.listAccounts(Mockito.any(ListAccountsRequest.class))).thenReturn(ListAccountsResponse.builder()
+	void statusAndStateReportTheirOwnFieldWhenTheyDisagree() throws Exception {
+		when(this.organizations.listAccounts(any(ListAccountsRequest.class))).thenReturn(ListAccountsResponse.builder()
 				.accounts(Account.builder()
 						.id("333333333333")
 						.arn("arn:aws:organizations::123456789012:account/o-exampleorg/333333333333")
@@ -171,12 +178,13 @@ public class ListAWSAccountsStepTests {
 		);
 
 		WorkflowJob job = this.jenkinsRule.jenkins.createProject(WorkflowJob.class, "listAccountsDivergent");
-		job.setDefinition(new CpsFlowDefinition(""
-				+ "node {\n"
-				+ "  def accounts = listAWSAccounts()\n"
-				+ "  echo \"status=${accounts[0].status}\"\n"
-				+ "  echo \"state=${accounts[0].state}\"\n"
-				+ "}\n", true)
+		job.setDefinition(new CpsFlowDefinition("""
+                node {
+                  def accounts = listAWSAccounts()
+                  echo "status=${accounts[0].status}"
+                  echo "state=${accounts[0].state}"
+                }
+                """, true)
 		);
 
 		Run run = this.jenkinsRule.assertBuildStatusSuccess(job.scheduleBuild2(0));
@@ -191,8 +199,8 @@ public class ListAWSAccountsStepTests {
 	 * the only one that can come back null.
 	 */
 	@Test
-	public void stateFallsBackToStatusWhenTheResponseOmitsState() throws Exception {
-		Mockito.when(this.organizations.listAccounts(Mockito.any(ListAccountsRequest.class))).thenReturn(ListAccountsResponse.builder()
+	void stateFallsBackToStatusWhenTheResponseOmitsState() throws Exception {
+		when(this.organizations.listAccounts(any(ListAccountsRequest.class))).thenReturn(ListAccountsResponse.builder()
 				.accounts(Account.builder()
 						.id("444444444444")
 						.arn("arn:aws:organizations::123456789012:account/o-exampleorg/444444444444")
@@ -203,12 +211,13 @@ public class ListAWSAccountsStepTests {
 		);
 
 		WorkflowJob job = this.jenkinsRule.jenkins.createProject(WorkflowJob.class, "listAccountsStatusOnly");
-		job.setDefinition(new CpsFlowDefinition(""
-				+ "node {\n"
-				+ "  def accounts = listAWSAccounts()\n"
-				+ "  echo \"status=${accounts[0].status}\"\n"
-				+ "  echo \"state=${accounts[0].state}\"\n"
-				+ "}\n", true)
+		job.setDefinition(new CpsFlowDefinition("""
+                node {
+                  def accounts = listAWSAccounts()
+                  echo "status=${accounts[0].status}"
+                  echo "state=${accounts[0].state}"
+                }
+                """, true)
 		);
 
 		Run run = this.jenkinsRule.assertBuildStatusSuccess(job.scheduleBuild2(0));
@@ -223,8 +232,8 @@ public class ListAWSAccountsStepTests {
 	 * the second page regardless of what it is asked for.
 	 */
 	@Test
-	public void listAccountsPropagatesPagingToken() throws Exception {
-		Mockito.when(this.organizations.listAccounts(Mockito.any(ListAccountsRequest.class)))
+	void listAccountsPropagatesPagingToken() throws Exception {
+		when(this.organizations.listAccounts(any(ListAccountsRequest.class)))
 				.thenReturn(ListAccountsResponse.builder()
 						.accounts(account("111111111111", "First"))
 						.nextToken("next")
@@ -234,26 +243,27 @@ public class ListAWSAccountsStepTests {
 						.build());
 
 		WorkflowJob job = this.jenkinsRule.jenkins.createProject(WorkflowJob.class, "listAccountsPagingTest");
-		job.setDefinition(new CpsFlowDefinition(""
-				+ "node {\n"
-				+ "  def accounts = listAWSAccounts()\n"
-				+ "  echo \"ids=${accounts.collect { it.id }.toString()}\"\n"
-				+ "}\n", true)
+		job.setDefinition(new CpsFlowDefinition("""
+                node {
+                  def accounts = listAWSAccounts()
+                  echo "ids=${accounts.collect { it.id }.toString()}"
+                }
+                """, true)
 		);
 
 		Run run = this.jenkinsRule.assertBuildStatusSuccess(job.scheduleBuild2(0));
 		this.jenkinsRule.assertLogContains("ids=[111111111111, 222222222222]", run);
 
 		ArgumentCaptor<ListAccountsRequest> captor = ArgumentCaptor.forClass(ListAccountsRequest.class);
-		Mockito.verify(this.organizations, Mockito.times(2)).listAccounts(captor.capture());
+		verify(this.organizations, times(2)).listAccounts(captor.capture());
 		List<ListAccountsRequest> requests = captor.getAllValues();
 		assertThat(requests.get(0).nextToken()).isNull();
 		assertThat(requests.get(1).nextToken()).isEqualTo("next");
 	}
 
 	@Test
-	public void listAccountsForParentPropagatesParentAndPagingToken() throws Exception {
-		Mockito.when(this.organizations.listAccountsForParent(Mockito.any(ListAccountsForParentRequest.class)))
+	void listAccountsForParentPropagatesParentAndPagingToken() throws Exception {
+		when(this.organizations.listAccountsForParent(any(ListAccountsForParentRequest.class)))
 				.thenReturn(ListAccountsForParentResponse.builder()
 						.accounts(account("111111111111", "First"))
 						.nextToken("next")
@@ -263,12 +273,13 @@ public class ListAWSAccountsStepTests {
 						.build());
 
 		WorkflowJob job = this.jenkinsRule.jenkins.createProject(WorkflowJob.class, "listAccountsParentTest");
-		job.setDefinition(new CpsFlowDefinition(""
-				+ "node {\n"
-				+ "  def accounts = listAWSAccounts(parent: 'ou-1234')\n"
-				+ "  echo \"accountsCount=${accounts.size()}\"\n"
-				+ "  echo \"ids=${accounts.collect { it.id }.toString()}\"\n"
-				+ "}\n", true)
+		job.setDefinition(new CpsFlowDefinition("""
+                node {
+                  def accounts = listAWSAccounts(parent: 'ou-1234')
+                  echo "accountsCount=${accounts.size()}"
+                  echo "ids=${accounts.collect { it.id }.toString()}"
+                }
+                """, true)
 		);
 
 		Run run = this.jenkinsRule.assertBuildStatusSuccess(job.scheduleBuild2(0));
@@ -277,7 +288,7 @@ public class ListAWSAccountsStepTests {
 		this.jenkinsRule.assertLogContains("ids=[111111111111, 222222222222]", run);
 
 		ArgumentCaptor<ListAccountsForParentRequest> captor = ArgumentCaptor.forClass(ListAccountsForParentRequest.class);
-		Mockito.verify(this.organizations, Mockito.times(2)).listAccountsForParent(captor.capture());
+		verify(this.organizations, times(2)).listAccountsForParent(captor.capture());
 		List<ListAccountsForParentRequest> requests = captor.getAllValues();
 		assertThat(requests.get(0).parentId()).isEqualTo("ou-1234");
 		assertThat(requests.get(0).nextToken()).isNull();

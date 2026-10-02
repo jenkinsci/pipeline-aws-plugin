@@ -22,23 +22,24 @@ package de.taimos.pipeline.aws;
 
 import java.util.Collections;
 
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-public class InvokeLambdaStepTest {
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
+class InvokeLambdaStepTest {
 
 	@Test
-	public void shouldConvertPayloadObjectToString() throws Exception {
+	void shouldConvertPayloadObjectToString() {
 		InvokeLambdaStep invokeLambdaStep = new InvokeLambdaStep("test-lambda");
 		invokeLambdaStep.setPayload(Collections.singletonMap("key", "value"));
-		Assert.assertEquals("{\"key\":\"value\"}", invokeLambdaStep.getPayloadAsString());
+		assertEquals("{\"key\":\"value\"}", invokeLambdaStep.getPayloadAsString());
 	}
 
 	@Test
-	public void shouldConvertPayloadListToString() throws Exception {
+	void shouldConvertPayloadListToString() {
 		InvokeLambdaStep invokeLambdaStep = new InvokeLambdaStep("test-lambda");
 		invokeLambdaStep.setPayload(Collections.singletonList("elem"));
-		Assert.assertEquals("[\"elem\"]", invokeLambdaStep.getPayloadAsString());
+		assertEquals("[\"elem\"]", invokeLambdaStep.getPayloadAsString());
 	}
 
 }

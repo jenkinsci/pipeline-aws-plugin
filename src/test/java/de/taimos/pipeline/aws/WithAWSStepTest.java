@@ -36,6 +36,8 @@ import com.cloudbees.plugins.credentials.domains.Domain;
 import com.cloudbees.plugins.credentials.impl.BaseStandardCredentials;
 import com.cloudbees.plugins.credentials.impl.UsernamePasswordCredentialsImpl;
 
+import org.junit.jupiter.api.BeforeAll;
+import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.auth.credentials.AwsCredentials;
@@ -47,27 +49,33 @@ import hudson.util.ListBoxModel;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
 import org.jenkinsci.plugins.workflow.job.WorkflowRun;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.jvnet.hudson.test.JenkinsRule;
 
+import java.io.Serial;
 import java.util.ArrayList;
 import java.util.List;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * Test the behavior of the {@link WithAWSStep}
  *
  * @author Allan Burdajewicz
  */
-public class WithAWSStepTest {
+@WithJenkins
+class WithAWSStepTest {
 
-	@ClassRule
-	public static JenkinsRule jenkinsRule = new JenkinsRule();
+	private static JenkinsRule jenkinsRule;
 
-	@Before
-	public void before() throws Exception {
+	@BeforeAll
+	static void beforeAll(JenkinsRule rule) {
+		jenkinsRule = rule;
+	}
+
+	@BeforeEach
+	void beforeEach() throws Exception {
 		List<Credentials> credentials = SystemCredentialsProvider.getInstance().getCredentials();
 		SystemCredentialsProvider.getInstance().getCredentials().removeAll(credentials);
 		SystemCredentialsProvider.getInstance().save();
@@ -75,8 +83,7 @@ public class WithAWSStepTest {
 	}
 
 	@Test
-	public void testStepWithGlobalCredentials() throws Exception {
-
+	void testStepWithGlobalCredentials() throws Exception {
 		String globalCredentialsId = "global-aws-creds";
 
 		List<String> credentialIds = new ArrayList<>();
@@ -99,7 +106,7 @@ public class WithAWSStepTest {
 	}
 
 	@Test
-	public void testStepWithBasicAndAwsGlobalCredentials() throws Exception {
+	void testStepWithBasicAndAwsGlobalCredentials() throws Exception {
 
 		String globalBaseCreds = "global-basic-creds";
 		String globalAwsCreds = "global-aws-creds";
@@ -130,7 +137,7 @@ public class WithAWSStepTest {
 	}
 
 	@Test
-	public void testStepWithNotFoundGlobalCredentials() throws Exception {
+	void testStepWithNotFoundGlobalCredentials() throws Exception {
 
 		String globalBaseCreds = "something-random";
 
@@ -150,7 +157,7 @@ public class WithAWSStepTest {
 	}
 
 	@Test
-	public void testStepWithGlobalAWSCredentials() throws Exception {
+	void testStepWithGlobalAWSCredentials() throws Exception {
 
 		String globalCredentialsId = "global-aws-creds";
 
@@ -181,7 +188,7 @@ public class WithAWSStepTest {
 	}
 
 	@Test
-	public void testSettingEndpointUrl() throws Exception {
+	void testSettingEndpointUrl() {
 		final EnvVars envVars = new EnvVars();
 		envVars.put(AWSClientFactory.AWS_ENDPOINT_URL, "https://minio.mycompany.com");
 		envVars.put(AWSClientFactory.AWS_REGION, "us-west-2");
@@ -197,13 +204,13 @@ public class WithAWSStepTest {
 		// that is passed as an instance, so the SDK leaves it to the caller. One connection manager
 		// per test run is harmless, and the alternative is reaching into the factory's internals.
 		try (S3Client client = AWSClientFactory.configureV2Builder(S3Client.builder(), null, envVars).build()) {
-			Assert.assertEquals("https://minio.mycompany.com",
+			assertEquals("https://minio.mycompany.com",
 					client.serviceClientConfiguration().endpointOverride().map(Object::toString).orElse(null));
 		}
 	}
 
 	@Test
-	public void testStepWithFolderCredentials() throws Exception {
+	void testStepWithFolderCredentials() throws Exception {
 
 		String folderCredentialsId = "folders-aws-creds";
 
@@ -231,7 +238,7 @@ public class WithAWSStepTest {
 	}
 
 	@Test
-	public void testStepWithAWSFolderCredentials() throws Exception {
+	void testStepWithAWSFolderCredentials() throws Exception {
 
 		String folderCredentialsId = "folders-aws-creds";
 
@@ -264,7 +271,7 @@ public class WithAWSStepTest {
 	}
 
 	@Test
-	public void testStepWithAWSIamMFAFolderCredentials() throws Exception {
+	void testStepWithAWSIamMFAFolderCredentials() throws Exception {
 
 		String folderCredentialsId = "folders-aws-creds";
 
@@ -298,14 +305,15 @@ public class WithAWSStepTest {
 	}
 
 	@Test
-	public void testStepWithAssumeRoleSAMLAssertion() throws Exception {
+	void testStepWithAssumeRoleSAMLAssertion() throws Exception {
 		WorkflowJob job = jenkinsRule.jenkins.createProject(WorkflowJob.class, "testStepWithAssumeRoleSAMLAssertion");
-		job.setDefinition(new CpsFlowDefinition(""
-				+ "node {\n"
-				+ "  withAWS (role: 'myRole', roleAccount: '123456789012', principalArn: 'arn:aws:iam::123456789012:saml-provider/test', samlAssertion: 'base64SAML', region: 'eu-west-1') {\n"
-				+ "    echo 'It works!'\n"
-				+ "  }\n"
-				+ "}\n", true)
+		job.setDefinition(new CpsFlowDefinition("""
+                node {
+                  withAWS (role: 'myRole', roleAccount: '123456789012', principalArn: 'arn:aws:iam::123456789012:saml-provider/test', samlAssertion: 'base64SAML', region: 'eu-west-1') {
+                    echo 'It works!'
+                  }
+                }
+                """, true)
 		);
 		WorkflowRun workflowRun = job.scheduleBuild2(0).get();
 		jenkinsRule.waitForCompletion(workflowRun);
@@ -315,14 +323,15 @@ public class WithAWSStepTest {
 	}
 
 	@Test
-	public void testStepWithAssumeRole() throws Exception {
+	void testStepWithAssumeRole() throws Exception {
 		WorkflowJob job = jenkinsRule.jenkins.createProject(WorkflowJob.class, "testStepWithAssumeRole");
-		job.setDefinition(new CpsFlowDefinition(""
-				+ "node {\n"
-				+ "  withAWS (role: 'myRole', roleAccount: '123456789012') {\n"
-				+ "    echo 'It works!'\n"
-				+ "  }\n"
-				+ "}\n", true)
+		job.setDefinition(new CpsFlowDefinition("""
+                node {
+                  withAWS (role: 'myRole', roleAccount: '123456789012') {
+                    echo 'It works!'
+                  }
+                }
+                """, true)
 		);
 		WorkflowRun workflowRun = job.scheduleBuild2(0).get();
 		jenkinsRule.waitForCompletion(workflowRun);
@@ -331,14 +340,15 @@ public class WithAWSStepTest {
 	}
 
 	@Test
-	public void testStepWithAssumeRoleChina() throws Exception {
+	void testStepWithAssumeRoleChina() throws Exception {
 		WorkflowJob job = jenkinsRule.jenkins.createProject(WorkflowJob.class, "testStepWithAssumeRoleChina");
-		job.setDefinition(new CpsFlowDefinition(""
-				+ "node {\n"
-				+ "  withAWS (role: 'myRole', roleAccount: '123456789012', region: 'cn-north-1') {\n"
-				+ "    echo 'It works!'\n"
-				+ "  }\n"
-				+ "}\n", true)
+		job.setDefinition(new CpsFlowDefinition("""
+                node {
+                  withAWS (role: 'myRole', roleAccount: '123456789012', region: 'cn-north-1') {
+                    echo 'It works!'
+                  }
+                }
+                """, true)
 		);
 		WorkflowRun workflowRun = job.scheduleBuild2(0).get();
 		jenkinsRule.waitForCompletion(workflowRun);
@@ -348,7 +358,7 @@ public class WithAWSStepTest {
 	}
 
 	@Test
-	public void testListCredentials() throws Exception {
+	void testListCredentials() throws Exception {
 		Folder folder = jenkinsRule.jenkins.createProject(Folder.class, "folder" + jenkinsRule.jenkins.getItems().size());
 		CredentialsStore folderStore = this.getFolderStore(folder);
 		StandardUsernamePasswordCredentials folderCredentials = new UsernamePasswordCredentialsImpl(CredentialsScope.GLOBAL,
@@ -365,7 +375,7 @@ public class WithAWSStepTest {
 
 		// 3 options: Root credentials, folder credentials and "none"
 		ListBoxModel list = descriptor.doFillCredentialsItems(job);
-		Assert.assertEquals(3, list.size());
+		assertEquals(3, list.size());
 
 		StandardUsernamePasswordCredentials systemCredentials = new UsernamePasswordCredentialsImpl(CredentialsScope.SYSTEM,
 				"system-creds", "test-creds", "aws-access-key-id", "aws-secret-access-key");
@@ -373,11 +383,11 @@ public class WithAWSStepTest {
 
 		// Still 3 options: Root credentials, folder credentials and "none"
 		list = descriptor.doFillCredentialsItems(job);
-		Assert.assertEquals(3, list.size());
+		assertEquals(3, list.size());
 	}
 
 	@Test
-	public void testListAWSCredentials() throws Exception {
+	void testListAWSCredentials() throws Exception {
 
 		Folder folder = jenkinsRule.jenkins.createProject(Folder.class, "folder" + jenkinsRule.jenkins.getItems().size());
 		CredentialsStore folderStore = this.getFolderStore(folder);
@@ -397,7 +407,7 @@ public class WithAWSStepTest {
 
 		// 3 options: Root credentials, folder credentials and "none"
 		ListBoxModel list = descriptor.doFillCredentialsItems(job);
-		Assert.assertEquals(3, list.size());
+		assertEquals(3, list.size());
 
 		StandardUsernamePasswordCredentials systemCredentials = new UsernamePasswordCredentialsImpl(CredentialsScope.SYSTEM,
 				"system-creds", "test-creds", "aws-access-key-id", "aws-secret-access-key");
@@ -405,7 +415,7 @@ public class WithAWSStepTest {
 
 		// Still 3 options: Root credentials, folder credentials and "none"
 		list = descriptor.doFillCredentialsItems(job);
-		Assert.assertEquals(3, list.size());
+		assertEquals(3, list.size());
 	}
 
 	private CredentialsStore getFolderStore(AbstractFolder f) {
@@ -428,7 +438,8 @@ public class WithAWSStepTest {
 	 */
 	public static class StubCredentials extends BaseStandardCredentials implements AmazonWebServicesCredentials {
 
-		private static final long serialVersionUID = 1L;
+		@Serial
+        private static final long serialVersionUID = 1L;
 		// stored as strings, not as an AwsCredentials: the credentials store persists this object and
 		// the SDK's credential types are not serializable
 		private final String accessKeyId;
@@ -525,7 +536,7 @@ public class WithAWSStepTest {
 	 * lost its token and left a key/secret pair that cannot sign.
 	 */
 	@Test
-	public void sessionCredentialsExportTheirTokenWithoutMfa() throws Exception {
+	void sessionCredentialsExportTheirTokenWithoutMfa() throws Exception {
 		this.registerStub("stub-session-creds", "the-session-token");
 
 		WorkflowRun run = this.runEchoingSessionToken("testSessionToken", "stub-session-creds");
@@ -539,18 +550,19 @@ public class WithAWSStepTest {
 	 * rejects.
 	 */
 	@Test
-	public void basicCredentialsClearAnInheritedSessionToken() throws Exception {
+	void basicCredentialsClearAnInheritedSessionToken() throws Exception {
 		this.registerStub("stub-basic-creds-nested", null);
 
 		WorkflowJob job = jenkinsRule.jenkins.createProject(WorkflowJob.class, "testClearsInheritedToken");
-		job.setDefinition(new CpsFlowDefinition(""
-				+ "node {\n"
-				+ "  withEnv(['AWS_SESSION_TOKEN=inherited-token']) {\n"
-				+ "    withAWS (credentials: 'stub-basic-creds-nested') {\n"
-				+ "      echo \"token=[${env.AWS_SESSION_TOKEN}]\"\n"
-				+ "    }\n"
-				+ "  }\n"
-				+ "}\n", true)
+		job.setDefinition(new CpsFlowDefinition("""
+                node {
+                  withEnv(['AWS_SESSION_TOKEN=inherited-token']) {
+                    withAWS (credentials: 'stub-basic-creds-nested') {
+                      echo "token=[${env.AWS_SESSION_TOKEN}]"
+                    }
+                  }
+                }
+                """, true)
 		);
 		WorkflowRun run = jenkinsRule.assertBuildStatusSuccess(job.scheduleBuild2(0));
 
@@ -558,7 +570,7 @@ public class WithAWSStepTest {
 	}
 
 	@Test
-	public void basicCredentialsExportNoToken() throws Exception {
+	void basicCredentialsExportNoToken() throws Exception {
 		this.registerStub("stub-basic-creds", null);
 
 		WorkflowRun run = this.runEchoingSessionToken("testNoSessionToken", "stub-basic-creds");
@@ -573,7 +585,7 @@ public class WithAWSStepTest {
 	 * credential type must still have its token exported.
 	 */
 	@Test
-	public void aThirdPartySessionCredentialAlsoExportsItsToken() throws Exception {
+	void aThirdPartySessionCredentialAlsoExportsItsToken() throws Exception {
 		this.registerStub("stub-third-party-creds", "third-party");
 
 		WorkflowRun run = this.runEchoingSessionToken("testThirdPartyToken", "stub-third-party-creds");
@@ -588,7 +600,7 @@ public class WithAWSStepTest {
 	 * one has to be dropped here too.
 	 */
 	@Test
-	public void usernamePasswordCredentialsClearAnInheritedSessionToken() throws Exception {
+	void usernamePasswordCredentialsClearAnInheritedSessionToken() throws Exception {
 		String credentialsId = "user-pass-creds-nested";
 		StandardUsernamePasswordCredentials credentials = new UsernamePasswordCredentialsImpl(
 				CredentialsScope.GLOBAL, credentialsId, "desc", "access-key-id", "secret-access-key");
@@ -625,16 +637,17 @@ public class WithAWSStepTest {
 	 * token alongside the placeholder keys.
 	 */
 	@Test
-	public void samlAssertionStillReachesStsWithAnInheritedToken() throws Exception {
+	void samlAssertionStillReachesStsWithAnInheritedToken() throws Exception {
 		WorkflowJob job = jenkinsRule.jenkins.createProject(WorkflowJob.class, "testSamlWithInheritedToken");
-		job.setDefinition(new CpsFlowDefinition(""
-				+ "node {\n"
-				+ "  withEnv(['AWS_SESSION_TOKEN=inherited-token']) {\n"
-				+ "    withAWS (role: 'myRole', roleAccount: '123456789012', principalArn: 'arn:aws:iam::123456789012:saml-provider/test', samlAssertion: 'base64SAML', region: 'eu-west-1') {\n"
-				+ "      echo 'It works!'\n"
-				+ "    }\n"
-				+ "  }\n"
-				+ "}\n", true)
+		job.setDefinition(new CpsFlowDefinition("""
+                node {
+                  withEnv(['AWS_SESSION_TOKEN=inherited-token']) {
+                    withAWS (role: 'myRole', roleAccount: '123456789012', principalArn: 'arn:aws:iam::123456789012:saml-provider/test', samlAssertion: 'base64SAML', region: 'eu-west-1') {
+                      echo 'It works!'
+                    }
+                  }
+                }
+                """, true)
 		);
 		WorkflowRun workflowRun = job.scheduleBuild2(0).get();
 		jenkinsRule.waitForCompletion(workflowRun);
@@ -651,7 +664,7 @@ public class WithAWSStepTest {
 	 * after withCredentials - or the message would be a false alarm on a build that ends up fine.
 	 */
 	@Test
-	public void nothingIsLoggedWhenARoleWillSupplyAToken() throws Exception {
+	void nothingIsLoggedWhenARoleWillSupplyAToken() throws Exception {
 		String credentialsId = "user-pass-creds-with-role";
 		SystemCredentialsProvider.getInstance().getCredentials().add(new UsernamePasswordCredentialsImpl(
 				CredentialsScope.GLOBAL, credentialsId, "desc", "access-key-id", "secret-access-key"));
@@ -681,7 +694,7 @@ public class WithAWSStepTest {
 	 * appear on every withAWS.
 	 */
 	@Test
-	public void nothingIsLoggedWhenThereIsNoTokenToDrop() throws Exception {
+	void nothingIsLoggedWhenThereIsNoTokenToDrop() throws Exception {
 		this.registerStub("stub-basic-creds-quiet", null);
 
 		WorkflowRun run = this.runEchoingSessionToken("testQuietWhenNoToken", "stub-basic-creds-quiet");

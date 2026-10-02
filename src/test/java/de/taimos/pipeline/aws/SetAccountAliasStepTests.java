@@ -23,18 +23,22 @@ package de.taimos.pipeline.aws;
 
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.jvnet.hudson.test.JenkinsRule;
+import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
 import org.mockito.ArgumentCaptor;
-import org.mockito.Mockito;
 import software.amazon.awssdk.services.iam.IamClient;
 import software.amazon.awssdk.services.iam.model.CreateAccountAliasRequest;
 import software.amazon.awssdk.services.iam.model.ListAccountAliasesResponse;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 /**
  * The alias guard is the one part of this step that is not a mechanical rename: v1 checked for a
@@ -42,61 +46,63 @@ import static org.assertj.core.api.Assertions.assertThat;
  * would either re-create an alias that is already correct or skip setting one that is missing, and
  * nothing else in the suite would notice.
  */
-public class SetAccountAliasStepTests {
+@WithJenkins
+class SetAccountAliasStepTests {
 
-	@Rule
-	public JenkinsRule jenkinsRule = new JenkinsRule();
+	private JenkinsRule jenkinsRule;
 	private IamClient iam;
 
-	@Before
-	public void setupSdk() throws Exception {
-		this.iam = Mockito.mock(IamClient.class);
-		AWSClientFactory.setFactoryDelegate((x) -> this.iam);
+	@BeforeEach
+	void setupSdk(JenkinsRule rule) {
+		this.jenkinsRule = rule;
+		this.iam = mock(IamClient.class);
+		AWSClientFactory.setFactoryDelegate(x -> this.iam);
 	}
 
-	@After
-	public void tearDownSdk() throws Exception {
+	@AfterEach
+	void tearDownSdk() {
 		AWSClientFactory.setFactoryDelegate(null);
 	}
 
 	private void runStep(String jobName) throws Exception {
 		WorkflowJob job = this.jenkinsRule.jenkins.createProject(WorkflowJob.class, jobName);
-		job.setDefinition(new CpsFlowDefinition(""
-				+ "node {\n"
-				+ "  setAccountAlias(name: 'my-alias')\n"
-				+ "}\n", true)
+		job.setDefinition(new CpsFlowDefinition("""
+                node {
+                  setAccountAlias(name: 'my-alias')
+                }
+                """, true)
 		);
 		this.jenkinsRule.assertBuildStatusSuccess(job.scheduleBuild2(0));
 	}
 
 	@Test
-	public void createsTheAliasWhenNoneIsSet() throws Exception {
-		Mockito.when(this.iam.listAccountAliases()).thenReturn(ListAccountAliasesResponse.builder().build());
+	void createsTheAliasWhenNoneIsSet() throws Exception {
+		when(this.iam.listAccountAliases()).thenReturn(ListAccountAliasesResponse.builder().build());
 
 		this.runStep("aliasEmpty");
 
 		ArgumentCaptor<CreateAccountAliasRequest> captor = ArgumentCaptor.forClass(CreateAccountAliasRequest.class);
-		Mockito.verify(this.iam).createAccountAlias(captor.capture());
+		verify(this.iam).createAccountAlias(captor.capture());
 		assertThat(captor.getValue().accountAlias()).isEqualTo("my-alias");
 	}
 
 	@Test
-	public void createsTheAliasWhenADifferentOneIsSet() throws Exception {
-		Mockito.when(this.iam.listAccountAliases())
+	void createsTheAliasWhenADifferentOneIsSet() throws Exception {
+		when(this.iam.listAccountAliases())
 				.thenReturn(ListAccountAliasesResponse.builder().accountAliases("other-alias").build());
 
 		this.runStep("aliasDifferent");
 
-		Mockito.verify(this.iam).createAccountAlias(Mockito.any(CreateAccountAliasRequest.class));
+		verify(this.iam).createAccountAlias(any(CreateAccountAliasRequest.class));
 	}
 
 	@Test
-	public void doesNothingWhenTheAliasAlreadyMatches() throws Exception {
-		Mockito.when(this.iam.listAccountAliases())
+	void doesNothingWhenTheAliasAlreadyMatches() throws Exception {
+		when(this.iam.listAccountAliases())
 				.thenReturn(ListAccountAliasesResponse.builder().accountAliases("my-alias").build());
 
 		this.runStep("aliasMatches");
 
-		Mockito.verify(this.iam, Mockito.never()).createAccountAlias(Mockito.any(CreateAccountAliasRequest.class));
+		verify(this.iam, never()).createAccountAlias(any(CreateAccountAliasRequest.class));
 	}
 }

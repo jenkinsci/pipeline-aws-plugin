@@ -23,55 +23,60 @@ package de.taimos.pipeline.aws;
 
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.jvnet.hudson.test.JenkinsRule;
+import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
 import org.mockito.ArgumentCaptor;
-import org.mockito.Mockito;
 import software.amazon.awssdk.services.sns.SnsClient;
 import software.amazon.awssdk.services.sns.model.PublishRequest;
 import software.amazon.awssdk.services.sns.model.PublishResponse;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 /**
  * Exercises snsPublish end to end. SNSPublishStepTest only covers the step's getters, so without
  * this the request the step actually sends to AWS is unasserted.
  */
-public class SNSPublishStepIntegrationTest {
+@WithJenkins
+class SNSPublishStepIntegrationTest {
 
-	@Rule
-	public JenkinsRule jenkinsRule = new JenkinsRule();
+	private JenkinsRule jenkinsRule;
 	private SnsClient sns;
 
-	@Before
-	public void setupSdk() throws Exception {
-		this.sns = Mockito.mock(SnsClient.class);
-		Mockito.when(this.sns.publish(Mockito.any(PublishRequest.class)))
+	@BeforeEach
+	void setupSdk(JenkinsRule rule) {
+		this.jenkinsRule = rule;
+		this.sns = mock(SnsClient.class);
+		when(this.sns.publish(any(PublishRequest.class)))
 				.thenReturn(PublishResponse.builder().messageId("mid-1").build());
-		AWSClientFactory.setFactoryDelegate((x) -> this.sns);
+		AWSClientFactory.setFactoryDelegate(x -> this.sns);
 	}
 
-	@After
-	public void tearDownSdk() throws Exception {
+	@AfterEach
+	void tearDownSdk() {
 		AWSClientFactory.setFactoryDelegate(null);
 	}
 
 	@Test
-	public void publishesSubjectAndMessage() throws Exception {
+	void publishesSubjectAndMessage() throws Exception {
 		WorkflowJob job = this.jenkinsRule.jenkins.createProject(WorkflowJob.class, "snsTest");
-		job.setDefinition(new CpsFlowDefinition(""
-				+ "node {\n"
-				+ "  snsPublish(topicArn: 'arn:aws:sns:us-east-1:1:t', subject: 'subj', message: 'msg')\n"
-				+ "}\n", true)
+		job.setDefinition(new CpsFlowDefinition("""
+                node {
+                  snsPublish(topicArn: 'arn:aws:sns:us-east-1:1:t', subject: 'subj', message: 'msg')
+                }
+                """, true)
 		);
 
 		this.jenkinsRule.assertBuildStatusSuccess(job.scheduleBuild2(0));
 
 		ArgumentCaptor<PublishRequest> captor = ArgumentCaptor.forClass(PublishRequest.class);
-		Mockito.verify(this.sns).publish(captor.capture());
+		verify(this.sns).publish(captor.capture());
 		assertThat(captor.getValue().topicArn()).isEqualTo("arn:aws:sns:us-east-1:1:t");
 		assertThat(captor.getValue().subject()).isEqualTo("subj");
 		assertThat(captor.getValue().message()).isEqualTo("msg");
@@ -79,19 +84,20 @@ public class SNSPublishStepIntegrationTest {
 	}
 
 	@Test
-	public void messageAttributesAreSentAsStrings() throws Exception {
+	void messageAttributesAreSentAsStrings() throws Exception {
 		WorkflowJob job = this.jenkinsRule.jenkins.createProject(WorkflowJob.class, "snsAttrTest");
-		job.setDefinition(new CpsFlowDefinition(""
-				+ "node {\n"
-				+ "  snsPublish(topicArn: 'arn:aws:sns:us-east-1:1:t', subject: 'subj', message: 'msg',\n"
-				+ "             messageAttributes: [k1: 'v1', k2: 'v2'])\n"
-				+ "}\n", true)
+		job.setDefinition(new CpsFlowDefinition("""
+                node {
+                  snsPublish(topicArn: 'arn:aws:sns:us-east-1:1:t', subject: 'subj', message: 'msg',
+                             messageAttributes: [k1: 'v1', k2: 'v2'])
+                }
+                """, true)
 		);
 
 		this.jenkinsRule.assertBuildStatusSuccess(job.scheduleBuild2(0));
 
 		ArgumentCaptor<PublishRequest> captor = ArgumentCaptor.forClass(PublishRequest.class);
-		Mockito.verify(this.sns).publish(captor.capture());
+		verify(this.sns).publish(captor.capture());
 		assertThat(captor.getValue().messageAttributes()).hasSize(2);
 		assertThat(captor.getValue().messageAttributes().get("k1").stringValue()).isEqualTo("v1");
 		assertThat(captor.getValue().messageAttributes().get("k1").dataType()).isEqualTo("String");

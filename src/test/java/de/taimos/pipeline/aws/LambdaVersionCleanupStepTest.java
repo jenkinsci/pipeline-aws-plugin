@@ -2,11 +2,11 @@ package de.taimos.pipeline.aws;
 
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.jvnet.hudson.test.JenkinsRule;
+import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
 import org.mockito.Mockito;
 import software.amazon.awssdk.services.cloudformation.CloudFormationClient;
 import software.amazon.awssdk.services.cloudformation.model.ListStackResourcesRequest;
@@ -28,18 +28,26 @@ import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
 
-public class LambdaVersionCleanupStepTest {
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
-	@Rule
-	public JenkinsRule jenkinsRule = new JenkinsRule();
+@WithJenkins
+class LambdaVersionCleanupStepTest {
+
+	private JenkinsRule jenkinsRule;
 	private LambdaClient awsLambda;
 	private CloudFormationClient cloudformation;
 
-	@Before
-	public void setupSdk() throws Exception {
-		this.awsLambda = Mockito.mock(LambdaClient.class);
-		this.cloudformation = Mockito.mock(CloudFormationClient.class);
-		AWSClientFactory.setFactoryDelegate((x) -> {
+	@BeforeEach
+	void setupSdk(JenkinsRule rule) {
+		this.jenkinsRule = rule;
+		this.awsLambda = mock(LambdaClient.class);
+		this.cloudformation = mock(CloudFormationClient.class);
+		AWSClientFactory.setFactoryDelegate(x -> {
 			if (x instanceof LambdaClientBuilder) {
 				return this.awsLambda;
 			} else {
@@ -49,14 +57,14 @@ public class LambdaVersionCleanupStepTest {
 		// The step drives the SDK paginators, which are default methods on the client interface and
 		// so return null from a mock. Handing back real paginators over the mock keeps the
 		// underlying listVersionsByFunction/listStackResources stubs and verifications meaningful.
-		Mockito.when(this.awsLambda.listVersionsByFunctionPaginator(Mockito.any(ListVersionsByFunctionRequest.class)))
+		when(this.awsLambda.listVersionsByFunctionPaginator(any(ListVersionsByFunctionRequest.class)))
 				.thenAnswer(invocation -> new ListVersionsByFunctionIterable(this.awsLambda, invocation.getArgument(0)));
-		Mockito.when(this.cloudformation.listStackResourcesPaginator(Mockito.any(ListStackResourcesRequest.class)))
+		when(this.cloudformation.listStackResourcesPaginator(any(ListStackResourcesRequest.class)))
 				.thenAnswer(invocation -> new ListStackResourcesIterable(this.cloudformation, invocation.getArgument(0)));
 	}
 
-	@After
-	public void tearDownSdk() throws Exception {
+	@AfterEach
+	void tearDownSdk() {
 		AWSClientFactory.setFactoryDelegate(null);
 	}
 
@@ -69,7 +77,7 @@ public class LambdaVersionCleanupStepTest {
 	}
 
 	private void stubNoAliases(String functionName) {
-		Mockito.when(this.awsLambda.listAliases(ListAliasesRequest.builder().functionName(functionName).build()))
+		when(this.awsLambda.listAliases(ListAliasesRequest.builder().functionName(functionName).build()))
 				.thenReturn(ListAliasesResponse.builder().build());
 	}
 
@@ -79,7 +87,7 @@ public class LambdaVersionCleanupStepTest {
 	 * SDK carries the marker between pages.
 	 */
 	private void stubVersions(String functionName, FunctionConfiguration... versions) {
-		Mockito.when(this.awsLambda.listVersionsByFunction(Mockito.any(ListVersionsByFunctionRequest.class)))
+		when(this.awsLambda.listVersionsByFunction(any(ListVersionsByFunctionRequest.class)))
 				.thenAnswer(invocation -> {
 					ListVersionsByFunctionRequest request = invocation.getArgument(0);
 					if (!functionName.equals(request.functionName())) {
@@ -104,19 +112,19 @@ public class LambdaVersionCleanupStepTest {
 	}
 
 	@Test
-	public void deleteSingleFunction() throws Exception {
+	void deleteSingleFunction() throws Exception {
 		this.stubNoAliases("foo");
 		this.stubVersions("foo", version("v1", recently()), version("v2", "2018-02-05T11:15:12Z"));
 
 		this.runCleanup("cfnTest", "functionName: 'foo', daysAgo: 5");
 
-		Mockito.verify(this.awsLambda).deleteFunction(DeleteFunctionRequest.builder()
+		verify(this.awsLambda).deleteFunction(DeleteFunctionRequest.builder()
 				.qualifier("v2")
 				.functionName("foo")
 				.build()
 		);
 		// The point of the step: v1 is newer than the cutoff and must be left alone.
-		Mockito.verify(this.awsLambda, Mockito.never()).deleteFunction(DeleteFunctionRequest.builder()
+		verify(this.awsLambda, never()).deleteFunction(DeleteFunctionRequest.builder()
 				.qualifier("v1")
 				.functionName("foo")
 				.build()
@@ -124,9 +132,9 @@ public class LambdaVersionCleanupStepTest {
 	}
 
 	@Test
-	public void paginatedResponse() throws Exception {
+	void paginatedResponse() throws Exception {
 		this.stubNoAliases("foo");
-		Mockito.when(this.awsLambda.listVersionsByFunction(Mockito.any(ListVersionsByFunctionRequest.class)))
+		when(this.awsLambda.listVersionsByFunction(any(ListVersionsByFunctionRequest.class)))
 				.thenAnswer(invocation -> {
 					ListVersionsByFunctionRequest request = invocation.getArgument(0);
 					if (request.marker() == null) {
@@ -142,32 +150,32 @@ public class LambdaVersionCleanupStepTest {
 
 		this.runCleanup("cfnTest", "functionName: 'foo', daysAgo: 5");
 
-		Mockito.verify(this.awsLambda).deleteFunction(DeleteFunctionRequest.builder()
+		verify(this.awsLambda).deleteFunction(DeleteFunctionRequest.builder()
 				.qualifier("v2")
 				.functionName("foo")
 				.build()
 		);
-		Mockito.verify(this.awsLambda, Mockito.never()).deleteFunction(DeleteFunctionRequest.builder()
+		verify(this.awsLambda, never()).deleteFunction(DeleteFunctionRequest.builder()
 				.qualifier("v1")
 				.functionName("foo")
 				.build()
 		);
-		Mockito.verify(this.awsLambda, Mockito.times(2)).listVersionsByFunction(Mockito.any(ListVersionsByFunctionRequest.class));
+		verify(this.awsLambda, times(2)).listVersionsByFunction(any(ListVersionsByFunctionRequest.class));
 	}
 
 	@Test
-	public void ignoreLatest() throws Exception {
+	void ignoreLatest() throws Exception {
 		this.stubNoAliases("foo");
 		this.stubVersions("foo", version("$LATEST", daysAgo(15)));
 
 		this.runCleanup("cfnTest", "functionName: 'foo', daysAgo: 5");
 
-		Mockito.verify(this.awsLambda, Mockito.never()).deleteFunction(Mockito.any(DeleteFunctionRequest.class));
+		verify(this.awsLambda, never()).deleteFunction(any(DeleteFunctionRequest.class));
 	}
 
 	@Test
-	public void ignoreAliases() throws Exception {
-		Mockito.when(this.awsLambda.listAliases(ListAliasesRequest.builder().functionName("foo").build()))
+	void ignoreAliases() throws Exception {
+		when(this.awsLambda.listAliases(ListAliasesRequest.builder().functionName("foo").build()))
 				.thenReturn(ListAliasesResponse.builder()
 						.aliases(AliasConfiguration.builder().functionVersion("myVersion").build())
 						.build());
@@ -175,19 +183,19 @@ public class LambdaVersionCleanupStepTest {
 
 		this.runCleanup("cfnTest", "functionName: 'foo', daysAgo: 5");
 
-		Mockito.verify(this.awsLambda, Mockito.never()).deleteFunction(Mockito.any(DeleteFunctionRequest.class));
+		verify(this.awsLambda, never()).deleteFunction(any(DeleteFunctionRequest.class));
 	}
 
 	@Test
-	public void deleteCloudFormationStack() throws Exception {
+	void deleteCloudFormationStack() throws Exception {
 		this.stubNoAliases("foo");
 		this.stubNoAliases("foo2");
-		Mockito.when(this.awsLambda.listVersionsByFunction(Mockito.any(ListVersionsByFunctionRequest.class)))
+		when(this.awsLambda.listVersionsByFunction(any(ListVersionsByFunctionRequest.class)))
 				.thenAnswer(invocation -> ListVersionsByFunctionResponse.builder()
 						.versions(Arrays.asList(version("v1", recently()), version("v2", "2018-02-05T11:15:12Z")))
 						.build());
 
-		Mockito.when(this.cloudformation.listStackResources(Mockito.any(ListStackResourcesRequest.class)))
+		when(this.cloudformation.listStackResources(any(ListStackResourcesRequest.class)))
 				.thenAnswer(invocation -> {
 					ListStackResourcesRequest request = invocation.getArgument(0);
 					if (request.nextToken() == null) {
@@ -207,19 +215,19 @@ public class LambdaVersionCleanupStepTest {
 
 		this.runCleanup("cfnTest", "stackName: 'baz', daysAgo: 5");
 
-		Mockito.verify(this.awsLambda).deleteFunction(DeleteFunctionRequest.builder()
+		verify(this.awsLambda).deleteFunction(DeleteFunctionRequest.builder()
 				.qualifier("v2")
 				.functionName("foo")
 				.build()
 		);
-		Mockito.verify(this.awsLambda).deleteFunction(DeleteFunctionRequest.builder()
+		verify(this.awsLambda).deleteFunction(DeleteFunctionRequest.builder()
 				.qualifier("v2")
 				.functionName("foo2")
 				.build()
 		);
 		// "bar" is an AWS::Baz::Function, so the resource-type filter must keep the step away from it
 		// entirely - both when listing its versions and when deleting.
-		Mockito.verify(this.awsLambda, Mockito.never()).deleteFunction(Mockito.<DeleteFunctionRequest>argThat(r -> "bar".equals(r.functionName())));
-		Mockito.verify(this.awsLambda, Mockito.times(2)).listVersionsByFunction(Mockito.any(ListVersionsByFunctionRequest.class));
+		verify(this.awsLambda, never()).deleteFunction(Mockito.<DeleteFunctionRequest>argThat(r -> "bar".equals(r.functionName())));
+		verify(this.awsLambda, times(2)).listVersionsByFunction(any(ListVersionsByFunctionRequest.class));
 	}
 }

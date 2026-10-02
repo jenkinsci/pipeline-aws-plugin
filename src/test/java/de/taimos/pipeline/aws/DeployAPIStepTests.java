@@ -23,35 +23,39 @@ package de.taimos.pipeline.aws;
 
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.jvnet.hudson.test.JenkinsRule;
+import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
 import org.mockito.ArgumentCaptor;
-import org.mockito.Mockito;
 import software.amazon.awssdk.services.apigateway.ApiGatewayClient;
 import software.amazon.awssdk.services.apigateway.model.CreateDeploymentRequest;
 import software.amazon.awssdk.services.apigateway.model.CreateDeploymentResponse;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
-public class DeployAPIStepTests {
+@WithJenkins
+class DeployAPIStepTests {
 
-	@Rule
-	public JenkinsRule jenkinsRule = new JenkinsRule();
+	private JenkinsRule jenkinsRule;
 	private ApiGatewayClient apiGateway;
 
-	@Before
-	public void setupSdk() throws Exception {
-		this.apiGateway = Mockito.mock(ApiGatewayClient.class);
-		Mockito.when(this.apiGateway.createDeployment(Mockito.any(CreateDeploymentRequest.class)))
+	@BeforeEach
+	void setupSdk(JenkinsRule rule) {
+		this.jenkinsRule = rule;
+		this.apiGateway = mock(ApiGatewayClient.class);
+		when(this.apiGateway.createDeployment(any(CreateDeploymentRequest.class)))
 				.thenReturn(CreateDeploymentResponse.builder().id("dep-1").build());
-		AWSClientFactory.setFactoryDelegate((x) -> this.apiGateway);
+		AWSClientFactory.setFactoryDelegate(x -> this.apiGateway);
 	}
 
-	@After
-	public void tearDownSdk() throws Exception {
+	@AfterEach
+	void tearDownSdk() {
 		AWSClientFactory.setFactoryDelegate(null);
 	}
 
@@ -65,12 +69,12 @@ public class DeployAPIStepTests {
 		this.jenkinsRule.assertBuildStatusSuccess(job.scheduleBuild2(0));
 
 		ArgumentCaptor<CreateDeploymentRequest> captor = ArgumentCaptor.forClass(CreateDeploymentRequest.class);
-		Mockito.verify(this.apiGateway).createDeployment(captor.capture());
+		verify(this.apiGateway).createDeployment(captor.capture());
 		return captor.getValue();
 	}
 
 	@Test
-	public void deploysTheApiToTheStage() throws Exception {
+	void deploysTheApiToTheStage() throws Exception {
 		CreateDeploymentRequest request = this.runAndCapture("apiDeploy", "api: 'abc123', stage: 'prod'");
 
 		assertThat(request.restApiId()).isEqualTo("abc123");
@@ -80,7 +84,7 @@ public class DeployAPIStepTests {
 	}
 
 	@Test
-	public void passesDescriptionAndVariables() throws Exception {
+	void passesDescriptionAndVariables() throws Exception {
 		CreateDeploymentRequest request = this.runAndCapture("apiDeployVars",
 				"api: 'abc123', stage: 'prod', description: 'a release', variables: ['k1=v1', 'k2=v2']");
 

@@ -22,22 +22,21 @@ import com.cloudbees.plugins.credentials.common.StandardUsernamePasswordCredenti
 import com.cloudbees.plugins.credentials.impl.UsernamePasswordCredentialsImpl;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.jvnet.hudson.test.BuildWatcher;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.jvnet.hudson.test.For;
 import org.jvnet.hudson.test.Issue;
 import org.jvnet.hudson.test.JenkinsRule;
+import org.jvnet.hudson.test.junit.jupiter.BuildWatcherExtension;
+import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
 
 @For(S3UploadStep.class)
-public class S3UploadStepIntegrationTest {
+@WithJenkins
+class S3UploadStepIntegrationTest {
 
-	@ClassRule
-	public static BuildWatcher buildWatcher = new BuildWatcher();
-
-	@Rule
-	public JenkinsRule r = new JenkinsRule();
+	@SuppressWarnings("unused")
+	@RegisterExtension
+	private static final BuildWatcherExtension buildWatcher = new BuildWatcherExtension();
 
 	/**
 	 * Runs the upload on a real agent, so it covers the whole remoting path: the callable and its
@@ -56,7 +55,7 @@ public class S3UploadStepIntegrationTest {
 	 */
 	@Issue("JENKINS-49025")
 	@Test
-	public void smokes() throws Exception {
+	void smokes(JenkinsRule r) throws Exception {
 		String globalCredentialsId = "x";
 		StandardUsernamePasswordCredentials key = new UsernamePasswordCredentialsImpl(CredentialsScope.GLOBAL, globalCredentialsId, "x", "x", "x");
 		SystemCredentialsProvider.getInstance().getCredentials().add(key);

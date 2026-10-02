@@ -21,17 +21,18 @@
 
 package de.taimos.pipeline.aws;
 
-import org.junit.Assert;
-import org.junit.Test;
-
+import org.junit.jupiter.api.Test;
 import de.taimos.pipeline.aws.utils.CannedAcl;
 
-public class S3CopyStepTest
-{
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
+class S3CopyStepTest {
+
 	private static final String[] metas = {"a", "b"};
 
 	@Test
-	public void gettersWorkAsExpectedForFileCase() throws Exception {
+	void gettersWorkAsExpectedForFileCase() {
 		S3CopyStep step = new S3CopyStep("my-bucket", "my-path", "other-bucket", "other-path", false, false);
 		step.setKmsId("alias/foo");
 		step.setMetadatas(metas);
@@ -40,16 +41,16 @@ public class S3CopyStepTest
 		step.setContentType("text/plain");
 		step.setContentDisposition("attachment");
 		step.setSseAlgorithm("AES256");
-		Assert.assertEquals("my-bucket", step.getFromBucket());
-		Assert.assertEquals("my-path", step.getFromPath());
-		Assert.assertEquals("other-bucket", step.getToBucket());
-		Assert.assertEquals("other-path", step.getToPath());
-		Assert.assertEquals("alias/foo", step.getKmsId());
-		Assert.assertArrayEquals(metas, step.getMetadatas());
-		Assert.assertEquals(CannedAcl.PublicRead, step.getAcl());
-		Assert.assertEquals("my-cachecontrol", step.getCacheControl());
-		Assert.assertEquals("text/plain", step.getContentType());
-		Assert.assertEquals("AES256", step.getSseAlgorithm());
-		Assert.assertEquals("attachment", step.getContentDisposition());
+		assertEquals("my-bucket", step.getFromBucket());
+		assertEquals("my-path", step.getFromPath());
+		assertEquals("other-bucket", step.getToBucket());
+		assertEquals("other-path", step.getToPath());
+		assertEquals("alias/foo", step.getKmsId());
+		assertArrayEquals(metas, step.getMetadatas());
+		assertEquals(CannedAcl.PublicRead, step.getAcl());
+		assertEquals("my-cachecontrol", step.getCacheControl());
+		assertEquals("text/plain", step.getContentType());
+		assertEquals("AES256", step.getSseAlgorithm());
+		assertEquals("attachment", step.getContentDisposition());
 	}
 }

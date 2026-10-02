@@ -1,5 +1,7 @@
 package de.taimos.pipeline.aws.eb;
 
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.junit.jupiter.MockitoExtension;
 import software.amazon.awssdk.services.elasticbeanstalk.ElasticBeanstalkClient;
 import software.amazon.awssdk.services.elasticbeanstalk.model.CreateEnvironmentRequest;
 import software.amazon.awssdk.services.elasticbeanstalk.model.CreateEnvironmentResponse;
@@ -9,49 +11,53 @@ import software.amazon.awssdk.services.elasticbeanstalk.model.EnvironmentDescrip
 import software.amazon.awssdk.services.elasticbeanstalk.model.UpdateEnvironmentRequest;
 import software.amazon.awssdk.services.elasticbeanstalk.model.UpdateEnvironmentResponse;
 import org.jenkinsci.plugins.workflow.steps.StepContext;
-import org.junit.Assert;
-import org.junit.After;
-import org.junit.BeforeClass;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
-import org.mockito.Mockito;
-import org.mockito.junit.MockitoJUnitRunner;
 
 import java.util.Collections;
 
-@RunWith(MockitoJUnitRunner.class)
-public class EBCreateEnvironmentStepTest {
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+@ExtendWith(MockitoExtension.class)
+class EBCreateEnvironmentStepTest {
+
     @Captor
-    ArgumentCaptor<CreateEnvironmentRequest> captor;
+    private ArgumentCaptor<CreateEnvironmentRequest> captor;
     @Captor
-    ArgumentCaptor<DescribeEnvironmentsRequest> describeCaptor;
+    private ArgumentCaptor<DescribeEnvironmentsRequest> describeCaptor;
     @Captor
-    ArgumentCaptor<UpdateEnvironmentRequest> updateCaptor;
+    private ArgumentCaptor<UpdateEnvironmentRequest> updateCaptor;
 
     private static StepContext context;
 
-    @BeforeClass
-    public static void setupStepContext() throws Exception {
+	@BeforeAll
+	static void setupStepContext() throws Exception {
         context = EBTestingUtils.setupStepContext();
     }
 
-    @After
-    public void resetClient() {
+	@AfterEach
+	void resetClient() {
         // the factory delegate is static and would otherwise stay installed for whichever test
         // class runs next in the same JVM, handing it a mocked ElasticBeanstalkClient
         EBTestingUtils.resetElasticBeanstalkClient();
     }
 
-    @Test
-    public void stepDescriptorNameIsAsExpected() {
+	@Test
+	void stepDescriptorNameIsAsExpected() {
         EBCreateEnvironmentStep.DescriptorImpl stepDescriptor = new EBCreateEnvironmentStep.DescriptorImpl();
-        Assert.assertEquals("ebCreateEnvironment", stepDescriptor.getFunctionName());
+        assertEquals("ebCreateEnvironment", stepDescriptor.getFunctionName());
     }
 
-    @Test
-    public void environmentIsCreatedWithDetailsProvided() throws Exception {
+	@Test
+	void environmentIsCreatedWithDetailsProvided() throws Exception {
         EBCreateEnvironmentStep step = new EBCreateEnvironmentStep("my application", "my-environment");
         step.setDescription("my-description");
         step.setTemplateName("my-template");
@@ -62,23 +68,23 @@ public class EBCreateEnvironmentStepTest {
 
         ElasticBeanstalkClient client = EBTestingUtils.setupElasticBeanstalkClient();
         CreateEnvironmentResponse result = CreateEnvironmentResponse.builder().build();
-        Mockito.doReturn(result).when(client).createEnvironment(Mockito.any(CreateEnvironmentRequest.class));
+        doReturn(result).when(client).createEnvironment(any(CreateEnvironmentRequest.class));
 
         execution.run();
 
-        Mockito.verify(client, Mockito.times(0)).describeEnvironments(Mockito.any(DescribeEnvironmentsRequest.class));
-        Mockito.verify(client, Mockito.times(0)).updateEnvironment(Mockito.any(UpdateEnvironmentRequest.class));
-        Mockito.verify(client, Mockito.times(1)).createEnvironment(captor.capture());
-        Assert.assertEquals("my application", captor.getValue().applicationName());
-        Assert.assertEquals("my-template", captor.getValue().templateName());
-        Assert.assertEquals("my-description", captor.getValue().description());
-        Assert.assertEquals("my-environment", captor.getValue().environmentName());
-        Assert.assertEquals("my-solution-stack", captor.getValue().solutionStackName());
-        Assert.assertEquals("my-version", captor.getValue().versionLabel());
+        verify(client, times(0)).describeEnvironments(any(DescribeEnvironmentsRequest.class));
+        verify(client, times(0)).updateEnvironment(any(UpdateEnvironmentRequest.class));
+        verify(client, times(1)).createEnvironment(captor.capture());
+        assertEquals("my application", captor.getValue().applicationName());
+        assertEquals("my-template", captor.getValue().templateName());
+        assertEquals("my-description", captor.getValue().description());
+        assertEquals("my-environment", captor.getValue().environmentName());
+        assertEquals("my-solution-stack", captor.getValue().solutionStackName());
+        assertEquals("my-version", captor.getValue().versionLabel());
     }
 
-    @Test
-    public void environmentIsUpdatedIfExisting() throws Exception {
+	@Test
+	void environmentIsUpdatedIfExisting() throws Exception {
         EBCreateEnvironmentStep step = new EBCreateEnvironmentStep("my application", "my-environment");
         step.setDescription("my-description");
         step.setTemplateName("my-template");
@@ -91,51 +97,51 @@ public class EBCreateEnvironmentStepTest {
         DescribeEnvironmentsResponse describeResult = DescribeEnvironmentsResponse.builder()
                 .environments(Collections.singletonList(environment))
                 .build();
-        Mockito.doReturn(describeResult).when(client).describeEnvironments(Mockito.any(DescribeEnvironmentsRequest.class));
+        doReturn(describeResult).when(client).describeEnvironments(any(DescribeEnvironmentsRequest.class));
 
         UpdateEnvironmentResponse updateResult = UpdateEnvironmentResponse.builder().build();
-        Mockito.doReturn(updateResult).when(client).updateEnvironment(Mockito.any(UpdateEnvironmentRequest.class));
+        doReturn(updateResult).when(client).updateEnvironment(any(UpdateEnvironmentRequest.class));
 
         execution.run();
 
-        Mockito.verify(client, Mockito.times(1)).describeEnvironments(describeCaptor.capture());
-        Mockito.verify(client, Mockito.times(1)).updateEnvironment(updateCaptor.capture());
-        Mockito.verify(client, Mockito.times(0)).createEnvironment(Mockito.any(CreateEnvironmentRequest.class));
-        Assert.assertEquals("my application", updateCaptor.getValue().applicationName());
-        Assert.assertEquals("my-template", updateCaptor.getValue().templateName());
-        Assert.assertEquals("my-description", updateCaptor.getValue().description());
-        Assert.assertEquals("my-environment", updateCaptor.getValue().environmentName());
-        Assert.assertEquals("my-solution-stack", updateCaptor.getValue().solutionStackName());
-        Assert.assertEquals("my-version", updateCaptor.getValue().versionLabel());
+        verify(client, times(1)).describeEnvironments(describeCaptor.capture());
+        verify(client, times(1)).updateEnvironment(updateCaptor.capture());
+        verify(client, times(0)).createEnvironment(any(CreateEnvironmentRequest.class));
+        assertEquals("my application", updateCaptor.getValue().applicationName());
+        assertEquals("my-template", updateCaptor.getValue().templateName());
+        assertEquals("my-description", updateCaptor.getValue().description());
+        assertEquals("my-environment", updateCaptor.getValue().environmentName());
+        assertEquals("my-solution-stack", updateCaptor.getValue().solutionStackName());
+        assertEquals("my-version", updateCaptor.getValue().versionLabel());
 
-        Assert.assertEquals("my application", describeCaptor.getValue().applicationName());
-        Assert.assertEquals("my-environment", describeCaptor.getValue().environmentNames().get(0));
+        assertEquals("my application", describeCaptor.getValue().applicationName());
+        assertEquals("my-environment", describeCaptor.getValue().environmentNames().get(0));
     }
 
-    @Test
-    public void environmentIsCreatedIfNotExisting() throws Exception {
+	@Test
+	void environmentIsCreatedIfNotExisting() throws Exception {
         EBCreateEnvironmentStep step = new EBCreateEnvironmentStep("my application", "my-environment");
         EBCreateEnvironmentStep.Execution execution = new EBCreateEnvironmentStep.Execution(step, context);
 
         ElasticBeanstalkClient client = EBTestingUtils.setupElasticBeanstalkClient();
         DescribeEnvironmentsResponse describeResult = DescribeEnvironmentsResponse.builder().build();
-        Mockito.when(client.describeEnvironments(Mockito.any(DescribeEnvironmentsRequest.class))).thenReturn(describeResult);
+        when(client.describeEnvironments(any(DescribeEnvironmentsRequest.class))).thenReturn(describeResult);
 
         CreateEnvironmentResponse result = CreateEnvironmentResponse.builder().build();
-        Mockito.when(client.createEnvironment(Mockito.any(CreateEnvironmentRequest.class))).thenReturn(result);
+        when(client.createEnvironment(any(CreateEnvironmentRequest.class))).thenReturn(result);
 
         execution.run();
 
-        Mockito.verify(client, Mockito.times(1)).describeEnvironments(describeCaptor.capture());
-        Mockito.verify(client, Mockito.times(0)).updateEnvironment(Mockito.any(UpdateEnvironmentRequest.class));
-        Mockito.verify(client, Mockito.times(1)).createEnvironment(Mockito.any(CreateEnvironmentRequest.class));
+        verify(client, times(1)).describeEnvironments(describeCaptor.capture());
+        verify(client, times(0)).updateEnvironment(any(UpdateEnvironmentRequest.class));
+        verify(client, times(1)).createEnvironment(any(CreateEnvironmentRequest.class));
 
-        Assert.assertEquals("my application", describeCaptor.getValue().applicationName());
-        Assert.assertEquals("my-environment", describeCaptor.getValue().environmentNames().get(0));
+        assertEquals("my application", describeCaptor.getValue().applicationName());
+        assertEquals("my-environment", describeCaptor.getValue().environmentNames().get(0));
     }
 
-    @Test
-    public void terminatedEnvironmentsAreNonExisting() throws Exception {
+	@Test
+	void terminatedEnvironmentsAreNonExisting() throws Exception {
         EBCreateEnvironmentStep step = new EBCreateEnvironmentStep("my application", "my-environment");
         EBCreateEnvironmentStep.Execution execution = new EBCreateEnvironmentStep.Execution(step, context);
 
@@ -146,18 +152,18 @@ public class EBCreateEnvironmentStepTest {
         DescribeEnvironmentsResponse describeResult = DescribeEnvironmentsResponse.builder()
                 .environments(Collections.singletonList(environment))
                 .build();
-        Mockito.doReturn(describeResult).when(client).describeEnvironments(Mockito.any(DescribeEnvironmentsRequest.class));
+        doReturn(describeResult).when(client).describeEnvironments(any(DescribeEnvironmentsRequest.class));
 
         CreateEnvironmentResponse result = CreateEnvironmentResponse.builder().build();
-        Mockito.when(client.createEnvironment(Mockito.any(CreateEnvironmentRequest.class))).thenReturn(result);
+        when(client.createEnvironment(any(CreateEnvironmentRequest.class))).thenReturn(result);
 
         execution.run();
 
-        Mockito.verify(client, Mockito.times(1)).describeEnvironments(describeCaptor.capture());
-        Mockito.verify(client, Mockito.times(0)).updateEnvironment(Mockito.any(UpdateEnvironmentRequest.class));
-        Mockito.verify(client, Mockito.times(1)).createEnvironment(Mockito.any(CreateEnvironmentRequest.class));
+        verify(client, times(1)).describeEnvironments(describeCaptor.capture());
+        verify(client, times(0)).updateEnvironment(any(UpdateEnvironmentRequest.class));
+        verify(client, times(1)).createEnvironment(any(CreateEnvironmentRequest.class));
 
-        Assert.assertEquals("my application", describeCaptor.getValue().applicationName());
-        Assert.assertEquals("my-environment", describeCaptor.getValue().environmentNames().get(0));
+        assertEquals("my application", describeCaptor.getValue().applicationName());
+        assertEquals("my-environment", describeCaptor.getValue().environmentNames().get(0));
     }
 }

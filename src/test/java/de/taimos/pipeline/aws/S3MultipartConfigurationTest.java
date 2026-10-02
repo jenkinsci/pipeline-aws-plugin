@@ -22,7 +22,7 @@
 package de.taimos.pipeline.aws;
 
 import de.taimos.pipeline.aws.AbstractS3Step.S3ClientOptions;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import software.amazon.awssdk.services.s3.multipart.MultipartConfiguration;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -39,13 +39,13 @@ import static org.assertj.core.api.Assertions.assertThat;
  *
  * The SDK's own default is 8 MiB for everything, so none of this survives without being set.
  */
-public class S3MultipartConfigurationTest {
+class S3MultipartConfigurationTest {
 
 	private static final long MIB = 1024 * 1024;
 	private static final long GIB = 1024 * MIB;
 
 	@Test
-	public void uploadsUseV1sUploadFigures() {
+	void uploadsUseV1sUploadFigures() {
 		MultipartConfiguration configuration = S3ClientOptions.uploadMultipartConfiguration();
 
 		assertThat(configuration.thresholdInBytes()).isEqualTo(16 * MIB);
@@ -58,7 +58,7 @@ public class S3MultipartConfigurationTest {
 	 * instead of about 52.
 	 */
 	@Test
-	public void copiesUseV1sCopyFigures() {
+	void copiesUseV1sCopyFigures() {
 		MultipartConfiguration configuration = S3ClientOptions.copyMultipartConfiguration();
 
 		assertThat(configuration.thresholdInBytes()).isEqualTo(5 * GIB);
@@ -76,7 +76,7 @@ public class S3MultipartConfigurationTest {
 	 * needs a built client, which needs a region and credentials, and was judged not worth it.
 	 */
 	@Test
-	public void downloadsGetNoMultipartConfiguration() {
+	void downloadsGetNoMultipartConfiguration() {
 		assertThat(S3ClientOptions.downloadMultipartConfiguration()).isNull();
 	}
 }

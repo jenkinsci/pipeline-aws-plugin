@@ -21,11 +21,9 @@
 
 package de.taimos.pipeline.aws;
 
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
-import org.junit.rules.Timeout;
-import org.mockito.Mockito;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.io.TempDir;
 import org.mockito.stubbing.Answer;
 import software.amazon.awssdk.core.async.AsyncRequestBody;
 import software.amazon.awssdk.core.async.AsyncResponseTransformer;
@@ -41,13 +39,15 @@ import software.amazon.awssdk.transfer.s3.model.CompletedDirectoryDownload;
 import software.amazon.awssdk.transfer.s3.model.DownloadDirectoryRequest;
 
 import java.io.File;
-import java.nio.file.Path;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
-import java.util.stream.Collectors;
+import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 /**
  * Where a directory download puts files on disk.
@@ -61,13 +61,11 @@ import static org.assertj.core.api.Assertions.assertThat;
  * actual files rather than on a request object. Mocking the transfer manager, as the other download
  * tests do, cannot observe this at all.
  */
-public class S3DownloadLayoutTest {
+@Timeout(value = 60, unit = TimeUnit.SECONDS)
+class S3DownloadLayoutTest {
 
-	@Rule
-	public TemporaryFolder folder = new TemporaryFolder();
-
-	@Rule
-	public Timeout timeout = Timeout.seconds(60);
+	@TempDir
+	private File folder;
 
 	/**
 	 * Keys carry an explicit size because the SDK's default filter distinguishes on it: a
@@ -75,21 +73,21 @@ public class S3DownloadLayoutTest {
 	 * not.
 	 */
 	private static S3AsyncClient stubClientReturning(Map<String, Long> keys) {
-		S3AsyncClient client = Mockito.mock(S3AsyncClient.class);
+		S3AsyncClient client = mock(S3AsyncClient.class);
 
 		// stub the underlying call first: the real publisher drives it, so it must already answer
-		Mockito.when(client.listObjectsV2(Mockito.any(ListObjectsV2Request.class)))
+		when(client.listObjectsV2(any(ListObjectsV2Request.class)))
 				.thenReturn(CompletableFuture.completedFuture(ListObjectsV2Response.builder()
 						.contents(keys.entrySet().stream()
 								.map(e -> S3Object.builder().key(e.getKey()).size(e.getValue()).build())
-								.collect(Collectors.toList()))
+								.toList())
 						.isTruncated(false)
 						.build()));
-		Mockito.when(client.listObjectsV2Paginator(Mockito.any(ListObjectsV2Request.class)))
+		when(client.listObjectsV2Paginator(any(ListObjectsV2Request.class)))
 				.thenAnswer((Answer<ListObjectsV2Publisher>) invocation ->
 						new ListObjectsV2Publisher(client, invocation.getArgument(0)));
 
-		Mockito.when(client.getObject(Mockito.any(GetObjectRequest.class), Mockito.any(AsyncResponseTransformer.class)))
+		when(client.getObject(any(GetObjectRequest.class), any(AsyncResponseTransformer.class)))
 				.thenAnswer(invocation -> {
 					AsyncResponseTransformer<GetObjectResponse, ?> transformer = invocation.getArgument(1);
 					CompletableFuture<?> future = transformer.prepare();
@@ -116,8 +114,8 @@ public class S3DownloadLayoutTest {
 	 * destination, as it did under v1.
 	 */
 	@Test
-	public void aPrefixedDownloadKeepsTheFullKeyPath() {
-		File destination = this.folder.getRoot();
+	void aPrefixedDownloadKeepsTheFullKeyPath() {
+		File destination = this.folder;
 
 		CompletedDirectoryDownload completed = this.download("a/b/",
 				sized("a/b/x.txt", 4L, "a/b/nested/y.txt", 4L), destination);
@@ -131,8 +129,8 @@ public class S3DownloadLayoutTest {
 	 * Without a prefix the two layouts agree, so this pins that the fix did not shift the no-path case.
 	 */
 	@Test
-	public void anUnprefixedDownloadIsUnchanged() {
-		File destination = this.folder.getRoot();
+	void anUnprefixedDownloadIsUnchanged() {
+		File destination = this.folder;
 
 		CompletedDirectoryDownload completed = this.download("",
 				sized("top.txt", 4L, "sub/deeper.txt", 4L), destination);
@@ -153,8 +151,8 @@ public class S3DownloadLayoutTest {
 	 * excluded zero-byte markers - which is the claim being made.
 	 */
 	@Test
-	public void theSdkDefaultAlreadySkipsZeroByteFolderMarkers() {
-		File destination = this.folder.getRoot();
+	void theSdkDefaultAlreadySkipsZeroByteFolderMarkers() {
+		File destination = this.folder;
 		Map<String, Long> keys = sized("a/b/", 0L, "a/b/x.txt", 4L);
 
 		CompletedDirectoryDownload completed;
@@ -177,8 +175,8 @@ public class S3DownloadLayoutTest {
 	 * directory itself - unwritable as a file, so a failed transfer and hence a failed build.
 	 */
 	@Test
-	public void delimiterTerminatedKeysWithContentAreSkippedToo() {
-		File destination = this.folder.getRoot();
+	void delimiterTerminatedKeysWithContentAreSkippedToo() {
+		File destination = this.folder;
 
 		CompletedDirectoryDownload completed = this.download("a/b/",
 				sized("a/b/", 4L, "a/b/x.txt", 4L), destination);

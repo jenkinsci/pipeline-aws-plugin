@@ -1,56 +1,62 @@
 package de.taimos.pipeline.aws.cloudformation.stacksets;
 
+import org.junit.jupiter.api.Timeout;
 import software.amazon.awssdk.awscore.exception.AwsErrorDetails;
-import software.amazon.awssdk.services.cloudformation.model.CloudFormationException;
 import software.amazon.awssdk.services.cloudformation.CloudFormationClient;
 import software.amazon.awssdk.services.cloudformation.model.*;
 import de.taimos.pipeline.aws.cloudformation.PollConfiguration;
 import hudson.model.TaskListener;
 import org.assertj.core.api.Assertions;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.Timeout;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
-import org.mockito.Mockito;
 
 import java.io.OutputStream;
 import java.io.PrintStream;
 import java.time.Duration;
 import java.util.Collections;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
-public class CloudFormationStackSetTest {
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.Mockito.atLeast;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.withSettings;
 
-	/**
-	 * Nothing in this class legitimately takes more than a couple of seconds. The bound is here rather
-	 * than on individual methods because the two many-polls tests are only finite thanks to an
-	 * overridden sleep: if that seam is ever bypassed - the sleep inlined back into a loop, or
-	 * sleepBetweenPolls made private, final or static - they would each wait 50k x 1s rather than fail,
-	 * and a wedged build is much worse to diagnose than a red one.
-	 *
-	 * 30s against an observed ~2s for the slowest test here: enough headroom for the slower of the two
-	 * CI platforms without letting a real slowdown burn two minutes per method before reporting.
-	 */
-	@Rule
-	public Timeout timeout = Timeout.seconds(30);
+/**
+ * Nothing in this class legitimately takes more than a couple of seconds. The bound is here rather
+ * than on individual methods because the two many-polls tests are only finite thanks to an
+ * overridden sleep: if that seam is ever bypassed - the sleep inlined back into a loop, or
+ * sleepBetweenPolls made private, final or static - they would each wait 50k x 1s rather than fail,
+ * and a wedged build is much worse to diagnose than a red one.
+ *
+ * 30s against an observed ~2s for the slowest test here: enough headroom for the slower of the two
+ * CI platforms without letting a real slowdown burn two minutes per method before reporting.
+ */
+@Timeout(value = 30, unit = TimeUnit.SECONDS)
+class CloudFormationStackSetTest {
 
 	private CloudFormationClient client;
 	private SleepStrategy sleepStrategy;
 	private CloudFormationStackSet stackSet;
 
-	@Before
-	public void setup() {
-		TaskListener listener = Mockito.mock(TaskListener.class);
-		Mockito.when(listener.getLogger()).thenReturn(System.out);
-		client = Mockito.mock(CloudFormationClient.class);
-		sleepStrategy = Mockito.mock(SleepStrategy.class);
+	@BeforeEach
+	void setup() {
+		TaskListener listener = mock(TaskListener.class);
+		when(listener.getLogger()).thenReturn(System.out);
+		client = mock(CloudFormationClient.class);
+		sleepStrategy = mock(SleepStrategy.class);
 		stackSet = new CloudFormationStackSet(client, "foo", listener, sleepStrategy);
 	}
 
 	@Test
-	public void stackSetExists() {
-		Mockito.when(client.describeStackSet(Mockito.any(DescribeStackSetRequest.class)))
+	void stackSetExists() {
+		when(client.describeStackSet(any(DescribeStackSetRequest.class)))
 				.thenReturn(DescribeStackSetResponse.builder().stackSet(StackSet.builder().build()).build()
 				);
 
@@ -58,33 +64,34 @@ public class CloudFormationStackSetTest {
 	}
 
 	@Test
-	public void stackSetDoesNotExists() {
+	void stackSetDoesNotExists() {
 		CloudFormationException ex = (CloudFormationException) CloudFormationException.builder()
 				.message("stack set does not exist")
 				.awsErrorDetails(AwsErrorDetails.builder().errorCode("StackSetNotFoundException").errorMessage("stack set does not exist").build())
 				.build();
-		Mockito.when(client.describeStackSet(Mockito.any(DescribeStackSetRequest.class)))
+		when(client.describeStackSet(any(DescribeStackSetRequest.class)))
 				.thenThrow(ex);
 
 		Assertions.assertThat(stackSet.exists()).isFalse();
 	}
 
-	@Test(expected = CloudFormationException.class)
-	public void stackSetExistsError() {
+	@Test
+	void stackSetExistsError() {
 		CloudFormationException ex = (CloudFormationException) CloudFormationException.builder()
-				.message("stack set does not exist")
-				.awsErrorDetails(AwsErrorDetails.builder().errorMessage("stack set does not exist").build())
-				.build();
-		Mockito.when(client.describeStackSet(Mockito.any(DescribeStackSetRequest.class)))
-				.thenThrow(ex);
+					.message("stack set does not exist")
+					.awsErrorDetails(AwsErrorDetails.builder().errorMessage("stack set does not exist").build())
+					.build();
+		when(client.describeStackSet(any(DescribeStackSetRequest.class)))
+					.thenThrow(ex);
+		assertThrows(CloudFormationException.class, () ->
 
-		stackSet.exists();
+			stackSet.exists());
 	}
 
 	@Test
-	public void createTemplateBody() {
+	void createTemplateBody() {
 		CreateStackSetResponse expected = CreateStackSetResponse.builder().build();
-		Mockito.when(client.createStackSet(Mockito.any(CreateStackSetRequest.class)))
+		when(client.createStackSet(any(CreateStackSetRequest.class)))
 				.thenReturn(expected);
 
 		Parameter parameter1 = Parameter.builder().parameterKey("foo").parameterValue("bar").build();
@@ -93,15 +100,15 @@ public class CloudFormationStackSetTest {
 		CreateStackSetResponse result = stackSet.create("body", null, Collections.singletonList(parameter1), Collections.singletonList(tag1), null, null);
 		Assertions.assertThat(result).isSameAs(expected);
 		ArgumentCaptor<CreateStackSetRequest> captor = ArgumentCaptor.forClass(CreateStackSetRequest.class);
-		Mockito.verify(client).createStackSet(captor.capture());
+		verify(client).createStackSet(captor.capture());
 		Assertions.assertThat(captor.getValue()).isEqualTo(CreateStackSetRequest.builder().stackSetName("foo").capabilities(Capability.CAPABILITY_IAM, Capability.CAPABILITY_NAMED_IAM, Capability.CAPABILITY_AUTO_EXPAND).parameters(parameter1).tags(tag1).templateBody("body").build()
 		);
 	}
 
 	@Test
-	public void createTemplateUrl() {
+	void createTemplateUrl() {
 		CreateStackSetResponse expected = CreateStackSetResponse.builder().build();
-		Mockito.when(client.createStackSet(Mockito.any(CreateStackSetRequest.class)))
+		when(client.createStackSet(any(CreateStackSetRequest.class)))
 				.thenReturn(expected);
 
 		Parameter parameter1 = Parameter.builder().parameterKey("foo").parameterValue("bar").build();
@@ -110,27 +117,27 @@ public class CloudFormationStackSetTest {
 		CreateStackSetResponse result = stackSet.create(null, "url", Collections.singletonList(parameter1), Collections.singletonList(tag1), null, null);
 		Assertions.assertThat(result).isSameAs(expected);
 		ArgumentCaptor<CreateStackSetRequest> captor = ArgumentCaptor.forClass(CreateStackSetRequest.class);
-		Mockito.verify(client).createStackSet(captor.capture());
+		verify(client).createStackSet(captor.capture());
 		Assertions.assertThat(captor.getValue()).isEqualTo(CreateStackSetRequest.builder().stackSetName("foo").capabilities(Capability.CAPABILITY_IAM, Capability.CAPABILITY_NAMED_IAM, Capability.CAPABILITY_AUTO_EXPAND).parameters(parameter1).tags(tag1).templateURL("url").build()
 		);
 	}
 
-	@Test(expected = IllegalArgumentException.class)
-	public void createNoTemplate() {
+	@Test
+	void createNoTemplate() {
 		CreateStackSetResponse expected = CreateStackSetResponse.builder().build();
-		Mockito.when(client.createStackSet(Mockito.any(CreateStackSetRequest.class)))
-				.thenReturn(expected);
-
+		when(client.createStackSet(any(CreateStackSetRequest.class)))
+					.thenReturn(expected);
 		Parameter parameter1 = Parameter.builder().parameterKey("foo").parameterValue("bar").build();
 		Tag tag1 = Tag.builder().key("bar").value("baz").build();
+		assertThrows(IllegalArgumentException.class, () ->
 
-		stackSet.create(null, null, Collections.singletonList(parameter1), Collections.singletonList(tag1), null, null);
+			stackSet.create(null, null, Collections.singletonList(parameter1), Collections.singletonList(tag1), null, null));
 	}
 
 	@Test
-	public void createAdministratorRoleArn() {
+	void createAdministratorRoleArn() {
 		CreateStackSetResponse expected = CreateStackSetResponse.builder().build();
-		Mockito.when(client.createStackSet(Mockito.any(CreateStackSetRequest.class)))
+		when(client.createStackSet(any(CreateStackSetRequest.class)))
 				.thenReturn(expected);
 
 		Parameter parameter1 = Parameter.builder().parameterKey("foo").parameterValue("bar").build();
@@ -139,15 +146,15 @@ public class CloudFormationStackSetTest {
 		CreateStackSetResponse result = stackSet.create("body", null, Collections.singletonList(parameter1), Collections.singletonList(tag1), "foo", "baz");
 		Assertions.assertThat(result).isSameAs(expected);
 		ArgumentCaptor<CreateStackSetRequest> captor = ArgumentCaptor.forClass(CreateStackSetRequest.class);
-		Mockito.verify(client).createStackSet(captor.capture());
+		verify(client).createStackSet(captor.capture());
 		Assertions.assertThat(captor.getValue()).isEqualTo(CreateStackSetRequest.builder().stackSetName("foo").capabilities(Capability.CAPABILITY_IAM, Capability.CAPABILITY_NAMED_IAM, Capability.CAPABILITY_AUTO_EXPAND).parameters(parameter1).administrationRoleARN("foo").executionRoleName("baz").tags(tag1).templateBody("body").build()
 		);
 	}
 
 	@Test
-	public void updateTemplateBody() throws InterruptedException {
+	void updateTemplateBody() throws InterruptedException {
 		UpdateStackSetResponse expected = UpdateStackSetResponse.builder().build();
-		Mockito.when(client.updateStackSet(Mockito.any(UpdateStackSetRequest.class)))
+		when(client.updateStackSet(any(UpdateStackSetRequest.class)))
 				.thenReturn(expected);
 
 		Parameter parameter1 = Parameter.builder().parameterKey("foo").parameterValue("bar").build();
@@ -156,15 +163,15 @@ public class CloudFormationStackSetTest {
 		UpdateStackSetResponse result = stackSet.update("body", null, UpdateStackSetRequest.builder().parameters(parameter1).tags(tag1).build());
 		Assertions.assertThat(result).isSameAs(expected);
 		ArgumentCaptor<UpdateStackSetRequest> captor = ArgumentCaptor.forClass(UpdateStackSetRequest.class);
-		Mockito.verify(client).updateStackSet(captor.capture());
+		verify(client).updateStackSet(captor.capture());
 		Assertions.assertThat(captor.getValue()).isEqualTo(UpdateStackSetRequest.builder().stackSetName("foo").capabilities(Capability.CAPABILITY_IAM, Capability.CAPABILITY_NAMED_IAM, Capability.CAPABILITY_AUTO_EXPAND).parameters(parameter1).tags(tag1).templateBody("body").build()
 		);
 	}
 
 	@Test
-	public void updateTemplateUrl() throws InterruptedException {
+	void updateTemplateUrl() throws InterruptedException {
 		UpdateStackSetResponse expected = UpdateStackSetResponse.builder().build();
-		Mockito.when(client.updateStackSet(Mockito.any(UpdateStackSetRequest.class)))
+		when(client.updateStackSet(any(UpdateStackSetRequest.class)))
 				.thenReturn(expected);
 
 		Parameter parameter1 = Parameter.builder().parameterKey("foo").parameterValue("bar").build();
@@ -173,15 +180,15 @@ public class CloudFormationStackSetTest {
 		UpdateStackSetResponse result = stackSet.update(null, "url", UpdateStackSetRequest.builder().parameters(parameter1).tags(tag1).build());
 		Assertions.assertThat(result).isSameAs(expected);
 		ArgumentCaptor<UpdateStackSetRequest> captor = ArgumentCaptor.forClass(UpdateStackSetRequest.class);
-		Mockito.verify(client).updateStackSet(captor.capture());
+		verify(client).updateStackSet(captor.capture());
 		Assertions.assertThat(captor.getValue()).isEqualTo(UpdateStackSetRequest.builder().stackSetName("foo").capabilities(Capability.CAPABILITY_IAM, Capability.CAPABILITY_NAMED_IAM, Capability.CAPABILITY_AUTO_EXPAND).parameters(parameter1).tags(tag1).templateURL("url").build()
 		);
 	}
 
 	@Test
-	public void updateTemplateKeepPrevious() throws InterruptedException {
+	void updateTemplateKeepPrevious() throws InterruptedException {
 		UpdateStackSetResponse expected = UpdateStackSetResponse.builder().build();
-		Mockito.when(client.updateStackSet(Mockito.any(UpdateStackSetRequest.class)))
+		when(client.updateStackSet(any(UpdateStackSetRequest.class)))
 				.thenReturn(expected);
 
 		Parameter parameter1 = Parameter.builder().parameterKey("foo").parameterValue("bar").build();
@@ -190,19 +197,19 @@ public class CloudFormationStackSetTest {
 		UpdateStackSetResponse result = stackSet.update(null, null, UpdateStackSetRequest.builder().parameters(parameter1).tags(tag1).build());
 		Assertions.assertThat(result).isSameAs(expected);
 		ArgumentCaptor<UpdateStackSetRequest> captor = ArgumentCaptor.forClass(UpdateStackSetRequest.class);
-		Mockito.verify(client).updateStackSet(captor.capture());
+		verify(client).updateStackSet(captor.capture());
 		Assertions.assertThat(captor.getValue()).isEqualTo(UpdateStackSetRequest.builder().stackSetName("foo").capabilities(Capability.CAPABILITY_IAM, Capability.CAPABILITY_NAMED_IAM, Capability.CAPABILITY_AUTO_EXPAND).parameters(parameter1).tags(tag1).usePreviousTemplate(true).build()
 		);
 	}
 
 	@Test
-	public void update_OperationInProgressException() throws InterruptedException {
+	void update_OperationInProgressException() throws InterruptedException {
 		UpdateStackSetResponse expected = UpdateStackSetResponse.builder().build();
-		Mockito.when(client.updateStackSet(Mockito.any(UpdateStackSetRequest.class)))
+		when(client.updateStackSet(any(UpdateStackSetRequest.class)))
 				.thenThrow(OperationInProgressException.class)
 				.thenReturn(expected);
 
-		Mockito.when(this.sleepStrategy.calculateSleepDuration(Mockito.anyInt())).thenReturn(5L);
+		when(this.sleepStrategy.calculateSleepDuration(anyInt())).thenReturn(5L);
 
 		Parameter parameter1 = Parameter.builder().parameterKey("foo").parameterValue("bar").build();
 		Tag tag1 = Tag.builder().key("bar").value("baz").build();
@@ -210,20 +217,20 @@ public class CloudFormationStackSetTest {
 		UpdateStackSetResponse result = stackSet.update(null, null, UpdateStackSetRequest.builder().parameters(parameter1).tags(tag1).build());
 		Assertions.assertThat(result).isSameAs(expected);
 		ArgumentCaptor<UpdateStackSetRequest> captor = ArgumentCaptor.forClass(UpdateStackSetRequest.class);
-		Mockito.verify(client, Mockito.times(2)).updateStackSet(captor.capture());
+		verify(client, times(2)).updateStackSet(captor.capture());
 		Assertions.assertThat(captor.getValue()).isEqualTo(UpdateStackSetRequest.builder().stackSetName("foo").capabilities(Capability.CAPABILITY_IAM, Capability.CAPABILITY_NAMED_IAM, Capability.CAPABILITY_AUTO_EXPAND).parameters(parameter1).tags(tag1).usePreviousTemplate(true).build()
 		);
-		Mockito.verify(this.sleepStrategy).calculateSleepDuration(1);
+		verify(this.sleepStrategy).calculateSleepDuration(1);
 	}
 
 	@Test
-	public void update_StaleRequestException() throws InterruptedException {
+	void update_StaleRequestException() throws InterruptedException {
 		UpdateStackSetResponse expected = UpdateStackSetResponse.builder().build();
-		Mockito.when(client.updateStackSet(Mockito.any(UpdateStackSetRequest.class)))
+		when(client.updateStackSet(any(UpdateStackSetRequest.class)))
 				.thenThrow(StaleRequestException.class)
 				.thenReturn(expected);
 
-		Mockito.when(this.sleepStrategy.calculateSleepDuration(Mockito.anyInt())).thenReturn(5L);
+		when(this.sleepStrategy.calculateSleepDuration(anyInt())).thenReturn(5L);
 
 		Parameter parameter1 = Parameter.builder().parameterKey("foo").parameterValue("bar").build();
 		Tag tag1 = Tag.builder().key("bar").value("baz").build();
@@ -231,17 +238,17 @@ public class CloudFormationStackSetTest {
 		UpdateStackSetResponse result = stackSet.update(null, null, UpdateStackSetRequest.builder().parameters(parameter1).tags(tag1).build());
 		Assertions.assertThat(result).isSameAs(expected);
 		ArgumentCaptor<UpdateStackSetRequest> captor = ArgumentCaptor.forClass(UpdateStackSetRequest.class);
-		Mockito.verify(client, Mockito.times(2)).updateStackSet(captor.capture());
+		verify(client, times(2)).updateStackSet(captor.capture());
 		Assertions.assertThat(captor.getValue()).isEqualTo(UpdateStackSetRequest.builder().stackSetName("foo").capabilities(Capability.CAPABILITY_IAM, Capability.CAPABILITY_NAMED_IAM, Capability.CAPABILITY_AUTO_EXPAND).parameters(parameter1).tags(tag1).usePreviousTemplate(true).build()
 		);
-		Mockito.verify(this.sleepStrategy).calculateSleepDuration(1);
+		verify(this.sleepStrategy).calculateSleepDuration(1);
 	}
 
 	@Test
-	public void update_TooManyOperations_LimitExceeded() throws InterruptedException {
+	void update_TooManyOperations_LimitExceeded() throws InterruptedException {
 		UpdateStackSetResponse expected = UpdateStackSetResponse.builder().build();
-		Mockito.when(client.updateStackSet(Mockito.any(UpdateStackSetRequest.class)))
-				.thenThrow((LimitExceededException) LimitExceededException.builder()
+		when(client.updateStackSet(any(UpdateStackSetRequest.class)))
+				.thenThrow(LimitExceededException.builder()
 						.message("StackSet operations cannot involve more than 3500")
 						.awsErrorDetails(AwsErrorDetails.builder()
 								.errorMessage("StackSet operations cannot involve more than 3500")
@@ -249,20 +256,20 @@ public class CloudFormationStackSetTest {
 						.build())
 				.thenReturn(expected);
 
-		Mockito.when(this.sleepStrategy.calculateSleepDuration(Mockito.anyInt())).thenReturn(5L);
+		when(this.sleepStrategy.calculateSleepDuration(anyInt())).thenReturn(5L);
 
 		UpdateStackSetResponse result = stackSet.update(null, null, UpdateStackSetRequest.builder().build());
 		Assertions.assertThat(result).isSameAs(expected);
 		ArgumentCaptor<UpdateStackSetRequest> captor = ArgumentCaptor.forClass(UpdateStackSetRequest.class);
-		Mockito.verify(client, Mockito.times(2)).updateStackSet(captor.capture());
+		verify(client, times(2)).updateStackSet(captor.capture());
 		Assertions.assertThat(captor.getValue()).isEqualTo(UpdateStackSetRequest.builder().stackSetName("foo").capabilities(Capability.CAPABILITY_IAM, Capability.CAPABILITY_NAMED_IAM, Capability.CAPABILITY_AUTO_EXPAND).usePreviousTemplate(true).build()
 		);
-		Mockito.verify(this.sleepStrategy).calculateSleepDuration(1);
+		verify(this.sleepStrategy).calculateSleepDuration(1);
 	}
 
 	@Test
-	public void waitForStackStateStatus() throws InterruptedException {
-		Mockito.when(client.describeStackSet(DescribeStackSetRequest.builder().stackSetName("foo").build()
+	void waitForStackStateStatus() throws InterruptedException {
+		when(client.describeStackSet(DescribeStackSetRequest.builder().stackSetName("foo").build()
 		)).thenReturn(DescribeStackSetResponse.builder().stackSet(StackSet.builder().status(StackSetStatus.ACTIVE).build()
 				).build()
 		).thenReturn(DescribeStackSetResponse.builder().stackSet(StackSet.builder().status(StackSetStatus.DELETED).build()
@@ -270,8 +277,8 @@ public class CloudFormationStackSetTest {
 		);
 		stackSet.waitForStackState(StackSetStatus.DELETED, Duration.ofMillis(5));
 
-		Mockito.verify(client, Mockito.atLeast(2))
-				.describeStackSet(Mockito.any(DescribeStackSetRequest.class));
+		verify(client, atLeast(2))
+				.describeStackSet(any(DescribeStackSetRequest.class));
 	}
 
 	/**
@@ -300,8 +307,8 @@ public class CloudFormationStackSetTest {
 	 */
 	private CloudFormationStackSet nonSleepingStackSet(CloudFormationClient stubOnlyClient, int[] sleeps) {
 		// discard the per-poll progress lines rather than putting 50k of them on the build log
-		TaskListener quietListener = Mockito.mock(TaskListener.class, Mockito.withSettings().stubOnly());
-		Mockito.when(quietListener.getLogger()).thenReturn(new PrintStream(OutputStream.nullOutputStream(), false));
+		TaskListener quietListener = mock(TaskListener.class, withSettings().stubOnly());
+		when(quietListener.getLogger()).thenReturn(new PrintStream(OutputStream.nullOutputStream(), false));
 		return new CloudFormationStackSet(stubOnlyClient, "foo", quietListener, sleepStrategy) {
 			@Override
 			void sleepBetweenPolls(Duration pollInterval) {
@@ -322,7 +329,7 @@ public class CloudFormationStackSetTest {
 	 * for.
 	 */
 	@Test
-	public void aNonPositivePollIntervalIsSubstitutedHereToo() {
+	void aNonPositivePollIntervalIsSubstitutedHereToo() {
 		Assertions.assertThat(CloudFormationStackSet.pollSleepMillis(Duration.ZERO)).isEqualTo(1000L);
 		Assertions.assertThat(CloudFormationStackSet.pollSleepMillis(Duration.ofMillis(-5))).isEqualTo(1000L);
 		// a sub-millisecond interval rounds to zero milliseconds, so it counts as disabled rather than
@@ -360,7 +367,7 @@ public class CloudFormationStackSetTest {
 	}
 
 	@Test
-	public void waitForStackStateSurvivesManyPolls() throws Throwable {
+	void waitForStackStateSurvivesManyPolls() throws Throwable {
 		// ACTIVE -> DELETED is the transition this wait polls through, so it is the direction that
 		// exercises the loop; the losing branch covers the other one.
 		DescribeStackSetResponse pending = DescribeStackSetResponse.builder()
@@ -368,8 +375,8 @@ public class CloudFormationStackSetTest {
 		DescribeStackSetResponse done = DescribeStackSetResponse.builder()
 				.stackSet(StackSet.builder().status(StackSetStatus.DELETED).build()).build();
 		int[] calls = {0};
-		CloudFormationClient stubOnly = Mockito.mock(CloudFormationClient.class, Mockito.withSettings().stubOnly());
-		Mockito.when(stubOnly.describeStackSet(Mockito.any(DescribeStackSetRequest.class)))
+		CloudFormationClient stubOnly = mock(CloudFormationClient.class, withSettings().stubOnly());
+		when(stubOnly.describeStackSet(any(DescribeStackSetRequest.class)))
 				.thenAnswer(invocation -> ++calls[0] < POLLS ? pending : done);
 		int[] sleeps = {0};
 		CloudFormationStackSet subject = this.nonSleepingStackSet(stubOnly, sleeps);
@@ -382,15 +389,15 @@ public class CloudFormationStackSetTest {
 	}
 
 	@Test
-	public void waitForOperationToCompleteSurvivesManyPolls() throws Throwable {
+	void waitForOperationToCompleteSurvivesManyPolls() throws Throwable {
 		String operationId = UUID.randomUUID().toString();
 		DescribeStackSetOperationResponse running = DescribeStackSetOperationResponse.builder()
 				.stackSetOperation(StackSetOperation.builder().status(StackSetOperationStatus.RUNNING).build()).build();
 		DescribeStackSetOperationResponse done = DescribeStackSetOperationResponse.builder()
 				.stackSetOperation(StackSetOperation.builder().status(StackSetOperationStatus.SUCCEEDED).build()).build();
 		int[] calls = {0};
-		CloudFormationClient stubOnly = Mockito.mock(CloudFormationClient.class, Mockito.withSettings().stubOnly());
-		Mockito.when(stubOnly.describeStackSetOperation(Mockito.any(DescribeStackSetOperationRequest.class)))
+		CloudFormationClient stubOnly = mock(CloudFormationClient.class, withSettings().stubOnly());
+		when(stubOnly.describeStackSetOperation(any(DescribeStackSetOperationRequest.class)))
 				.thenAnswer(invocation -> ++calls[0] < POLLS ? running : done);
 		int[] sleeps = {0};
 		CloudFormationStackSet subject = this.nonSleepingStackSet(stubOnly, sleeps);
@@ -407,8 +414,8 @@ public class CloudFormationStackSetTest {
 	 * would otherwise hold an executor until the build was aborted.
 	 */
 	@Test
-	public void waitForStackStateFailsOnATerminalStatusItIsNotWaitingFor() {
-		Mockito.when(client.describeStackSet(Mockito.any(DescribeStackSetRequest.class)))
+	void waitForStackStateFailsOnATerminalStatusItIsNotWaitingFor() {
+		when(client.describeStackSet(any(DescribeStackSetRequest.class)))
 				.thenReturn(DescribeStackSetResponse.builder()
 						.stackSet(StackSet.builder().status(StackSetStatus.DELETED).build()).build());
 
@@ -422,8 +429,8 @@ public class CloudFormationStackSetTest {
 	 * polled forever either.
 	 */
 	@Test
-	public void waitForStackStateFailsOnAnUnmodelledStatus() {
-		Mockito.when(client.describeStackSet(Mockito.any(DescribeStackSetRequest.class)))
+	void waitForStackStateFailsOnAnUnmodelledStatus() {
+		when(client.describeStackSet(any(DescribeStackSetRequest.class)))
 				.thenReturn(DescribeStackSetResponse.builder()
 						.stackSet(StackSet.builder().status("SOMETHING_NEW").build()).build());
 
@@ -433,9 +440,9 @@ public class CloudFormationStackSetTest {
 	}
 
 	@Test
-	public void waitForOperationToComplete() throws InterruptedException {
+	void waitForOperationToComplete() throws InterruptedException {
 		String operationId = UUID.randomUUID().toString();
-		Mockito.when(client.describeStackSetOperation(DescribeStackSetOperationRequest.builder().stackSetName("foo").operationId(operationId).build()
+		when(client.describeStackSetOperation(DescribeStackSetOperationRequest.builder().stackSetName("foo").operationId(operationId).build()
 		)).thenReturn(DescribeStackSetOperationResponse.builder().stackSetOperation(StackSetOperation.builder().status(StackSetOperationStatus.RUNNING).build()
 				).build()
 		).thenReturn(DescribeStackSetOperationResponse.builder().stackSetOperation(StackSetOperation.builder().status(StackSetOperationStatus.SUCCEEDED).build()
@@ -445,13 +452,13 @@ public class CloudFormationStackSetTest {
 	}
 
 	@Test
-	public void waitForOperationToCompleteWithThrottle() throws InterruptedException {
+	void waitForOperationToCompleteWithThrottle() throws InterruptedException {
 		String operationId = UUID.randomUUID().toString();
 		CloudFormationException ex = (CloudFormationException) CloudFormationException.builder()
 				.message("error")
 				.awsErrorDetails(AwsErrorDetails.builder().errorCode("Throttling").errorMessage("error").build())
 				.build();
-		Mockito.when(client.describeStackSetOperation(DescribeStackSetOperationRequest.builder().stackSetName("foo").operationId(operationId).build()
+		when(client.describeStackSetOperation(DescribeStackSetOperationRequest.builder().stackSetName("foo").operationId(operationId).build()
 		)).thenThrow(ex)
 		.thenReturn(DescribeStackSetOperationResponse.builder().stackSetOperation(StackSetOperation.builder().status(StackSetOperationStatus.RUNNING).build()
 				).build()
@@ -461,22 +468,23 @@ public class CloudFormationStackSetTest {
 		stackSet.waitForOperationToComplete(operationId, Duration.ofMillis(5));
 	}
 
-	@Test(expected = StackSetOperationFailedException.class)
-	public void waitForOperationToCompleteFailure() throws InterruptedException {
+	@Test
+	void waitForOperationToCompleteFailure() {
 		String operationId = UUID.randomUUID().toString();
-		Mockito.when(client.describeStackSetOperation(DescribeStackSetOperationRequest.builder().stackSetName("foo").operationId(operationId).build()
-		)).thenReturn(DescribeStackSetOperationResponse.builder().stackSetOperation(StackSetOperation.builder().status(StackSetOperationStatus.RUNNING).build()
-				).build()
-		).thenReturn(DescribeStackSetOperationResponse.builder().stackSetOperation(StackSetOperation.builder().status(StackSetOperationStatus.FAILED).build()
-				).build()
-		);
-		stackSet.waitForOperationToComplete(operationId, Duration.ofMillis(5));
+		when(client.describeStackSetOperation(DescribeStackSetOperationRequest.builder().stackSetName("foo").operationId(operationId).build()
+			)).thenReturn(DescribeStackSetOperationResponse.builder().stackSetOperation(StackSetOperation.builder().status(StackSetOperationStatus.RUNNING).build()
+			).build()
+			).thenReturn(DescribeStackSetOperationResponse.builder().stackSetOperation(StackSetOperation.builder().status(StackSetOperationStatus.FAILED).build()
+			).build()
+			);
+		assertThrows(StackSetOperationFailedException.class, () ->
+			stackSet.waitForOperationToComplete(operationId, Duration.ofMillis(5)));
 	}
 
 	@Test
-	public void delete() {
+	void delete() {
 		stackSet.delete();
-		Mockito.verify(client).deleteStackSet(DeleteStackSetRequest.builder().stackSetName("foo").build()
+		verify(client).deleteStackSet(DeleteStackSetRequest.builder().stackSetName("foo").build()
 		);
 	}
 }

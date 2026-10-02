@@ -21,12 +21,13 @@
 
 package de.taimos.pipeline.aws;
 
-import org.junit.Assert;
-import org.junit.Test;
-
+import org.junit.jupiter.api.Test;
 import software.amazon.awssdk.services.s3.S3Configuration;
 
-public class AbstractS3StepTest {
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+class AbstractS3StepTest {
 	/**
 	 * v1 carried pathStyleAccessEnabled and payloadSigningEnabled on the client builder itself, where
 	 * they could be read back. v2 folds both into an S3Configuration, and payloadSigningEnabled has
@@ -34,23 +35,23 @@ public class AbstractS3StepTest {
 	 * the mapping rather than the getters.
 	 */
 	@Test
-	public void bothOptionsReachTheServiceConfiguration() throws Exception {
+	void bothOptionsReachTheServiceConfiguration() {
 		S3DeleteStep step = new S3DeleteStep("my-bucket", "my-path", true, true);
 
 		S3Configuration configuration = step.createS3ClientOptions().createS3Configuration();
 
-		Assert.assertEquals(true, configuration.pathStyleAccessEnabled());
-		Assert.assertEquals(false, configuration.chunkedEncodingEnabled());
+		assertTrue(configuration.pathStyleAccessEnabled());
+		assertFalse(configuration.chunkedEncodingEnabled());
 	}
 
 	@Test
-	public void bothOptionsDefaultOff() throws Exception {
+	void bothOptionsDefaultOff() {
 		S3DeleteStep step = new S3DeleteStep("my-bucket", "my-path", false, false);
 
 		S3Configuration configuration = step.createS3ClientOptions().createS3Configuration();
 
-		Assert.assertEquals(false, configuration.pathStyleAccessEnabled());
+		assertFalse(configuration.pathStyleAccessEnabled());
 		// payloadSigningEnabled off leaves chunked encoding at the SDK default, which is on
-		Assert.assertEquals(true, configuration.chunkedEncodingEnabled());
+		assertTrue(configuration.chunkedEncodingEnabled());
 	}
 }

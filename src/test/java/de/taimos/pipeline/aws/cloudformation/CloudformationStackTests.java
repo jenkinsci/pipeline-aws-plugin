@@ -29,11 +29,10 @@ import software.amazon.awssdk.services.cloudformation.model.UpdateStackRequest;
 import software.amazon.awssdk.services.cloudformation.waiters.CloudFormationWaiter;
 import hudson.model.TaskListener;
 import org.assertj.core.api.Assertions;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
-import org.mockito.Mockito;
 
 import java.time.Duration;
 import java.util.Collections;
@@ -42,20 +41,30 @@ import java.util.concurrent.ExecutionException;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.atLeastOnce;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
+import static org.mockito.Mockito.when;
 
-public class CloudformationStackTests {
+class CloudformationStackTests {
 
 	private EventPrinter eventPrinter;
 
-	@Before
-	public void mockWait() {
-		this.eventPrinter = Mockito.mock(EventPrinter.class);
+	@BeforeEach
+	void mockWait() {
+		this.eventPrinter = mock(EventPrinter.class);
 	}
 
-	@After
-	public void noMoreEventPrinterInteractions() {
-		Mockito.verifyNoMoreInteractions(this.eventPrinter);
+	@AfterEach
+	void noMoreEventPrinterInteractions() {
+		verifyNoMoreInteractions(this.eventPrinter);
 	}
 
 	/**
@@ -65,7 +74,7 @@ public class CloudformationStackTests {
 	 * longer aborts while CloudFormation is still working.
 	 */
 	@Test
-	public void waiterAttemptBudgetDoesNotEndTheWaitBeforeTheTimeout() {
+	void waiterAttemptBudgetDoesNotEndTheWaitBeforeTheTimeout() {
 		PollConfiguration pollConfiguration = PollConfiguration.builder()
 				.timeout(Duration.ofHours(2))
 				.pollInterval(Duration.ofSeconds(1))
@@ -85,7 +94,7 @@ public class CloudformationStackTests {
 	 * call DescribeStacks in a tight loop for the whole timeout. The backoff is floored instead.
 	 */
 	@Test
-	public void waiterBackoffIsFlooredWhenEventPrintingIsDisabled() {
+	void waiterBackoffIsFlooredWhenEventPrintingIsDisabled() {
 		PollConfiguration pollConfiguration = PollConfiguration.builder()
 				.timeout(Duration.ofMinutes(10))
 				.pollInterval(Duration.ZERO)
@@ -105,7 +114,7 @@ public class CloudformationStackTests {
 	 * EventPrinter's own loop already had.
 	 */
 	@Test
-	public void waiterBackoffHonoursSubSecondIntervalsExactly() {
+	void waiterBackoffHonoursSubSecondIntervalsExactly() {
 		PollConfiguration pollConfiguration = PollConfiguration.builder()
 				.timeout(Duration.ofMinutes(10))
 				.pollInterval(Duration.ofMillis(250))
@@ -118,12 +127,12 @@ public class CloudformationStackTests {
 	}
 
 	@Test
-	public void stackExists() {
-		TaskListener taskListener = Mockito.mock(TaskListener.class);
-		Mockito.when(taskListener.getLogger()).thenReturn(System.out);
-		CloudFormationClient client = Mockito.mock(CloudFormationClient.class);
+	void stackExists() {
+		TaskListener taskListener = mock(TaskListener.class);
+		when(taskListener.getLogger()).thenReturn(System.out);
+		CloudFormationClient client = mock(CloudFormationClient.class);
 		CloudFormationStack stack = newCloudFormationStack(client, "foo", taskListener);
-		Mockito.when(client.describeStacks(DescribeStacksRequest.builder().stackName("foo").build()
+		when(client.describeStacks(DescribeStacksRequest.builder().stackName("foo").build()
 		)).thenReturn(DescribeStacksResponse.builder().stacks(Stack.builder().build()
 							  ).build()
 		);
@@ -140,111 +149,111 @@ public class CloudformationStackTests {
 	}
 
 	@Test
-	public void stackDoesNotExists() {
-		TaskListener taskListener = Mockito.mock(TaskListener.class);
-		Mockito.when(taskListener.getLogger()).thenReturn(System.out);
-		CloudFormationClient client = Mockito.mock(CloudFormationClient.class);
+	void stackDoesNotExists() {
+		TaskListener taskListener = mock(TaskListener.class);
+		when(taskListener.getLogger()).thenReturn(System.out);
+		CloudFormationClient client = mock(CloudFormationClient.class);
 		CloudFormationStack stack = newCloudFormationStack(client, "foo", taskListener);
 		CloudFormationException ex = (CloudFormationException) CloudFormationException.builder()
 				.message("foo")
 				.awsErrorDetails(AwsErrorDetails.builder().errorCode("ValidationError").errorMessage("stack foo does not exist").build())
 				.build();
-				Mockito.when(client.describeStacks(DescribeStacksRequest.builder().stackName("foo").build()
+				when(client.describeStacks(DescribeStacksRequest.builder().stackName("foo").build()
 		)).thenThrow(ex);
 		Assertions.assertThat(stack.exists()).isFalse();
 	}
 
 	@Test
-	public void changeSetExists() {
-		TaskListener taskListener = Mockito.mock(TaskListener.class);
-		Mockito.when(taskListener.getLogger()).thenReturn(System.out);
-		CloudFormationClient client = Mockito.mock(CloudFormationClient.class);
+	void changeSetExists() {
+		TaskListener taskListener = mock(TaskListener.class);
+		when(taskListener.getLogger()).thenReturn(System.out);
+		CloudFormationClient client = mock(CloudFormationClient.class);
 		CloudFormationStack stack = newCloudFormationStack(client, "foo", taskListener);
-		Mockito.when(client.describeChangeSet(DescribeChangeSetRequest.builder().stackName("foo").changeSetName("bar").build()
+		when(client.describeChangeSet(DescribeChangeSetRequest.builder().stackName("foo").changeSetName("bar").build()
 		)).thenReturn(DescribeChangeSetResponse.builder().changes(Change.builder().build()).build()
 		);
 		Assertions.assertThat(stack.changeSetExists("bar")).isTrue();
 	}
 
 	@Test
-	public void executeChangeSetWithChanges() throws ExecutionException {
-		TaskListener taskListener = Mockito.mock(TaskListener.class);
-		Mockito.when(taskListener.getLogger()).thenReturn(System.out);
-		Mockito.when(taskListener.getLogger()).thenReturn(System.out);
-		CloudFormationClient client = Mockito.mock(CloudFormationClient.class);
-		Mockito.when(client.waiter()).thenAnswer(invocation -> CloudFormationWaiter.builder().client(client).build());
+	void executeChangeSetWithChanges() throws ExecutionException {
+		TaskListener taskListener = mock(TaskListener.class);
+		when(taskListener.getLogger()).thenReturn(System.out);
+		when(taskListener.getLogger()).thenReturn(System.out);
+		CloudFormationClient client = mock(CloudFormationClient.class);
+		when(client.waiter()).thenAnswer(invocation -> CloudFormationWaiter.builder().client(client).build());
 
 		CloudFormationStack stack = newCloudFormationStack(client, "foo", taskListener);
-		Mockito.when(client.describeChangeSet(DescribeChangeSetRequest.builder().stackName("foo").changeSetName("bar").build()
+		when(client.describeChangeSet(DescribeChangeSetRequest.builder().stackName("foo").changeSetName("bar").build()
 		)).thenReturn(DescribeChangeSetResponse.builder().changes(Change.builder().build()).build()
 		);
 
-		Mockito.when(client.describeStacks(DescribeStacksRequest.builder().stackName("foo").build()))
+		when(client.describeStacks(DescribeStacksRequest.builder().stackName("foo").build()))
 				.thenReturn(DescribeStacksResponse.builder().stacks(Stack.builder().stackStatus("CREATE_COMPLETE").outputs(Output.builder().outputKey("bar").outputValue("baz").build()).build()).build());
 
 		Map<String, String> outputs = stack.executeChangeSet("bar", PollConfiguration.DEFAULT);
 
-		Mockito.verify(client).executeChangeSet(any(ExecuteChangeSetRequest.class));
-		Mockito.verify(this.eventPrinter).waitAndPrintStackEvents(Mockito.eq("foo"), Mockito.any(), Mockito.eq(PollConfiguration.DEFAULT));
+		verify(client).executeChangeSet(any(ExecuteChangeSetRequest.class));
+		verify(this.eventPrinter).waitAndPrintStackEvents(eq("foo"), any(), eq(PollConfiguration.DEFAULT));
 		Assertions.assertThat(outputs).containsEntry("bar", "baz").containsEntry("jenkinsStackUpdateStatus", "true");
 	}
 
 	@Test
-	public void doNotExecuteChangeSetIfNoChanges() throws ExecutionException {
-		TaskListener taskListener = Mockito.mock(TaskListener.class);
-		Mockito.when(taskListener.getLogger()).thenReturn(System.out);
-		CloudFormationClient client = Mockito.mock(CloudFormationClient.class);
+	void doNotExecuteChangeSetIfNoChanges() throws ExecutionException {
+		TaskListener taskListener = mock(TaskListener.class);
+		when(taskListener.getLogger()).thenReturn(System.out);
+		CloudFormationClient client = mock(CloudFormationClient.class);
 		CloudFormationStack stack = newCloudFormationStack(client, "foo", taskListener);
-		Mockito.when(client.describeChangeSet(DescribeChangeSetRequest.builder().stackName("foo").changeSetName("bar").build()
+		when(client.describeChangeSet(DescribeChangeSetRequest.builder().stackName("foo").changeSetName("bar").build()
 		)).thenReturn(DescribeChangeSetResponse.builder().status(ChangeSetStatus.FAILED).statusReason("the submitted information didn't contain changes").build());
-		Mockito.when(client.describeStacks(DescribeStacksRequest.builder().stackName("foo").build()))
+		when(client.describeStacks(DescribeStacksRequest.builder().stackName("foo").build()))
 				.thenReturn(DescribeStacksResponse.builder().stacks(Stack.builder().outputs(Output.builder().outputKey("bar").outputValue("baz").build()).build()).build());
 
 		Map<String, String> outputs = stack.executeChangeSet("bar", PollConfiguration.DEFAULT);
-		Mockito.verify(client, Mockito.never()).executeChangeSet(any(ExecuteChangeSetRequest.class));
+		verify(client, never()).executeChangeSet(any(ExecuteChangeSetRequest.class));
 		Assertions.assertThat(outputs).containsEntry("bar", "baz").containsEntry("jenkinsStackUpdateStatus", "false");
 	}
 
 	@Test
-	public void executeChangeSetIfNoChangesButSuccessfulStatus() throws ExecutionException {
-		TaskListener taskListener = Mockito.mock(TaskListener.class);
-		Mockito.when(taskListener.getLogger()).thenReturn(System.out);
-		CloudFormationClient client = Mockito.mock(CloudFormationClient.class);
+	void executeChangeSetIfNoChangesButSuccessfulStatus() throws ExecutionException {
+		TaskListener taskListener = mock(TaskListener.class);
+		when(taskListener.getLogger()).thenReturn(System.out);
+		CloudFormationClient client = mock(CloudFormationClient.class);
 		CloudFormationStack stack = newCloudFormationStack(client, "foo", taskListener);
-		Mockito.when(client.describeChangeSet(DescribeChangeSetRequest.builder().stackName("foo").changeSetName("bar").build()
+		when(client.describeChangeSet(DescribeChangeSetRequest.builder().stackName("foo").changeSetName("bar").build()
 		)).thenReturn(DescribeChangeSetResponse.builder().status(ChangeSetStatus.CREATE_COMPLETE).build());
-		Mockito.when(client.describeStacks(DescribeStacksRequest.builder().stackName("foo").build()))
+		when(client.describeStacks(DescribeStacksRequest.builder().stackName("foo").build()))
 				.thenReturn(DescribeStacksResponse.builder().stacks(Stack.builder().stackStatus(StackStatus.CREATE_COMPLETE).outputs(Output.builder().outputKey("bar").outputValue("baz").build()).build()).build());
-		Mockito.when(client.waiter()).thenAnswer(invocation -> CloudFormationWaiter.builder().client(client).build());
+		when(client.waiter()).thenAnswer(invocation -> CloudFormationWaiter.builder().client(client).build());
 
 		Map<String, String> outputs = stack.executeChangeSet("bar", PollConfiguration.DEFAULT);
-		Mockito.verify(client).executeChangeSet(any(ExecuteChangeSetRequest.class));
-		Mockito.verify(this.eventPrinter).waitAndPrintStackEvents(Mockito.eq("foo"), Mockito.any(), Mockito.eq(PollConfiguration.DEFAULT));
+		verify(client).executeChangeSet(any(ExecuteChangeSetRequest.class));
+		verify(this.eventPrinter).waitAndPrintStackEvents(eq("foo"), any(), eq(PollConfiguration.DEFAULT));
 		Assertions.assertThat(outputs).containsEntry("bar", "baz");
 	}
 
 	@Test
-	public void changeSetDoesNotExists() {
-		TaskListener taskListener = Mockito.mock(TaskListener.class);
-		Mockito.when(taskListener.getLogger()).thenReturn(System.out);
-		CloudFormationClient client = Mockito.mock(CloudFormationClient.class);
+	void changeSetDoesNotExists() {
+		TaskListener taskListener = mock(TaskListener.class);
+		when(taskListener.getLogger()).thenReturn(System.out);
+		CloudFormationClient client = mock(CloudFormationClient.class);
 		CloudFormationStack stack = newCloudFormationStack(client, "foo", taskListener);
 		CloudFormationException ex = (CloudFormationException) CloudFormationException.builder()
 				.message("foo")
 				.awsErrorDetails(AwsErrorDetails.builder().errorCode("ValidationError").errorMessage("change set bar does not exist").build())
 				.build();
-				Mockito.when(client.describeChangeSet(DescribeChangeSetRequest.builder().stackName("foo").changeSetName("bar").build()
+				when(client.describeChangeSet(DescribeChangeSetRequest.builder().stackName("foo").changeSetName("bar").build()
 		)).thenThrow(ex);
 		Assertions.assertThat(stack.changeSetExists("bar")).isFalse();
 	}
 
 	@Test
-	public void describeStack() {
-		TaskListener taskListener = Mockito.mock(TaskListener.class);
-		Mockito.when(taskListener.getLogger()).thenReturn(System.out);
-		CloudFormationClient client = Mockito.mock(CloudFormationClient.class);
+	void describeStack() {
+		TaskListener taskListener = mock(TaskListener.class);
+		when(taskListener.getLogger()).thenReturn(System.out);
+		CloudFormationClient client = mock(CloudFormationClient.class);
 		CloudFormationStack stack = newCloudFormationStack(client, "foo", taskListener);
-		Mockito.when(client.describeStacks(DescribeStacksRequest.builder().stackName("foo").build()))
+		when(client.describeStacks(DescribeStacksRequest.builder().stackName("foo").build()))
 				.thenReturn(DescribeStacksResponse.builder().stacks(Stack.builder().outputs(Output.builder().outputKey("bar").outputValue("baz").build()).build()).build());
 		Assertions.assertThat(stack.describeOutputs()).isEqualTo(Collections.singletonMap(
 				"bar", "baz"
@@ -252,12 +261,12 @@ public class CloudformationStackTests {
 	}
 
 	@Test
-	public void createNewStackChangeSet() throws ExecutionException {
-		TaskListener taskListener = Mockito.mock(TaskListener.class);
-		Mockito.when(taskListener.getLogger()).thenReturn(System.out);
-		CloudFormationClient client = Mockito.mock(CloudFormationClient.class);
-		Mockito.when(client.waiter()).thenAnswer(invocation -> CloudFormationWaiter.builder().client(client).build());
-		Mockito.when(client.describeStacks(DescribeStacksRequest.builder().stackName("foo").build()))
+	void createNewStackChangeSet() throws ExecutionException {
+		TaskListener taskListener = mock(TaskListener.class);
+		when(taskListener.getLogger()).thenReturn(System.out);
+		CloudFormationClient client = mock(CloudFormationClient.class);
+		when(client.waiter()).thenAnswer(invocation -> CloudFormationWaiter.builder().client(client).build());
+		when(client.describeStacks(DescribeStacksRequest.builder().stackName("foo").build()))
 				.thenReturn(DescribeStacksResponse.builder().build());
 
 		CloudFormationStack stack = newCloudFormationStack(client, "foo", taskListener);
@@ -265,82 +274,78 @@ public class CloudformationStackTests {
 		stack.createChangeSet("c1", "templateBody", null, Collections.emptyList(), Collections.emptyList(), Collections.emptyList(), PollConfiguration.DEFAULT, ChangeSetType.CREATE, "myarn", null);
 
 		ArgumentCaptor<CreateChangeSetRequest> captor = ArgumentCaptor.forClass(CreateChangeSetRequest.class);
-		Mockito.verify(client).createChangeSet(captor.capture());
+		verify(client).createChangeSet(captor.capture());
 		Assertions.assertThat(captor.getValue()).isEqualTo(CreateChangeSetRequest.builder().changeSetType(ChangeSetType.CREATE).stackName("foo").templateBody("templateBody").capabilities(Capability.CAPABILITY_IAM, Capability.CAPABILITY_NAMED_IAM, Capability.CAPABILITY_AUTO_EXPAND).parameters(Collections.emptyList()).changeSetName("c1").roleARN("myarn").notificationARNs(Collections.emptyList()).tags(Collections.emptyList()).build()
 		);
-		Mockito.verify(this.eventPrinter).waitAndPrintChangeSetEvents(Mockito.eq("foo"), Mockito.eq("c1"), Mockito.any(), Mockito.eq(PollConfiguration.DEFAULT));
+		verify(this.eventPrinter).waitAndPrintChangeSetEvents(eq("foo"), eq("c1"), any(), eq(PollConfiguration.DEFAULT));
 	}
 
 	@Test
-	public void createNewStackChangeSet_NoSubmittedChanges() throws ExecutionException {
-		TaskListener taskListener = Mockito.mock(TaskListener.class);
-		Mockito.when(taskListener.getLogger()).thenReturn(System.out);
-		CloudFormationClient client = Mockito.mock(CloudFormationClient.class);
-		Mockito.when(client.waiter()).thenAnswer(invocation -> CloudFormationWaiter.builder().client(client).build());
-		Mockito.when(client.describeStacks(Mockito.any(DescribeStacksRequest.class))).thenReturn(DescribeStacksResponse.builder().build());
-		Mockito.when(client.describeChangeSet(Mockito.any(DescribeChangeSetRequest.class))).thenReturn(DescribeChangeSetResponse.builder().status(ChangeSetStatus.FAILED).statusReason("The submitted information didn't contain changes").build()
+	void createNewStackChangeSet_NoSubmittedChanges() throws ExecutionException {
+		TaskListener taskListener = mock(TaskListener.class);
+		when(taskListener.getLogger()).thenReturn(System.out);
+		CloudFormationClient client = mock(CloudFormationClient.class);
+		when(client.waiter()).thenAnswer(invocation -> CloudFormationWaiter.builder().client(client).build());
+		when(client.describeStacks(any(DescribeStacksRequest.class))).thenReturn(DescribeStacksResponse.builder().build());
+		when(client.describeChangeSet(any(DescribeChangeSetRequest.class))).thenReturn(DescribeChangeSetResponse.builder().status(ChangeSetStatus.FAILED).statusReason("The submitted information didn't contain changes").build()
 		);
-		Mockito.doThrow(new ExecutionException(SdkClientException.create("foo")))
+		doThrow(new ExecutionException(SdkClientException.create("foo")))
 				.when(this.eventPrinter)
-						.waitAndPrintChangeSetEvents(Mockito.eq("foo"), Mockito.eq("c1"),
-								Mockito.any(), Mockito.eq(PollConfiguration.DEFAULT));
+						.waitAndPrintChangeSetEvents(eq("foo"), eq("c1"),
+								any(), eq(PollConfiguration.DEFAULT));
 
 		CloudFormationStack stack = newCloudFormationStack(client, "foo", taskListener);
 
 		stack.createChangeSet("c1", "templateBody", null, Collections.emptyList(), Collections.emptyList(), Collections.emptyList(), PollConfiguration.DEFAULT, ChangeSetType.CREATE, "myarn", null);
-		Mockito.verify(this.eventPrinter, Mockito.atLeastOnce()).waitAndPrintChangeSetEvents(any(), any(), Mockito.any(), any());
+		verify(this.eventPrinter, atLeastOnce()).waitAndPrintChangeSetEvents(any(), any(), any(), any());
 	}
 
 	@Test
-	public void createNewStackChangeSet_NoUpdatesToBePerformed() throws ExecutionException {
-		TaskListener taskListener = Mockito.mock(TaskListener.class);
-		Mockito.when(taskListener.getLogger()).thenReturn(System.out);
-		CloudFormationClient client = Mockito.mock(CloudFormationClient.class);
-		Mockito.when(client.waiter()).thenAnswer(invocation -> CloudFormationWaiter.builder().client(client).build());
-		Mockito.when(client.describeStacks(Mockito.any(DescribeStacksRequest.class))).thenReturn(DescribeStacksResponse.builder().build());
-		Mockito.when(client.describeChangeSet(Mockito.any(DescribeChangeSetRequest.class))).thenReturn(DescribeChangeSetResponse.builder().status(ChangeSetStatus.FAILED).statusReason("No updates are to be performed").build()
+	void createNewStackChangeSet_NoUpdatesToBePerformed() throws ExecutionException {
+		TaskListener taskListener = mock(TaskListener.class);
+		when(taskListener.getLogger()).thenReturn(System.out);
+		CloudFormationClient client = mock(CloudFormationClient.class);
+		when(client.waiter()).thenAnswer(invocation -> CloudFormationWaiter.builder().client(client).build());
+		when(client.describeStacks(any(DescribeStacksRequest.class))).thenReturn(DescribeStacksResponse.builder().build());
+		when(client.describeChangeSet(any(DescribeChangeSetRequest.class))).thenReturn(DescribeChangeSetResponse.builder().status(ChangeSetStatus.FAILED).statusReason("No updates are to be performed").build()
 		);
-		Mockito.doThrow(new ExecutionException(SdkClientException.create("foo")))
+		doThrow(new ExecutionException(SdkClientException.create("foo")))
 				.when(this.eventPrinter)
-				.waitAndPrintChangeSetEvents(Mockito.eq("foo"), Mockito.eq("c1"),
-						Mockito.any(), Mockito.eq(PollConfiguration.DEFAULT));
+				.waitAndPrintChangeSetEvents(eq("foo"), eq("c1"),
+						any(), eq(PollConfiguration.DEFAULT));
 
 		CloudFormationStack stack = newCloudFormationStack(client, "foo", taskListener);
 
 		stack.createChangeSet("c1", "templateBody", null, Collections.emptyList(), Collections.emptyList(), Collections.emptyList(), PollConfiguration.DEFAULT, ChangeSetType.CREATE, "myarn", null);
-		Mockito.verify(this.eventPrinter, Mockito.atLeastOnce()).waitAndPrintChangeSetEvents(any(), any(), Mockito.any(), any());
-	}
-
-	@Test(expected = ExecutionException.class)
-	public void createNewStackChangeSet_UnknownWaiterError() throws ExecutionException {
-		TaskListener taskListener = Mockito.mock(TaskListener.class);
-		Mockito.when(taskListener.getLogger()).thenReturn(System.out);
-		CloudFormationClient client = Mockito.mock(CloudFormationClient.class);
-		Mockito.when(client.waiter()).thenAnswer(invocation -> CloudFormationWaiter.builder().client(client).build());
-		Mockito.when(client.describeStacks(Mockito.any(DescribeStacksRequest.class))).thenReturn(DescribeStacksResponse.builder().build());
-		Mockito.when(client.describeChangeSet(Mockito.any(DescribeChangeSetRequest.class))).thenReturn(DescribeChangeSetResponse.builder().status(ChangeSetStatus.FAILED).statusReason("someother failure").build()
-		);
-		Mockito.doThrow(new ExecutionException(SdkClientException.create("foo")))
-				.when(this.eventPrinter)
-				.waitAndPrintChangeSetEvents(Mockito.eq("foo"), Mockito.eq("c1"),
-						Mockito.any(), Mockito.eq(PollConfiguration.DEFAULT));
-
-		CloudFormationStack stack = newCloudFormationStack(client, "foo", taskListener);
-
-		try {
-			stack.createChangeSet("c1", "templateBody", null, Collections.emptyList(), Collections.emptyList(), Collections.emptyList(), PollConfiguration.DEFAULT, ChangeSetType.CREATE, "myarn", null);
-		} finally {
-			Mockito.verify(this.eventPrinter, Mockito.atLeastOnce()).waitAndPrintChangeSetEvents(any(), any(), Mockito.any(), any());
-		}
+		verify(this.eventPrinter, atLeastOnce()).waitAndPrintChangeSetEvents(any(), any(), any(), any());
 	}
 
 	@Test
-	public void updateStackWithStackChangeSet() throws ExecutionException {
-		TaskListener taskListener = Mockito.mock(TaskListener.class);
-		Mockito.when(taskListener.getLogger()).thenReturn(System.out);
-		CloudFormationClient client = Mockito.mock(CloudFormationClient.class);
-		Mockito.when(client.waiter()).thenAnswer(invocation -> CloudFormationWaiter.builder().client(client).build());
-		Mockito.when(client.describeStacks(DescribeStacksRequest.builder().stackName("foo").build()))
+	void createNewStackChangeSet_UnknownWaiterError() throws ExecutionException {
+		TaskListener taskListener = mock(TaskListener.class);
+		when(taskListener.getLogger()).thenReturn(System.out);
+		CloudFormationClient client = mock(CloudFormationClient.class);
+		when(client.waiter()).thenAnswer(invocation -> CloudFormationWaiter.builder().client(client).build());
+		when(client.describeStacks(any(DescribeStacksRequest.class))).thenReturn(DescribeStacksResponse.builder().build());
+		when(client.describeChangeSet(any(DescribeChangeSetRequest.class))).thenReturn(DescribeChangeSetResponse.builder().status(ChangeSetStatus.FAILED).statusReason("someother failure").build()
+			);
+		doThrow(new ExecutionException(SdkClientException.create("foo")))
+					.when(this.eventPrinter)
+					.waitAndPrintChangeSetEvents(eq("foo"), eq("c1"),
+							any(), eq(PollConfiguration.DEFAULT));
+		CloudFormationStack stack = newCloudFormationStack(client, "foo", taskListener);
+		assertThrows(ExecutionException.class, () ->
+				stack.createChangeSet("c1", "templateBody", null, Collections.emptyList(), Collections.emptyList(), Collections.emptyList(), PollConfiguration.DEFAULT, ChangeSetType.CREATE, "myarn", null));
+		verify(this.eventPrinter, atLeastOnce()).waitAndPrintChangeSetEvents(any(), any(), any(), any());
+	}
+
+	@Test
+	void updateStackWithStackChangeSet() throws ExecutionException {
+		TaskListener taskListener = mock(TaskListener.class);
+		when(taskListener.getLogger()).thenReturn(System.out);
+		CloudFormationClient client = mock(CloudFormationClient.class);
+		when(client.waiter()).thenAnswer(invocation -> CloudFormationWaiter.builder().client(client).build());
+		when(client.describeStacks(DescribeStacksRequest.builder().stackName("foo").build()))
 				.thenReturn(DescribeStacksResponse.builder().stacks(Stack.builder().stackStatus("CREATE_COMPLETE").build()).build());
 
 		CloudFormationStack stack = newCloudFormationStack(client, "foo", taskListener);
@@ -348,19 +353,19 @@ public class CloudformationStackTests {
 		stack.createChangeSet("c1", "templateBody", null, Collections.emptyList(), Collections.emptyList(), Collections.emptyList(), PollConfiguration.DEFAULT, ChangeSetType.UPDATE, "myarn", null);
 
 		ArgumentCaptor<CreateChangeSetRequest> captor = ArgumentCaptor.forClass(CreateChangeSetRequest.class);
-		Mockito.verify(client).createChangeSet(captor.capture());
+		verify(client).createChangeSet(captor.capture());
 		Assertions.assertThat(captor.getValue()).isEqualTo(CreateChangeSetRequest.builder().changeSetType(ChangeSetType.UPDATE).stackName("foo").templateBody("templateBody").capabilities(Capability.CAPABILITY_IAM, Capability.CAPABILITY_NAMED_IAM, Capability.CAPABILITY_AUTO_EXPAND).parameters(Collections.emptyList()).changeSetName("c1").roleARN("myarn").notificationARNs(Collections.emptyList()).tags(Collections.emptyList()).build()
 		);
-		Mockito.verify(this.eventPrinter).waitAndPrintChangeSetEvents(Mockito.eq("foo"), Mockito.eq("c1"), Mockito.any(), Mockito.eq(PollConfiguration.DEFAULT));
+		verify(this.eventPrinter).waitAndPrintChangeSetEvents(eq("foo"), eq("c1"), any(), eq(PollConfiguration.DEFAULT));
 	}
 
 	@Test
-	public void createStackWithStackChangeSetReviewInProgress() throws ExecutionException {
-		TaskListener taskListener = Mockito.mock(TaskListener.class);
-		Mockito.when(taskListener.getLogger()).thenReturn(System.out);
-		CloudFormationClient client = Mockito.mock(CloudFormationClient.class);
-		Mockito.when(client.waiter()).thenAnswer(invocation -> CloudFormationWaiter.builder().client(client).build());
-		Mockito.when(client.describeStacks(DescribeStacksRequest.builder().stackName("foo").build()))
+	void createStackWithStackChangeSetReviewInProgress() throws ExecutionException {
+		TaskListener taskListener = mock(TaskListener.class);
+		when(taskListener.getLogger()).thenReturn(System.out);
+		CloudFormationClient client = mock(CloudFormationClient.class);
+		when(client.waiter()).thenAnswer(invocation -> CloudFormationWaiter.builder().client(client).build());
+		when(client.describeStacks(DescribeStacksRequest.builder().stackName("foo").build()))
 				.thenReturn(DescribeStacksResponse.builder().stacks(Stack.builder().stackStatus("REVIEW_IN_PROGRESS").build()).build());
 
 		CloudFormationStack stack = newCloudFormationStack(client, "foo", taskListener);
@@ -368,19 +373,19 @@ public class CloudformationStackTests {
 		stack.createChangeSet("c1", "templateBody", null, Collections.emptyList(), Collections.emptyList(), Collections.emptyList(), PollConfiguration.DEFAULT, ChangeSetType.UPDATE, "myarn", null);
 
 		ArgumentCaptor<CreateChangeSetRequest> captor = ArgumentCaptor.forClass(CreateChangeSetRequest.class);
-		Mockito.verify(client).createChangeSet(captor.capture());
+		verify(client).createChangeSet(captor.capture());
 		Assertions.assertThat(captor.getValue()).isEqualTo(CreateChangeSetRequest.builder().changeSetType(ChangeSetType.CREATE).stackName("foo").templateBody("templateBody").capabilities(Capability.CAPABILITY_IAM, Capability.CAPABILITY_NAMED_IAM, Capability.CAPABILITY_AUTO_EXPAND).parameters(Collections.emptyList()).changeSetName("c1").roleARN("myarn").notificationARNs(Collections.emptyList()).tags(Collections.emptyList()).build()
 		);
-		Mockito.verify(this.eventPrinter).waitAndPrintChangeSetEvents(Mockito.eq("foo"), Mockito.eq("c1"), Mockito.any(), Mockito.eq(PollConfiguration.DEFAULT));
+		verify(this.eventPrinter).waitAndPrintChangeSetEvents(eq("foo"), eq("c1"), any(), eq(PollConfiguration.DEFAULT));
 	}
 
 	@Test
-	public void updateStack() throws ExecutionException {
-		TaskListener taskListener = Mockito.mock(TaskListener.class);
-		Mockito.when(taskListener.getLogger()).thenReturn(System.out);
-		CloudFormationClient client = Mockito.mock(CloudFormationClient.class);
-		Mockito.when(client.waiter()).thenAnswer(invocation -> CloudFormationWaiter.builder().client(client).build());
-		Mockito.when(client.describeStacks(DescribeStacksRequest.builder().stackName("foo").build()))
+	void updateStack() throws ExecutionException {
+		TaskListener taskListener = mock(TaskListener.class);
+		when(taskListener.getLogger()).thenReturn(System.out);
+		CloudFormationClient client = mock(CloudFormationClient.class);
+		when(client.waiter()).thenAnswer(invocation -> CloudFormationWaiter.builder().client(client).build());
+		when(client.describeStacks(DescribeStacksRequest.builder().stackName("foo").build()))
 				.thenReturn(DescribeStacksResponse.builder().stacks(Stack.builder().outputs(Output.builder().outputKey("bar").outputValue("baz").build()).build()).build());
 
 		CloudFormationStack stack = newCloudFormationStack(client, "foo", taskListener);
@@ -389,20 +394,20 @@ public class CloudformationStackTests {
 		Map<String, String> outputs = stack.update("templateBody", null, Collections.emptyList(), Collections.emptyList(), Collections.emptyList(), PollConfiguration.DEFAULT, "myarn", rollbackConfig);
 
 		ArgumentCaptor<UpdateStackRequest> captor = ArgumentCaptor.forClass(UpdateStackRequest.class);
-		Mockito.verify(client).updateStack(captor.capture());
+		verify(client).updateStack(captor.capture());
 		Assertions.assertThat(captor.getValue()).isEqualTo(UpdateStackRequest.builder().stackName("foo").templateBody("templateBody").capabilities(Capability.CAPABILITY_IAM, Capability.CAPABILITY_NAMED_IAM, Capability.CAPABILITY_AUTO_EXPAND).parameters(Collections.emptyList()).roleARN("myarn").rollbackConfiguration(rollbackConfig).build()
 		);
-		Mockito.verify(this.eventPrinter).waitAndPrintStackEvents(Mockito.eq("foo"), Mockito.any(), Mockito.eq(PollConfiguration.DEFAULT));
+		verify(this.eventPrinter).waitAndPrintStackEvents(eq("foo"), any(), eq(PollConfiguration.DEFAULT));
 		Assertions.assertThat(outputs).containsEntry("bar", "baz").containsEntry("jenkinsStackUpdateStatus", "true");
 	}
 
 	@Test
-	public void updateStackWithTemplateUrl() throws ExecutionException {
-		TaskListener taskListener = Mockito.mock(TaskListener.class);
-		Mockito.when(taskListener.getLogger()).thenReturn(System.out);
-		CloudFormationClient client = Mockito.mock(CloudFormationClient.class);
-		Mockito.when(client.waiter()).thenAnswer(invocation -> CloudFormationWaiter.builder().client(client).build());
-		Mockito.when(client.describeStacks(DescribeStacksRequest.builder().stackName("foo").build()))
+	void updateStackWithTemplateUrl() throws ExecutionException {
+		TaskListener taskListener = mock(TaskListener.class);
+		when(taskListener.getLogger()).thenReturn(System.out);
+		CloudFormationClient client = mock(CloudFormationClient.class);
+		when(client.waiter()).thenAnswer(invocation -> CloudFormationWaiter.builder().client(client).build());
+		when(client.describeStacks(DescribeStacksRequest.builder().stackName("foo").build()))
 				.thenReturn(DescribeStacksResponse.builder().stacks(Stack.builder().outputs(Output.builder().outputKey("bar").outputValue("baz").build()).build()).build());
 
 		CloudFormationStack stack = newCloudFormationStack(client, "foo", taskListener);
@@ -411,20 +416,20 @@ public class CloudformationStackTests {
 		Map<String, String> outputs = stack.update(null, "bar", Collections.emptyList(), Collections.emptyList(), Collections.emptyList(), PollConfiguration.DEFAULT, "myarn", rollbackConfig);
 
 		ArgumentCaptor<UpdateStackRequest> captor = ArgumentCaptor.forClass(UpdateStackRequest.class);
-		Mockito.verify(client).updateStack(captor.capture());
+		verify(client).updateStack(captor.capture());
 		Assertions.assertThat(captor.getValue()).isEqualTo(UpdateStackRequest.builder().stackName("foo").templateURL("bar").capabilities(Capability.CAPABILITY_IAM, Capability.CAPABILITY_NAMED_IAM, Capability.CAPABILITY_AUTO_EXPAND).parameters(Collections.emptyList()).roleARN("myarn").rollbackConfiguration(rollbackConfig).build()
 		);
-		Mockito.verify(this.eventPrinter).waitAndPrintStackEvents(Mockito.eq("foo"), Mockito.any(), Mockito.eq(PollConfiguration.DEFAULT));
+		verify(this.eventPrinter).waitAndPrintStackEvents(eq("foo"), any(), eq(PollConfiguration.DEFAULT));
 		Assertions.assertThat(outputs).containsEntry("bar", "baz").containsEntry("jenkinsStackUpdateStatus", "true");
 	}
 
 	@Test
-	public void updateStackWithPreviousTemplate() throws ExecutionException {
-		TaskListener taskListener = Mockito.mock(TaskListener.class);
-		Mockito.when(taskListener.getLogger()).thenReturn(System.out);
-		CloudFormationClient client = Mockito.mock(CloudFormationClient.class);
-		Mockito.when(client.waiter()).thenAnswer(invocation -> CloudFormationWaiter.builder().client(client).build());
-		Mockito.when(client.describeStacks(DescribeStacksRequest.builder().stackName("foo").build()))
+	void updateStackWithPreviousTemplate() throws ExecutionException {
+		TaskListener taskListener = mock(TaskListener.class);
+		when(taskListener.getLogger()).thenReturn(System.out);
+		CloudFormationClient client = mock(CloudFormationClient.class);
+		when(client.waiter()).thenAnswer(invocation -> CloudFormationWaiter.builder().client(client).build());
+		when(client.describeStacks(DescribeStacksRequest.builder().stackName("foo").build()))
 				.thenReturn(DescribeStacksResponse.builder().stacks(Stack.builder().outputs(Output.builder().outputKey("bar").outputValue("baz").build()).build()).build());
 
 		CloudFormationStack stack = newCloudFormationStack(client, "foo", taskListener);
@@ -433,20 +438,20 @@ public class CloudformationStackTests {
 		Map<String, String> outputs = stack.update(null, null, Collections.emptyList(), Collections.emptyList(), Collections.emptyList(), PollConfiguration.DEFAULT, "myarn", rollbackConfig);
 
 		ArgumentCaptor<UpdateStackRequest> captor = ArgumentCaptor.forClass(UpdateStackRequest.class);
-		Mockito.verify(client).updateStack(captor.capture());
+		verify(client).updateStack(captor.capture());
 		Assertions.assertThat(captor.getValue()).isEqualTo(UpdateStackRequest.builder().stackName("foo").usePreviousTemplate(true).capabilities(Capability.CAPABILITY_IAM, Capability.CAPABILITY_NAMED_IAM, Capability.CAPABILITY_AUTO_EXPAND).parameters(Collections.emptyList()).roleARN("myarn").rollbackConfiguration(rollbackConfig).build()
 		);
-		Mockito.verify(this.eventPrinter).waitAndPrintStackEvents(Mockito.eq("foo"), Mockito.any(), Mockito.eq(PollConfiguration.DEFAULT));
+		verify(this.eventPrinter).waitAndPrintStackEvents(eq("foo"), any(), eq(PollConfiguration.DEFAULT));
 		Assertions.assertThat(outputs).containsEntry("bar", "baz").containsEntry("jenkinsStackUpdateStatus", "true");
 	}
 
 	@Test
-	public void createStack() throws ExecutionException {
-		TaskListener taskListener = Mockito.mock(TaskListener.class);
-		Mockito.when(taskListener.getLogger()).thenReturn(System.out);
-		CloudFormationClient client = Mockito.mock(CloudFormationClient.class);
-		Mockito.when(client.waiter()).thenAnswer(invocation -> CloudFormationWaiter.builder().client(client).build());
-		Mockito.when(client.describeStacks(DescribeStacksRequest.builder().stackName("foo").build()))
+	void createStack() throws ExecutionException {
+		TaskListener taskListener = mock(TaskListener.class);
+		when(taskListener.getLogger()).thenReturn(System.out);
+		CloudFormationClient client = mock(CloudFormationClient.class);
+		when(client.waiter()).thenAnswer(invocation -> CloudFormationWaiter.builder().client(client).build());
+		when(client.describeStacks(DescribeStacksRequest.builder().stackName("foo").build()))
 				.thenReturn(DescribeStacksResponse.builder().stacks(Stack.builder().outputs(Output.builder().outputKey("bar").outputValue("baz").build()).build()).build());
 
 		CloudFormationStack stack = newCloudFormationStack(client, "foo", taskListener);
@@ -454,20 +459,20 @@ public class CloudformationStackTests {
 		Map<String, String> outputs = stack.create("templateBody", null, Collections.emptyList(), Collections.emptyList(), Collections.emptyList(), PollConfiguration.DEFAULT, "myarn", OnFailure.DO_NOTHING.toString(), null);
 
 		ArgumentCaptor<CreateStackRequest> captor = ArgumentCaptor.forClass(CreateStackRequest.class);
-		Mockito.verify(client).createStack(captor.capture());
+		verify(client).createStack(captor.capture());
 		Assertions.assertThat(captor.getValue()).isEqualTo(CreateStackRequest.builder().stackName("foo").templateBody("templateBody").capabilities(Capability.CAPABILITY_IAM, Capability.CAPABILITY_NAMED_IAM, Capability.CAPABILITY_AUTO_EXPAND).parameters(Collections.emptyList()).timeoutInMinutes((int) PollConfiguration.DEFAULT.getTimeout().toMinutes()).onFailure(OnFailure.DO_NOTHING).roleARN("myarn").notificationARNs(Collections.emptyList()).tags(Collections.emptyList()).build()
 		);
-		Mockito.verify(this.eventPrinter).waitAndPrintStackEvents(Mockito.eq("foo"), Mockito.any(), Mockito.eq(PollConfiguration.DEFAULT));
+		verify(this.eventPrinter).waitAndPrintStackEvents(eq("foo"), any(), eq(PollConfiguration.DEFAULT));
 		Assertions.assertThat(outputs).containsEntry("bar", "baz").containsEntry("jenkinsStackUpdateStatus", "true");
 	}
 
 	@Test
-	public void createStackWithTemplateUrl() throws ExecutionException {
-		TaskListener taskListener = Mockito.mock(TaskListener.class);
-		Mockito.when(taskListener.getLogger()).thenReturn(System.out);
-		CloudFormationClient client = Mockito.mock(CloudFormationClient.class);
-		Mockito.when(client.waiter()).thenAnswer(invocation -> CloudFormationWaiter.builder().client(client).build());
-		Mockito.when(client.describeStacks(DescribeStacksRequest.builder().stackName("foo").build()))
+	void createStackWithTemplateUrl() throws ExecutionException {
+		TaskListener taskListener = mock(TaskListener.class);
+		when(taskListener.getLogger()).thenReturn(System.out);
+		CloudFormationClient client = mock(CloudFormationClient.class);
+		when(client.waiter()).thenAnswer(invocation -> CloudFormationWaiter.builder().client(client).build());
+		when(client.describeStacks(DescribeStacksRequest.builder().stackName("foo").build()))
 				.thenReturn(DescribeStacksResponse.builder().stacks(Stack.builder().outputs(Output.builder().outputKey("bar").outputValue("baz").build()).build()).build());
 
 		CloudFormationStack stack = newCloudFormationStack(client, "foo", taskListener);
@@ -479,84 +484,82 @@ public class CloudformationStackTests {
 		Map<String, String> outputs = stack.create(null, "bar", Collections.emptyList(), Collections.emptyList(), Collections.emptyList(), pollConfiguration, "myarn", OnFailure.DO_NOTHING.toString(), true);
 
 		ArgumentCaptor<CreateStackRequest> captor = ArgumentCaptor.forClass(CreateStackRequest.class);
-		Mockito.verify(client).createStack(captor.capture());
+		verify(client).createStack(captor.capture());
 		Assertions.assertThat(captor.getValue()).isEqualTo(CreateStackRequest.builder().stackName("foo").enableTerminationProtection(true).templateURL("bar").capabilities(Capability.CAPABILITY_IAM, Capability.CAPABILITY_NAMED_IAM, Capability.CAPABILITY_AUTO_EXPAND).parameters(Collections.emptyList()).timeoutInMinutes(3).onFailure(OnFailure.DO_NOTHING).roleARN("myarn").notificationARNs(Collections.emptyList()).tags(Collections.emptyList()).build()
 		);
-		Mockito.verify(this.eventPrinter).waitAndPrintStackEvents(Mockito.eq("foo"), Mockito.any(), Mockito.eq(pollConfiguration));
+		verify(this.eventPrinter).waitAndPrintStackEvents(eq("foo"), any(), eq(pollConfiguration));
 		Assertions.assertThat(outputs).containsEntry("bar", "baz").containsEntry("jenkinsStackUpdateStatus", "true");
 	}
 
-	@Test(expected = IllegalArgumentException.class)
-	public void createStackWithNoTemplate() throws ExecutionException {
-		CloudFormationClient client = Mockito.mock(CloudFormationClient.class);
-		try {
-			TaskListener taskListener = Mockito.mock(TaskListener.class);
-			Mockito.when(client.waiter()).thenAnswer(invocation -> CloudFormationWaiter.builder().client(client).build());
+	@Test
+	void createStackWithNoTemplate() {
+		CloudFormationClient client = mock(CloudFormationClient.class);
 
-			CloudFormationStack stack = newCloudFormationStack(client, "foo", taskListener);
+		TaskListener taskListener = mock(TaskListener.class);
+		when(client.waiter()).thenAnswer(invocation -> CloudFormationWaiter.builder().client(client).build());
 
-			stack.create(null, null, Collections.emptyList(), Collections.emptyList(), Collections.emptyList(), PollConfiguration.DEFAULT, "myarn", OnFailure.ROLLBACK.toString(), null);
-		} finally {
-			Mockito.verifyNoInteractions(client);
-		}
+		CloudFormationStack stack = newCloudFormationStack(client, "foo", taskListener);
+
+		assertThrows(IllegalArgumentException.class, () -> stack.create(null, null, Collections.emptyList(), Collections.emptyList(), Collections.emptyList(), PollConfiguration.DEFAULT, "myarn", OnFailure.ROLLBACK.toString(), null));
+		verifyNoInteractions(client);
 	}
 
 	@Test
-	public void deleteStack() throws ExecutionException {
-		TaskListener taskListener = Mockito.mock(TaskListener.class);
-		Mockito.when(taskListener.getLogger()).thenReturn(System.out);
-		CloudFormationClient client = Mockito.mock(CloudFormationClient.class);
-		Mockito.when(client.waiter()).thenAnswer(invocation -> CloudFormationWaiter.builder().client(client).build());
-		Mockito.when(client.describeStackEvents(Mockito.any(DescribeStackEventsRequest.class))).thenReturn(DescribeStackEventsResponse.builder().build());
-		Mockito.when(client.describeStacks(Mockito.any(DescribeStacksRequest.class))).thenReturn(DescribeStacksResponse.builder().build());
+	void deleteStack() throws ExecutionException {
+		TaskListener taskListener = mock(TaskListener.class);
+		when(taskListener.getLogger()).thenReturn(System.out);
+		CloudFormationClient client = mock(CloudFormationClient.class);
+		when(client.waiter()).thenAnswer(invocation -> CloudFormationWaiter.builder().client(client).build());
+		when(client.describeStackEvents(any(DescribeStackEventsRequest.class))).thenReturn(DescribeStackEventsResponse.builder().build());
+		when(client.describeStacks(any(DescribeStacksRequest.class))).thenReturn(DescribeStacksResponse.builder().build());
 
 		CloudFormationStack stack = newCloudFormationStack(client, "foo", taskListener);
 
 		stack.delete(PollConfiguration.DEFAULT, new String[]{"myresourcetoretain"}, "myarn", "myclientrequesttoken");
 
 		ArgumentCaptor<DeleteStackRequest> captor = ArgumentCaptor.forClass(DeleteStackRequest.class);
-		Mockito.verify(client).deleteStack(captor.capture());
+		verify(client).deleteStack(captor.capture());
 		Assertions.assertThat(captor.getValue()).isEqualTo(DeleteStackRequest.builder().stackName("foo").clientRequestToken("myclientrequesttoken").roleARN("myarn").retainResources("myresourcetoretain").build()
 
 		);
-		Mockito.verify(this.eventPrinter).waitAndPrintStackEvents(Mockito.eq("foo"), Mockito.any(), Mockito.eq(PollConfiguration.DEFAULT));
+		verify(this.eventPrinter).waitAndPrintStackEvents(eq("foo"), any(), eq(PollConfiguration.DEFAULT));
 	}
 
 	@Test
-	public void deleteStackByStackNameOnly() throws ExecutionException {
-		TaskListener taskListener = Mockito.mock(TaskListener.class);
-		Mockito.when(taskListener.getLogger()).thenReturn(System.out);
-		CloudFormationClient client = Mockito.mock(CloudFormationClient.class);
-		Mockito.when(client.waiter()).thenAnswer(invocation -> CloudFormationWaiter.builder().client(client).build());
+	void deleteStackByStackNameOnly() throws ExecutionException {
+		TaskListener taskListener = mock(TaskListener.class);
+		when(taskListener.getLogger()).thenReturn(System.out);
+		CloudFormationClient client = mock(CloudFormationClient.class);
+		when(client.waiter()).thenAnswer(invocation -> CloudFormationWaiter.builder().client(client).build());
 
 		CloudFormationStack stack = newCloudFormationStack(client, "foo", taskListener);
 
 		stack.delete(PollConfiguration.DEFAULT, null, null, null);
 
 		ArgumentCaptor<DeleteStackRequest> captor = ArgumentCaptor.forClass(DeleteStackRequest.class);
-		Mockito.verify(client).deleteStack(captor.capture());
+		verify(client).deleteStack(captor.capture());
 		Assertions.assertThat(captor.getValue()).isEqualTo(DeleteStackRequest.builder().stackName("foo").build()
 
 		);
-		Mockito.verify(this.eventPrinter).waitAndPrintStackEvents(Mockito.eq("foo"), Mockito.any(), Mockito.eq(PollConfiguration.DEFAULT));
+		verify(this.eventPrinter).waitAndPrintStackEvents(eq("foo"), any(), eq(PollConfiguration.DEFAULT));
 	}
 
 	@Test
-	public void describeChangeSet() {
-		TaskListener taskListener = Mockito.mock(TaskListener.class);
-		Mockito.when(taskListener.getLogger()).thenReturn(System.out);
-		CloudFormationClient client = Mockito.mock(CloudFormationClient.class);
+	void describeChangeSet() {
+		TaskListener taskListener = mock(TaskListener.class);
+		when(taskListener.getLogger()).thenReturn(System.out);
+		CloudFormationClient client = mock(CloudFormationClient.class);
 		DescribeChangeSetResponse expected = DescribeChangeSetResponse.builder().changes(
 						Change.builder().build()
 				).build();
-		Mockito.when(client.describeChangeSet(any(DescribeChangeSetRequest.class))).thenReturn(expected);
+		when(client.describeChangeSet(any(DescribeChangeSetRequest.class))).thenReturn(expected);
 
 		CloudFormationStack stack = newCloudFormationStack(client, "foo", taskListener);
 		DescribeChangeSetResponse result = stack.describeChangeSet("bar");
 		Assertions.assertThat(result).isSameAs(expected);
 
 		ArgumentCaptor<DescribeChangeSetRequest> captor = ArgumentCaptor.forClass(DescribeChangeSetRequest.class);
-		Mockito.verify(client).describeChangeSet(captor.capture());
+		verify(client).describeChangeSet(captor.capture());
 		Assertions.assertThat(captor.getValue()).isEqualTo(DescribeChangeSetRequest.builder().stackName("foo").changeSetName("bar").build()
 		);
 	}

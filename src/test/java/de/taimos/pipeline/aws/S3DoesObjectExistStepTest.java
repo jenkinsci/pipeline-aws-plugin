@@ -21,14 +21,16 @@
 
 package de.taimos.pipeline.aws;
 
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-public class S3DoesObjectExistStepTest {
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
+class S3DoesObjectExistStepTest {
+
 	@Test
-	public void gettersWorkAsExpected() throws Exception {
+	void gettersWorkAsExpected() {
 		S3DoesObjectExistStep step = new S3DoesObjectExistStep("my-bucket", "my-object", false, false);
-		Assert.assertEquals("my-bucket", step.getBucket());
-		Assert.assertEquals("my-object", step.getPath());
+		assertEquals("my-bucket", step.getBucket());
+		assertEquals("my-object", step.getPath());
 	}
 }

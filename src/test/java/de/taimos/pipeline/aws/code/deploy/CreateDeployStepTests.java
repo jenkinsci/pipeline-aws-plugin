@@ -26,13 +26,12 @@ import hudson.model.Result;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
 import org.jenkinsci.plugins.workflow.job.WorkflowRun;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.jvnet.hudson.test.JenkinsRule;
+import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
 import org.mockito.ArgumentCaptor;
-import org.mockito.Mockito;
 import software.amazon.awssdk.services.codedeploy.CodeDeployClient;
 import software.amazon.awssdk.services.codedeploy.model.CreateDeploymentRequest;
 import software.amazon.awssdk.services.codedeploy.model.CreateDeploymentResponse;
@@ -46,27 +45,33 @@ import software.amazon.awssdk.services.codedeploy.model.GetDeploymentGroupRespon
 import software.amazon.awssdk.services.codedeploy.model.RevisionLocationType;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
-public class CreateDeployStepTests {
+@WithJenkins
+class CreateDeployStepTests {
 
-	@Rule
-	public JenkinsRule jenkinsRule = new JenkinsRule();
+	private JenkinsRule jenkinsRule;
 	private CodeDeployClient codeDeploy;
 
-	@Before
-	public void setupSdk() throws Exception {
-		this.codeDeploy = Mockito.mock(CodeDeployClient.class);
-		Mockito.when(this.codeDeploy.createDeployment(Mockito.any(CreateDeploymentRequest.class)))
+	@BeforeEach
+	void setupSdk(JenkinsRule rule) {
+		this.jenkinsRule = rule;
+		this.codeDeploy = mock(CodeDeployClient.class);
+		when(this.codeDeploy.createDeployment(any(CreateDeploymentRequest.class)))
 				.thenReturn(CreateDeploymentResponse.builder().deploymentId("d-1").build());
-		Mockito.when(this.codeDeploy.getDeploymentGroup(Mockito.any(GetDeploymentGroupRequest.class)))
+		when(this.codeDeploy.getDeploymentGroup(any(GetDeploymentGroupRequest.class)))
 				.thenReturn(GetDeploymentGroupResponse.builder()
 						.deploymentGroupInfo(DeploymentGroupInfo.builder().computePlatform("Server").build())
 						.build());
-		AWSClientFactory.setFactoryDelegate((x) -> this.codeDeploy);
+		AWSClientFactory.setFactoryDelegate(x -> this.codeDeploy);
 	}
 
-	@After
-	public void tearDownSdk() throws Exception {
+	@AfterEach
+	void tearDownSdk() {
 		AWSClientFactory.setFactoryDelegate(null);
 	}
 
@@ -81,13 +86,13 @@ public class CreateDeployStepTests {
 	}
 
 	@Test
-	public void buildsAnS3RevisionRequest() throws Exception {
+	void buildsAnS3RevisionRequest() throws Exception {
 		this.run("deployTestS3",
 				"applicationName: 'app', deploymentGroupName: 'group', s3Bucket: 'b', s3Key: 'k', s3BundleType: 'zip'",
 				Result.SUCCESS);
 
 		ArgumentCaptor<CreateDeploymentRequest> captor = ArgumentCaptor.forClass(CreateDeploymentRequest.class);
-		Mockito.verify(this.codeDeploy).createDeployment(captor.capture());
+		verify(this.codeDeploy).createDeployment(captor.capture());
 		CreateDeploymentRequest request = captor.getValue();
 		assertThat(request.applicationName()).isEqualTo("app");
 		assertThat(request.deploymentGroupName()).isEqualTo("group");
@@ -98,13 +103,13 @@ public class CreateDeployStepTests {
 	}
 
 	@Test
-	public void buildsAGitHubRevisionRequest() throws Exception {
+	void buildsAGitHubRevisionRequest() throws Exception {
 		this.run("deployTestGitHub",
 				"applicationName: 'app', deploymentGroupName: 'group', gitHubRepository: 'org/repo', gitHubCommitId: 'abc123'",
 				Result.SUCCESS);
 
 		ArgumentCaptor<CreateDeploymentRequest> captor = ArgumentCaptor.forClass(CreateDeploymentRequest.class);
-		Mockito.verify(this.codeDeploy).createDeployment(captor.capture());
+		verify(this.codeDeploy).createDeployment(captor.capture());
 		assertThat(captor.getValue().revision().revisionType()).isEqualTo(RevisionLocationType.GIT_HUB);
 		assertThat(captor.getValue().revision().gitHubLocation().repository()).isEqualTo("org/repo");
 		assertThat(captor.getValue().revision().gitHubLocation().commitId()).isEqualTo("abc123");
@@ -115,17 +120,17 @@ public class CreateDeployStepTests {
 	 * NullPointerException for every pipeline that omitted it.
 	 */
 	@Test
-	public void omittingWaitForCompletionDoesNotPoll() throws Exception {
+	void omittingWaitForCompletionDoesNotPoll() throws Exception {
 		this.run("deployTestNoWait",
 				"applicationName: 'app', deploymentGroupName: 'group', s3Bucket: 'b', s3Key: 'k', s3BundleType: 'zip'",
 				Result.SUCCESS);
 
-		Mockito.verify(this.codeDeploy, Mockito.never()).getDeployment(Mockito.any(GetDeploymentRequest.class));
+		verify(this.codeDeploy, never()).getDeployment(any(GetDeploymentRequest.class));
 	}
 
 	@Test
-	public void waitForCompletionPollsUntilTheDeploymentSucceeds() throws Exception {
-		Mockito.when(this.codeDeploy.getDeployment(Mockito.any(GetDeploymentRequest.class)))
+	void waitForCompletionPollsUntilTheDeploymentSucceeds() throws Exception {
+		when(this.codeDeploy.getDeployment(any(GetDeploymentRequest.class)))
 				.thenReturn(GetDeploymentResponse.builder()
 						.deploymentInfo(DeploymentInfo.builder().status("Succeeded").build())
 						.build());
@@ -134,7 +139,7 @@ public class CreateDeployStepTests {
 				"applicationName: 'app', deploymentGroupName: 'group', s3Bucket: 'b', s3Key: 'k', s3BundleType: 'zip', waitForCompletion: true",
 				Result.SUCCESS);
 
-		Mockito.verify(this.codeDeploy).getDeployment(GetDeploymentRequest.builder().deploymentId("d-1").build());
+		verify(this.codeDeploy).getDeployment(GetDeploymentRequest.builder().deploymentId("d-1").build());
 	}
 
 	/**
@@ -143,13 +148,13 @@ public class CreateDeployStepTests {
 	 * fail there with an opaque message after the deployment call is already in flight.
 	 */
 	@Test
-	public void rejectsAnUnknownFileExistsBehavior() throws Exception {
+	void rejectsAnUnknownFileExistsBehavior() throws Exception {
 		WorkflowRun run = this.run("deployTestBadBehavior",
 				"applicationName: 'app', deploymentGroupName: 'group', s3Bucket: 'b', s3Key: 'k', s3BundleType: 'zip', fileExistsBehavior: 'OVERWRTIE'",
 				Result.FAILURE);
 
 		this.jenkinsRule.assertLogContains("OVERWRTIE", run);
-		Mockito.verify(this.codeDeploy, Mockito.never()).createDeployment(Mockito.any(CreateDeploymentRequest.class));
+		verify(this.codeDeploy, never()).createDeployment(any(CreateDeploymentRequest.class));
 	}
 
 	/**
@@ -157,8 +162,8 @@ public class CreateDeployStepTests {
 	 * of whether the deployment group turns out to be ECS.
 	 */
 	@Test
-	public void rejectsAnUnknownFileExistsBehaviorForEcsDeploymentsToo() throws Exception {
-		Mockito.when(this.codeDeploy.getDeploymentGroup(Mockito.any(GetDeploymentGroupRequest.class)))
+	void rejectsAnUnknownFileExistsBehaviorForEcsDeploymentsToo() throws Exception {
+		when(this.codeDeploy.getDeploymentGroup(any(GetDeploymentGroupRequest.class)))
 				.thenReturn(GetDeploymentGroupResponse.builder()
 						.deploymentGroupInfo(DeploymentGroupInfo.builder().computePlatform("ECS").build())
 						.build());
@@ -168,15 +173,15 @@ public class CreateDeployStepTests {
 				Result.FAILURE);
 
 		this.jenkinsRule.assertLogContains("OVERWRTIE", run);
-		Mockito.verify(this.codeDeploy, Mockito.never()).createDeployment(Mockito.any(CreateDeploymentRequest.class));
+		verify(this.codeDeploy, never()).createDeployment(any(CreateDeploymentRequest.class));
 	}
 
 	/**
 	 * ECS and Lambda deployments must not carry fileExistsBehavior at all.
 	 */
 	@Test
-	public void omitsFileExistsBehaviorForEcsDeployments() throws Exception {
-		Mockito.when(this.codeDeploy.getDeploymentGroup(Mockito.any(GetDeploymentGroupRequest.class)))
+	void omitsFileExistsBehaviorForEcsDeployments() throws Exception {
+		when(this.codeDeploy.getDeploymentGroup(any(GetDeploymentGroupRequest.class)))
 				.thenReturn(GetDeploymentGroupResponse.builder()
 						.deploymentGroupInfo(DeploymentGroupInfo.builder().computePlatform("ECS").build())
 						.build());
@@ -186,7 +191,7 @@ public class CreateDeployStepTests {
 				Result.SUCCESS);
 
 		ArgumentCaptor<CreateDeploymentRequest> captor = ArgumentCaptor.forClass(CreateDeploymentRequest.class);
-		Mockito.verify(this.codeDeploy).createDeployment(captor.capture());
+		verify(this.codeDeploy).createDeployment(captor.capture());
 		assertThat(captor.getValue().fileExistsBehavior()).isNull();
 	}
 }

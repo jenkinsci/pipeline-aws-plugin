@@ -23,18 +23,18 @@ package utils;
 import java.io.ByteArrayOutputStream;
 import java.io.ObjectOutputStream;
 
-import org.junit.Test;
-
 import de.taimos.pipeline.aws.utils.JsonUtils;
+import org.junit.jupiter.api.Test;
 
-public class JsonUtilsTest {
-	
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+
+class JsonUtilsTest {
+
 	@Test
-	public void jsonObjectShouldBeSerializable() throws Exception {	
+	void jsonObjectShouldBeSerializable() {
 		Object result = JsonUtils.fromString("{}");
-		
-		new ObjectOutputStream(new ByteArrayOutputStream()).writeObject(result);
+
 		// no exception -> ok
+		assertDoesNotThrow(() -> new ObjectOutputStream(new ByteArrayOutputStream()).writeObject(result));
 	}
-	
 }

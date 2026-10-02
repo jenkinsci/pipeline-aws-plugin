@@ -1,90 +1,101 @@
 package de.taimos.pipeline.aws.cloudformation;
 
+import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
 import software.amazon.awssdk.services.cloudformation.CloudFormationClient;
 import de.taimos.pipeline.aws.AWSClientFactory;
 import de.taimos.pipeline.aws.AWSUtilFactory;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.jvnet.hudson.test.JenkinsRule;
-import org.mockito.Mockito;
 
 import java.util.Collections;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyCollection;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.nullable;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
-public class CFNUpdateStackTests {
+@WithJenkins
+class CFNUpdateStackTests {
 
-	@Rule
-	public JenkinsRule jenkinsRule = new JenkinsRule();
+	private JenkinsRule jenkinsRule;
 	private CloudFormationStack stack;
 	private CloudFormationClient cloudFormation;
 
-	@Before
-	public void setupSdk() throws Exception {
-		this.stack = Mockito.mock(CloudFormationStack.class);
-		this.cloudFormation = Mockito.mock(CloudFormationClient.class);
-		AWSClientFactory.setFactoryDelegate((x) -> this.cloudFormation);
+	@BeforeEach
+	void setupSdk(JenkinsRule rule) {
+		this.jenkinsRule = rule;
+		this.stack = mock(CloudFormationStack.class);
+		this.cloudFormation = mock(CloudFormationClient.class);
+		AWSClientFactory.setFactoryDelegate(x -> this.cloudFormation);
 		AWSUtilFactory.setStackSupplier(s -> {
 			assertEquals("foo", s);
 			return stack;
 		});
 	}
 
-	@After
-	public void tearDownSdk() {
+	@AfterEach
+	void tearDownSdk() {
 		AWSClientFactory.setFactoryDelegate(null);
 		AWSUtilFactory.setStackSupplier(null);
 	}
 
 	@Test
-	public void createNonExistantStack() throws Exception {
+	void createNonExistantStack() throws Exception {
 		WorkflowJob job = this.jenkinsRule.jenkins.createProject(WorkflowJob.class, "testStepWithGlobalCredentials");
-		Mockito.when(this.stack.exists()).thenReturn(false);
-		Mockito.when(this.stack.describeOutputs()).thenReturn(Collections.singletonMap("foo", "bar"));
-		job.setDefinition(new CpsFlowDefinition(""
-														+ "node {\n"
-														+ "  cfnUpdate(stack: 'foo')"
-														+ "}\n", true)
+		when(this.stack.exists()).thenReturn(false);
+		when(this.stack.describeOutputs()).thenReturn(Collections.singletonMap("foo", "bar"));
+		job.setDefinition(new CpsFlowDefinition("""
+                node {
+                  cfnUpdate(stack: 'foo')
+                }
+                """, true)
 		);
 		this.jenkinsRule.assertBuildStatusSuccess(job.scheduleBuild2(0));
 
-		Mockito.verify(this.stack).create(nullable(String.class), nullable(String.class), Mockito.anyCollection(),
-				Mockito.anyCollection(), Mockito.anyCollection(), Mockito.any(), nullable(String.class), Mockito.anyString(), nullable(Boolean.class));
+		verify(this.stack).create(nullable(String.class), nullable(String.class), anyCollection(),
+				anyCollection(), anyCollection(), any(), nullable(String.class), anyString(), nullable(Boolean.class));
 	}
 
 	@Test
-	public void updateExistantStack() throws Exception {
+	void updateExistantStack() throws Exception {
 		WorkflowJob job = this.jenkinsRule.jenkins.createProject(WorkflowJob.class, "cfnTest");
-		Mockito.when(this.stack.exists()).thenReturn(true);
-		Mockito.when(this.stack.describeOutputs()).thenReturn(Collections.singletonMap("foo", "bar"));
-		job.setDefinition(new CpsFlowDefinition(""
-														+ "node {\n"
-														+ "  cfnUpdate(stack: 'foo')"
-														+ "}\n", true)
+		when(this.stack.exists()).thenReturn(true);
+		when(this.stack.describeOutputs()).thenReturn(Collections.singletonMap("foo", "bar"));
+		job.setDefinition(new CpsFlowDefinition("""
+                node {
+                  cfnUpdate(stack: 'foo')
+                }
+                """, true)
 		);
 		this.jenkinsRule.assertBuildStatusSuccess(job.scheduleBuild2(0));
 
-		Mockito.verify(this.stack).update(nullable(String.class), nullable(String.class), Mockito.anyCollection(),
-				Mockito.anyCollection(), Mockito.anyCollection(), Mockito.any(), nullable(String.class), Mockito.any());
+		verify(this.stack).update(nullable(String.class), nullable(String.class), anyCollection(),
+				anyCollection(), anyCollection(), any(), nullable(String.class), any());
 	}
 
 	@Test
-	public void doNotCreateNonExistantStack() throws Exception {
+	void doNotCreateNonExistantStack() throws Exception {
 		WorkflowJob job = this.jenkinsRule.jenkins.createProject(WorkflowJob.class, "cfnTest");
-		Mockito.when(this.stack.exists()).thenReturn(false);
-		Mockito.when(this.stack.describeOutputs()).thenReturn(Collections.singletonMap("foo", "bar"));
-		job.setDefinition(new CpsFlowDefinition(""
-														+ "node {\n"
-														+ "  cfnUpdate(stack: 'foo', create: false)"
-														+ "}\n", true)
+		when(this.stack.exists()).thenReturn(false);
+		when(this.stack.describeOutputs()).thenReturn(Collections.singletonMap("foo", "bar"));
+		job.setDefinition(new CpsFlowDefinition("""
+                node {
+                  cfnUpdate(stack: 'foo', create: false)
+                }
+                """, true)
 		);
 		this.jenkinsRule.assertBuildStatusSuccess(job.scheduleBuild2(0));
 
-		Mockito.verify(this.stack, Mockito.never()).create(Mockito.anyString(), Mockito.anyString(), Mockito.anyCollection(), Mockito.anyCollection(), Mockito.anyCollection(), Mockito.any(), Mockito.anyString(), Mockito.anyString(), Mockito.anyBoolean());
+		verify(this.stack, never()).create(anyString(), anyString(), anyCollection(), anyCollection(), anyCollection(), any(), anyString(), anyString(), anyBoolean());
 	}
 }

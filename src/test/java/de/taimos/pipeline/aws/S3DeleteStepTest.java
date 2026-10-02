@@ -21,14 +21,16 @@
 
 package de.taimos.pipeline.aws;
 
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-public class S3DeleteStepTest {
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
+class S3DeleteStepTest {
+
 	@Test
-	public void gettersWorkAsExpected() throws Exception {
+	void gettersWorkAsExpected() {
 		S3DeleteStep step = new S3DeleteStep("my-bucket", "my-path", false, false);
-		Assert.assertEquals("my-bucket", step.getBucket());
-		Assert.assertEquals("my-path", step.getPath());
+		assertEquals("my-bucket", step.getBucket());
+		assertEquals("my-path", step.getPath());
 	}
 }

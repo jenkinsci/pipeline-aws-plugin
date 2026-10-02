@@ -1,18 +1,17 @@
 package de.taimos.pipeline.aws.cloudformation.parser;
-
+import org.junit.jupiter.api.Test;
 import software.amazon.awssdk.services.cloudformation.model.Parameter;
 import java.io.ByteArrayInputStream;
 import java.nio.charset.StandardCharsets;
 import org.assertj.core.api.Assertions;
-import org.junit.Test;
 
 import java.io.IOException;
 import java.util.Collection;
 
-public class JSONParameterFileParserTests {
+class JSONParameterFileParserTests {
 
 	@Test
-	public void parseParameters() throws IOException {
+	void parseParameters() throws IOException {
 		JSONParameterFileParser parser = new JSONParameterFileParser();
 		String json = "[{\"ParameterKey\": \"bar\", \"ParameterValue\": \"foo\"}]";
 		Collection<Parameter> parameters = parser.parseParams(new ByteArrayInputStream(json.getBytes(StandardCharsets.UTF_8)));
@@ -22,7 +21,7 @@ public class JSONParameterFileParserTests {
 	}
 
 	@Test
-	public void parseKeyParameters() throws IOException {
+	void parseKeyParameters() throws IOException {
 		JSONParameterFileParser parser = new JSONParameterFileParser();
 		String json = "[{\"ParameterKey\": \"bar\", \"UsePreviousValue\": true}]";
 		Collection<Parameter> parameters = parser.parseParams(new ByteArrayInputStream(json.getBytes(StandardCharsets.UTF_8)));

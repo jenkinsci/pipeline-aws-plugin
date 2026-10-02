@@ -21,49 +21,55 @@
 
 package de.taimos.pipeline.aws;
 
+import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
 import software.amazon.awssdk.services.iam.IamClient;
 import software.amazon.awssdk.services.iam.model.UpdateAssumeRolePolicyRequest;
 import software.amazon.awssdk.services.iam.model.UpdateAssumeRolePolicyResponse;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.jvnet.hudson.test.JenkinsRule;
-import org.mockito.Mockito;
 
-public class UpdateTrustPolicyStepTests {
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
-	@Rule
-	public JenkinsRule jenkinsRule = new JenkinsRule();
+@WithJenkins
+class UpdateTrustPolicyStepTests {
+
+	private JenkinsRule jenkinsRule;
 	private IamClient iam;
 
-	@Before
-	public void setupSdk() throws Exception {
-		this.iam = Mockito.mock(IamClient.class);
-		AWSClientFactory.setFactoryDelegate((x) -> this.iam);
+	@BeforeEach
+	void setupSdk(JenkinsRule rule) {
+		this.jenkinsRule = rule;
+		this.iam = mock(IamClient.class);
+		AWSClientFactory.setFactoryDelegate(x -> this.iam);
 	}
 
-	@After
-	public void tearDownSdk() throws Exception {
+	@AfterEach
+	void tearDownSdk() {
 		AWSClientFactory.setFactoryDelegate(null);
 	}
 
 	@Test
-	public void updateTrustPolicy() throws Exception {
+	void updateTrustPolicy() throws Exception {
 		WorkflowJob job = this.jenkinsRule.jenkins.createProject(WorkflowJob.class, "updateTest");
-		Mockito.when(this.iam.updateAssumeRolePolicy(Mockito.any(UpdateAssumeRolePolicyRequest.class))).thenReturn(UpdateAssumeRolePolicyResponse.builder().build());
-		job.setDefinition(new CpsFlowDefinition(""
-														+ "node {\n"
-														+ "  writeFile(file: 'testfile', text: '{}')\n"
-														+ "  updateTrustPolicy(roleName: 'testRole', policyFile: 'testfile')\n"
-														+ "}\n", true)
+		when(this.iam.updateAssumeRolePolicy(any(UpdateAssumeRolePolicyRequest.class))).thenReturn(UpdateAssumeRolePolicyResponse.builder().build());
+		job.setDefinition(new CpsFlowDefinition("""
+                node {
+                  writeFile(file: 'testfile', text: '{}')
+                  updateTrustPolicy(roleName: 'testRole', policyFile: 'testfile')
+                }
+                """, true)
 		);
 
 		this.jenkinsRule.assertBuildStatusSuccess(job.scheduleBuild2(0));
 
-		Mockito.verify(this.iam).updateAssumeRolePolicy(UpdateAssumeRolePolicyRequest.builder().roleName("testRole").policyDocument("{}").build());
+		verify(this.iam).updateAssumeRolePolicy(UpdateAssumeRolePolicyRequest.builder().roleName("testRole").policyDocument("{}").build());
 	}
 
 }

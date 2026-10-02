@@ -22,7 +22,7 @@
 package de.taimos.pipeline.aws;
 
 import hudson.EnvVars;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.AwsCredentials;
 import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
@@ -42,7 +42,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * provider it was handed, and that provider is the shared default chain, the first s3Upload or
  * s3Copy of a build tears down credential resolution for the rest of the JVM.
  */
-public class CredentialsProviderOwnershipTest {
+class CredentialsProviderOwnershipTest {
 
 	private static final class ClosableProvider implements AwsCredentialsProvider, SdkAutoCloseable {
 		private boolean closed;
@@ -66,7 +66,7 @@ public class CredentialsProviderOwnershipTest {
 	 */
 
 	@Test
-	public void theSyncClientClosesACallerSuppliedProvider() {
+	void theSyncClientClosesACallerSuppliedProvider() {
 		ClosableProvider provider = new ClosableProvider();
 
 		S3Client.builder().region(Region.US_WEST_2).credentialsProvider(provider).build().close();
@@ -75,7 +75,7 @@ public class CredentialsProviderOwnershipTest {
 	}
 
 	@Test
-	public void theAsyncClientClosesACallerSuppliedProvider() {
+	void theAsyncClientClosesACallerSuppliedProvider() {
 		ClosableProvider provider = new ClosableProvider();
 
 		S3AsyncClient.builder().region(Region.US_WEST_2).credentialsProvider(provider).build().close();
@@ -88,7 +88,7 @@ public class CredentialsProviderOwnershipTest {
 	 * that would most plausibly diverge from a service client's.
 	 */
 	@Test
-	public void thePresignerClosesACallerSuppliedProvider() {
+	void thePresignerClosesACallerSuppliedProvider() {
 		ClosableProvider provider = new ClosableProvider();
 
 		S3Presigner.builder().region(Region.US_WEST_2).credentialsProvider(provider).build().close();
@@ -97,7 +97,7 @@ public class CredentialsProviderOwnershipTest {
 	}
 
 	@Test
-	public void theDefaultProviderIsSharedAcrossTheJvm() {
+	void theDefaultProviderIsSharedAcrossTheJvm() {
 		assertThat(DefaultCredentialsProvider.create()).isSameAs(DefaultCredentialsProvider.create());
 	}
 
@@ -106,7 +106,7 @@ public class CredentialsProviderOwnershipTest {
 	 * would close the shared instance above.
 	 */
 	@Test
-	public void theFactoryNeverHandsAClientTheCloseableSharedProvider() {
+	void theFactoryNeverHandsAClientTheCloseableSharedProvider() {
 		// empty on purpose: the default branch is selected by the *absence* of AWS_ACCESS_KEY_ID,
 		// AWS_PROFILE and AWS_PIPELINE_STEPS_FROM_NODE. Region is resolved elsewhere and is not read
 		// here at all, so setting one would only suggest it mattered.

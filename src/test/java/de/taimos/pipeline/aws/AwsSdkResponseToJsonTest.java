@@ -21,9 +21,9 @@
 
 package de.taimos.pipeline.aws;
 
+import org.junit.jupiter.api.Test;
 import software.amazon.awssdk.services.cloudformation.model.TemplateParameter;
 import software.amazon.awssdk.services.cloudformation.model.ValidateTemplateResponse;
-import org.junit.Test;
 
 import java.util.List;
 import java.util.Map;
@@ -43,10 +43,10 @@ import static org.assertj.core.api.Assertions.assertThat;
  * {@code CFNValidateStepTests.validateWithUrlSuccess}, which asserts the rendered map end to end
  * through the step; they are deliberately not repeated here.
  */
-public class AwsSdkResponseToJsonTest {
+class AwsSdkResponseToJsonTest {
 
 	@Test
-	public void preservesTopLevelKeyNames() throws Exception {
+	void preservesTopLevelKeyNames() {
 		ValidateTemplateResponse result = ValidateTemplateResponse.builder()
 				.description("myDescription")
 				.capabilitiesWithStrings("CAPABILITY_IAM")
@@ -76,7 +76,7 @@ public class AwsSdkResponseToJsonTest {
 	 * a null guard, so turning these into nulls would be a breaking change dressed up as fidelity.
 	 */
 	@Test
-	public void unsetCollectionsStayEmptyAndUnsetScalarsStayNullAsUnderV1() throws Exception {
+	void unsetCollectionsStayEmptyAndUnsetScalarsStayNullAsUnderV1() {
 		ValidateTemplateResponse result = ValidateTemplateResponse.builder()
 				.description("myDescription")
 				.build();
