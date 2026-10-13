@@ -66,6 +66,7 @@ public class AWSClientFactory implements Serializable {
 	static final String AWS_REGION = "AWS_REGION";
 	static final String AWS_ENDPOINT_URL = "AWS_ENDPOINT_URL";
 	static final String AWS_SDK_SOCKET_TIMEOUT = "AWS_SDK_SOCKET_TIMEOUT";
+	static final String AWS_SDK_CONNECTION_ACQUISITION_TIMEOUT = "AWS_SDK_CONNECTION_ACQUISITION_TIMEOUT";
 	static final String AWS_SDK_RETRIES = "AWS_SDK_RETRIES";
 	static final String AWS_SDK_MAX_CONNECTIONS = "AWS_SDK_MAX_CONNECTIONS";
 	static final String AWS_PIPELINE_STEPS_FROM_NODE = "AWS_PIPELINE_STEPS_FROM_NODE";
@@ -207,6 +208,10 @@ public class AWSClientFactory implements Serializable {
 		return Duration.ofMillis(Integer.parseInt(vars.get(AWS_SDK_SOCKET_TIMEOUT, "50000")));
 	}
 
+	static Duration getV2ConnectionAcquisitionTimeout(EnvVars vars) {
+		return Duration.ofMillis(Integer.parseInt(vars.get(AWS_SDK_CONNECTION_ACQUISITION_TIMEOUT, "120000")));
+	}
+
 	/**
 	 * Only S3TransferManager needs this: it has no synchronous form, so s3Upload, s3Download and
 	 * s3Copy build an S3AsyncClient for it.
@@ -219,6 +224,9 @@ public class AWSClientFactory implements Serializable {
 	 * AWS_SDK_SOCKET_TIMEOUT maps onto readTimeout and writeTimeout together. v1's ClientConfiguration
 	 * had a single socket timeout covering both directions, and netty splits them, so applying it to
 	 * only one would quietly halve what the setting covers.
+	 *
+	 * The connection acquisition timeout is configurable separately because Netty's default of 10
+	 * seconds can expire while the SDK's classes are still being loaded on a fresh remote agent.
 	 */
 	static software.amazon.awssdk.http.async.SdkAsyncHttpClient.Builder<?> getV2AsyncHttpClientBuilder(EnvVars vars) {
 		return applyAsyncTimeouts(NettyNioAsyncHttpClient.builder(), vars)
@@ -233,7 +241,8 @@ public class AWSClientFactory implements Serializable {
 		Duration socketTimeout = getV2SocketTimeout(vars);
 		return builder
 				.readTimeout(socketTimeout)
-				.writeTimeout(socketTimeout);
+				.writeTimeout(socketTimeout)
+				.connectionAcquisitionTimeout(getV2ConnectionAcquisitionTimeout(vars));
 	}
 
 	/**

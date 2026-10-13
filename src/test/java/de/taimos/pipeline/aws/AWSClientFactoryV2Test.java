@@ -412,6 +412,19 @@ class AWSClientFactoryV2Test {
 	}
 
 	@Test
+	void asyncConnectionAcquisitionTimeoutCanBeConfigured() {
+		EnvVars vars = new EnvVars();
+		vars.put(AWSClientFactory.AWS_SDK_CONNECTION_ACQUISITION_TIMEOUT, "123456");
+		NettyNioAsyncHttpClient.Builder builder = mock(NettyNioAsyncHttpClient.Builder.class, Mockito.RETURNS_SELF);
+
+		AWSClientFactory.applyAsyncTimeouts(builder, vars);
+
+		verify(builder).connectionAcquisitionTimeout(Duration.ofMillis(123456));
+		assertThat(AWSClientFactory.getV2ConnectionAcquisitionTimeout(new EnvVars()))
+				.isEqualTo(Duration.ofMillis(120000));
+	}
+
+	@Test
 	void retryCountKeepsTheV1NumberOfAttempts() {
 		assertThat(resolveMaxAttempts(AWSClientFactory.getV2OverrideConfiguration(new EnvVars()))).isEqualTo(11);
 
