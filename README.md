@@ -116,9 +116,13 @@ configuration - and they apply to the steps that run inside that scope.
 | --- | --- | --- |
 | `AWS_SDK_RETRIES` | `10` | Retries per request, on top of the initial attempt. |
 | `AWS_SDK_SOCKET_TIMEOUT` | `50000` | Socket timeout in milliseconds. |
+| `AWS_SDK_CONNECTION_ACQUISITION_TIMEOUT` | `120000` | Maximum time in milliseconds an asynchronous AWS client waits to acquire a connection. |
 | `AWS_SDK_MAX_CONNECTIONS` | `500` | Maximum concurrent connections across all synchronous AWS requests in the controller. |
 
 `AWS_SDK_RETRIES` and `AWS_SDK_SOCKET_TIMEOUT` have been available since 751.v34a_8f1c5f312.
+`AWS_SDK_CONNECTION_ACQUISITION_TIMEOUT` configures the Netty async client used by `s3Upload`,
+`s3Download` and `s3Copy`; its default is raised above the SDK's 10-second default to accommodate
+initial class loading on fresh remote agents.
 `AWS_SDK_MAX_CONNECTIONS` arrives with the AWS SDK v2 migration and is ignored by
 751.v34a_8f1c5f312 and earlier.
 
@@ -1225,6 +1229,10 @@ ebWaitOnEnvironmentHealth(
 
 ## current master
 
+* Fixed: first `s3Upload`, `s3Download` or `s3Copy` calls on a fresh remote agent could fail while
+  loading AWS SDK classes with Netty's 10-second connection-acquisition timeout. The async client's
+  default is now 120 seconds; set `AWS_SDK_CONNECTION_ACQUISITION_TIMEOUT` in milliseconds to
+  override it ([#374](https://github.com/jenkinsci/pipeline-aws-plugin/issues/374)).
 * **Breaking**: requires Jenkins 2.541.1 or newer. The plugin's parent POM and plugin BOM were
   updated to the 2.541 baseline in preparation for the migration to the AWS SDK for Java 2.x
   ([#341](https://github.com/jenkinsci/pipeline-aws-plugin/issues/341),
